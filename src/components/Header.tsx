@@ -5,7 +5,7 @@ export default function Header(){
     <header className="bg-[#0f2040] text-white sticky top-0 z-40">
       <div className="max-w-[1280px] mx-auto px-4 py-3 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#c8a84e] flex items-center justify-center text-[#0f2040] font-bold">AI</div>
+          <img src="/logo.png" alt="AI Insurance Network Tree" className="h-9 w-auto bg-white rounded-xl px-1 py-1 object-contain" />
           <div>
             <div className="font-bold leading-none text-sm">AI Insurance Network Tree</div>
             <div className="text-[11px] opacity-70">ระบบบริหารเครือข่ายตัวแทน • ต้นไม้ฐาน 5 คน</div>
@@ -18,6 +18,7 @@ export default function Header(){
           <Link href="/tree" className="opacity-80 hover:opacity-100">ผังเครือข่าย</Link>
           <Link href="/income" className="opacity-80 hover:opacity-100">รายได้</Link>
           <Link href="/admin" className="opacity-80 hover:opacity-100">ผู้ดูแล</Link>
+          <a href="https://ai-insurance-network-3cp54o23p-ak-e11e.vercel.app/" target="_blank" rel="noreferrer" className="px-3 py-1.5 rounded-full border border-white/30 text-xs hover:bg-white/10">↩ กลับระบบเก่า</a>
         </nav>
         <div className="flex items-center gap-2">
           <Link href="/login" className="px-4 py-2 rounded-full bg-white text-[#0f2040] text-sm font-semibold">เข้าสู่ระบบ</Link>
