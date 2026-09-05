@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>AI Insurance Network Tree — Architecture & Design Docs</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;600;700&family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  *{font-family:'Sarabun','Noto Sans Thai',sans-serif}
+  .navy{color:#0f2040}.bg-navy{background:#0f2040}.gold{color:#c8a84e}.bg-gold{background:#c8a84e}
+  .card{border:1px solid #e2e8f0;border-radius:16px;background:white}
+  pre{white-space:pre-wrap;word-break:break-word}
+</style>
+</head>
+<body class="bg-[#f6f8fb] text-slate-800">
+<!-- HEADER -->
+<header class="bg-navy text-white sticky top-0 z-50">
+  <div class="max-w-[1280px] mx-auto px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-gold flex items-center justify-center text-navy font-bold">AI</div>
+      <div>
+        <div class="font-bold leading-none">AI Insurance Network Tree</div>
+        <div class="text-xs opacity-70">System Architecture & Design — ฉบับก่อนเขียนโค้ด</div>
+      </div>
+    </div>
+    <div class="flex gap-2 text-xs">
+      <span class="px-3 py-1.5 rounded-full bg-white/10">Next.js 15 + TS + Prisma + Supabase</span>
+      <span class="px-3 py-1.5 rounded-full bg-gold text-navy font-semibold">Production-ready</span>
+    </div>
+  </div>
+  <nav class="max-w-[1280px] mx-auto px-6 pb-3 flex gap-2 overflow-auto text-xs">
+    <a href="#overview" class="px-3 py-1.5 rounded-full bg-white text-navy font-semibold">สรุป</a>
+    <a href="#arch" class="px-3 py-1.5 rounded-full bg-white/15 hover:bg-white/25">สถาปัตยกรรม</a>
+    <a href="#flow" class="px-3 py-1.5 rounded-full bg-white/15 hover:bg-white/25">User Flow</a>
+    <a href="#perm" class="px-3 py-1.5 rounded-full bg-white/15 hover:bg-white/25">Permission</a>
+    <a href="#er" class="px-3 py-1.5 rounded-full bg-white/15 hover:bg-white/25">ER Diagram</a>
+    <a href="#place" class="px-3 py-1.5 rounded-full bg-white/15 hover:bg-white/25">Placement</a>
+    <a href="#income" class="px-3 py-1.5 rounded-full bg-white/15 hover:bg-white/25">Income Engine</a>
+    <a href="#email" class="px-3 py-1.5 rounded-full bg-white/15 hover:bg-white/25">Email</a>
+  </nav>
+</header>
+
+<div class="max-w-[1280px] mx-auto px-6 py-8 space-y-8">
+
+<!-- 1 OVERVIEW -->
+<section id="overview" class="card p-6">
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold navy">1) สรุปความเข้าใจระบบ</h1>
+      <p class="text-sm text-slate-600 mt-2 leading-relaxed">ระบบบริหารเครือข่ายตัวแทนประกัน แบบ <b>ต้นไม้ฐานกว้าง 5 คน (5-wide placement tree)</b> แยกชัดเจนระหว่างผู้สนใจ (Prospect) / ผู้สมัคร / สมาชิก — ไม่นับ Prospect ในต้นไม้ ไม่คำนวณรายได้จากตำแหน่งว่าง รายได้ทุกบาทอ้างอิงผลงานจริงและ Income Rule แบบมี Version ตรวจสอบย้อนหลังได้ พร้อมอีเมลธุรกรรมครบวงจร RBAC แบบ Dynamic และ Audit Log แบบ append-only</p>
+    </div>
+    <div class="hidden md:block text-right text-xs bg-amber-50 border border-amber-200 rounded-xl p-3 min-w-[280px]">
+      <div class="font-semibold text-amber-800">ข้อความกำกับรายได้ (ทุกหน้าเกี่ยวกับรายได้)</div>
+      <div class="text-amber-900 mt-1 leading-relaxed">“รายได้และผลประโยชน์ขึ้นอยู่กับผลงานจริง คุณสมบัติ เงื่อนไข การอนุมัติ และหลักเกณฑ์ที่ใช้ในแต่ละช่วงเวลา ตัวเลขประมาณการไม่ใช่การรับประกันรายได้ กรุณาตรวจสอบกับหน่วยงานหรือบริษัทที่เกี่ยวข้องก่อนนำไปใช้อ้างอิง”</div>
+    </div>
+  </div>
+  <div class="grid md:grid-cols-4 gap-3 mt-5">
+    <div class="rounded-xl bg-slate-50 border p-4"><div class="text-xs text-slate-500">หลักการสำคัญ</div><div class="text-sm font-semibold">Deny by Default • No Fake Data • Vacant = ว่าง</div></div>
+    <div class="rounded-xl bg-slate-50 border p-4"><div class="text-xs text-slate-500">ภาษา/โซนเวลา</div><div class="text-sm font-semibold">ไทยเป็นค่าเริ่มต้น • เก็บ UTC แสดง Asia/Bangkok</div></div>
+    <div class="rounded-xl bg-slate-50 border p-4"><div class="text-xs text-slate-500">ความปลอดภัย</div><div class="text-sm font-semibold">Encryption • RLS • MFA • Signed URL • Audit Log</div></div>
+    <div class="rounded-xl bg-slate-50 border p-4"><div class="text-xs text-slate-500">Demo Data</div><div class="text-sm font-semibold">ติดป้าย “ข้อมูลทดลอง” แยกจากข้อมูลจริงชัดเจน</div></div>
+  </div>
+</section>
+
+<!-- 2 ARCH -->
+<section id="arch" class="card p-6">
+  <h2 class="text-xl font-bold navy">2) System Architecture</h2>
+  <div class="grid lg:grid-cols-2 gap-6 mt-4">
+    <div class="rounded-xl border bg-white overflow-hidden">
+      <div class="px-4 py-3 bg-navy text-white text-sm font-semibold">High-Level (App Router)</div>
+      <div class="p-4 text-sm leading-relaxed">
+        <div class="font-mono text-xs bg-slate-900 text-slate-100 rounded-lg p-3 overflow-auto">[Browser/Mobile] ──▶ Next.js App Router (SSR+RSC)
+  ├─ (public) / , /about, /join, /track, /privacy
+  ├─ (auth) /login, /register, /verify-otp, /forgot
+  ├─ (app) /dashboard , /prospects , /tree , /income , /docs , /admin/*
+  └─ API Routes /api/*  ──▶ Prisma ──▶ PostgreSQL (Supabase)
+                              ├─ Supabase Auth + RLS
+                              ├─ Queue : pg-boss / BullMQ (email, jobs)
+                              ├─ Storage : Supabase Storage (เอกสาร, รูป)
+                              └─ Email : Resend/SendGrid/SES (Idempotent)</div>
+        <ul class="list-disc pl-5 mt-3 text-slate-600 text-xs space-y-1">
+          <li>ตรวจสอบสิทธิ์ 3 ชั้น: UI guard → API middleware → RLS ที่ DB</li>
+          <li>เงินใช้ <code>Decimal(18,2)</code> • เวลา <code>timestamptz UTC</code> • UUID v4</li>
+          <li>ธุรกรรมการเงินห้าม DELETE ใช้ Reversal Transaction เท่านั้น</li>
+        </ul>
+      </div>
+    </div>
+    <div class="rounded-xl border bg-white overflow-hidden">
+      <div class="px-4 py-3 bg-navy text-white text-sm font-semibold">Deployment & Env</div>
+      <div class="p-4 text-sm">
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="rounded-lg bg-slate-50 border p-3"><b>Vercel</b><br/>Next.js hosting, Edge, Cron</div>
+          <div class="rounded-lg bg-slate-50 border p-3"><b>Supabase</b><br/>Postgres + Auth + Storage + Realtime</div>
+          <div class="rounded-lg bg-slate-50 border p-3"><b>Resend / SES</b><br/>Transactional Email + Webhooks</div>
+          <div class="rounded-lg bg-slate-50 border p-3"><b>pg-boss</b><br/>Queue + Retry + DLQ</div>
+        </div>
+        <pre class="mt-3 bg-slate-900 text-emerald-200 rounded-lg p-3 text-[11px] leading-relaxed">DATABASE_URL=postgresql://...
+AUTH_SECRET=...
+EMAIL_PROVIDER=resend
+EMAIL_API_KEY=...
+EMAIL_FROM_NAME="AI Insurance Network Tree"
+EMAIL_FROM_ADDRESS=noreply@example.com
+EMAIL_REPLY_TO=support@example.com
+APP_BASE_URL=https://app.example.com
+NEXT_PUBLIC_APP_URL=https://app.example.com</pre>
+        <div class="text-[11px] text-slate-500 mt-2">ห้ามฝัง API Key ในโค้ด / ไม่ส่งความลับไป Browser</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 USER FLOW -->
+<section id="flow" class="card p-6">
+  <h2 class="text-xl font-bold navy">3) User Flow</h2>
+  <div class="grid lg:grid-cols-3 gap-4 mt-4">
+    <div class="rounded-xl border p-4 bg-white">
+      <div class="text-sm font-bold navy">A) Prospect → Member</div>
+      <div class="mt-2 text-xs leading-relaxed bg-slate-900 text-slate-100 rounded-lg p-3 font-mono">เข้าชมหน้า public
+→ ลงทะเบียนสนใจ (Prospect)
+→ OTP / ยืนยันอีเมล + ยอมรับ PDPA
+→ ทำแบบประเมิน / นัดหมาย
+→ กรอกใบสมัคร + ส่งเอกสาร
+→ เจ้าหน้าที่ตรวจสอบ
+→ Admin อนุมัติ → สร้าง Member ID
+→ BFS วางในต้นไม้ (บันทึกเหตุผล)
+→ เปิดสิทธิ์สมาชิก → อีเมลอนุมัติ+วางตำแหน่ง</div>
+      <div class="text-[11px] text-slate-500 mt-2">Prospect ไม่กิน Slot / ไม่สร้างรายได้จนกว่าอนุมัติ • ตรวจเบอร์/อีเมล/เอกสารซ้ำ</div>
+    </div>
+    <div class="rounded-xl border p-4 bg-white">
+      <div class="text-sm font-bold navy">B) Tree Placement</div>
+      <div class="mt-2 text-xs leading-relaxed bg-slate-900 text-slate-100 rounded-lg p-3 font-mono">ขออนุมัติ place-member {parentId}
+→ TX + SELECT ... FOR UPDATE (parent row lock)
+→ นับลูก parent < 5 ? วาง slot แรกว่าง
+→ เต็ม → BFS queue ชั้นถัดไป ซ้าย→ขวา
+→ INSERT tree_placements (unique parent+slot)
+→ บันทึก audit + ส่งอีเมล “จัดวางแล้ว”</div>
+      <div class="text-[11px] text-slate-500 mt-2">Strict History (default) ไม่ย้ายตำแหน่งเดิม • Vacancy Refill ต้องอนุมัติ + version ใหม่</div>
+    </div>
+    <div class="rounded-xl border p-4 bg-white">
+      <div class="text-sm font-bold navy">C) Performance → Income → Payout</div>
+      <div class="mt-2 text-xs leading-relaxed bg-slate-900 text-slate-100 rounded-lg p-3 font-mono">นำเข้า performance_records (CSV/API)
+→ Income Rule Engine (versioned) คำนวณ
+→ สร้าง income_transactions (Estimated)
+→ Admin อนุมัติ → Approved
+→ สร้าง payout_batches → Paid + เอกสาร PDF
+→ Reversal ใช้ transaction ใหม่ ไม่ลบเดิม
+→ อีเมลทุกสถานะ + Signed PDF link หมดอายุ</div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 PERMISSION -->
+<section id="perm" class="card p-6">
+  <h2 class="text-xl font-bold navy">4) Permission Matrix (Dynamic RBAC)</h2>
+  <p class="text-xs text-slate-600 mt-1">Super Admin จัดการ Roles/Permissions ได้จาก UI โดยไม่แก้โค้ด • Deny by Default • ตรวจสอบ 3 ชั้น: หน้าเว็บ + API + RLS</p>
+  <div class="overflow-auto mt-4 rounded-xl border">
+    <table class="w-full text-xs">
+      <thead class="bg-navy text-white">
+        <tr><th class="text-left p-2.5">Permission Key</th><th class="p-2.5">Prospect</th><th class="p-2.5">Member</th><th class="p-2.5">Agent</th><th class="p-2.5">Mgr</th><th class="p-2.5">Finance</th><th class="p-2.5">Auditor</th><th class="p-2.5 bg-gold text-navy">Admin</th><th class="p-2.5 bg-gold text-navy">Super</th></tr>
+      </thead>
+      <tbody class="divide-y">
+        <tr><td class="p-2 font-mono">dashboard.view</td><td class="text-center">✓</td><td class="text-center">✓</td><td class="text-center">✓</td><td class="text-center">✓</td><td class="text-center">✓</td><td class="text-center">✓</td><td class="text-center">✓</td><td class="text-center">✓</td></tr>
+        <tr class="bg-slate-50"><td class="p-2 font-mono">prospect.view / create / edit / assign / convert</td><td class="text-center">—</td><td class="text-center">—</td><td class="text-center">view</td><td class="text-center">✓</td><td class="text-center">—</td><td class="text-center">view</td><td class="text-center">✓</td><td class="text-center">✓</td></tr>
+        <tr><td class="p-2 font-mono">member.view_own / view_team / view_all / approve</td><td class="text-center">own</td><td class="text-center">own</td><td class="text-center">team</td><td class="text-center">team</td><td class="text-center">own</td><td class="text-center">all(r)</td><td class="text-center">all</td><td class="text-center">all</td></tr>
+        <tr class="bg-slate-50"><td class="p-2 font-mono">tree.view_own / view_team / view_all / manage</td><td class="text-center">—</td><td class="text-center">own</td><td class="text-center">team</td><td class="text-center">team</td><td class="text-center">—</td><td class="text-center">view_all</td><td class="text-center">✓</td><td class="text-center">✓</td></tr>
+        <tr><td class="p-2 font-mono">income.view_own / view_team / view_all / approve</td><td class="text-center">—</td><td class="text-center">own</td><td class="text-center">own</td><td class="text-center">team</td><td class="text-center">all+approve</td><td class="text-center">all(r)</td><td class="text-center">all</td><td class="text-center">all</td></tr>
+        <tr class="bg-slate-50"><td class="p-2 font-mono">document.download / report.export</td><td class="text-center">—</td><td class="text-center">own</td><td class="text-center">own</td><td class="text-center">team</td><td class="text-center">✓</td><td class="text-center">✓</td><td class="text-center">✓</td><td class="text-center">✓</td></tr>
+        <tr><td class="p-2 font-mono">role.manage / permission.manage / audit.view</td><td class="text-center">—</td><td class="text-center">—</td><td class="text-center">—</td><td class="text-center">—</td><td class="text-center">—</td><td class="text-center">audit.view</td><td class="text-center">✓</td><td class="text-center">✓</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="grid md:grid-cols-3 gap-3 mt-4 text-xs">
+    <div class="rounded-xl border p-3 bg-white"><b>Data Scope</b><div class="text-slate-600 mt-1">Own / Direct / Team(depth N) / Branch / Assigned / All — กำหนดชั้นที่มองเห็นได้ เช่น ไม่เกิน 3/5 ชั้น หรือทุกชั้นในสายงาน</div></div>
+    <div class="rounded-xl border p-3 bg-white"><b>Field Visibility</b><div class="text-slate-600 mt-1">ตั้งราย field: ชื่อ รูป Member ID เบอร์ อีเมล ตำแหน่ง ผลงาน รายได้ เอกสาร ฯลฯ — ค่าเริ่มต้นห้ามเห็นรายได้/เอกสารคนอื่น</div></div>
+    <div class="rounded-xl border p-3 bg-white"><b>Menu Visibility</b><div class="text-slate-600 mt-1">เมนูแสดงตาม permission เท่านั้น • ไม่เห็นเมนู = ไม่มีสิทธิ์ • ตรวจซ้ำที่ API + RLS</div></div>
+  </div>
+</section>
+
+<!-- 5 ER -->
+<section id="er" class="card p-6">
+  <h2 class="text-xl font-bold navy">5) Database ER Diagram (ย่อ — เต็มใน Prisma Schema)</h2>
+  <div class="rounded-xl border bg-white p-4 overflow-auto">
+    <pre class="text-[11px] leading-relaxed font-mono">users ──1:N── user_sessions
+  ├──1:1── member_profiles ──1:N── memberships ──N:1── positions
+  ├──1:N── referrals (sponsor_id → user_id)
+  ├──1:N── tree_nodes ──1:N── tree_placements (placement_parent_id + slot  UNIQUE)
+  ├──1:N── performance_records
+  ├──1:N── income_transactions ──N:1── income_rule_versions
+  │         └──N:1── payout_batches ──1:N── payouts
+  ├──1:N── financial_documents ( + document_verifications )
+  ├──1:N── prospects ──1:N── prospect_assignments / activities / status_history / documents / consents / appointments
+  │         └──1:1── prospect_conversions (prospect_id → member_id)
+  ├──1:N── notifications + notification_preferences + scheduled_reports
+  ├──1:N── consent_records  + audit_logs (append-only)
+  └──M:N── user_roles ──M:N── role_permissions ──M:N── permissions
+            + permission_scopes + menu_visibility + field_visibility
+
+  Other: partners, lead_sources, email_templates/versions/messages/recipients/delivery_logs/failures/suppression_list</pre>
+    <div class="text-xs text-slate-600 mt-3">ข้อกำหนด DB: UUID PK • Direct Sponsor แยก Placement Parent • UNIQUE(parent_id,slot) • TX+Row Lock • Idempotency Key • Decimal เงิน • timestamptz UTC • ห้ามลบธุรกรรมการเงิน • RLS เปิด</div>
+  </div>
+</section>
+
+<!-- 6 PLACEMENT -->
+<section id="place" class="card p-6">
+  <h2 class="text-xl font-bold navy">6) Placement Algorithm — ต้นไม้ฐานกว้าง 5 คน (BFS Level-Order)</h2>
+  <div class="grid lg:grid-cols-2 gap-6 mt-4">
+    <div class="rounded-xl border bg-white p-4">
+      <div class="text-sm font-semibold">กฎหลัก</div>
+      <ul class="list-disc pl-5 text-xs text-slate-700 mt-2 space-y-1">
+        <li>Sponsor (คนแนะนำ) ≠ Placement Parent (ตำแหน่งในต้นไม้) — เก็บแยก</li>
+        <li>1 สมาชิกมีลูกได้สูงสุด 5 ช่อง (Slot 1-5) — ห้ามเกิน</li>
+        <li>หา Parent แบบ BFS: ระดับตื้นสุดก่อน → ซ้ายไปขวาในระดับเดียวกัน</li>
+        <li>Strict History (default): ไม่ย้ายคนเดิม ไม่กิน Slot ซ้ำ</li>
+        <li>ใช้ Transaction + <code>SELECT ... FOR UPDATE</code> ล็อกแถว Parent</li>
+        <li>Idempotency Key กันคำสั่งซ้ำ (concurrent registration)</li>
+        <li>ตัวอย่าง: A มี A01-A05 → คนที่ 6 ลงใต้ A01 → A01 เต็มลง A02 ...</li>
+      </ul>
+      <div class="mt-3 rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs">
+        <b>ตำแหน่งว่าง:</b> แสดง “ตำแหน่งว่าง” เส้นประสีเทา • ไม่นับ Active • ไม่สร้างผลงาน/รายได้ • ห้ามสร้างชื่อสมมุติ
+      </div>
+    </div>
+    <div class="rounded-xl border bg-slate-900 text-slate-100 p-4 overflow-auto">
+      <div class="text-xs font-mono leading-relaxed">-- Pseudo (Postgres + Prisma)
+BEGIN;
+SELECT id FROM tree_nodes WHERE id = :requestedParent FOR UPDATE;
+
+-- 1) ลอง parent ที่ขอมาก่อน
+SELECT slot FROM tree_placements WHERE parent_id=:p;
+IF count &lt; 5 THEN INSERT (parent_id, slot=minVacant) RETURN;
+
+-- 2) BFS หา parent ว่างใน subtree
+WITH RECURSIVE bfs AS (
+  SELECT id, 0 as depth FROM tree_nodes WHERE id=:p
+  UNION ALL
+  SELECT c.id, depth+1 FROM tree_nodes c
+  JOIN tree_placements tp ON tp.child_id=c.id
+  JOIN bfs ON bfs.id=tp.parent_id
+)
+SELECT parent_id, slot FROM (
+  SELECT tp.parent_id, COUNT(*) cnt FROM tree_placements tp
+  GROUP BY tp.parent_id HAVING COUNT(*)&lt;5
+) q ORDER BY depth, parent_id LIMIT 1 FOR UPDATE;
+
+INSERT INTO tree_placements(parent_id, child_id, slot, reason, idempotency_key)
+VALUES (:foundParent, :newMember, :slot, 'BFS', :key)
+ON CONFLICT (idempotency_key) DO NOTHING; -- กันซ้ำ
+COMMIT;</div>
+      <div class="text-[11px] text-slate-400 mt-2">กันสมาชิกซ้ำ: UNIQUE(child_id) • กัน Slot ซ้ำ: UNIQUE(parent_id,slot) • Concurrent ปลอดภัยด้วย Row Lock</div>
+    </div>
+  </div>
+</section>
+
+<!-- 7 INCOME -->
+<section id="income" class="card p-6">
+  <h2 class="text-xl font-bold navy">7) Income Rule Engine (Versioned)</h2>
+  <div class="grid lg:grid-cols-2 gap-4 mt-4">
+    <div class="rounded-xl border bg-white p-4 text-xs leading-relaxed">
+      <b>ประเภทรายได้ (Admin ปรับได้ ไม่ hard-code):</b>
+      <div class="grid grid-cols-2 gap-2 mt-2">
+        <span class="rounded-lg bg-slate-50 border px-2 py-1.5">ค่าคอมมิชชั่นส่วนบุคคล</span>
+        <span class="rounded-lg bg-slate-50 border px-2 py-1.5">เบี้ยปีต่ออายุ</span>
+        <span class="rounded-lg bg-slate-50 border px-2 py-1.5">ค่าบริหารหน่วย/ศูนย์/ภาค</span>
+        <span class="rounded-lg bg-slate-50 border px-2 py-1.5">ค่าสร้างหน่วย/ศูนย์/ภาค</span>
+        <span class="rounded-lg bg-slate-50 border px-2 py-1.5">โบนัส / ปรับปรุง</span>
+        <span class="rounded-lg bg-slate-50 border px-2 py-1.5">ภาษี หัก ณ ที่จ่าย / Chargeback</span>
+      </div>
+      <div class="mt-3">ทุก Transaction มี: Transaction ID, Member ID, Policy Ref, ประเภท, งวดบัญชี, ยอดก่อนหัก/หัก/ภาษี/สุทธิ, สถานะ, ผู้อนุมัติ, Rule Version</div>
+      <div class="mt-2 flex gap-2">
+        <span class="px-2 py-1 rounded-full bg-amber-100 text-amber-800">Estimated</span>
+        <span class="px-2 py-1 rounded-full bg-sky-100 text-sky-800">Pending</span>
+        <span class="px-2 py-1 rounded-full bg-emerald-100 text-emerald-800">Approved</span>
+        <span class="px-2 py-1 rounded-full bg-navy text-white">Paid</span>
+        <span class="px-2 py-1 rounded-full bg-red-100 text-red-700">Reversed</span>
+      </div>
+      <div class="text-[11px] text-slate-500 mt-2">ห้ามเรียก Estimated ว่า “ใบเสร็จรับเงิน” • แยกสีกราฟ Estimated/Approved/Paid ชัดเจน</div>
+    </div>
+    <div class="rounded-xl border bg-white p-4 text-xs">
+      <b>วิธีคำนวณ (Rule Version)</b>
+      <pre class="mt-2 bg-slate-900 text-emerald-100 rounded-lg p-3 text-[11px]">income_rule_versions { id, version, effective_from, rules JSONB }
+rules = [
+  { type:"personal_commission", rate:0.25, base:"first_year_premium" },
+  { type:"unit_management", rate:0.03, base:"team_premium", scope:"direct_5" },
+  ...
+]
+// คำนวณ → สร้าง income_transactions (Estimated)
+// อนุมัติ → Approved → payout_batches → Paid + PDF + QR
+// แก้ไข → สร้าง Reversal transaction ใหม่ ไม่ลบเดิม</pre>
+    </div>
+  </div>
+</section>
+
+<!-- 8 EMAIL -->
+<section id="email" class="card p-6">
+  <h2 class="text-xl font-bold navy">8) Email Event Architecture</h2>
+  <div class="grid lg:grid-cols-2 gap-4 mt-4">
+    <div class="rounded-xl border bg-white p-4 text-xs leading-relaxed">
+      <b>เหตุการณ์สำคัญ (ตัวอย่าง):</b>
+      <ul class="list-disc pl-5 mt-2 space-y-1 text-slate-700">
+        <li>Prospect: ลงทะเบียน/OTP/มอบหมายที่ปรึกษา/นัดหมาย/เปลี่ยนสถานะ</li>
+        <li>Applicant: รับใบสมัคร/เอกสารไม่ครบ/ตรวจสอบ/อนุมัติ/สร้าง Member ID/วางต้นไม้</li>
+        <li>Member: อุปกรณ์ใหม่/เปลี่ยนรหัส/มีสมาชิกใหม่/ครบ 5 คน/เลื่อนตำแหน่ง/ผลงาน/รายได้/จ่ายเงิน/เอกสาร</li>
+      </ul>
+      <div class="mt-3 rounded-lg bg-slate-50 border p-3">ทุกอีเมลมี: ชื่อระบบ ชื่อผู้รับ ประเภท วันเวลา Asia/Bangkok Reference ID รายละเอียด สถานะ ขั้นตอนถัดไป ปุ่มดูรายละเอียด ช่องทางติดต่อ ข้อความปลอดภัย ลิงก์จัดการแจ้งเตือน • <b>ห้ามส่ง</b> รหัสผ่าน OTP หมดอายุ เลขบัตร/บัญชีเต็ม เอกสารยืนยัน รายได้คนอื่น</div>
+    </div>
+    <div class="rounded-xl border bg-white p-4 text-xs">
+      <b>ป้องกันส่งซ้ำ + คิว</b>
+      <pre class="mt-2 bg-slate-900 text-sky-100 rounded-lg p-3 text-[11px]">email_messages { id, event_id, idempotency_key UNIQUE,
+  template_version, recipient_id, status, provider_msg_id,
+  attempts, error, queued_at, sent_at }
+
+Flow: Trigger → Queue (pg-boss) → Render Template
+  → Deduplicate by idempotency_key
+  → Send via Resend/SES → Webhook (Delivered/Bounced/Complained)
+  → Retry + Exponential Backoff → Dead Letter Queue
+  → Admin: ดูประวัติ / ส่งใหม่ / Suppression List</pre>
+      <div class="text-[11px] text-slate-500 mt-2">สถานะ: Queued → Processing → Sent → Delivered / Failed / Bounced / Complained</div>
+    </div>
+  </div>
+</section>
+
+<section class="card p-6">
+  <h2 class="text-sm font-bold navy">ถัดไป: เริ่มสร้างโค้ด Production (หลังคุณอนุมัติ Architecture นี้)</h2>
+  <p class="text-xs text-slate-600 mt-1">ลำดับสร้าง: Scaffold → Prisma Schema → Auth/RBAC → Prospect CRM → Tree (BFS+UI) → Income+PDF → Email System → Dashboards → Tests/Seed • ทุกส่วนเชื่อม DB/Auth/RLS จริง ไม่ใช่หน้าตัวอย่าง</p>
+  <div class="mt-3 flex gap-2">
+    <span class="px-3 py-1.5 rounded-full bg-navy text-white text-xs">รอคำสั่ง “เริ่มสร้างโค้ด”</span>
+    <span class="px-3 py-1.5 rounded-full border text-xs">หรือแจ้งปรับ Architecture ก่อนได้</span>
+  </div>
+</section>
+
+</div>
+<footer class="text-center text-xs text-slate-400 py-6">AI Insurance Network Tree — Architecture v1 • เก็บ UTC แสดง Asia/Bangkok • Decimal เงิน • Audit append-only • RLS เปิด</footer>
+</body>
+</html>
