@@ -1,0 +1,688 @@
+// prisma/schema.prisma — AI Insurance Network Tree
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ──────────────────────────────────────────────
+enum UserStatus {
+  ACTIVE
+  PENDING
+  SUSPENDED
+  RESIGNED
+  INACTIVE
+}
+
+enum MemberStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  RESIGNED
+}
+
+enum ProspectStatus {
+  NEW
+  CONTACTED
+  INTERESTED
+  APPOINTMENT
+  FOLLOW_UP
+  PREPARING_DOCUMENTS
+  APPLIED
+  CONVERTED
+  NOT_INTERESTED
+  UNREACHABLE
+  CANCELLED
+}
+
+enum IncomeStatus {
+  ESTIMATED
+  PENDING
+  APPROVED
+  PAID
+  REJECTED
+  REVERSED
+}
+
+enum EmailStatus {
+  QUEUED
+  PROCESSING
+  SENT
+  DELIVERED
+  FAILED
+  BOUNCED
+  COMPLAINED
+}
+
+enum PlacementPolicy {
+  STRICT_HISTORY
+  VACANCY_REFILL
+}
+
+enum PayoutStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  PAID
+  REVERSED
+}
+
+// ── Core Users & Auth ─────────────────────────────────
+model User {
+  id                String   @id @default(uuid()) @db.Uuid
+  email             String   @unique
+  emailVerified     Boolean  @default(false)
+  phone             String?  @unique
+  phoneVerified     Boolean  @default(false)
+  passwordHash      String?
+  prefix            String?
+  firstName         String
+  lastName          String
+  displayName       String?
+  dob               DateTime? @db.Date
+  province          String?
+  branch            String?
+  avatarUrl         String?
+  sponsorId         String?  @db.Uuid
+  sponsor           User?    @relation("UserSponsor", fields: [sponsorId], references: [id])
+  sponsored         User[]   @relation("UserSponsor")
+  status            UserStatus @default(PENDING)
+  mfaEnabled        Boolean  @default(false)
+  mfaSecret         String?
+  pdpaConsentVersion String?
+  pdpaConsentedAt   DateTime?
+  tosVersion        String?
+  tosConsentedAt    DateTime?
+  createdAt         DateTime @default(now()) @db.Timestamptz
+  approvedAt        DateTime? @db.Timestamptz
+  updatedAt         DateTime @updatedAt @db.Timestamptz
+
+  sessions          UserSession[]
+  roles             UserRole[]
+  memberProfile     MemberProfile?
+  prospectsOwned    Prospect[] @relation("ProspectOwner")
+  prospectActivities ProspectActivity[]
+  auditLogs         AuditLog[]
+  notifications     Notification[]
+  consentRecords    ConsentRecord[]
+  incomeTransactions IncomeTransaction[]
+  performanceRecords PerformanceRecord[]
+  treeNode          TreeNode?
+  placementsAsChild TreePlacement[] @relation("PlacementChild")
+}
+
+model UserSession {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash     String   @unique
+  device        String?
+  ip            String?
+  userAgent     String?
+  expiresAt     DateTime @db.Timestamptz
+  lastActiveAt  DateTime @default(now()) @db.Timestamptz
+  createdAt     DateTime @default(now()) @db.Timestamptz
+  @@index([userId])
+}
+
+model ConsentRecord {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String   // PDPA, TOS, MARKETING
+  version     String
+  consentedAt DateTime @default(now()) @db.Timestamptz
+  ip          String?
+}
+
+// ── Member ────────────────────────────────────────────
+model MemberProfile {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @unique @db.Uuid
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  memberId        String   @unique // M-XXXXXX
+  prospectId      String?  @unique @db.Uuid
+  prospect        Prospect? @relation(fields: [prospectId], references: [id])
+  status          MemberStatus @default(PENDING)
+  branchName      String?
+  regionName      String?
+  licenseStatus   String?
+  trainingStatus  String?
+  idCardHash      String? // encrypted
+  idCardLast4     String?
+  directSponsorId String?  @db.Uuid
+  createdAt       DateTime @default(now()) @db.Timestamptz
+  approvedAt      DateTime? @db.Timestamptz
+  qualifications  MemberQualification[]
+  statusHistory   MemberStatusHistory[]
+  documents       DocumentVerification[]
+}
+
+model MemberStatusHistory {
+  id          String   @id @default(uuid()) @db.Uuid
+  memberId    String   @db.Uuid
+  member      MemberProfile @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  fromStatus  String?
+  toStatus    String
+  reason      String?
+  changedBy   String?  @db.Uuid
+  createdAt   DateTime @default(now()) @db.Timestamptz
+}
+
+model Membership {
+  id          String   @id @default(uuid()) @db.Uuid
+  memberId    String   @db.Uuid
+  positionId  String   @db.Uuid
+  position    Position @relation(fields: [positionId], references: [id])
+  startAt     DateTime @db.Timestamptz
+  endAt       DateTime? @db.Timestamptz
+  approvedBy  String?  @db.Uuid
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  @@index([memberId])
+}
+
+// ── Tree 5-wide ───────────────────────────────────────
+model TreeNode {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @unique @db.Uuid
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  level       Int      @default(0)
+  directCount Int      @default(0)
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  placementsAsParent TreePlacement[] @relation("PlacementParent")
+}
+
+model TreePlacement {
+  id              String   @id @default(uuid()) @db.Uuid
+  parentId        String   @db.Uuid
+  parent          TreeNode @relation("PlacementParent", fields: [parentId], references: [id], onDelete: Cascade)
+  childId         String   @unique @db.Uuid
+  child           User     @relation("PlacementChild", fields: [childId], references: [id], onDelete: Cascade)
+  slot            Int      // 1..5
+  level           Int
+  reason          String?
+  idempotencyKey  String?  @unique
+  policy          PlacementPolicy @default(STRICT_HISTORY)
+  createdAt       DateTime @default(now()) @db.Timestamptz
+  @@unique([parentId, slot])
+  @@index([parentId])
+}
+
+// ── Positions & Qualifications ────────────────────────
+model Position {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique
+  nameTh      String
+  nameEn      String?
+  icon        String?
+  color       String?
+  priority    Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  rules       PositionRule[]
+  memberships Membership[]
+}
+
+model PositionRule {
+  id                String   @id @default(uuid()) @db.Uuid
+  positionId        String   @db.Uuid
+  position          Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  key               String   // min_tenure_months, min_active_members, personal_premium ...
+  value             Decimal  @db.Decimal(18,2)
+  description       String?
+}
+
+model MemberQualification {
+  id          String   @id @default(uuid()) @db.Uuid
+  memberId    String   @db.Uuid
+  member      MemberProfile @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  positionId  String   @db.Uuid
+  progress    Json?    // {current, target, missing[]}
+  isQualified Boolean  @default(false)
+  evaluatedAt DateTime @default(now()) @db.Timestamptz
+  @@unique([memberId, positionId])
+}
+
+// ── Performance & Income ──────────────────────────────
+model PerformanceRecord {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  policyRef     String?
+  type          String   // first_year_premium, renewal ...
+  amount        Decimal  @db.Decimal(18,2)
+  period        String   // YYYY-MM
+  occurredAt    DateTime @db.Timestamptz
+  createdAt     DateTime @default(now()) @db.Timestamptz
+  @@index([userId, period])
+}
+
+model IncomeRuleVersion {
+  id            String   @id @default(uuid()) @db.Uuid
+  version       String   @unique
+  effectiveFrom DateTime @db.Timestamptz
+  effectiveTo   DateTime? @db.Timestamptz
+  rules         Json     // array of {type, rate, base, scope}
+  createdBy     String?  @db.Uuid
+  createdAt     DateTime @default(now()) @db.Timestamptz
+  transactions  IncomeTransaction[]
+}
+
+model IncomeTransaction {
+  id            String   @id @default(uuid()) @db.Uuid
+  transactionId String   @unique // TX-XXXX
+  userId        String   @db.Uuid
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ruleVersionId String?  @db.Uuid
+  ruleVersion   IncomeRuleVersion? @relation(fields: [ruleVersionId], references: [id])
+  policyRef     String?
+  type          String
+  period        String
+  grossAmount   Decimal  @db.Decimal(18,2)
+  deductions    Decimal  @default(0) @db.Decimal(18,2)
+  tax           Decimal  @default(0) @db.Decimal(18,2)
+  netAmount     Decimal  @db.Decimal(18,2)
+  status        IncomeStatus @default(ESTIMATED)
+  approvedBy    String?  @db.Uuid
+  approvedAt    DateTime? @db.Timestamptz
+  reversalOfId  String?  @unique @db.Uuid
+  reversalOf    IncomeTransaction? @relation("Reversal", fields: [reversalOfId], references: [id])
+  reversal      IncomeTransaction? @relation("Reversal")
+  payoutBatchId String?  @db.Uuid
+  payoutBatch   PayoutBatch? @relation(fields: [payoutBatchId], references: [id])
+  idempotencyKey String? @unique
+  occurredAt    DateTime @db.Timestamptz
+  createdAt     DateTime @default(now()) @db.Timestamptz
+  @@index([userId, period, status])
+}
+
+model PayoutBatch {
+  id          String   @id @default(uuid()) @db.Uuid
+  batchNo     String   @unique
+  period      String
+  status      PayoutStatus @default(DRAFT)
+  totalAmount Decimal  @db.Decimal(18,2)
+  createdBy   String?  @db.Uuid
+  approvedBy  String?  @db.Uuid
+  paidAt      DateTime? @db.Timestamptz
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  payouts     Payout[]
+  transactions IncomeTransaction[]
+}
+
+model Payout {
+  id          String   @id @default(uuid()) @db.Uuid
+  batchId     String   @db.Uuid
+  batch       PayoutBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  userId      String   @db.Uuid
+  amount      Decimal  @db.Decimal(18,2)
+  status      PayoutStatus @default(PENDING)
+  paidAt      DateTime? @db.Timestamptz
+  createdAt   DateTime @default(now()) @db.Timestamptz
+}
+
+model FinancialDocument {
+  id            String   @id @default(uuid()) @db.Uuid
+  docNo         String   @unique
+  userId        String   @db.Uuid
+  type          String   // income_statement, payout_cert, receipt
+  period        String?
+  grossAmount   Decimal  @db.Decimal(18,2)
+  tax           Decimal  @db.Decimal(18,2)
+  netAmount     Decimal  @db.Decimal(18,2)
+  status        String   // issued, void
+  qrHash        String?
+  issuedBy      String?  @db.Uuid
+  issuedAt      DateTime @default(now()) @db.Timestamptz
+  expiresAt     DateTime? @db.Timestamptz
+  pdfUrl        String?
+  verifications DocumentVerification[]
+}
+
+model DocumentVerification {
+  id          String   @id @default(uuid()) @db.Uuid
+  documentId  String   @db.Uuid
+  document    FinancialDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  memberId    String?  @db.Uuid
+  member      MemberProfile? @relation(fields: [memberId], references: [id])
+  verifiedAt  DateTime @default(now()) @db.Timestamptz
+}
+
+// ── Partners ─────────────────────────────────────────
+model Partner {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  status      String   // pending, verified, rejected
+  description String?
+  logoUrl     String?
+  brandGuideline String?
+  approvedBy  String?  @db.Uuid
+  startAt     DateTime? @db.Timestamptz
+  endAt       DateTime? @db.Timestamptz
+  disclaimer  String?
+  createdAt   DateTime @default(now()) @db.Timestamptz
+}
+
+// ── RBAC ─────────────────────────────────────────────
+model Role {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique
+  nameTh      String
+  nameEn      String?
+  color       String?
+  icon        String?
+  priority    Int      @default(0)
+  isActive    Boolean  @default(true)
+  validFrom   DateTime? @db.Timestamptz
+  validTo     DateTime? @db.Timestamptz
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  permissions RolePermission[]
+  userRoles   UserRole[]
+  scopes      PermissionScope[]
+}
+
+model Permission {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String   @unique // dashboard.view
+  nameTh      String
+  category    String?
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  rolePermissions RolePermission[]
+}
+
+model RolePermission {
+  id            String   @id @default(uuid()) @db.Uuid
+  roleId        String   @db.Uuid
+  role          Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissionId  String   @db.Uuid
+  permission    Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  @@unique([roleId, permissionId])
+}
+
+model UserRole {
+  id      String @id @default(uuid()) @db.Uuid
+  userId  String @db.Uuid
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleId  String @db.Uuid
+  role    Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  @@unique([userId, roleId])
+}
+
+model PermissionScope {
+  id        String @id @default(uuid()) @db.Uuid
+  roleId    String @db.Uuid
+  role      Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  scope     String // Own, Direct, Team, Branch, Assigned, All
+  depth     Int?   // max depth for Team
+  @@unique([roleId, scope])
+}
+
+model MenuVisibility {
+  id      String @id @default(uuid()) @db.Uuid
+  roleId  String @db.Uuid
+  menuKey String
+  visible Boolean @default(true)
+  @@unique([roleId, menuKey])
+}
+
+model FieldVisibility {
+  id      String @id @default(uuid()) @db.Uuid
+  roleId  String @db.Uuid
+  field   String
+  visible Boolean @default(false)
+  @@unique([roleId, field])
+}
+
+// ── Prospects CRM ────────────────────────────────────
+model Prospect {
+  id            String   @id @default(uuid()) @db.Uuid
+  prospectId    String   @unique // P-XXXXXX
+  firstName     String
+  lastName      String
+  nickname      String?
+  phone         String?
+  email         String?
+  province      String?
+  occupation    String?
+  ageRange      String?
+  leadSourceId  String?  @db.Uuid
+  leadSource    LeadSource? @relation(fields: [leadSourceId], references: [id])
+  referralCode  String?
+  sponsorId     String?  @db.Uuid
+  interest      String?
+  assignedTo    String?  @db.Uuid
+  leadScore     Int      @default(0)
+  status        ProspectStatus @default(NEW)
+  consentStatus String?  // granted, withdrawn
+  lastContactAt DateTime? @db.Timestamptz
+  nextFollowUpAt DateTime? @db.Timestamptz
+  ownerId       String?  @db.Uuid
+  owner         User?    @relation("ProspectOwner", fields: [ownerId], references: [id])
+  memberProfile MemberProfile?
+  assignments   ProspectAssignment[]
+  activities    ProspectActivity[]
+  statusHistory ProspectStatusHistory[]
+  documents     ProspectDocument[]
+  consents      ProspectConsent[]
+  appointments  Appointment[]
+  conversion    ProspectConversion?
+  createdAt     DateTime @default(now()) @db.Timestamptz
+  updatedAt     DateTime @updatedAt @db.Timestamptz
+}
+
+model LeadSource {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  createdAt DateTime @default(now()) @db.Timestamptz
+  prospects Prospect[]
+}
+
+model ProspectAssignment {
+  id          String   @id @default(uuid()) @db.Uuid
+  prospectId  String   @db.Uuid
+  prospect    Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  assigneeId  String   @db.Uuid
+  assignedBy  String?  @db.Uuid
+  createdAt   DateTime @default(now()) @db.Timestamptz
+}
+
+model ProspectActivity {
+  id          String   @id @default(uuid()) @db.Uuid
+  prospectId  String   @db.Uuid
+  prospect    Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  userId      String?  @db.Uuid
+  user        User?    @relation(fields: [userId], references: [id])
+  type        String   // call, note, meeting
+  content     String?
+  createdAt   DateTime @default(now()) @db.Timestamptz
+}
+
+model ProspectStatusHistory {
+  id          String   @id @default(uuid()) @db.Uuid
+  prospectId  String   @db.Uuid
+  prospect    Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  fromStatus  String?
+  toStatus    String
+  changedBy   String?  @db.Uuid
+  createdAt   DateTime @default(now()) @db.Timestamptz
+}
+
+model ProspectDocument {
+  id          String   @id @default(uuid()) @db.Uuid
+  prospectId  String   @db.Uuid
+  prospect    Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  fileName    String
+  fileUrl     String
+  createdAt   DateTime @default(now()) @db.Timestamptz
+}
+
+model ProspectConsent {
+  id          String   @id @default(uuid()) @db.Uuid
+  prospectId  String   @db.Uuid
+  prospect    Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  type        String
+  version     String
+  granted     Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.Timestamptz
+}
+
+model ProspectConversion {
+  id          String   @id @default(uuid()) @db.Uuid
+  prospectId  String   @unique @db.Uuid
+  prospect    Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  userId      String?  @db.Uuid
+  memberId    String?  @db.Uuid
+  convertedAt DateTime @default(now()) @db.Timestamptz
+  convertedBy String?  @db.Uuid
+}
+
+model Appointment {
+  id          String   @id @default(uuid()) @db.Uuid
+  prospectId  String   @db.Uuid
+  prospect    Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  title       String
+  startAt     DateTime @db.Timestamptz
+  endAt       DateTime? @db.Timestamptz
+  status      String   @default("scheduled")
+  createdAt   DateTime @default(now()) @db.Timestamptz
+}
+
+// ── Notifications & Email ────────────────────────────
+model Notification {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String
+  title      String
+  body        String?
+  channel     String   // in_app, email, line, telegram
+  isRead      Boolean  @default(false)
+  referenceId String?
+  createdAt   DateTime @default(now()) @db.Timestamptz
+}
+
+model NotificationPreference {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  eventKey  String
+  channel   String
+  enabled   Boolean  @default(true)
+  @@unique([userId, eventKey, channel])
+}
+
+model EmailTemplate {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String   @unique
+  nameTh      String
+  subject     String
+  bodyHtml    String   @db.Text
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  versions    EmailTemplateVersion[]
+  messages    EmailMessage[]
+}
+
+model EmailTemplateVersion {
+  id          String   @id @default(uuid()) @db.Uuid
+  templateId  String   @db.Uuid
+  template    EmailTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  version     Int
+  subject     String
+  bodyHtml    String   @db.Text
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  @@unique([templateId, version])
+}
+
+model EmailMessage {
+  id              String   @id @default(uuid()) @db.Uuid
+  eventId         String?  @db.Uuid
+  idempotencyKey  String?  @unique
+  templateId      String?  @db.Uuid
+  template        EmailTemplate? @relation(fields: [templateId], references: [id])
+  templateVersion Int?
+  toEmail         String
+  toUserId        String?  @db.Uuid
+  subject         String
+  bodyHtml        String   @db.Text
+  status          EmailStatus @default(QUEUED)
+  providerMessageId String?
+  attempts        Int      @default(0)
+  error           String?  @db.Text
+  queuedAt        DateTime @default(now()) @db.Timestamptz
+  sentAt          DateTime? @db.Timestamptz
+  recipients      EmailRecipient[]
+  deliveryLogs    EmailDeliveryLog[]
+}
+
+model EmailRecipient {
+  id          String   @id @default(uuid()) @db.Uuid
+  messageId   String   @db.Uuid
+  message     EmailMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  email       String
+  name        String?
+}
+
+model EmailDeliveryLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  messageId   String   @db.Uuid
+  message     EmailMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  status      EmailStatus
+  providerResponse String? @db.Text
+  createdAt   DateTime @default(now()) @db.Timestamptz
+}
+
+model EmailFailure {
+  id          String   @id @default(uuid()) @db.Uuid
+  messageId   String?  @db.Uuid
+  email       String
+  reason      String?  @db.Text
+  createdAt   DateTime @default(now()) @db.Timestamptz
+}
+
+model EmailSuppression {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  reason    String?
+  createdAt DateTime @default(now()) @db.Timestamptz
+}
+
+model ScheduledReport {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  frequency   String   // daily, weekly, monthly, yearly
+  lang        String   @default("th")
+  sendAt      String?  // HH:mm Asia/Bangkok
+  isActive    Boolean  @default(true)
+  lastSentAt  DateTime? @db.Timestamptz
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  logs        ReportDeliveryLog[]
+}
+
+model ReportDeliveryLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  reportId    String   @db.Uuid
+  report      ScheduledReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  sentAt      DateTime @default(now()) @db.Timestamptz
+  status      String
+}
+
+// ── Audit Log (append-only) ──────────────────────────
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String?  @db.Uuid
+  user        User?    @relation(fields: [userId], references: [id])
+  action      String
+  entity      String
+  entityId    String?
+  oldValue    Json?
+  newValue    Json?
+  reason      String?
+  ip          String?
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  @@index([entity, entityId])
+  @@index([userId])
+}

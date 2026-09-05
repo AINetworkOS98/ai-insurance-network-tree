@@ -1,69 +1,71 @@
-import Image from "next/image";
-
-export default function Home() {
+import Header from '@/components/Header';
+import Link from 'next/link';
+export default function Home(){
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div>
+      <Header/>
+      <section className="bg-[#0f2040] text-white">
+        <div className="max-w-[1280px] mx-auto px-6 py-12 grid md:grid-cols-2 gap-8 items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-xs">✦ ระบบโปร่งใส ตรวจสอบได้ • ปฏิบัติตาม PDPA</div>
+            <h1 className="text-3xl md:text-4xl font-bold leading-tight mt-4">สร้างทีม สร้างอนาคต<br/>ด้วยระบบ <span className="text-[#c8a84e]">AI Insurance Network Tree</span></h1>
+            <p className="text-sm opacity-80 mt-3 leading-relaxed">บริหารผู้สนใจ ผู้สมัคร สมาชิก โครงสร้างทีมฐานกว้าง 5 คน ผลงาน รายได้ และเอกสารทางการเงินอย่างโปร่งใส ปลอดภัย ตรวจสอบย้อนหลังได้</p>
+            <div className="flex gap-3 mt-6">
+              <Link href="/register" className="px-6 py-3 rounded-full bg-[#c8a84e] text-[#0f2040] font-semibold">สมัครแสดงความสนใจ</Link>
+              <Link href="/tree" className="px-6 py-3 rounded-full border border-white/30">ดูผังตัวอย่าง</Link>
+            </div>
+            <div className="flex gap-6 mt-6 text-xs opacity-70">
+              <span>✓ ไม่นับ Prospect ในต้นไม้</span><span>✓ รายได้อ้างอิงผลงานจริง</span><span>✓ Audit Log ครบ</span>
+            </div>
+          </div>
+          <div className="rounded-2xl bg-white text-slate-800 p-5">
+            <div className="text-sm font-bold">เส้นทางความก้าวหน้า</div>
+            <div className="mt-3 space-y-2 text-sm">
+              {['ตัวแทน','ผู้บริหารหน่วย','ผู้บริหารศูนย์','ผู้บริหารภาค','ผู้จัดการฝ่าย','ผู้อำนวยการ'].map((t,i)=>(
+                <div key={t} className="flex items-center gap-3 p-2.5 rounded-xl border bg-slate-50">
+                  <div className="w-8 h-8 rounded-full bg-[#0f2040] text-white flex items-center justify-center text-xs">{i+1}</div>
+                  <div className="font-semibold">{t}</div>
+                  <span className="ml-auto text-xs text-slate-500">เงื่อนไขปรับได้โดย Admin</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-slate-500 mt-3">การเลื่อนตำแหน่งต้องผ่านผู้มีอำนาจอนุมัติ • แสดง Progress Bar และสิ่งที่ยังขาด</p>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </section>
+
+      <section id="career" className="max-w-[1280px] mx-auto px-6 py-10 grid md:grid-cols-3 gap-6">
+        {[
+          {t:'ระบบพัฒนาทีม', d:'ต้นไม้ฐานกว้าง 5 คน BFS ซับซ้อนแต่โปร่งใส วางตำแหน่งยุติธรรม'},
+          {t:'ศูนย์เรียนรู้', d:'วิดีโอ บทเรียนสาธารณะ และแบบประเมินก่อนสมัคร'},
+          {t:'รายได้โปร่งใส', d:'Estimated / Approved / Paid แยกสีชัดเจน ไม่การันตีรายได้'},
+        ].map(c=>(
+          <div key={c.t} className="card p-6">
+            <div className="font-bold text-[#0f2040]">{c.t}</div>
+            <div className="text-sm text-slate-600 mt-1">{c.d}</div>
+          </div>
+        ))}
+      </section>
+
+      <section className="max-w-[1280px] mx-auto px-6 pb-10">
+        <div className="card p-6">
+          <h3 className="font-bold text-[#0f2040]">พันธมิตร</h3>
+          <p className="text-xs text-slate-600 mt-1">หากต้องการระบุ “บริษัท ไทยประกันชีวิต จำกัด (มหาชน)” ต้องมีเอกสารอนุญาตก่อนแสดงว่าเป็น Partner อย่างเป็นทางการ มิฉะนั้นแสดง “พันธมิตรที่อยู่ระหว่างการตรวจสอบ” ห้ามใช้โลโก้โดยไม่ได้รับอนุญาต</p>
+          <div className="mt-3 flex gap-3">
+            <div className="px-4 py-3 rounded-xl border bg-amber-50 text-sm">พันธมิตรที่อยู่ระหว่างการตรวจสอบ <span className="badge-demo ml-2">ข้อมูลทดลอง</span></div>
+            <div className="px-4 py-3 rounded-xl border bg-slate-50 text-sm">Brand Guideline ต้องได้รับอนุมัติ</div>
+          </div>
         </div>
-      </main>
+        <div className="mt-4 rounded-xl bg-amber-50 border border-amber-200 p-4 text-xs text-amber-900">
+          รายได้และผลประโยชน์ขึ้นอยู่กับผลงานจริง คุณสมบัติ เงื่อนไข การอนุมัติ และหลักเกณฑ์ที่ใช้ในแต่ละช่วงเวลา ตัวเลขประมาณการไม่ใช่การรับประกันรายได้ กรุณาตรวจสอบกับหน่วยงานหรือบริษัทที่เกี่ยวข้องก่อนนำไปใช้อ้างอิง
+        </div>
+      </section>
+
+      <footer className="border-t bg-white">
+        <div className="max-w-[1280px] mx-auto px-6 py-6 text-xs text-slate-500 flex flex-wrap gap-4">
+          <Link href="/privacy">นโยบายความเป็นส่วนตัว</Link><Link href="/terms">ข้อกำหนดการใช้งาน</Link><Link href="/faq">FAQ</Link><span className="ml-auto">© 2026 AI Insurance Network Tree</span>
+        </div>
+      </footer>
     </div>
   );
 }

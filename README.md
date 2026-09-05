@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Insurance Network Tree — ระบบบริหารเครือข่ายตัวแทนประกัน
 
-## Getting Started
+**ต้นไม้ฐานกว้าง 5 คน • Prospect CRM • Income Engine แบบมี Version • Email แบบ Idempotent • RBAC แบบ Dynamic**
 
-First, run the development server:
-
+## Quick Start
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env   # ใส่ DATABASE_URL
+npx prisma generate
+npx prisma migrate dev --name init
+npx prisma db seed   # ข้อมูลทดลอง — ติดป้ายชัดเจน
+npm run dev          # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Tech
+Next.js 15 App Router + TypeScript + Tailwind + Prisma + PostgreSQL (Supabase) + Supabase Auth + Resend/SES + React Flow + Recharts
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## หลักการสำคัญ
+- ห้ามสร้างสมาชิก/รายได้ปลอม • ตำแหน่งว่างแสดง “ว่าง” ไม่นับผลงาน/รายได้
+- Prospect ไม่กิน Slot ในต้นไม้จนกว่าอนุมัติ • รายได้ทุกบาทอ้างอิงผลงาน + Rule Version
+- อัตราค่าตอบแทนแก้ได้จาก Admin ไม่ hard-code • ทุกการแก้ไขมี Audit Log (append-only)
+- Deny by Default • ตรวจสิทธิ์ 3 ชั้น: UI → API → RLS • เงิน Decimal • เวลา UTC แสดง Asia/Bangkok
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Placement Algorithm (ฐาน 5)
+`src/lib/tree.ts` — BFS Level-Order: ตรวจ parent ที่ขอก่อน → ถ้าเต็มค้นหาชั้นถัดไปซ้าย→ขวา → UNIQUE(parent,slot) + Row Lock + Idempotency Key
 
-## Learn More
+## Income Engine
+`src/lib/income.ts` — `income_rule_versions.rules` (JSONB) คำนวณ → Estimated → Approved → Paid + PDF/QR → Reversal ไม่ลบเดิม
 
-To learn more about Next.js, take a look at the following resources:
+## Email
+`src/lib/email.ts` — Event ID + Idempotency Key + Template Version + Queue + Retry/Backoff + DLQ + Suppression List
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## API
+`POST /api/auth/register` `POST /api/auth/verify-otp` `POST /api/members/approve` `POST /api/tree/place-member` `GET /api/tree/available-slots` `GET /api/income/summary` `GET /api/admin/audit-logs`
