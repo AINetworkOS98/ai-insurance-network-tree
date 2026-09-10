@@ -13,7 +13,7 @@ export default function Header(){
         </Link>
         <nav className="hidden md:flex gap-5 text-sm">
           <Link href="/" className="opacity-80 hover:opacity-100">หน้าแรก</Link>
-          <Link href="/#career" className="opacity-80 hover:opacity-100">เส้นทางความก้าวหน้า</Link>
+          <Link href="/verify" className="opacity-80 hover:opacity-100">ตรวจสมาชิก</Link>
           <Link href="/prospects" className="opacity-80 hover:opacity-100">ผู้สนใจ</Link>
           <Link href="/tree" className="opacity-80 hover:opacity-100">ผังเครือข่าย</Link>
           <Link href="/income" className="opacity-80 hover:opacity-100">รายได้</Link>
@@ -21,7 +21,6 @@ export default function Header(){
           <a href="https://ai-insurance-network-3cp54o23p-ak-e11e.vercel.app/" target="_blank" rel="noreferrer" className="px-3 py-1.5 rounded-full border border-white/30 text-xs hover:bg-white/10">↩ กลับระบบเก่า</a>
         </nav>
         <div className="flex items-center gap-2">
-          <Link href="/login" className="px-4 py-2 rounded-full bg-white text-[#0f2040] text-sm font-semibold">เข้าสู่ระบบ</Link>
           <Link href="/register" className="px-4 py-2 rounded-full bg-[#c8a84e] text-[#0f2040] text-sm font-semibold">สมัครแสดงความสนใจ</Link>
         </div>
       </div>

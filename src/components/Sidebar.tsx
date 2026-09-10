@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 const items=[
   {href:"/dashboard", label:"ภาพรวม", icon:"▦"},
+  {href:"/verify", label:"ตรวจสมาชิก", icon:"🔍"},
+  {href:"/recruit", label:"สมัครตัวแทน", icon:"📝"},
   {href:"/prospects", label:"ผู้สนใจ", icon:"◎"},
   {href:"/appointments", label:"นัดหมาย", icon:"◷"},
   {href:"/tree", label:"ผังเครือข่าย", icon:"⁂"},

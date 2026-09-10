@@ -1,10 +1,25 @@
 import Header from '@/components/Header';
 import Link from 'next/link';
 export default function Home(){
+  const OS_BASE = 'https://ai-insurance-network-os.vercel.app';
+  const OLD_OS = 'https://ai-insurance-network-3cp54o23p-ak-e11e.vercel.app';
   return (
     <div>
       <Header/>
-      <section className="bg-[#0f2040] text-white">
+      {/* Cross-system banner */}
+      <div className="bg-[#0f2040] border-y border-white/10">
+        <div className="max-w-[1280px] mx-auto px-6 py-2 flex flex-wrap gap-2 text-[11px] items-center">
+          <span className="text-white/60">เชื่อมฐานเดียวกัน (akarapol798)</span>
+          <span className="text-white/30">•</span>
+          <a href={`${OS_BASE}/?tab=search_landing`} target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded-full bg-white text-[#0f2040] font-bold hover:bg-white/90">🔍 ค้นหา/ตรวจสมาชิก</a>
+          <a href={`${OS_BASE}/?tab=members_mgmt`} target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded-full bg-white/10 text-white border border-white/20 hover:bg-white/20">👥 จัดการสมาชิก</a>
+          <a href={`${OS_BASE}/?tab=recruit_agent`} target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded-full bg-white/10 text-white border border-white/20 hover:bg-white/20">📝 สมัครตัวแทน</a>
+          <a href={`${OS_BASE}/?tab=ai_studio`} target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded-full bg-white/10 text-white border border-white/20 hover:bg-white/20">✦ AI Studio</a>
+          <a href={`${OS_BASE}/?tab=career_plan`} target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded-full bg-white/10 text-white border border-white/20 hover:bg-white/20">🚀 แผนอาชีพ</a>
+          <a href={OLD_OS} target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded-full border border-white/20 text-white/70 hover:bg-white/10">↩ ระบบเก่า</a>
+        </div>
+      </div>
+      <section className="bg-navy text-white">
         <div className="max-w-[1280px] mx-auto px-6 py-12 grid md:grid-cols-2 gap-8 items-center">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-xs">✦ ระบบโปร่งใส ตรวจสอบได้ • ปฏิบัติตาม PDPA</div>
@@ -23,7 +38,7 @@ export default function Home(){
             <div className="mt-3 space-y-2 text-sm">
               {['ตัวแทน','ผู้บริหารหน่วย','ผู้บริหารศูนย์','ผู้บริหารภาค','ผู้จัดการฝ่าย','ผู้อำนวยการ'].map((t,i)=>(
                 <div key={t} className="flex items-center gap-3 p-2.5 rounded-xl border bg-slate-50">
-                  <div className="w-8 h-8 rounded-full bg-[#0f2040] text-white flex items-center justify-center text-xs">{i+1}</div>
+                  <div className="w-8 h-8 rounded-full bg-navy text-white flex items-center justify-center text-xs">{i+1}</div>
                   <div className="font-semibold">{t}</div>
                   <span className="ml-auto text-xs text-slate-500">เงื่อนไขปรับได้โดย Admin</span>
                 </div>

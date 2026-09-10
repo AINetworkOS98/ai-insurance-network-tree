@@ -1,6 +1,10 @@
 @import "tailwindcss";
-:root{ --navy:#0f2040; --gold:#c8a84e; }
+:root{ --navy:#1e3a5f; --gold:#c8a84e; --soft-white:#f8fafc; --slate-light:#f1f5f9; --slate-medium:#64748b; }
 .bg-navy{ background: var(--navy); } .text-navy{ color: var(--navy); } .border-navy{ border-color: var(--navy); }
 .bg-gold{ background: var(--gold); } .text-gold{ color: var(--gold); }
-.card{ border:1px solid #e2e8f0; border-radius:16px; background:white; }
+.bg-soft-white{ background: var(--soft-white); }
+.text-soft-white{ color: var(--soft-white); }
+.card{ border:1px solid #e2e8f0; border-radius:16px; background:var(--soft-white); }
 .badge-demo{ background:#fef3c7; color:#92400e; border:1px solid #fcd34d; font-size:10px; padding:2px 6px; border-radius:999px; }
+.slate-light{ color: var(--slate-light); }
+.slate-medium{ color: var(--slate-medium); }

@@ -12,7 +12,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Noto+Sans+Thai:wght@400;600&display=swap" rel="stylesheet" />
       </head>
-      <body className="min-h-full flex flex-col bg-[#f6f8fb] text-slate-800" style={{fontFamily:"'Sarabun','Noto Sans Thai',sans-serif"}}>
+      <body className="min-h-full flex flex-col bg-soft-white text-slate-medium font-sans antialiased" style={{fontFamily:"'Sarabun','Noto Sans Thai',sans-serif"}}>
         {children}
       </body>
     </html>
