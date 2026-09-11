@@ -952,6 +952,132 @@ model RankHistory {
   @@index([userId])
 }
 
+// ── Calendar & Maintenance (สเปคหมวด 8+9) ────────────────
+model CalendarPeriod {
+  id          String   @id @default(uuid()) @db.Uuid
+  period      String   @unique // YYYY-MM
+  startAt     DateTime @db.Timestamptz // Asia/Bangkok 00:00 แปลงเป็น UTC เก็บ
+  endAt       DateTime @db.Timestamptz // ก่อนวันแรกเดือนถัดไป 00:00
+  cutoffAt    DateTime? @db.Timestamptz // cutoff พิเศษต่อประเภทงาน
+  status      String   @default("Open") // Open | PendingFinalization | Closed
+  snapshots   MonthlySnapshot[]
+  adjustments PeriodAdjustment[]
+  createdAt   DateTime @default(now()) @db.Timestamptz
+}
+
+model PeriodRule {
+  id        String   @id @default(uuid()) @db.Uuid
+  kind      String   // submission | payment | policy_approved | verified | credited_period
+  period    String?  // YYYY-MM หรือ null = ทุกเดือน
+  cutoffAt  DateTime @db.Timestamptz
+  note      String?
+  createdAt DateTime @default(now()) @db.Timestamptz
+  @@unique([kind, period])
+}
+
+model MonthlySnapshot {
+  id           String   @id @default(uuid()) @db.Uuid
+  period       String
+  calendar     CalendarPeriod @relation(fields: [period], references: [period], onDelete: Cascade)
+  userId       String   @db.Uuid
+  rankLevel    Int
+  planVersion  String?
+  verifiedAmount  Decimal @db.Decimal(18,2)
+  pendingAmount   Decimal @db.Decimal(18,2)
+  rejectedAmount  Decimal @db.Decimal(18,2)
+  remainingToTarget Decimal? @db.Decimal(18,2)
+  snapshot     Json     // ผัง/ตำแหน่ง/แผนเวอร์ชัน ณ เวลาปิดยอด
+  createdAt    DateTime @default(now()) @db.Timestamptz
+  @@unique([period, userId])
+  @@index([period])
+  @@index([userId])
+}
+
+model PeriodAdjustment {
+  id        String   @id @default(uuid()) @db.Uuid
+  period    String
+  calendar  CalendarPeriod @relation(fields: [period], references: [period], onDelete: Cascade)
+  userId    String   @db.Uuid
+  amount    Decimal  @db.Decimal(18,2)
+  reason    String
+  createdBy String?  @db.Uuid
+  isReversal Boolean @default(false)
+  createdAt DateTime @default(now()) @db.Timestamptz
+  @@index([period, userId])
+}
+
+model MaintenancePlan {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String
+  kind            String   // monthly | quarterly
+  metric          String   // commission | premium | com | com_plus
+  status          String   @default("Draft") // Draft | Active | Archived
+  cycle           String   // monthly | quarterly | yearly
+  graceMonths     Int      @default(0) // ระยะผ่อนผันสมาชิกใหม่
+  allowedFailCycles Int    @default(1) // จำนวนรอบไม่ผ่านก่อนตัดสิน
+  warnDaysBefore  Int[]    @default([7,3,1]) // แจ้งเตือนก่อนปิดยอด
+  effectDate      DateTime? @db.Timestamptz
+  createdBy       String?  @db.Uuid
+  isLegacyRef     Boolean  @default(false) // อ้างอิงไตรมาส 2569
+  createdAt       DateTime @default(now()) @db.Timestamptz
+  updatedAt       DateTime @updatedAt @db.Timestamptz
+  rules           MaintenanceRule[]
+  results         MaintenanceResult[]
+}
+
+model MaintenanceRule {
+  id          String   @id @default(uuid()) @db.Uuid
+  planId      String   @db.Uuid
+  plan        MaintenancePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  targetRank  Int      // 0..4
+  minAmount   Decimal  @db.Decimal(18,2)
+  resultType  String   // warning | suspended | removed | demoted
+  label       String?  // ป้องกันสตาร์ / แก้สตาร์
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  @@unique([planId, targetRank])
+  @@index([planId])
+}
+
+model MaintenanceResult {
+  id          String   @id @default(uuid()) @db.Uuid
+  planId      String   @db.Uuid
+  plan        MaintenancePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  period      String   // YYYY-MM หรือ YYYY-Qn
+  userId      String   @db.Uuid
+  targetRank  Int
+  required    Decimal  @db.Decimal(18,2)
+  verified    Decimal  @db.Decimal(18,2)
+  remaining   Decimal  @db.Decimal(18,2)
+  status      String   // passed | warning | suspended | removed | pending_review
+  reason      String?
+  decidedAt   DateTime @default(now()) @db.Timestamptz
+  @@unique([planId, period, userId])
+  @@index([period, status])
+}
+
+model MembershipStatusHistory {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  fromStatus  String?
+  toStatus    String
+  reason      String?
+  changedBy   String?  @db.Uuid
+  period      String?
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  @@index([userId])
+}
+
+model ReviewRequest {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  status      String   @default("pending") // pending | approved | rejected
+  reason      String
+  decidedBy   String?  @db.Uuid
+  decidedAt   DateTime? @db.Timestamptz
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  @@index([userId, status])
+}
+
 // ── Audit Log (append-only) ──────────────────────────
 model AuditLog {
   id          String   @id @default(uuid()) @db.Uuid
