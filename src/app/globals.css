@@ -1,11 +1,11 @@
 @import "tailwindcss";
-:root{ --navy:#1e3a5f; --gold:#c8a84e; --soft-white:#FFFBF5; --warm-white:#FFFBF5; --slate-light:#f1f5f9; --slate-medium:#64748b; }
-html,body{ background: var(--soft-white); }
+:root{ --navy:#475569; --gold:#c8a84e; --soft-white:#ffffff; --warm-white:#ffffff; --slate-light:#f1f5f9; --slate-medium:#64748b; } /* พื้นขาวล้วน #ffffff */
+html,body{ background: #ffffff; }
 .bg-navy{ background: var(--navy); } .text-navy{ color: var(--navy); } .border-navy{ border-color: var(--navy); }
 .bg-gold{ background: var(--gold); } .text-gold{ color: var(--gold); }
-.bg-soft-white{ background: var(--soft-white); }
+.bg-soft-white{ background: #ffffff; }
 .text-soft-white{ color: var(--soft-white); }
-.card{ border:1px solid #ece6d9; border-radius:16px; background:#ffffff; box-shadow:0 1px 3px rgba(30,58,95,.06); }
+.card{ border:1px solid #e5e7eb; border-radius:16px; background:#ffffff; box-shadow:0 1px 3px rgba(0,0,0,.06); }
 .badge-demo{ background:#fef3c7; color:#92400e; border:1px solid #fcd34d; font-size:10px; padding:2px 6px; border-radius:999px; }
 .slate-light{ color: var(--slate-light); }
 .slate-medium{ color: var(--slate-medium); }
