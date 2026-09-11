@@ -90,6 +90,15 @@ model User {
   sponsorId         String?  @db.Uuid
   sponsor           User?    @relation("UserSponsor", fields: [sponsorId], references: [id])
   sponsored         User[]   @relation("UserSponsor")
+  // สเปคหมวด 4: แยก 3 คอลัมน์
+  placementParentId String?  @db.Uuid // ตำแหน่งแม่ในผัง 1 แตก 5
+  placementParent   User?    @relation("UserPlacement", fields: [placementParentId], references: [id])
+  placementChildren User[]   @relation("UserPlacement")
+  managerId         String?  @db.Uuid // โครงสร้างบังคับบัญชาจริง
+  manager           User?    @relation("UserManager", fields: [managerId], references: [id])
+  managedUsers      User[]   @relation("UserManager")
+  memberCode        String?  @unique // M-XXXXXX auto
+  referralCode      String?  @unique // R-XXXXXX auto
   status            UserStatus @default(PENDING)
   rankLevel         Int      @default(0) // 0=ผู้สนใจทั่วไป ... 4=ผู้จัดการภาค (สเปคหมวด 2)
   rankUpdatedAt     DateTime? @db.Timestamptz
@@ -105,6 +114,10 @@ model User {
 
   sessions          UserSession[]
   authIdentities    AuthIdentity[]
+  referralCodeEntry ReferralCode?
+  sponsorshipAsChild Sponsorship? @relation("SponsorshipChild")
+  sponsorshipsAsParent Sponsorship[] @relation("SponsorshipParent")
+  placementQueue    PlacementQueue?
   roles             UserRole[]
   memberProfile     MemberProfile?
   prospectsOwned    Prospect[] @relation("ProspectOwner")
@@ -716,6 +729,50 @@ model PasswordResetToken {
   usedAt    DateTime? @db.Timestamptz
   createdAt DateTime @default(now()) @db.Timestamptz
   @@index([userId])
+}
+
+// ── Referral & Sponsorship (สเปคหมวด 4) ────────────────────
+model ReferralCode {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String   @unique // R-XXXXXX
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now()) @db.Timestamptz
+  @@index([code])
+}
+
+model Sponsorship {
+  id             String   @id @default(uuid()) @db.Uuid
+  childId        String   @unique @db.Uuid // ผู้ถูกแนะนำ
+  child          User     @relation("SponsorshipChild", fields: [childId], references: [id], onDelete: Cascade)
+  sponsorId      String   @db.Uuid // ผู้แนะนำจริง (sponsor_id)
+  sponsor        User     @relation("SponsorshipParent", fields: [sponsorId], references: [id])
+  referralCode   String?
+  createdAt      DateTime @default(now()) @db.Timestamptz
+  @@index([sponsorId])
+}
+
+model SponsorshipHistory {
+  id          String   @id @default(uuid()) @db.Uuid
+  childId     String   @db.Uuid
+  oldSponsorId String? @db.Uuid
+  newSponsorId String? @db.Uuid
+  reason      String
+  changedBy   String?  @db.Uuid
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  @@index([childId])
+}
+
+model PlacementQueue {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @unique @db.Uuid
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sponsorId   String?  @db.Uuid
+  queueNo     Int      @unique @default(autoincrement())
+  reason      String?  // เหตุผลที่พักในคิว
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  @@index([queueNo])
 }
 
 // ── Audit Log (append-only) ──────────────────────────
