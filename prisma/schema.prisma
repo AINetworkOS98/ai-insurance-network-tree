@@ -125,6 +125,7 @@ model User {
   prospectsOwned    Prospect[] @relation("ProspectOwner")
   prospectActivities ProspectActivity[]
   auditLogs         AuditLog[]
+  rankHistories     RankHistory[]
   notifications     Notification[]
   consentRecords    ConsentRecord[]
   incomeTransactions IncomeTransaction[]
@@ -895,6 +896,60 @@ model PerformanceLedger {
   periodSnapshotId String? @db.Uuid
   createdAt       DateTime @default(now()) @db.Timestamptz
   @@index([userId, period])
+}
+
+// ── Rank Plans (สเปคหมวด 6) ───────────────────────────────
+model RankPlan {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  version     String   @unique // v1, v2 ...
+  status      String   @default("Draft") // Draft | Active | Archived
+  validFrom   DateTime? @db.Timestamptz
+  validTo     DateTime? @db.Timestamptz
+  sourceRef   String?  // แหล่งอ้างอิง
+  createdBy   String?  @db.Uuid
+  isLegacyRef Boolean  @default(false) // ข้อมูลอ้างอิงเก่า 15 Jan 64
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
+  rules       RankRule[]
+  histories   RankHistory[]
+}
+
+model RankRule {
+  id              String   @id @default(uuid()) @db.Uuid
+  planId          String   @db.Uuid
+  plan            RankPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  targetRank      Int      // 1..4 (เลื่อนไปขั้นนี้)
+  // แยกฐานวัด — ห้ามใช้แทนกันโดยไม่มีนิยาม
+  metric          String   // premium | commission | fyc | com | com_plus
+  personalMin     Decimal? @db.Decimal(18,2)
+  teamMin         Decimal? @db.Decimal(18,2)
+  qualifiedUnits  Int?     // จำนวนหน่วยที่ผ่านคุณสมบัติ
+  qualifiedCenters Int?    // จำนวนศูนย์ที่ผ่านคุณสมบัติ
+  durationMinMonths Int?
+  durationMaxMonths Int?
+  licenseRequired Boolean  @default(false)
+  evalType        String   @default("auto") // auto | approval
+  description     String?
+  createdAt       DateTime @default(now()) @db.Timestamptz
+  @@unique([planId, targetRank, metric])
+  @@index([planId])
+}
+
+model RankHistory {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fromRank    Int
+  toRank      Int
+  planId      String?  @db.Uuid
+  plan        RankPlan? @relation(fields: [planId], references: [id])
+  result      String   // promoted | demoted | evaluated_incomplete | rejected
+  evaluatedAt DateTime @default(now()) @db.Timestamptz
+  reason      String?
+  snapshot    Json?    // ผลงานที่ใช้ประเมิน
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  @@index([userId])
 }
 
 // ── Audit Log (append-only) ──────────────────────────
