@@ -732,6 +732,21 @@ model ReportDeliveryLog {
   status      String
 }
 
+// ── Event Outbox (สเปคหมวด 12: ยอด + แจ้งเตือน atomic) ─
+model EventOutbox {
+  id          String   @id @default(uuid()) @db.Uuid
+  eventId     String   @unique // idempotency key: event+recipient+channel
+  eventType   String   // member.registered, rank.promoted, period.closed ...
+  payload     Json
+  recipientId String?  @db.Uuid
+  channel     String   @default("in_app") // in_app | email
+  status      String   @default("pending") // pending | sent | failed
+  attempts    Int      @default(0)
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  sentAt      DateTime? @db.Timestamptz
+  @@index([status, createdAt])
+}
+
 // ── System Config (สเปคหมวด 1 — ชื่อระบบตั้งค่าได้) ─────────────
 model SystemConfig {
   id        String   @id @default("default") // singleton
