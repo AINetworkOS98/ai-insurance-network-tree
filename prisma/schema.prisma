@@ -208,6 +208,7 @@ model TreeNode {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   level       Int      @default(0)
   directCount Int      @default(0)
+  isActive    Boolean  @default(true) // สเปคหมวด 9: คัดออกแล้วคงจุดเดิมเป็นไม่ใช้งาน
   createdAt   DateTime @default(now()) @db.Timestamptz
   placementsAsParent TreePlacement[] @relation("PlacementParent")
 }
@@ -226,6 +227,48 @@ model TreePlacement {
   createdAt       DateTime @default(now()) @db.Timestamptz
   @@unique([parentId, slot])
   @@index([parentId])
+}
+
+model PlacementRun {
+  id             String   @id @default(uuid()) @db.Uuid
+  jobId          String   @unique // ใช้ติดตาม background job
+  idempotencyKey String?  @unique
+  status         String   @default("running") // running | paused | completed | failed
+  startedBy      String?  @db.Uuid
+  startedAt      DateTime @default(now()) @db.Timestamptz
+  finishedAt     DateTime? @db.Timestamptz
+  totalQueued    Int      @default(0)
+  totalSuccess   Int      @default(0)
+  totalSkipped   Int      @default(0)
+  totalFailed    Int      @default(0)
+  scopeTeamId    String?  @db.Uuid // ขอบเขตทีมที่ได้รับสิทธิ
+  entries        PlacementRunEntry[]
+}
+
+model PlacementRunEntry {
+  id          String   @id @default(uuid()) @db.Uuid
+  runId       String   @db.Uuid
+  run         PlacementRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  userId      String   @db.Uuid
+  parentId    String?  @db.Uuid
+  slot        Int?
+  status      String   // success | skipped | failed
+  reason      String?
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  @@index([runId])
+}
+
+model PlacementHistory {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  parentId    String?  @db.Uuid
+  slot        Int?
+  level       Int?
+  action      String   // placed | moved | removed
+  reason      String?
+  changedBy   String?  @db.Uuid
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  @@index([userId])
 }
 
 // ── Positions & Qualifications ────────────────────────
