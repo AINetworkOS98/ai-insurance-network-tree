@@ -1,5 +1,7 @@
 import Header from '@/components/Header';
 import Link from 'next/link';
+import { RANK_CATALOG } from '@/lib/rankCatalog';
+// หน้าแรกสำหรับทุกระดับ — สมาชิกทั่วไป (rank 0) เห็นเฉพาะหน้านี้ ไม่โหลดข้อมูลหลังบ้าน (สเปคหมวด 2, 11)
 export default function Home(){
   const OS_BASE = 'https://ai-insurance-network-os.vercel.app';
   const OLD_OS = 'https://ai-insurance-network-3cp54o23p-ak-e11e.vercel.app';
@@ -23,28 +25,35 @@ export default function Home(){
         <div className="max-w-[1280px] mx-auto px-6 py-12 grid md:grid-cols-2 gap-8 items-center">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-xs">✦ ระบบโปร่งใส ตรวจสอบได้ • ปฏิบัติตาม PDPA</div>
-            <h1 className="text-3xl md:text-4xl font-bold leading-tight mt-4">สร้างทีม สร้างอนาคต<br/>ด้วยระบบ <span className="text-[#c8a84e]">AI Insurance Network Tree</span></h1>
+            <h1 className="text-3xl md:text-4xl font-bold leading-tight mt-4">สร้างทีม สร้างอนาคต<br/>ด้วยระบบ <span className="text-[#c8a84e]">AI INSURANCE NETWORK OS</span></h1>
             <p className="text-sm opacity-80 mt-3 leading-relaxed">บริหารผู้สนใจ ผู้สมัคร สมาชิก โครงสร้างทีมฐานกว้าง 5 คน ผลงาน รายได้ และเอกสารทางการเงินอย่างโปร่งใส ปลอดภัย ตรวจสอบย้อนหลังได้</p>
             <div className="flex gap-3 mt-6">
               <Link href="/register" className="px-6 py-3 rounded-full bg-[#c8a84e] text-[#0f2040] font-semibold">สมัครแสดงความสนใจ</Link>
               <Link href="/tree" className="px-6 py-3 rounded-full border border-white/30">ดูผังตัวอย่าง</Link>
             </div>
-            <div className="flex gap-6 mt-6 text-xs opacity-70">
+            <div className="mt-4 p-3 rounded-xl bg-white/10 border border-white/20 text-xs leading-relaxed">
+              <div className="font-semibold">สำหรับผู้สนใจทั่วไป:</div>
+              <div className="opacity-80 mt-1">สมัครตัวแทน • แก้ข้อมูลบัญชีพื้นฐาน • ดูสถานะคำขอ • อ่านการแจ้งเตือนของตน — ไม่แสดงเมนูหลังบ้านจนกว่าจะเป็นตัวแทน</div>
+            </div>
+            <div className="flex gap-6 mt-4 text-xs opacity-70">
               <span>✓ ไม่นับ Prospect ในต้นไม้</span><span>✓ รายได้อ้างอิงผลงานจริง</span><span>✓ Audit Log ครบ</span>
             </div>
           </div>
           <div className="rounded-2xl bg-white text-slate-800 p-5">
-            <div className="text-sm font-bold">เส้นทางความก้าวหน้า</div>
+            <div className="text-sm font-bold">เส้นทางตำแหน่ง — 5 ขั้นตามสเปค (ไม่เกินผู้จัดการภาค)</div>
             <div className="mt-3 space-y-2 text-sm">
-              {['ตัวแทน','ผู้บริหารหน่วย','ผู้บริหารศูนย์','ผู้บริหารภาค','ผู้จัดการฝ่าย','ผู้อำนวยการ'].map((t,i)=>(
-                <div key={t} className="flex items-center gap-3 p-2.5 rounded-xl border bg-slate-50">
-                  <div className="w-8 h-8 rounded-full bg-navy text-white flex items-center justify-center text-xs">{i+1}</div>
-                  <div className="font-semibold">{t}</div>
-                  <span className="ml-auto text-xs text-slate-500">เงื่อนไขปรับได้โดย Admin</span>
+              {RANK_CATALOG.map((r)=>(
+                <div key={r.code} className="flex items-center gap-3 p-2.5 rounded-xl border bg-slate-50">
+                  <div className="w-8 h-8 rounded-full bg-navy text-white flex items-center justify-center text-xs">{r.level}</div>
+                  <div>
+                    <div className="font-semibold">{r.nameTh}</div>
+                    <div className="text-[11px] text-slate-500">อ้างอิง: {r.nameRef}</div>
+                  </div>
+                  <span className="ml-auto text-xs text-slate-500">{r.level===0?'เริ่มทุกคน':'เลื่อนตามผลงานจริง'}</span>
                 </div>
               ))}
             </div>
-            <p className="text-[11px] text-slate-500 mt-3">การเลื่อนตำแหน่งต้องผ่านผู้มีอำนาจอนุมัติ • แสดง Progress Bar และสิ่งที่ยังขาด</p>
+            <p className="text-[11px] text-slate-500 mt-3">สเปค: ผัง 1 แตก 5 ใช้จัดวางเท่านั้น แยกจากผังผู้แนะนำ/บังคับบัญชา — ครบ 5 คนไม่ได้เลื่อนตำแหน่งอัตโนมัติ</p>
           </div>
         </div>
       </section>

@@ -1,4 +1,6 @@
 // RBAC — Deny by Default
+// สเปคหมวด 2: แยก 3 เรื่อง — rank (สายงาน 0-4) / memberStatus (PENDING/ACTIVE/SUSPENDED/...) / permissions (รายความสามารถ)
+// ห้ามให้การเลื่อนตำแหน่งสร้างสิทธิ Super Admin อัตโนมัติ
 export type PermissionKey = string;
 export type DataScope = "Own"|"Direct"|"Team"|"Branch"|"Assigned"|"All";
 
@@ -14,18 +16,25 @@ export const PERMISSIONS: {key:string, nameTh:string, category:string}[] = [
   {key:"member.view_full_downline", nameTh:"ดูสายงานทั้งหมด", category:"member"},
   {key:"member.view_all", nameTh:"ดูสมาชิกทั้งหมด", category:"member"},
   {key:"member.approve", nameTh:"อนุมัติสมาชิก", category:"member"},
+  {key:"member.sponsor_edit", nameTh:"แก้ผู้แนะนำ (ต้องมีเหตุผล+ประวัติ)", category:"member"},
   {key:"tree.view_own", nameTh:"ดูต้นไม้ตนเอง", category:"tree"},
   {key:"tree.view_team", nameTh:"ดูต้นไม้ทีม", category:"tree"},
   {key:"tree.view_all", nameTh:"ดูต้นไม้ทั้งหมด", category:"tree"},
-  {key:"tree.manage", nameTh:"จัดการต้นไม้", category:"tree"},
+  {key:"tree.manage", nameTh:"จัดการต้นไม้/รันจัดวาง", category:"tree"},
   {key:"income.view_own", nameTh:"ดูรายได้ตนเอง", category:"income"},
   {key:"income.view_team", nameTh:"ดูรายได้ทีม", category:"income"},
   {key:"income.view_all", nameTh:"ดูรายได้ทั้งหมด", category:"income"},
   {key:"income.approve", nameTh:"อนุมัติรายได้", category:"income"},
   {key:"document.download", nameTh:"ดาวน์โหลดเอกสาร", category:"document"},
+  {key:"document.verify", nameTh:"ตรวจหลักฐานใบเสร็จ", category:"document"},
+  {key:"rank.manage", nameTh:"ตั้งแผนตำแหน่ง/กฎขึ้นตำแหน่ง", category:"rank"},
+  {key:"rank.approve", nameTh:"อนุมัติเลื่อนตำแหน่ง", category:"rank"},
+  {key:"maintenance.manage", nameTh:"ตั้งแผนรักษายอด/คัดออก", category:"maintenance"},
+  {key:"period.close", nameTh:"ปิดยอดรายเดือน/ปี", category:"period"},
+  {key:"system.manage", nameTh:"ตั้งค่าระบบ/ชื่อระบบ", category:"admin"},
   {key:"report.export", nameTh:"ส่งออกข้อมูล", category:"report"},
   {key:"role.manage", nameTh:"จัดการบทบาท", category:"admin"},
-  {key:"permission.manage", nameTh:"จัดการสิทธิ์", category:"admin"},
+  {key:"permission.manage", nameTh:"จัดการสิทธิ์รายความสามารถ", category:"admin"},
   {key:"audit.view", nameTh:"ดู Audit Log", category:"admin"},
 ];
 

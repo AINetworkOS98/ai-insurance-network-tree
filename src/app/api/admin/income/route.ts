@@ -1,12 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebase-admin';
 import { verifyToken } from '@/lib/auth';
-import { calculateTotalIncome, INITIAL_PLAN_VERSION, DEFAULT_POSITIONS } from '@/lib/calculationEngine';
+import { calculateTotalIncome, INITIAL_PLAN_VERSION, DEFAULT_POSITIONS, MemberMetrics, PositionId } from '@/lib/calculationEngine';
+
+interface FirestoreMember {
+  id: string;
+  memberCode?: string;
+  displayName?: string;
+  name?: string;
+  positionId?: PositionId;
+  role?: string;
+  status?: string;
+  personalFYC?: number;
+  teamFYC?: number;
+  personalCOM?: number;
+  teamCOM?: number;
+  renewalPremium?: number;
+  firstYearPremium?: number;
+  separatedUnitsCount?: number;
+  separatedCentersCount?: number;
+  separatedRegionsCount?: number;
+  parentMemberId?: string;
+}
 
 export async function GET(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '') || req.cookies.get('auth_token')?.value;
+    const token = authHeader?.replace('Bearer ', '') || (req.cookies.get('token')?.value || req.cookies.get('auth_token')?.value);
     
     if (!token) {
       return NextResponse.json({ ok: false, error: 'ไม่พบโทเค็นการยืนยันตัวตน' }, { status: 401 });
@@ -17,14 +37,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'โทเค็นไม่ถูกต้องหรือหมดอายุ' }, { status: 401 });
     }
     
-    if (decoded.role !== 'admin' && decoded.role !== 'super_admin') {
+    const roles = (decoded as any).roles || ((decoded as any).role ? [(decoded as any).role] : []);
+    const isAdmin = roles.includes('admin') || roles.includes('super_admin') || roles.includes('auditor');
+    if (!isAdmin) {
       return NextResponse.json({ ok: false, error: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
     }
     
     const db = getDb();
     const membersSnap = await db.collection('members').where('status', '==', 'active').get();
     
-    const members = membersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const members: FirestoreMember[] = membersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as FirestoreMember));
     
     // Calculate income for each member based on their position
     const incomeResults = [];
@@ -46,7 +68,7 @@ export async function GET(req: NextRequest) {
         .where('parentMemberId', '==', member.id)
         .get();
       
-      const downlineMembers = downlineSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const downlineMembers: FirestoreMember[] = downlineSnap.docs.map(d => ({ id: d.id, ...d.data() } as FirestoreMember));
       const activeDownline = downlineMembers.filter(m => m.status === 'active');
       const teamFYCCalc = activeDownline.reduce((sum, m) => sum + (m.personalFYC || 0), 0);
       const teamCOMCalc = activeDownline.reduce((sum, m) => sum + (m.personalCOM || 0), 0);
@@ -54,9 +76,9 @@ export async function GET(req: NextRequest) {
       const totalCenters = activeDownline.filter(m => m.positionId === 'center_manager' || m.positionId === 'senior_center_manager').length;
       const totalRegions = activeDownline.filter(m => m.positionId === 'region_manager' || m.positionId === 'executive_region').length;
       
-      const result = calculateTotalIncome({
+      const calcInput: MemberMetrics & { memberId: string; positionId: PositionId; period: string; planVersion: typeof INITIAL_PLAN_VERSION } = {
         memberId: member.id,
-        positionId: positionId as any,
+        positionId: positionId as PositionId,
         personalFYC,
         teamFYC: teamFYCCalc || teamFYC,
         personalCOM,
@@ -70,9 +92,12 @@ export async function GET(req: NextRequest) {
         separatedRegionsCount,
         annualFYC: (teamFYCCalc || teamFYC) * 12,
         annualCOM: (teamCOMCalc || teamCOM) * 12,
+        status: 'active',
         period: '2026-09',
         planVersion: INITIAL_PLAN_VERSION,
-      });
+      };
+      
+      const result = calculateTotalIncome(calcInput);
       
       incomeResults.push({
         memberId: member.id,

@@ -1,12 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebase-admin';
 import { verifyToken } from '@/lib/auth';
-import { DEFAULT_POSITIONS } from '@/lib/compensationRules';
+import { DEFAULT_POSITIONS, PositionId } from '@/lib/compensationRules';
+
+interface FirestoreMember {
+  id: string;
+  memberCode?: string;
+  displayName?: string;
+  name?: string;
+  positionId?: PositionId;
+  role?: string;
+  status?: string;
+  personalFYC?: number;
+  personalCOM?: number;
+  parentMemberId?: string;
+  unitId?: string;
+  centerId?: string;
+  regionId?: string;
+}
 
 export async function GET(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '') || req.cookies.get('auth_token')?.value;
+    const token = authHeader?.replace('Bearer ', '') || (req.cookies.get('token')?.value || req.cookies.get('auth_token')?.value);
     
     if (!token) {
       return NextResponse.json({ ok: false, error: 'ไม่พบโทเค็นการยืนยันตัวตน' }, { status: 401 });
@@ -17,14 +33,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'โทเค็นไม่ถูกต้องหรือหมดอายุ' }, { status: 401 });
     }
     
-    if (decoded.role !== 'admin' && decoded.role !== 'super_admin') {
+    const roles = (decoded as any).roles || ((decoded as any).role ? [(decoded as any).role] : []);
+    const isAdmin = roles.includes('admin') || roles.includes('super_admin') || roles.includes('auditor');
+    if (!isAdmin) {
       return NextResponse.json({ ok: false, error: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
     }
     
     const db = getDb();
     const membersSnap = await db.collection('members').get();
     
-    const members = membersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const members: FirestoreMember[] = membersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as FirestoreMember));
     
     // Build tree position data
     const positionData = DEFAULT_POSITIONS.map(pos => {
@@ -62,23 +80,45 @@ export async function GET(req: NextRequest) {
     // Tree structure - build hierarchy
     const rootMembers = members.filter(m => !m.parentMemberId && m.status === 'active');
     
-    function buildTree(member: any, depth = 0) {
-      const children = members.filter(m => m.parentMemberId === member.id && m.status === 'active');
-      return {
-        id: member.id,
-        memberCode: member.memberCode,
-        name: member.displayName || member.name,
-        positionId: member.positionId,
-        positionName: DEFAULT_POSITIONS.find(p => p.id === member.positionId)?.name || member.positionId,
-        personalFYC: member.personalFYC || 0,
-        personalCOM: member.personalCOM || 0,
-        status: member.status,
-        depth,
-        children: children.map(c => buildTree(c, depth + 1))
-      };
-    }
+    function buildTree(member: FirestoreMember, depth = 0): {
+        id: string;
+        memberCode: string | undefined;
+        name: string | undefined;
+        positionId: string | undefined;
+        positionName: string;
+        personalFYC: number;
+        personalCOM: number;
+        status: string | undefined;
+        depth: number;
+        children: any[];
+      } {
+        const children = members.filter(m => m.parentMemberId === member.id && m.status === 'active');
+        return {
+          id: member.id,
+          memberCode: member.memberCode,
+          name: member.displayName || member.name,
+          positionId: member.positionId,
+          positionName: DEFAULT_POSITIONS.find(p => p.id === member.positionId)?.name || member.positionId || 'agent',
+          personalFYC: member.personalFYC || 0,
+          personalCOM: member.personalCOM || 0,
+          status: member.status,
+          depth,
+          children: children.map(c => buildTree(c, depth + 1))
+        };
+      }
     
-    const treeStructure = rootMembers.map(m => buildTree(m));
+    const treeStructure: {
+    id: string;
+    memberCode: string | undefined;
+    name: string | undefined;
+    positionId: string | undefined;
+    positionName: string;
+    personalFYC: number;
+    personalCOM: number;
+    status: string | undefined;
+    depth: number;
+    children: any[];
+  }[] = rootMembers.map(m => buildTree(m));
     
     return NextResponse.json({ 
       ok: true, 
