@@ -1,11 +1,13 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function Admin() {
+export const dynamic = 'force-dynamic';
+
+function AdminContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/dashboard';
@@ -109,8 +111,8 @@ export default function Admin() {
             <button
               onClick={() => setActiveTab('members')}
               className={`px-4 py-2 rounded-full text-sm font-medium ${
-                activeTab === 'members' 
-                  ? 'bg-[#0f2040] text-white' 
+                activeTab === 'members'
+                  ? 'bg-[#0f2040] text-white'
                   : 'border text-slate-500 hover:bg-slate-50'
               }`}
             >
@@ -260,42 +262,53 @@ export default function Admin() {
               <div className="mt-6 card p-5">
                 <h2 className="text-lg font-bold text-navy">กราปจัดแบ่งรายได้</h2>
                 <div className="grid grid-cols-2 gap-3 mt-4">
-                  <div>
-                    <div className="text-xs text-slate-500">ส่วนตัว (Personal)</div>
-                    <div className="h-4 bg-slate-200 rounded-full overflow-hidden">
-                      <div 
-                        style={{ height: `${incomes.length > 0 ? (incomes[0].summary.personalCommission / Math.max(1, incomes.reduce((s: any, x: any) => s + x.totalIncome, 0)) * 100 : 0)}%`, background: '#34d399' }}
-                        className="h-full rounded-full"
-                      ></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-500">หน่วย (Unit)</div>
-                    <div className="h-4 bg-slate-200 rounded-full overflow-hidden">
-                      <div 
-                        style={{ height: `${incomes.length > 0 ? (incomes[0].summary.unitIncomes / Math.max(1, incomes.reduce((s: any, x: any) => s + x.totalIncome, 0)) * 100 : 0)}%`, background: '#a78bfa' }}
-                        className="h-full rounded-full"
-                      ></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-500">ศูนย์ (Center)</div>
-                    <div className="h-4 bg-slate-200 rounded-full overflow-hidden">
-                      <div 
-                        style={{ height: `${incomes.length > 0 ? (incomes[0].summary.centerIncomes / Math.max(1, incomes.reduce((s: any, x: any) => s + x.totalIncome, 0)) * 100 : 0)}%`, background: '#fbbf24' }}
-                        className="h-full rounded-full"
-                      ></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-500">ภาค (Region)</div>
-                    <div className="h-4 bg-slate-200 rounded-full overflow-hidden">
-                      <div 
-                        style={{ height: `${incomes.length > 0 ? (incomes[0].summary.regionIncomes / Math.max(1, incomes.reduce((s: any, x: any) => s + x.totalIncome, 0)) * 100 : 0)}%`, background: '#f43f5e' }}
-                        className="h-full rounded-full"
-                      ></div>
-                    </div>
-                  </div>
+                  {(() => {
+                    const totalIncomeSum = incomes.length > 0 ? incomes.reduce((s: number, x: any) => s + x.totalIncome, 0) : 1;
+                    const personalPct = incomes.length > 0 ? (incomes[0].summary.personalCommission / Math.max(1, totalIncomeSum)) * 100 : 0;
+                    const unitPct = incomes.length > 0 ? (incomes[0].summary.unitIncomes / Math.max(1, totalIncomeSum)) * 100 : 0;
+                    const centerPct = incomes.length > 0 ? (incomes[0].summary.centerIncomes / Math.max(1, totalIncomeSum)) * 100 : 0;
+                    const regionPct = incomes.length > 0 ? (incomes[0].summary.regionIncomes / Math.max(1, totalIncomeSum)) * 100 : 0;
+                    return (
+                      <>
+                        <div>
+                          <div className="text-xs text-slate-500">ส่วนตัว (Personal)</div>
+                          <div className="h-4 bg-slate-200 rounded-full overflow-hidden">
+                            <div
+                              style={{ height: `${personalPct}%`, background: '#34d399' }}
+                              className="h-full rounded-full"
+                            ></div>
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-slate-500">หน่วย (Unit)</div>
+                          <div className="h-4 bg-slate-200 rounded-full overflow-hidden">
+                            <div
+                              style={{ height: `${unitPct}%`, background: '#a78bfa' }}
+                              className="h-full rounded-full"
+                            ></div>
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-slate-500">ศูนย์ (Center)</div>
+                          <div className="h-4 bg-slate-200 rounded-full overflow-hidden">
+                            <div
+                              style={{ height: `${centerPct}%`, background: '#fbbf24' }}
+                              className="h-full rounded-full"
+                            ></div>
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-slate-500">ภาค (Region)</div>
+                          <div className="h-4 bg-slate-200 rounded-full overflow-hidden">
+                            <div
+                              style={{ height: `${regionPct}%`, background: '#f43f5e' }}
+                              className="h-full rounded-full"
+                            ></div>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
@@ -360,3 +373,11 @@ const DEFAULT_POSITIONS = [
   { id: 'senior_center_manager', name: 'ผู้บริหารศูนย์อาวุโส', color: '#fb923c' },
   { id: 'executive_region', name: 'ผู้บริหารภาคอาวุโส', color: '#e879f9' },
 ];
+
+export default function Admin() {
+  return (
+    <Suspense fallback={<div className="p-8"><div className="card p-6"><div className="loading-spinner mx-auto mb-4" /><p className="text-center text-slate-500">กำลังโหลด...</p></div></div>}>
+      <AdminContent />
+    </Suspense>
+  );
+}

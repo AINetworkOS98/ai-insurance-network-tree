@@ -235,3 +235,46 @@ export interface DownlineMetrics {
   totalRegions: number;
   downlineMembers: Member[];
 }
+
+export interface MemberMetrics {
+  memberId: string;
+  positionId: PositionId;
+  personalFYC: number;
+  teamFYC: number;
+  personalCOM: number;
+  teamCOM: number;
+  firstYearPremium: number;
+  renewalPremium: number;
+  directMembersCount: number;
+  activeMembersCount: number;
+  separatedUnitsCount: number;
+  separatedCentersCount: number;
+  separatedRegionsCount: number;
+  annualFYC: number;
+  annualCOM: number;
+  status: 'active' | 'inactive' | 'probation';
+}
+
+export interface IncomeBreakdown {
+  personalCommission: number;
+  unitCommission: number;
+  unitSeparation: number;
+  centerType1: number;
+  centerType2: number;
+  centerType3: number;
+  centerSeparation: number;
+  centerBonus: number;
+  regionType1: number;
+  regionType2: number;
+  regionBonus: number;
+  annualBonus: number;
+  specialBonus: number;
+}
+
+export interface IncomeSummary {
+  personalCommission: number;
+  unitIncomes: number;
+  centerIncomes: number;
+  regionIncomes: number;
+  bonusIncomes: number;
+}

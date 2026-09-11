@@ -1,15 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { calculateTotalIncome } from '@/lib/calculationEngine';
+import { calculateTotalIncome, MemberMetrics, PositionId, CompensationPlanVersion, INITIAL_PLAN_VERSION } from '@/lib/calculationEngine';
 import { getDb } from '@/lib/firebase-admin';
+
+interface CalculationInput extends MemberMetrics {
+  memberId: string;
+  positionId: PositionId;
+  period: string;
+  planVersion: CompensationPlanVersion;
+}
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     
     // Map Firestore data to CalculationInput
-    const input = {
+    const input: CalculationInput = {
       memberId: body.memberId,
-      positionId: body.positionId || 'agent',
+      positionId: (body.positionId || 'agent') as PositionId,
       personalFYC: body.personalFYC || 0,
       teamFYC: body.teamFYC || 0,
       personalCOM: body.personalCOM || 0,
@@ -21,10 +28,11 @@ export async function POST(req: NextRequest) {
       separatedUnitsCount: body.separatedUnitsCount || 0,
       separatedCentersCount: body.separatedCentersCount || 0,
       separatedRegionsCount: body.separatedRegionsCount || 0,
-      centerComList: body.centerComList,
-      centerFycList: body.centerFycList,
       annualFYC: body.annualFYC,
       annualCOM: body.annualCOM,
+      status: 'active',
+      period: body.period || '2026-09',
+      planVersion: INITIAL_PLAN_VERSION,
     };
     
     const result = calculateTotalIncome(input);

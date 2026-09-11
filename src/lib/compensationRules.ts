@@ -1,4 +1,6 @@
-import { Position, CompensationPlanVersion, CompensationRule, PositionId } from './types';
+import { Position, CompensationPlanVersion, CompensationRule } from './types';
+
+export type { PositionId } from './types';
 
 export const DEFAULT_POSITIONS: Position[] = [
   {

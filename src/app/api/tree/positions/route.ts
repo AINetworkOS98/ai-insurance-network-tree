@@ -2,13 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebase-admin';
 import { PositionId } from '@/lib/types';
 
+interface TreePosition {
+  id: string;
+  parentId?: string;
+  childId?: string;
+  slot?: number;
+  level?: string;
+  policy?: string;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const db = getDb();
     
     // Get all tree positions
     const positionsSnap = await db.collection('treePositions').limit(100).get();
-    const positions = [];
+    const positions: TreePosition[] = [];
     positionsSnap.forEach(doc => {
       const data = doc.data();
       positions.push({

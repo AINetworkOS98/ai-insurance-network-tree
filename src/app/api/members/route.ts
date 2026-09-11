@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebase-admin';
 
+interface FirestoreMember {
+  id: string;
+  memberCode?: string;
+  displayName?: string;
+  name?: string;
+  positionId?: string;
+  role?: string;
+  status?: string;
+  personalFYC?: number;
+  personalCOM?: number;
+  sponsorId?: string;
+  joinDate?: string;
+  uid?: string;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const db = getDb();
@@ -16,7 +31,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ ok: false, error: 'ไม่พบสมาชิก' }, { status: 404 });
       }
       
-      const member = { id: memberSnap.id, ...memberSnap.data() };
+      const member: FirestoreMember = { id: memberSnap.id, ...memberSnap.data() } as FirestoreMember;
       
       // Also get memberAccess
       const accessRef = db.collection('memberAccess').doc(member.uid || '');
@@ -27,7 +42,7 @@ export async function GET(req: NextRequest) {
     
     // List all members with basic info
     const membersSnap = await db.collection('members').limit(50).get();
-    const members = [];
+    const members: FirestoreMember[] = [];
     membersSnap.forEach(doc => {
       const data = doc.data();
       members.push({

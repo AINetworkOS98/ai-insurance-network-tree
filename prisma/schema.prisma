@@ -132,6 +132,7 @@ model User {
   performanceRecords PerformanceRecord[]
   treeNode          TreeNode?
   placementsAsChild TreePlacement[] @relation("PlacementChild")
+  member            Member?
 }
 
 model UserSession {
@@ -1091,6 +1092,123 @@ model ReviewRequest {
   decidedAt   DateTime? @db.Timestamptz
   createdAt   DateTime @default(now()) @db.Timestamptz
   @@index([userId, status])
+}
+
+// ── Spec §7: ตารางบังคับขั้นต่ำ (alias ครบ 10 ตาราง) ─────────────
+// organizations — องค์กรเดียวต่อ deployment (multi-tenant ready)
+model Organization {
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String   @unique // ORG-001
+  nameTh    String
+  nameEn    String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now()) @db.Timestamptz
+  members   Member[]
+  placements Placement[]
+}
+
+// members — สมาชิกองค์กร (แยกจาก User เพื่อรองรับ import/legacy)
+model Member {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @db.Uuid
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  userId          String?  @unique @db.Uuid
+  user            User?    @relation(fields: [userId], references: [id])
+  memberCode      String   @unique
+  displayName     String
+  rankLevel       Int      @default(0)
+  status          MemberStatus @default(PENDING)
+  sponsorId       String?  @db.Uuid
+  createdAt       DateTime @default(now()) @db.Timestamptz
+  placements      Placement[] @relation("MemberPlacements")
+  requests        PlacementRequest[]
+  @@index([organizationId])
+}
+
+// placements — ตำแหน่งในผัง 1:5 (DB-enforced 1-5, unique parent+slot)
+model Placement {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @db.Uuid
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  memberId        String   @unique @db.Uuid
+  member          Member   @relation("MemberPlacements", fields: [memberId], references: [id])
+  parentId        String?  @db.Uuid // null = root
+  slot            Int?     // 1..5, null only for root
+  level           Int      @default(0)
+  createdAt       DateTime @default(now()) @db.Timestamptz
+  @@unique([parentId, slot])
+  @@index([organizationId])
+  @@index([parentId])
+}
+
+// placement_requests — คิวจัดวาง + idempotency
+model PlacementRequest {
+  id              String   @id @default(uuid()) @db.Uuid
+  memberId        String   @db.Uuid
+  member          Member   @relation(fields: [memberId], references: [id])
+  sponsorId       String?  @db.Uuid
+  idempotencyKey  String?  @unique
+  status          String   @default("queued") // queued | placed | failed
+  reason          String?
+  createdAt       DateTime @default(now()) @db.Timestamptz
+  @@index([status])
+}
+
+// rank_rules — กติกาเลื่อนตำแหน่ง (alias ของ RankRule + RankPlan)
+model RankRuleSpec {
+  id          String   @id @default(uuid()) @db.Uuid
+  planId      String   @db.Uuid
+  targetRank  Int
+  metric      String
+  personalMin Decimal? @db.Decimal(18,2)
+  teamMin     Decimal? @db.Decimal(18,2)
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  @@map("rank_rules")
+}
+
+// receipts — ใบเสร็จ (alias ReceiptFile)
+model ReceiptSpec {
+  id        String   @id @default(uuid()) @db.Uuid
+  memberId  String   @db.Uuid
+  fileHash  String   @unique
+  status    String   @default("Uploaded")
+  amount    Decimal? @db.Decimal(18,2)
+  createdAt DateTime @default(now()) @db.Timestamptz
+  @@map("receipts")
+}
+
+// performance_ledger — บัญชีผลงาน (alias PerformanceLedger)
+model PerformanceLedgerSpec {
+  id        String   @id @default(uuid()) @db.Uuid
+  memberId  String   @db.Uuid
+  period    String
+  amount    Decimal  @db.Decimal(18,2)
+  status    String   @default("active")
+  createdAt DateTime @default(now()) @db.Timestamptz
+  @@map("performance_ledger")
+}
+
+// monthly_closures — ปิดยอดรายเดือน (alias CalendarPeriod+MonthlySnapshot)
+model MonthlyClosure {
+  id        String   @id @default(uuid()) @db.Uuid
+  period    String   @unique // YYYY-MM
+  status    String   @default("Open")
+  snapshots Int      @default(0)
+  closedAt  DateTime? @db.Timestamptz
+  createdAt DateTime @default(now()) @db.Timestamptz
+  @@map("monthly_closures")
+}
+
+// audit_logs (alias AuditLog) + notification_outbox (alias EventOutbox)
+model NotificationOutbox {
+  id          String   @id @default(uuid()) @db.Uuid
+  eventId     String   @unique
+  eventType   String
+  payload     Json
+  channel     String   @default("in_app")
+  status      String   @default("pending")
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  @@map("notification_outbox")
 }
 
 // ── Audit Log (append-only) ──────────────────────────
