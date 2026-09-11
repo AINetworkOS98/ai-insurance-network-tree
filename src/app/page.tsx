@@ -4,7 +4,6 @@ import { RANK_CATALOG } from '@/lib/rankCatalog';
 // หน้าแรกสำหรับทุกระดับ — สมาชิกทั่วไป (rank 0) เห็นเฉพาะหน้านี้ ไม่โหลดข้อมูลหลังบ้าน (สเปคหมวด 2, 11)
 export default function Home(){
   const OS_BASE = 'https://ai-insurance-network-os.vercel.app';
-  const OLD_OS = 'https://ai-insurance-network-3cp54o23p-ak-e11e.vercel.app';
   return (
     <div>
       <Header/>
@@ -18,7 +17,6 @@ export default function Home(){
           <a href={`${OS_BASE}/?tab=recruit_agent`} target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded-full bg-white/10 text-white border border-white/20 hover:bg-white/20">📝 สมัครตัวแทน</a>
           <a href={`${OS_BASE}/?tab=ai_studio`} target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded-full bg-white/10 text-white border border-white/20 hover:bg-white/20">✦ AI Studio</a>
           <a href={`${OS_BASE}/?tab=career_plan`} target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded-full bg-white/10 text-white border border-white/20 hover:bg-white/20">🚀 แผนอาชีพ</a>
-          <a href={OLD_OS} target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded-full border border-white/20 text-white/70 hover:bg-white/10">↩ ระบบเก่า</a>
         </div>
       </div>
       <section className="bg-navy text-white">

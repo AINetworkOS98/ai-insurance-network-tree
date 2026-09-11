@@ -22,7 +22,6 @@ export default function Header(){
           <Link href="/income" className="opacity-80 hover:opacity-100">รายได้</Link>
           <Link href="/admin" className="opacity-80 hover:opacity-100">ผู้ดูแล</Link>
           <Link href="/notifications" className="relative opacity-80 hover:opacity-100">🔔 แจ้งเตือน {unread!=null && unread>0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-red-600 text-white text-[11px]">{unread}</span>}</Link>
-          <a href="https://ai-insurance-network-3cp54o23p-ak-e11e.vercel.app/" target="_blank" rel="noreferrer" className="px-3 py-1.5 rounded-full border border-white/30 text-xs hover:bg-white/10">↩ กลับระบบเก่า</a>
         </nav>
         <div className="flex items-center gap-2">
           <Link href="/register" className="px-4 py-2 rounded-full bg-[#c8a84e] text-[#0f2040] text-sm font-semibold">สมัครแสดงความสนใจ</Link>
