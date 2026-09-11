@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 import { RANK_CATALOG } from '@/lib/rankCatalog';
+import { mirrorToFirestore } from '@/lib/firestoreMirror';
 
 // GET /api/rank-plans — ดูรายการแผน (ต้องล็อกอิน)
 export async function GET(req: NextRequest){
@@ -66,6 +67,7 @@ export async function POST(req: NextRequest){
     }
 
     const full = await prisma.rankPlan.findUnique({ where:{ id: plan.id }, include:{ rules:true } });
+    await mirrorToFirestore('rankPlans', String(plan.id), full);
     return NextResponse.json({ ok:true, plan: full });
   }catch(e:any){ return NextResponse.json({ error:e?.message || 'error' }, { status:500 }); }
 }

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { mirrorToFirestore } from '@/lib/firestoreMirror';
 import crypto from 'crypto';
 
 export function makeEventId(eventType: string, recipientId: string, channel: string, period?: string){
@@ -28,9 +29,10 @@ export async function emitNotification(opts:{
     if(pref && pref.enabled===false) return { skipped:true, reason:'preference off' };
   }
 
-  await prisma.notification.create({
+  const notif = await prisma.notification.create({
     data:{ userId: opts.userId, type: opts.type, title: opts.title, body: opts.body || null, channel, referenceId: opts.referenceId || null } as any
   });
+  await mirrorToFirestore('notifications', String(notif.id), { id: notif.id, userId: opts.userId, type: opts.type, title: opts.title });
   await prisma.eventOutbox.create({
     data:{ eventId, eventType: opts.type, payload:{ title: opts.title, body: opts.body, referenceId: opts.referenceId } as any, recipientId: opts.userId, channel, status:'sent', sentAt: new Date() } as any
   }).catch(()=>{});

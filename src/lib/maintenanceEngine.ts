@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { mirrorToFirestore } from '@/lib/firestoreMirror';
 
 // หมวด 9: รักษายอด — แยก monthly vs quarterly, ไม่หาร 3, ไม่เดาตัวเลข
 // ถ้าแผน Draft/ไม่มีกฎ -> ประเมินไม่ได้ ไม่คัดออก
@@ -67,6 +68,7 @@ export async function runMaintenanceForPeriod(planId: string, period: string, ru
     if(exists) continue;
     if(ev.status==='pending_review'){
       await prisma.maintenanceResult.create({ data:{ planId, period, userId: u.id, targetRank: u.rankLevel ?? 0, required: String(ev.required || 0) as any, verified: String(ev.verified || 0) as any, remaining: String(ev.remaining || 0) as any, status:'pending_review', reason: ev.reason } as any });
+      await mirrorToFirestore('maintenanceResults', `${planId}_${period}_${u.id}`, { planId, period, userId: u.id, status:'pending_review' });
       created++; continue;
     }
     if(ev.status==='passed'){

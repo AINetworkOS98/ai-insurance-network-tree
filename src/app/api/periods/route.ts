@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 import { ensurePeriod, getBangkokPeriod } from '@/lib/periodEngine';
+import { mirrorToFirestore } from '@/lib/firestoreMirror';
 
 // GET /api/periods — ดูรอบทั้งหมด + snapshot ของตัวเอง
 export async function GET(req: NextRequest){
@@ -33,6 +34,7 @@ export async function POST(req: NextRequest){
       const { monthBounds } = await import('@/lib/periodEngine');
       const { startAt, endAt } = monthBounds(period);
       const cal: any = await prisma.calendarPeriod.create({ data:{ period, startAt, endAt, cutoffAt: cutoffAt ? new Date(cutoffAt) : null, status:'Open' } as any });
+      await mirrorToFirestore('calendarPeriods', String(period), cal);
       if(kind && cutoffAt) await prisma.periodRule.create({ data:{ kind, period, cutoffAt: new Date(cutoffAt), note: note || null } as any }).catch(()=>{});
       return NextResponse.json({ ok:true, period: cal });
     }

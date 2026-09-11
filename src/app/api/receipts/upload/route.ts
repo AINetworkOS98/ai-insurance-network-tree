@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 import crypto from 'crypto';
+import { mirrorToFirestore } from '@/lib/firestoreMirror';
 
 // POST /api/receipts/upload — อัปโหลด JPG/PNG/PDF หลายหน้า (สเปคหมวด 7)
 // ตรวจชนิด/ขนาด + hash ตรวจไฟล์ซ้ำ + สร้าง ReceiptFile (Uploaded)

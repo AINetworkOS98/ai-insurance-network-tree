@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
+import { mirrorToFirestore } from '@/lib/firestoreMirror';
 
 // POST /api/receipts/verify — ส่งตรวจ / อนุมัติ / ปฏิเสธ (ต้องมี document.verify)
 // สเปค: 7 ขั้น — Uploaded→Extracted→PendingVerification→Verified/Rejected/Duplicate (+ Reversed)
