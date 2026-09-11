@@ -85,15 +85,18 @@ function AdminContent() {
   if (error) {
     return (
       <div className="p-8">
-        <div className="card p-6 bg-red-50 border-red-200">
-          <h3 className="text-lg font-bold text-red-600 mb-2">เกิดข้อผิดพลาด</h3>
-          <p className="text-slate-600">{error}</p>
+        <div className="card p-6 bg-sky-50 border-blue-100">
+          <h3 className="text-lg font-bold text-sky-700 mb-2">กรุณาเข้าสู่ระบบ</h3>
+          <p className="text-slate-600 text-sm">{error}</p>
+          <div className="mt-3 flex gap-2">
           <button
             onClick={fetchMembers}
-            className="mt-3 px-4 py-2 rounded-full bg-[#c8a84e] text-[#0f2040] text-sm font-medium hover:bg-slate-50"
+            className="px-4 py-2 rounded-full bg-sky-400 text-white text-sm font-medium hover:bg-sky-500"
           >
             ลองใหม่
           </button>
+          <Link href="/login" className="px-4 py-2 rounded-full bg-white border border-blue-200 text-sky-700 text-sm">ไปหน้าเข้าสู่ระบบ</Link>
+          </div>
         </div>
       </div>
     );
@@ -104,16 +107,16 @@ function AdminContent() {
       <Header />
       <div className="flex max-w-[1280px] mx-auto">
         <Sidebar />
-        <main className="flex-1 p-6 space-y-6">
-          <h1 className="text-xl font-bold text-navy">ผู้ดูแลระบบ — Admin Dashboard</h1>
+        <main className="flex-1 p-6 space-y-6 bg-white">
+          <h1 className="text-xl font-bold text-slate-800">ผู้ดูแลระบบ — Admin Dashboard</h1>
 
           <div className="flex gap-3 mb-4">
             <button
               onClick={() => setActiveTab('members')}
               className={`px-4 py-2 rounded-full text-sm font-medium ${
                 activeTab === 'members'
-                  ? 'bg-[#0f2040] text-white'
-                  : 'border text-slate-500 hover:bg-slate-50'
+                  ? 'bg-sky-400 text-white shadow-sm border border-sky-400'
+                  : 'bg-white border border-blue-100 text-slate-600 hover:bg-[#f0f7ff]'
               }`}
             >
               ข้อมูลสมาชิก
@@ -122,8 +125,8 @@ function AdminContent() {
               onClick={() => setActiveTab('income')}
               className={`px-4 py-2 rounded-full text-sm font-medium ${
                 activeTab === 'income'
-                  ? 'bg-[#0f2040] text-white'
-                  : 'border text-slate-500 hover:bg-slate-50'
+                  ? 'bg-sky-400 text-white shadow-sm border border-sky-400'
+                  : 'bg-white border border-blue-100 text-slate-600 hover:bg-[#f0f7ff]'
               }`}
             >
               รายได้
@@ -132,8 +135,8 @@ function AdminContent() {
               onClick={() => setActiveTab('positions')}
               className={`px-4 py-2 rounded-full text-sm font-medium ${
                 activeTab === 'positions'
-                  ? 'bg-[#0f2040] text-white'
-                  : 'border text-slate-500 hover:bg-slate-50'
+                  ? 'bg-sky-400 text-white shadow-sm border border-sky-400'
+                  : 'bg-white border border-blue-100 text-slate-600 hover:bg-[#f0f7ff]'
               }`}
             >
               ตำแหน่ง
@@ -142,8 +145,8 @@ function AdminContent() {
               onClick={() => setActiveTab('audit')}
               className={`px-4 py-2 rounded-full text-sm font-medium ${
                 activeTab === 'audit'
-                  ? 'bg-[#0f2040] text-white'
-                  : 'border text-slate-500 hover:bg-slate-50'
+                  ? 'bg-sky-400 text-white shadow-sm border border-sky-400'
+                  : 'bg-white border border-blue-100 text-slate-600 hover:bg-[#f0f7ff]'
               }`}
             >
               งบบันทึกการแก้ไข
@@ -155,15 +158,15 @@ function AdminContent() {
             <div>
               <div className="card p-5">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-bold text-navy">สมาชิกทั้งหมด</h2>
+                  <h2 className="text-lg font-bold text-slate-800">สมาชิกทั้งหมด</h2>
                   <span className="text-sm text-slate-500">ทั้งหมด {totalActiveMembers} รายการ</span>
                 </div>
                 <div className="mt-4 space-y-3 max-h-[500px] overflow-y-auto">
                   {members.length === 0 ? (
                     <p className="text-sm text-slate-500">ไม่พบข้อมูลสมาชิก</p>
                   ) : (
-                    <table className="w-full text-xs border">
-                      <thead className="bg-[#0f2040] text-white">
+                    <table className="w-full text-xs border border-blue-100">
+                      <thead className="bg-[#f0f7ff] text-slate-600 border-b border-blue-100">
                         <tr>
                           <th className="p-2 text-left">รหสมาชิก</th>
                           <th className="p-2 text-left">ชื่อ-นามสกุล</th>
@@ -199,11 +202,11 @@ function AdminContent() {
               </div>
 
               <div className="mt-6 card p-5">
-                <h2 className="text-lg font-bold text-navy">อัตราการกระจายตำแหน่ง</h2>
+                <h2 className="text-lg font-bold text-slate-800">อัตราการกระจายตำแหน่ง</h2>
                 <div className="grid grid-cols-2 gap-3 mt-4">
                   {positionData.map((p: any) => (
-                    <div key={p.positionId} className="p-3 rounded-xl border-slate-200">
-                      <div className="font-semibold text-navy">{p.positionName}</div>
+                    <div key={p.positionId} className="p-3 rounded-xl border border-blue-100 bg-[#f0f7ff]">
+                      <div className="font-semibold text-slate-800">{p.positionName}</div>
                       <div className="text-xs text-slate-500 mt-1">จำนวน: {p.memberCount} คน</div>
                       <div className="mt-2">
                         <div className="text-xs text-slate-500">FYC รวม: {p.totalFYC.toLocaleString()} บ.</div>
@@ -220,12 +223,12 @@ function AdminContent() {
           {activeTab === 'income' && (
             <div>
               <div className="card p-5">
-                <h2 className="text-lg font-bold text-navy">สรุปรายได้ทั้งหมด</h2>
+                <h2 className="text-lg font-bold text-slate-800">สรุปรายได้ทั้งหมด</h2>
                 {incomes.length === 0 ? (
                   <p className="text-sm text-slate-500 mt-4">ไม่พบข้อมูลรายได้</p>
                 ) : (
-                  <table className="w-full text-xs border mt-4">
-                    <thead className="bg-[#0f2040] text-white">
+                  <table className="w-full text-xs border border-blue-100 mt-4">
+                    <thead className="bg-[#f0f7ff] text-slate-600 border-b border-blue-100">
                       <tr>
                         <th className="p-2 text-left">ชื่อ</th>
                         <th className="p-2 text-center">ตำแหน่ง</th>
@@ -246,7 +249,7 @@ function AdminContent() {
                             <td className="p-2">
                               {DEFAULT_POSITIONS.find((p: any) => p.id === i.positionId)?.name || i.positionId}
                             </td>
-                            <td className="p-2 text-right font-bold text-navy">{i.totalIncome.toLocaleString()} บ.</td>
+                            <td className="p-2 text-right font-bold text-slate-800">{i.totalIncome.toLocaleString()} บ.</td>
                             <td className="p-2 text-right">{i.summary.personalCommission.toLocaleString()} บ.</td>
                             <td className="p-2 text-right">{i.summary.unitIncomes.toLocaleString()} บ.</td>
                             <td className="p-2 text-right">{i.summary.centerIncomes.toLocaleString()} บ.</td>
@@ -260,7 +263,7 @@ function AdminContent() {
               </div>
 
               <div className="mt-6 card p-5">
-                <h2 className="text-lg font-bold text-navy">กราปจัดแบ่งรายได้</h2>
+                <h2 className="text-lg font-bold text-slate-800">กราปจัดแบ่งรายได้</h2>
                 <div className="grid grid-cols-2 gap-3 mt-4">
                   {(() => {
                     const totalIncomeSum = incomes.length > 0 ? incomes.reduce((s: number, x: any) => s + x.totalIncome, 0) : 1;
@@ -272,7 +275,7 @@ function AdminContent() {
                       <>
                         <div>
                           <div className="text-xs text-slate-500">ส่วนตัว (Personal)</div>
-                          <div className="h-4 bg-slate-200 rounded-full overflow-hidden">
+                          <div className="h-4 bg-blue-100 rounded-full overflow-hidden">
                             <div
                               style={{ height: `${personalPct}%`, background: '#34d399' }}
                               className="h-full rounded-full"
@@ -281,7 +284,7 @@ function AdminContent() {
                         </div>
                         <div>
                           <div className="text-xs text-slate-500">หน่วย (Unit)</div>
-                          <div className="h-4 bg-slate-200 rounded-full overflow-hidden">
+                          <div className="h-4 bg-blue-100 rounded-full overflow-hidden">
                             <div
                               style={{ height: `${unitPct}%`, background: '#a78bfa' }}
                               className="h-full rounded-full"
@@ -290,7 +293,7 @@ function AdminContent() {
                         </div>
                         <div>
                           <div className="text-xs text-slate-500">ศูนย์ (Center)</div>
-                          <div className="h-4 bg-slate-200 rounded-full overflow-hidden">
+                          <div className="h-4 bg-blue-100 rounded-full overflow-hidden">
                             <div
                               style={{ height: `${centerPct}%`, background: '#fbbf24' }}
                               className="h-full rounded-full"
@@ -299,7 +302,7 @@ function AdminContent() {
                         </div>
                         <div>
                           <div className="text-xs text-slate-500">ภาค (Region)</div>
-                          <div className="h-4 bg-slate-200 rounded-full overflow-hidden">
+                          <div className="h-4 bg-blue-100 rounded-full overflow-hidden">
                             <div
                               style={{ height: `${regionPct}%`, background: '#f43f5e' }}
                               className="h-full rounded-full"
@@ -318,7 +321,7 @@ function AdminContent() {
           {activeTab === 'positions' && (
             <div>
               <div className="card p-5">
-                <h2 className="text-lg font-bold text-navy">โครงสร้างต้นไม้ (Tree Structure)</h2>
+                <h2 className="text-lg font-bold text-slate-800">โครงสร้างต้นไม้ (Tree Structure)</h2>
                 {treeStructure.length === 0 ? (
                   <p className="text-sm text-slate-500 mt-4">ไม่พบข้อมูลต้นไม้</p>
                 ) : (
@@ -334,8 +337,8 @@ function AdminContent() {
           {activeTab === 'audit' && (
             <div>
               <div className="card p-5">
-                <h2 className="text-lg font-bold text-navy">Log บันทึก (Audit Log)</h2>
-                <div className="mt-4 text-xs font-mono bg-slate-900 text-slate-100 rounded-xl p-3" style={{ maxHeight: '400px', overflow: 'auto' }}>
+                <h2 className="text-lg font-bold text-slate-800">Log บันทึก (Audit Log)</h2>
+                <div className="mt-4 text-xs font-mono bg-[#f0f7ff] border border-blue-100 text-slate-600 rounded-xl p-3" style={{ maxHeight: '400px', overflow: 'auto' }}>
                   2026-09-05 09:12 — admin@ — member.approve — P-1003 → M-000004 — reason: เอกสารครบ<br/>
                   2026-09-05 09:15 — system — tree.place — M-000004 → parent A01 slot 2 — BFS<br/>
                   2026-09-05 09:20 — finance@ — income.approve — TX-9001 — v2.1
