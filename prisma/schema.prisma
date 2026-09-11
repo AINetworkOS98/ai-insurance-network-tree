@@ -118,6 +118,8 @@ model User {
   sponsorshipAsChild Sponsorship? @relation("SponsorshipChild")
   sponsorshipsAsParent Sponsorship[] @relation("SponsorshipParent")
   placementQueue    PlacementQueue?
+  receiptFiles      ReceiptFile[]
+  performanceLedger PerformanceLedger[]
   roles             UserRole[]
   memberProfile     MemberProfile?
   prospectsOwned    Prospect[] @relation("ProspectOwner")
@@ -816,6 +818,83 @@ model PlacementQueue {
   reason      String?  // เหตุผลที่พักในคิว
   createdAt   DateTime @default(now()) @db.Timestamptz
   @@index([queueNo])
+}
+
+// ── Receipts & Performance Ledger (สเปคหมวด 7) ────────────────
+model ReceiptFile {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  originalName    String
+  mimeType        String
+  sizeBytes       Int
+  storagePath     String?
+  storageUrl      String?
+  fileHash        String   @unique // sha256 ป้องกันไฟล์ซ้ำ
+  status          String   @default("Uploaded") // Uploaded | Extracted | PendingVerification | Verified | Rejected | Duplicate | Reversed
+  submissionAt    DateTime @default(now()) @db.Timestamptz
+  paymentAt       DateTime? @db.Timestamptz
+  policyApprovedAt DateTime? @db.Timestamptz
+  verifiedAt      DateTime? @db.Timestamptz
+  creditedPeriod  String?  // YYYY-MM ที่จะนับผลงาน (แยกตามกฎ credited_period)
+  createdAt       DateTime @default(now()) @db.Timestamptz
+  updatedAt       DateTime @updatedAt @db.Timestamptz
+  extractions     ReceiptExtraction[]
+  verifications   ReceiptVerification[]
+  @@index([userId, status])
+  @@index([fileHash])
+}
+
+model ReceiptExtraction {
+  id            String   @id @default(uuid()) @db.Uuid
+  receiptId     String   @db.Uuid
+  receipt       ReceiptFile @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  // ข้อมูล OCR รายช่องพร้อม confidence
+  issuerName    String?
+  receiptNo     String?
+  transactionRef String?
+  policyNo      String?
+  payerName     String?
+  paidAt        DateTime? @db.Timestamptz
+  amount        Decimal? @db.Decimal(18,2)
+  type          String?  // เบี้ยประกัน, ค่าบำเหน็จ, อื่นๆ
+  periodLabel   String?  // งวดเบี้ย
+  agentCode     String?
+  qrBarcode     String?
+  confidence    Json?    // {issuer:0.9, amount:0.95, ...}
+  rawOcr        Json?    // ผล OCR ดิบ
+  correctedBy   String?  @db.Uuid // ผู้แก้ช่องที่อ่านไม่ชัด
+  originalValues Json?   // ค่าเดิมก่อนแก้
+  createdAt     DateTime @default(now()) @db.Timestamptz
+  @@index([receiptId])
+}
+
+model ReceiptVerification {
+  id          String   @id @default(uuid()) @db.Uuid
+  receiptId   String   @db.Uuid
+  receipt     ReceiptFile @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  result      String   // Verified | Rejected | Duplicate
+  reason      String?
+  verifiedBy  String?  @db.Uuid
+  verifiedAt  DateTime @default(now()) @db.Timestamptz
+  source      String?  // api_verified | manual_report | ocr_only
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  @@index([receiptId])
+}
+
+model PerformanceLedger {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  receiptId       String?  @unique @db.Uuid // สร้างได้ครั้งเดียวต่อใบเสร็จที่ผ่าน
+  type            String   // premium | commission | fyc | com | com_plus
+  amount          Decimal  @db.Decimal(18,2)
+  period          String   // YYYY-MM (credited_period)
+  status          String   @default("active") // active | reversed
+  reversalOfId    String?  @unique @db.Uuid
+  periodSnapshotId String? @db.Uuid
+  createdAt       DateTime @default(now()) @db.Timestamptz
+  @@index([userId, period])
 }
 
 // ── Audit Log (append-only) ──────────────────────────
