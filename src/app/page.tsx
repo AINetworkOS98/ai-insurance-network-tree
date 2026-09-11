@@ -3,21 +3,9 @@ import Link from 'next/link';
 import { RANK_CATALOG } from '@/lib/rankCatalog';
 // หน้าแรกสำหรับทุกระดับ — สมาชิกทั่วไป (rank 0) เห็นเฉพาะหน้านี้ ไม่โหลดข้อมูลหลังบ้าน (สเปคหมวด 2, 11)
 export default function Home(){
-  const OS_BASE = 'https://ai-insurance-network-os.vercel.app';
   return (
     <div>
       <Header/>
-      {/* Cross-system banner */}
-      <div className="bg-[#0f2040] border-y border-white/10">
-        <div className="max-w-[1280px] mx-auto px-6 py-2 flex flex-wrap gap-2 text-[11px] items-center">
-          <span className="text-white/60">เชื่อมฐานเดียวกัน (akarapol798)</span>
-          <span className="text-white/30">•</span>
-          <a href={`${OS_BASE}/?tab=search_landing`} target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded-full bg-white text-[#0f2040] font-bold hover:bg-white/90">🔍 ค้นหา/ตรวจสมาชิก</a>
-          <a href={`${OS_BASE}/?tab=recruit_agent`} target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded-full bg-white/10 text-white border border-white/20 hover:bg-white/20">📝 สมัครตัวแทน</a>
-          <a href={`${OS_BASE}/?tab=ai_studio`} target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded-full bg-white/10 text-white border border-white/20 hover:bg-white/20">✦ AI Studio</a>
-          <a href={`${OS_BASE}/?tab=career_plan`} target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded-full bg-white/10 text-white border border-white/20 hover:bg-white/20">🚀 แผนอาชีพ</a>
-        </div>
-      </div>
       <section className="bg-navy text-white">
         <div className="max-w-[1280px] mx-auto px-6 py-12 grid md:grid-cols-2 gap-8 items-center">
           <div>
