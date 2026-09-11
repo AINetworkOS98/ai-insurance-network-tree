@@ -13,7 +13,6 @@ export default function Home(){
           <span className="text-white/60">เชื่อมฐานเดียวกัน (akarapol798)</span>
           <span className="text-white/30">•</span>
           <a href={`${OS_BASE}/?tab=search_landing`} target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded-full bg-white text-[#0f2040] font-bold hover:bg-white/90">🔍 ค้นหา/ตรวจสมาชิก</a>
-          <a href={`${OS_BASE}/?tab=members_mgmt`} target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded-full bg-white/10 text-white border border-white/20 hover:bg-white/20">👥 จัดการสมาชิก</a>
           <a href={`${OS_BASE}/?tab=recruit_agent`} target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded-full bg-white/10 text-white border border-white/20 hover:bg-white/20">📝 สมัครตัวแทน</a>
           <a href={`${OS_BASE}/?tab=ai_studio`} target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded-full bg-white/10 text-white border border-white/20 hover:bg-white/20">✦ AI Studio</a>
           <a href={`${OS_BASE}/?tab=career_plan`} target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded-full bg-white/10 text-white border border-white/20 hover:bg-white/20">🚀 แผนอาชีพ</a>
