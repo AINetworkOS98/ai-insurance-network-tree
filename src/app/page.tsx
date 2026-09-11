@@ -16,11 +16,11 @@ export default function Home(){
           <div className="relative">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#eff6ff] border border-blue-200 text-xs text-sky-700">✦ ระบบโปร่งใส ตรวจสอบได้ • ปฏิบัติตาม PDPA</div>
             <div className="mt-4 p-5 md:p-6 rounded-2xl border border-blue-100 bg-[#f0f7ff] shadow-[0_8px_30px_rgba(59,130,246,.08)]">
-              <h1 className="text-3xl md:text-4xl font-bold leading-tight">สร้างทีม สร้างอนาคต<br/>ด้วยระบบ <span className="text-[#c8a84e]">AI INSURANCE NETWORK OS</span></h1>
+              <h1 className="text-3xl md:text-4xl font-bold leading-tight">สร้างทีม สร้างอนาคต<br/>ด้วยระบบ <span className="text-sky-500">AI INSURANCE NETWORK OS</span></h1>
               <p className="text-sm text-slate-600 mt-3 leading-relaxed">บริหารผู้สนใจ ผู้สมัคร สมาชิก โครงสร้างทีมฐานกว้าง 5 คน ผลงาน รายได้ และเอกสารทางการเงินอย่างโปร่งใส ปลอดภัย ตรวจสอบย้อนหลังได้</p>
             </div>
             <div className="flex gap-3 mt-6">
-              <Link href="/register" className="px-6 py-3 rounded-full bg-[#c8a84e] text-white font-semibold shadow-sm">สมัครแสดงความสนใจ</Link>
+              <Link href="/register" className="px-6 py-3 rounded-full bg-sky-400 text-white font-semibold shadow-sm hover:bg-sky-500">สมัครแสดงความสนใจ</Link>
               <Link href="/tree" className="px-6 py-3 rounded-full border border-blue-200 bg-[#eff6ff] text-sky-700">ดูผังตัวอย่าง</Link>
             </div>
             <div className="mt-4 p-3 rounded-xl bg-[#eff6ff] border border-blue-100 text-xs leading-relaxed">
@@ -36,7 +36,7 @@ export default function Home(){
             <div className="mt-3 space-y-2 text-sm">
               {RANK_CATALOG.map((r)=>(
                 <div key={r.code} className="flex items-center gap-3 p-2.5 rounded-xl border border-blue-100 bg-[#eff6ff]">
-                  <div className="w-8 h-8 rounded-full bg-[#c8a84e] text-white flex items-center justify-center text-xs">{r.level}</div>
+                  <div className="w-8 h-8 rounded-full bg-sky-400 text-white flex items-center justify-center text-xs">{r.level}</div>
                   <div>
                     <div className="font-semibold">{r.nameTh}</div>
                     <div className="text-[11px] text-slate-500">อ้างอิง: {r.nameRef}</div>
