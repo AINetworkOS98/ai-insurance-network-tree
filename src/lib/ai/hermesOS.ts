@@ -127,5 +127,29 @@ function buildFallback(q:string, intent:string, mode:SearchMode, hasDataset:bool
   if (hits?.length) return `พบ ${hits.length} รายการ:\n${hits.slice(0,5).map((h:any)=> `• ${h.type}: ${h.firstName ?? h.name ?? h.email ?? h.memberCode ?? JSON.stringify(h).slice(0,60)}`).join("\n")}`;
   if (intent==="CALCULATE" && /\d/.test(q)) return `ไม่พบนิพจน์คำนวณที่ชัด — พิมพ์เช่น 1234*56 หรือ 15000+2500`;
   if (!q.trim()) return `พิมพ์คำถามหรือวางข้อมูลได้เลย`;
-  return `รับทราบ: "${q.slice(0,120)}" — บอกเพิ่มได้ว่าต้องการค้นหา/วิเคราะห์/คำนวณอะไร`;
+
+  // Hermes fallback: ตอบให้ตรงคำถาม ไม่วนลูป "รับทราบ"
+  const ql = q.toLowerCase();
+  if (/ai\s*คือ.*อะไร|คือ.*ai|what.*is.*ai/i.test(q)) {
+    return `AI คือระบบอัจฉริยะที่ช่วยค้นหา วิเคราะห์ คำนวณ และจัดการข้อมูลเครือข่าย 1 แตก 5\n\n• พิมพ์คำถาม เช่น "สรุปยอดเดือนนี้" / "ดูผัง M-000123" / "คำนวณ 15000*12%"\n• วางตาราง/CSV แล้วบอก "วิเคราะห์" หรือ "สรุป"\n• แนบไฟล์ใบเสร็จเพื่อตรวจ OCR`;
+  }
+  if (/เขียน.*โค้ด|เขียน.*โปรแกรม|code|สร้าง.*ฟังก์ชัน/i.test(q)) {
+    // ถ้าถามเขียนโค้ดทั่วไป — ให้ตัวอย่างตามที่ขอ หรือถามเพิ่ม
+    if (/กล่อง.*รับ.*ข้อมูล|input.*box|ช่อง.*กรอก/i.test(q)) {
+      return `กล่องรับข้อมูล (React + Tailwind) — ก็อปไปใช้ได้เลย:\n\n\`\`\`tsx
+<input
+  type="text"
+  placeholder="พิมพ์ที่นี่..."
+  className="w-full px-4 py-3 rounded-2xl border border-blue-100 bg-white focus:outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+  onChange={e => console.log(e.target.value)}
+/>
+\`\`\`\n\nบอกได้เลยว่าอยากได้แบบไหน: ช่องค้นหา / ฟอร์มหลายช่อง / กล่องแชต`;
+    }
+    return `บอกได้เลยว่าอยากให้เขียนโค้ดอะไร เช่น "กล่องรับข้อมูล", "ตาราง", "กราฟ" — จะส่งโค้ดพร้อมก็อปให้ทันที`;
+  }
+  if (/สวัสดี|หวัดดี|hello|hi\b/i.test(ql)) return `สวัสดีครับ 👋 — ถามได้เลย เช่น "AI คืออะไร" / "คำนวณ 1234*56" / วางข้อมูลแล้วบอก "วิเคราะห์"`;
+  if (/อาว|อ้าว|ห๊ะ|งง/i.test(ql)) return `ว่าไงครับ 😊 — พิมพ์คำถามมาได้เลย หรือวางข้อมูลแล้วบอกว่าอยากให้ทำอะไร`;
+  if (ql.length <= 8) return `"${q}" — หมายถึงอะไรครับ? ลองพิมพ์เต็มๆ เช่น "สรุปยอด" / "ค้นหา M-000123" / "คำนวณ 100*5"`;
+  // default: ไม่วนลูป — ตอบสั้น ตรง
+  return `"${q.slice(0,80)}" — บอกเพิ่มนิดนึงว่าต้องการอะไร เช่น ค้นหา / วิเคราะห์ / คำนวณ / เขียนโค้ด`;
 }

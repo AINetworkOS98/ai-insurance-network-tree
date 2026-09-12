@@ -63,8 +63,8 @@ export class HermesProvider implements AIProvider {
   }
 
   isConfigured(): boolean {
-    // opencode-free ไม่ต้องมี apiKey ก็ถือว่า configured
     if (this.provider === 'opencode-free') return true;
+    if (this.provider === 'gemini') return !!this.apiKey && this.apiKey.startsWith('AIza');
     return !!this.apiKey;
   }
 
@@ -142,7 +142,7 @@ export class HermesProvider implements AIProvider {
     }
 
     // ===== Providers ปกติ (OpenAI / DeepSeek / Gemini) =====
-    if (!this.isConfigured()) throw new Error('AI provider not configured');
+    if (!this.isConfigured()) throw new Error(this.provider==='gemini' ? 'GEMINI_API_KEY ไม่ถูกต้อง (ต้องขึ้นต้นด้วย AIza)' : 'AI provider not configured');
 
     const url = this.baseUrl
       ? `${this.baseUrl.replace(/\/+$/,'')}/chat/completions`
