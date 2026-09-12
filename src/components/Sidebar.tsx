@@ -1,11 +1,11 @@
 'use client';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 
-// เมนู 9 รายการตามสเปคหมวด 5
 const items=[
   {href:"/", label:"หน้าแรก", icon:"⌂"},
+  {href:"/chat", label:"แชต AI", icon:"✦"},
   {href:"/dashboard", label:"ภาพรวม", icon:"▦"},
   {href:"/prospects", label:"สมาชิกและผู้สนใจ", icon:"◎"},
   {href:"/tree", label:"ผังทีม 1:5", icon:"⁂"},
@@ -15,7 +15,6 @@ const items=[
   {href:"/reports", label:"รายงาน", icon:"▤"},
   {href:"/settings", label:"ตั้งค่า", icon:"⚙"},
 ];
-// เมนูเสริม (ไม่นับใน 9 หลัก แสดงใต้เส้นประ)
 const extra=[
   {href:"/members", label:"สมาชิกของฉัน", icon:"◉"},
   {href:"/income", label:"รายได้", icon:"฿"},
@@ -24,32 +23,153 @@ const extra=[
   {href:"/verify", label:"ตรวจสมาชิก", icon:"🔍"},
   {href:"/notifications", label:"แจ้งเตือน", icon:"🔔"},
 ];
+
 export default function Sidebar(){
   const path=usePathname();
-  const [open,setOpen]=useState(false);
+  const router=useRouter();
+  const [collapsed,setCollapsed]=useState(false);
+  const [mobileOpen,setMobileOpen]=useState(false);
+  const [networkOpen,setNetworkOpen]=useState(true);
+  const [authed,setAuthed]=useState<boolean|null>(null);
+
+  useEffect(()=>{
+    fetch('/api/auth/me',{cache:'no-store'}).then(r=>setAuthed(r.ok)).catch(()=>setAuthed(false));
+  },[]);
+
+  // คีย์บอร์ด: Ctrl+B / [ / \ เพื่อ หด/ขยาย
+  useEffect(()=>{
+    const onKey=(e:KeyboardEvent)=>{
+      // ไม่ทับเวลาพิมพ์ใน input/textarea
+      const tag=(e.target as HTMLElement)?.tagName;
+      const isTyping = tag==='INPUT' || tag==='TEXTAREA' || (e.target as HTMLElement)?.isContentEditable;
+      if(isTyping && !(e.ctrlKey || e.metaKey)) return;
+      if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==='b'){
+        e.preventDefault(); setCollapsed(v=>!v);
+      } else if(!e.ctrlKey && !e.metaKey && !e.altKey && (e.key==='[' || e.key==='\\' || e.key===']')){
+        // [ หรือ \ เพื่อ toggle (เหมือน Slack / VSCode)
+        if(!isTyping){ e.preventDefault(); setCollapsed(v=>!v); }
+      } else if(e.key==='Escape' && mobileOpen){
+        setMobileOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return ()=> window.removeEventListener('keydown', onKey);
+  },[mobileOpen]);
+
+  // จำ state ไว้
+  useEffect(()=>{
+    const saved=localStorage.getItem('sidebar-collapsed');
+    if(saved) setCollapsed(saved==='1');
+  },[]);
+  useEffect(()=>{ localStorage.setItem('sidebar-collapsed', collapsed?'1':'0'); },[collapsed]);
+
   const Nav = (
-    <div className="p-4 space-y-1">
-      <div className="text-[10px] tracking-widest text-slate-400 px-3 pb-1">เมนูหลัก — 9 รายการ (สเปค)</div>
-      {items.map(it=>{
-        const active = path===it.href;
-        return <Link key={it.href} href={it.href} onClick={()=>setOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm ${active?'bg-[#0f2040] text-white':'hover:bg-slate-50 text-slate-700'}`}><span className="w-5 text-center">{it.icon}</span>{it.label}</Link>
-      })}
-      <div className="border-t my-3"/>
-      <div className="text-[10px] tracking-widest text-slate-400 px-3 pb-1">เสริม</div>
-      {extra.map(it=>{
-        const active = path===it.href;
-        return <Link key={it.href} href={it.href} onClick={()=>setOpen(false)} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm ${active?'bg-[#0f2040] text-white':'hover:bg-slate-50 text-slate-700'}`}><span className="w-5 text-center">{it.icon}</span>{it.label}</Link>
-      })}
-      <div className="pt-4 text-[11px] text-slate-500 border-t mt-4">โครงสร้างล็อก 1:5 • ทุกเมนูตรวจสิทธิฝั่ง API</div>
+    <div className={`p-3 space-y-1 ${collapsed?'px-2':''}`}>
+      {/* ปุ่มแชตใหม่ */}
+      <div className={`${collapsed?'px-0':''} pb-2`}>
+        {collapsed ? (
+          <Link href={authed ? "/chat" : "/login"} title={authed ? "แชตใหม่ (Ctrl+B สลับเมนู)" : "เข้าสู่ระบบก่อนแชต"} className={`flex items-center justify-center w-10 h-10 mx-auto rounded-xl text-white hover:bg-sky-600 ${authed===false?'bg-slate-400':'bg-sky-500'}`}>＋</Link>
+        ) : (
+          <Link href={authed ? "/chat" : "/login"} className={`flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-white text-sm font-semibold hover:bg-sky-600 ${authed===false?'bg-slate-400':'bg-sky-500'}`}>
+            ＋ {authed===false?'เข้าสู่ระบบก่อนแชต':'แชตใหม่'}
+          </Link>
+        )}
+      </div>
+
+      {/* ถ้ายังไม่ล็อกอิน — ซ่อนเมนูสมาชิกทั้งหมด ไม่โชว์กล่องให้ผู้สนใจเห็น */}
+      {authed===false ? (
+        <>
+          {!collapsed && <div className="text-[10px] tracking-widest text-slate-400 px-3 pb-1 pt-2">เมนู</div>}
+          <Link href="/" onClick={()=>setMobileOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm ${collapsed?'justify-center px-2':''} ${path==='/'?'bg-[#475569] text-white':'hover:bg-[#FFFBF5] text-slate-700'}`}>
+            <span className="w-5 text-center shrink-0">⌂</span>{!collapsed && <span>หน้าแรก</span>}
+          </Link>
+        </>
+      ) : (
+        <>
+          {!collapsed && <div className="text-[10px] tracking-widest text-slate-400 px-3 pb-1 pt-2">เมนูหลัก</div>}
+          {items.map(it=>{
+            const active = path===it.href || (it.href==='/chat' && path?.startsWith('/chat'));
+            return (
+              <Link key={it.href} href={it.href} onClick={()=>setMobileOpen(false)} title={collapsed?it.label:undefined}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm ${collapsed?'justify-center px-2':''} ${active?'bg-[#475569] text-white':'hover:bg-[#FFFBF5] text-slate-700'}`}>
+                <span className="w-5 text-center shrink-0">{it.icon}</span>
+                {!collapsed && <span className="truncate">{it.label}</span>}
+              </Link>
+            )
+          })}
+          {/* สร้างเครือข่าย - ซัพเมนู */}
+          <div className={`${collapsed?'px-1':''} mt-1`}>
+            <button
+              onClick={()=> collapsed ? setCollapsed(false) : setNetworkOpen(v=>!v)}
+              title={collapsed?'สร้างเครือข่าย':undefined}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm ${collapsed?'justify-center px-2':''} ${(path?.startsWith('/network')||path?.startsWith('/tree')) ?'bg-[#475569] text-white':'hover:bg-[#FFFBF5] text-slate-700'}`}>
+              <span className="w-5 text-center shrink-0">🌐</span>
+              {!collapsed && <span className="flex-1 text-left truncate">สร้างเครือข่าย</span>}
+              {!collapsed && <span className={`text-xs transition ${networkOpen?'rotate-90':''}`}>›</span>}
+            </button>
+            {!collapsed && networkOpen && (
+              <div className="ml-4 mt-1 pl-3 border-l-2 border-[#f3e8d3] space-y-1">
+                <Link href="/network-example" onClick={()=>setMobileOpen(false)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${path==='/network-example'?'bg-[#475569] text-white':'bg-[#f0f7ff] border border-[#dbeafe] text-[#2563eb] hover:bg-[#e8f0ff]'}`}>
+                  <span>👥</span><span>ตัวอย่างเครือข่าย</span>
+                  {path==='/network-example' && <span className="ml-auto text-[10px]">●</span>}
+                </Link>
+                <Link href="/tree" onClick={()=>setMobileOpen(false)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${path==='/tree'?'bg-[#475569] text-white':'hover:bg-[#FFFBF5] text-slate-600'}`}>
+                  <span>⁂</span><span>ผัง 1 แตก 5</span>
+                </Link>
+              </div>
+            )}
+            {collapsed && (
+              <div className="mt-1 flex justify-center">
+                <Link href="/network-example" title="ตัวอย่างเครือข่าย" className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs ${path==='/network-example'?'bg-[#475569] text-white':'bg-[#f0f7ff] border border-[#dbeafe] text-[#2563eb]'}`}>👥</Link>
+              </div>
+            )}
+          </div>
+          {!collapsed && <div className="border-t my-3"/>}
+          {!collapsed && <div className="text-[10px] tracking-widest text-slate-400 px-3 pb-1">เสริม</div>}
+          {extra.map(it=>{
+            const active = path===it.href;
+            return (
+              <Link key={it.href} href={it.href} onClick={()=>setMobileOpen(false)} title={collapsed?it.label:undefined}
+                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs ${collapsed?'justify-center px-2':''} ${active?'bg-[#475569] text-white':'hover:bg-[#FFFBF5] text-slate-600'}`}>
+                <span className="w-5 text-center shrink-0">{it.icon}</span>
+                {!collapsed && <span className="truncate">{it.label}</span>}
+              </Link>
+            )
+          })}
+        </>
+      )}
+      {!collapsed && authed!==false && <div className="pt-4 text-[11px] text-slate-400 border-t mt-4 px-3">กด <kbd className="px-1.5 py-0.5 bg-slate-100 border rounded text-[10px]">Ctrl</kbd>+<kbd className="px-1.5 py-0.5 bg-slate-100 border rounded text-[10px]">B</kbd> หรือ <kbd className="px-1.5 py-0.5 bg-slate-100 border rounded text-[10px]">[</kbd> เพื่อหด/ขยาย</div>}
     </div>
   );
+
   return (
     <>
       {/* Mobile toggle */}
-      <button onClick={()=>setOpen(v=>!v)} className="lg:hidden fixed bottom-4 right-4 z-50 w-12 h-12 rounded-full bg-[#0f2040] text-white shadow-lg flex items-center justify-center text-xl">☰</button>
-      {open && <div onClick={()=>setOpen(false)} className="lg:hidden fixed inset-0 bg-black/40 z-40"/>}
-      <aside className={`w-[240px] shrink-0 border-r bg-white min-h-[calc(100vh-56px)] ${open ? 'fixed inset-y-0 left-0 z-50 overflow-auto lg:static' : 'hidden lg:block'}`}>
-        {Nav}
+      <button onClick={()=>setMobileOpen(v=>!v)} className="lg:hidden fixed bottom-4 right-4 z-50 w-12 h-12 rounded-full bg-[#475569] text-white shadow-lg flex items-center justify-center text-xl">☰</button>
+      {mobileOpen && <div onClick={()=>setMobileOpen(false)} className="lg:hidden fixed inset-0 bg-black/40 z-40"/>}
+      {/* Desktop collapse toggle - ลอยขอบ */}
+      <button
+        onClick={()=>setCollapsed(v=>!v)}
+        title={collapsed?'ขยายเมนู (Ctrl+B หรือ [)':'หดเมนู (Ctrl+B หรือ [)'}
+        className="hidden lg:flex fixed z-30 w-6 h-12 items-center justify-center bg-white border border-[#f3e8d3] hover:bg-[#FFFBF5] text-slate-500 rounded-r-xl shadow-sm"
+        style={{left: collapsed? '56px' : '260px', top:'50%', transform:'translateY(-50%)'}}
+      >
+        {collapsed?'›':'‹'}
+      </button>
+
+      <aside className={`${collapsed?'w-[56px]':'w-[260px]'} shrink-0 border-r border-[#f3e8d3] bg-white flex flex-col
+        ${mobileOpen ? 'fixed inset-y-0 left-0 z-50 overflow-auto w-[260px]' : 'hidden lg:flex'}
+        transition-all duration-200`}>
+        {/* Logo */}
+        <div className={`h-[56px] border-b border-[#f3e8d3] flex items-center ${collapsed?'justify-center px-1':'gap-3 px-3'} shrink-0`}>
+          <img src="/logo.png" alt="AI Insurance" className="h-8 w-auto bg-white rounded-lg border border-[#f3e8d3] object-contain p-0.5"/>
+          {!collapsed && <div className="min-w-0"><div className="font-bold text-xs text-[#475569] leading-none truncate">AI Insurance Network</div><div className="text-[10px] text-slate-400">ระบบค้นหาด้วย AI อัจฉริยะ</div></div>}
+        </div>
+        <div className="flex-1 overflow-auto">
+          {Nav}
+        </div>
       </aside>
     </>
   );

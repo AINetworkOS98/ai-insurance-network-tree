@@ -74,7 +74,7 @@ function RegisterInner(){
 
           <label className="flex items-center gap-2 mt-3 text-xs"><input type="checkbox" defaultChecked /> ยอมรับเงื่อนไขการใช้งานและ PDPA (เก็บเวอร์ชันและเวลายินยอม)</label>
 
-          <button onClick={submit} disabled={loading} className="w-full mt-4 py-2.5 rounded-full bg-[#c8a84e] text-[#0f2040] font-semibold disabled:opacity-50">
+          <button onClick={submit} disabled={loading} className="w-full mt-4 py-2.5 rounded-full bg-[#c8a84e] text-[#475569] font-semibold disabled:opacity-50">
             {loading ? 'กำลังสมัคร...' : 'สมัคร — สร้างบัญชี'}
           </button>
           {msg && <div className="mt-3 text-xs text-center p-2 rounded-xl bg-slate-50 border">{msg}</div>}

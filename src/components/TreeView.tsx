@@ -54,7 +54,7 @@ export default function TreeView(){
   if(!tree) return (
     <div>
       <div className="border rounded-2xl bg-white p-10 text-center">
-        <div className="text-sm font-semibold text-[#0f2040]">ยังไม่มีผังเครือข่าย</div>
+        <div className="text-sm font-semibold text-[#475569]">ยังไม่มีผังเครือข่าย</div>
         <div className="text-xs text-slate-500 mt-1">ไม่มีข้อมูลปลอม — ระบบจะแสดงผังเมื่อมีสมาชิกจริงใน DB</div>
         <div className="text-[11px] text-slate-400 mt-2">สร้างสมาชิกผ่าน Admin → อนุมัติ Prospect → ระบบจะวางในต้นไม้ฐาน 5 คนแบบ BFS อัตโนมัติ</div>
         <div className="flex justify-center gap-2 text-[11px] mt-4">

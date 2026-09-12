@@ -104,16 +104,16 @@ export default function AppointmentsPage(){
         <Sidebar/>
         <main className="flex-1 p-6 space-y-6">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-xl font-bold text-[#0f2040]">นัดหมาย ◷</h1>
+            <h1 className="text-xl font-bold text-[#475569]">นัดหมาย ◷</h1>
             <span className="badge-demo">เชื่อม Prospect</span>
             <span className="text-xs text-slate-500 hidden md:inline">จัดการนัดหมาย ติดตาม และเปลี่ยนสถานะ — เชื่อมกับผู้สนใจ (Prospect)</span>
-            <button onClick={()=>setShowForm(v=>!v)} className="ml-auto px-4 py-2 rounded-full bg-[#0f2040] text-white text-sm font-semibold">+ สร้างนัดหมาย</button>
+            <button onClick={()=>setShowForm(v=>!v)} className="ml-auto px-4 py-2 rounded-full bg-[#475569] text-white text-sm font-semibold">+ สร้างนัดหมาย</button>
             <button onClick={load} className="px-4 py-2 rounded-full border bg-white text-sm">รีเฟรช</button>
           </div>
 
           {showForm && (
             <div className="card p-5 space-y-3">
-              <div className="font-semibold text-sm text-[#0f2040]">สร้างนัดหมายใหม่</div>
+              <div className="font-semibold text-sm text-[#475569]">สร้างนัดหมายใหม่</div>
               <div className="grid md:grid-cols-2 gap-3">
                 <label className="text-sm">หัวข้อ/ชื่อนัดหมาย *
                   <input value={form.title} onChange={e=>setForm({...form,title:e.target.value})} placeholder="เช่น นัดแนะนำแผนประกัน" className="mt-1 w-full border rounded-xl px-3 py-2" />
@@ -129,7 +129,7 @@ export default function AppointmentsPage(){
                 </label>
               </div>
               <div className="flex gap-2">
-                <button onClick={create} disabled={saving} className="px-5 py-2 rounded-full bg-[#c8a84e] text-[#0f2040] font-semibold text-sm disabled:opacity-50">{saving?'กำลังบันทึก...':'บันทึกนัดหมาย'}</button>
+                <button onClick={create} disabled={saving} className="px-5 py-2 rounded-full bg-[#c8a84e] text-[#475569] font-semibold text-sm disabled:opacity-50">{saving?'กำลังบันทึก...':'บันทึกนัดหมาย'}</button>
                 <button onClick={()=>setShowForm(false)} className="px-5 py-2 rounded-full border bg-white text-sm">ยกเลิก</button>
               </div>
               <p className="text-[11px] text-slate-500">บันทึกแล้วจะแสดงในรายการด้านล่าง • แสดงเฉพาะนัดหมายจริงจาก DB (ไม่มีข้อมูลปลอม)</p>
@@ -158,7 +158,7 @@ export default function AppointmentsPage(){
                 {filtered.map(a=>(
                   <div key={a.id} className="flex flex-wrap items-center gap-3 p-3 rounded-xl border bg-white hover:bg-slate-50">
                     <div className="flex-1 min-w-[220px]">
-                      <div className="font-semibold text-sm text-[#0f2040]">{a.title}</div>
+                      <div className="font-semibold text-sm text-[#475569]">{a.title}</div>
                       <div className="text-xs text-slate-500">
                         {new Date(a.startAt).toLocaleString('th-TH',{dateStyle:'medium', timeStyle:'short'})}
                         {a.endAt ? ` → ${new Date(a.endAt).toLocaleString('th-TH',{timeStyle:'short'})}` : ''}

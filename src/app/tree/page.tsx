@@ -87,12 +87,12 @@ export default function TreePage(){
         <Sidebar/>
         <main className="flex-1 p-6 space-y-4">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-xl font-bold text-[#0f2040]">ผังทีม 1:5 — โครงสร้างล็อก 1:5</h1>
+            <h1 className="text-xl font-bold text-[#475569]">ผังทีม 1:5 — โครงสร้างล็อก 1:5</h1>
             <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[11px] font-bold">โครงสร้างล็อก 1:5</span>
             <span className="text-xs text-slate-500">Breadth-first • ซ้ายไปขวา • ไม่เกิน 5 ช่อง/ชั้น</span>
             <div className="ml-auto flex gap-2">
-              <button onClick={()=> setActiveTab('real')} className={`px-4 py-1.5 rounded-full text-xs font-semibold border ${activeTab==='real' ? 'bg-[#0f2040] text-white' : 'bg-white'}`}>ดูผัง 1:5</button>
-              <button onClick={()=> setActiveTab('simulate')} className={`px-4 py-1.5 rounded-full text-xs font-semibold border ${activeTab==='simulate' ? 'bg-[#0f2040] text-white' : 'bg-white'}`}>ทดลองรัน</button>
+              <button onClick={()=> setActiveTab('real')} className={`px-4 py-1.5 rounded-full text-xs font-semibold border ${activeTab==='real' ? 'bg-[#475569] text-white' : 'bg-white'}`}>ดูผัง 1:5</button>
+              <button onClick={()=> setActiveTab('simulate')} className={`px-4 py-1.5 rounded-full text-xs font-semibold border ${activeTab==='simulate' ? 'bg-[#475569] text-white' : 'bg-white'}`}>ทดลองรัน</button>
             </div>
           </div>
 
@@ -100,12 +100,12 @@ export default function TreePage(){
           <div className="card p-4">
             <div className="text-[11px] text-slate-500 mb-2">ปุ่มควบคุม — ทุกปุ่มทำงานจริง (ไม่โชว์สำเร็จปลอม)</div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              <button onClick={()=> setActiveTab('real')} className="px-4 py-3 rounded-xl bg-[#0f2040] text-white text-xs font-semibold">ดูผัง 1:5</button>
+              <button onClick={()=> setActiveTab('real')} className="px-4 py-3 rounded-xl bg-[#475569] text-white text-xs font-semibold">ดูผัง 1:5</button>
               <button onClick={()=> setActiveTab('simulate')} className="px-4 py-3 rounded-xl border bg-white text-xs font-semibold hover:bg-slate-50">ทดลองรัน</button>
               <button onClick={runPlacement} disabled={loading==='run'} className="px-4 py-3 rounded-xl bg-emerald-600 text-white text-xs font-semibold disabled:opacity-50">รันจัดวางอัตโนมัติ</button>
               <button onClick={checkStructure} disabled={loading==='struct'} className="px-4 py-3 rounded-xl border bg-amber-50 text-xs font-semibold disabled:opacity-50">ตรวจโครงสร้าง</button>
               <button onClick={checkRank} disabled={loading==='rank'} className="px-4 py-3 rounded-xl border bg-white text-xs font-semibold disabled:opacity-50">ตรวจคุณสมบัติตำแหน่ง</button>
-              <button onClick={closePeriod} disabled={loading==='close'} className="px-4 py-3 rounded-xl bg-[#c8a84e] text-[#0f2040] text-xs font-bold disabled:opacity-50">ปิดยอดรายเดือน</button>
+              <button onClick={closePeriod} disabled={loading==='close'} className="px-4 py-3 rounded-xl bg-[#c8a84e] text-[#475569] text-xs font-bold disabled:opacity-50">ปิดยอดรายเดือน</button>
             </div>
             {msg && <div className="mt-3 text-xs p-2.5 rounded-xl bg-slate-50 border">{msg}</div>}
             <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-500">
@@ -147,7 +147,7 @@ export default function TreePage(){
                   <input placeholder="ค้นหาชื่อหรือรหัสสมาชิก" className="border rounded-xl px-3 py-2 flex-1 min-w-[200px]" />
                   <select className="border rounded-xl px-3 py-2"><option>ทุกสถานะ</option><option>Active</option><option>Pending</option></select>
                   <select className="border rounded-xl px-3 py-2"><option>ทุกสาขา</option><option>กรุงเทพ</option><option>เชียงใหม่</option></select>
-                  <button className="px-4 py-2 rounded-xl bg-[#0f2040] text-white">ค้นหา</button>
+                  <button className="px-4 py-2 rounded-xl bg-[#475569] text-white">ค้นหา</button>
                   <button className="px-3 py-2 rounded-xl border text-xs">ซูม +</button>
                   <button className="px-3 py-2 rounded-xl border text-xs">ย้อนขึ้นชั้นบน</button>
                 </div>

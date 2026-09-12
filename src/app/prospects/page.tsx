@@ -17,9 +17,9 @@ export default function Prospects(){
         <Sidebar/>
         <main className="flex-1 p-6 space-y-6">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-[#0f2040]">ผู้สนใจ (Prospect CRM)</h1>
+            <h1 className="text-xl font-bold text-[#475569]">ผู้สนใจ (Prospect CRM)</h1>
             {prospects.length===0 && <span className="text-xs px-2 py-1 rounded-full border bg-white text-slate-500">ไม่มีข้อมูลปลอม — แสดงเฉพาะข้อมูลจริงจาก DB</span>}
-            <button className="ml-auto px-4 py-2 rounded-full bg-[#0f2040] text-white text-sm">+ เพิ่มผู้สนใจ</button>
+            <button className="ml-auto px-4 py-2 rounded-full bg-[#475569] text-white text-sm">+ เพิ่มผู้สนใจ</button>
             <button className="px-4 py-2 rounded-full border bg-white text-sm">นำเข้า CSV/Excel</button>
           </div>
           <div className="card p-4">

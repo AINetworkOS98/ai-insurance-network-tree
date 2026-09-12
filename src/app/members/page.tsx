@@ -53,15 +53,15 @@ export default function MembersPage(){
         <Sidebar/>
         <main className="flex-1 p-6 space-y-4">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-xl font-bold text-[#0f2040]">สมาชิกของฉัน ◉</h1>
+            <h1 className="text-xl font-bold text-[#475569]">สมาชิกของฉัน ◉</h1>
             <span className="badge-demo">ทีมของฉัน</span>
             <span className="text-xs text-slate-500 hidden md:inline">ดูสมาชิกในสายงานตามสิทธิ์ • Own / Team / All</span>
-            <Link href="/tree" className="ml-auto px-4 py-2 rounded-full bg-[#0f2040] text-white text-sm">ดูผังเครือข่าย</Link>
+            <Link href="/tree" className="ml-auto px-4 py-2 rounded-full bg-[#475569] text-white text-sm">ดูผังเครือข่าย</Link>
             <button onClick={load} className="px-4 py-2 rounded-full border bg-white text-sm">รีเฟรช</button>
           </div>
 
           <div className="grid md:grid-cols-4 gap-3 text-sm">
-            <div className="card p-4"><div className="text-xs text-slate-500">สมาชิกทั้งหมด</div><div className="text-2xl font-bold text-[#0f2040]">{members.length}</div><div className="text-[11px] text-slate-500">ในขอบเขตที่มองเห็นได้</div></div>
+            <div className="card p-4"><div className="text-xs text-slate-500">สมาชิกทั้งหมด</div><div className="text-2xl font-bold text-[#475569]">{members.length}</div><div className="text-[11px] text-slate-500">ในขอบเขตที่มองเห็นได้</div></div>
             <div className="card p-4"><div className="text-xs text-slate-500">Active</div><div className="text-2xl font-bold text-emerald-600">{members.filter(m=>m.status==='ACTIVE').length}</div></div>
             <div className="card p-4"><div className="text-xs text-slate-500">Pending</div><div className="text-2xl font-bold text-amber-600">{members.filter(m=>m.status==='PENDING').length}</div></div>
             <div className="card p-4"><div className="text-xs text-slate-500">อื่นๆ</div><div className="text-2xl font-bold text-slate-600">{members.filter(m=>!['ACTIVE','PENDING'].includes(m.status)).length}</div></div>
@@ -81,13 +81,13 @@ export default function MembersPage(){
             : (
               <div className="overflow-auto">
                 <table className="w-full text-xs">
-                  <thead className="bg-[#0f2040] text-white">
+                  <thead className="bg-[#475569] text-white">
                     <tr><th className="text-left p-2.5">Member ID</th><th className="text-left p-2.5">ชื่อ</th><th className="text-left p-2.5">จังหวัด</th><th className="text-left p-2.5 hidden md:table-cell">สาขา/ภาค</th><th className="p-2.5">สถานะ</th><th className="text-left p-2.5 hidden md:table-cell">อีเมล</th></tr>
                   </thead>
                   <tbody className="divide-y">
                     {filtered.map(m=>(
                       <tr key={m.memberId} className="hover:bg-slate-50">
-                        <td className="p-2.5 font-mono font-semibold text-[#0f2040]">{m.memberId}</td>
+                        <td className="p-2.5 font-mono font-semibold text-[#475569]">{m.memberId}</td>
                         <td className="p-2.5">{m.name}</td>
                         <td className="p-2.5">{m.province}</td>
                         <td className="p-2.5 hidden md:table-cell">{m.branch} / {m.region}</td>

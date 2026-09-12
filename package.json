@@ -19,8 +19,10 @@
     "firebase": "^11.10.0",
     "firebase-admin": "^14.3.0",
     "jsonwebtoken": "^9.0.3",
+    "mammoth": "^1.12.3",
     "next": "16.3.4",
     "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.3.289",
     "prisma": "^6.14.0",
     "qrcode": "^1.5.4",
     "react": "19.2.8",
@@ -31,6 +33,7 @@
     "tailwind-merge": "^3.6.0",
     "tesseract.js": "^7.0.0",
     "uuid": "^14.0.2",
+    "xlsx": "^0.18.5",
     "zod": "^4.5.4"
   },
   "devDependencies": {

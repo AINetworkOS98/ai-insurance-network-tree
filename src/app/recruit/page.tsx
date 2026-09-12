@@ -30,9 +30,9 @@ export default function RecruitPage(){
         <Sidebar/>
         <main className="flex-1 p-6 space-y-6">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-[#0f2040]">สมัครตัวแทน — เชื่อม OS 📝</h1>
+            <h1 className="text-xl font-bold text-[#475569]">สมัครตัวแทน — เชื่อม OS 📝</h1>
             <span className="text-xs px-2 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700">ฐานเดียวกัน akarapol798</span>
-            <a href={`${OS}/?tab=recruit_agent`} target="_blank" rel="noreferrer" className="ml-auto px-4 py-2 rounded-full bg-[#0f2040] text-white text-sm">เปิด OS recruit_agent ↗</a>
+            <a href={`${OS}/?tab=recruit_agent`} target="_blank" rel="noreferrer" className="ml-auto px-4 py-2 rounded-full bg-[#475569] text-white text-sm">เปิด OS recruit_agent ↗</a>
           </div>
 
           <div className="grid lg:grid-cols-2 gap-6">
@@ -47,7 +47,7 @@ export default function RecruitPage(){
                 <label className="text-sm">เบอร์โทร*<input value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})} className="mt-1 w-full border rounded-xl px-3 py-2" placeholder="08x-xxx-xxxx" /></label>
                 <label className="text-sm">อีเมล<input value={form.email} onChange={e=>setForm({...form,email:e.target.value})} className="mt-1 w-full border rounded-xl px-3 py-2" placeholder="email@example.com" /></label>
                 <label className="text-sm">จังหวัด<input value={form.province} onChange={e=>setForm({...form,province:e.target.value})} className="mt-1 w-full border rounded-xl px-3 py-2" /></label>
-                <button type="submit" disabled={saving} className="w-full py-3 rounded-xl bg-[#c8a84e] text-[#0f2040] font-bold disabled:opacity-50">{saving?'กำลังส่ง...':'ส่งใบสมัคร (เข้า OS)'}</button>
+                <button type="submit" disabled={saving} className="w-full py-3 rounded-xl bg-[#c8a84e] text-[#475569] font-bold disabled:opacity-50">{saving?'กำลังส่ง...':'ส่งใบสมัคร (เข้า OS)'}</button>
                 {msg && <div className="text-xs p-3 rounded-xl bg-slate-50 border">{msg}</div>}
               </form>
               <div className="mt-3 flex gap-2 text-xs flex-wrap">

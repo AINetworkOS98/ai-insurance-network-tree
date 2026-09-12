@@ -125,6 +125,7 @@ model User {
   prospectsOwned    Prospect[] @relation("ProspectOwner")
   prospectActivities ProspectActivity[]
   auditLogs         AuditLog[]
+  aiMemories        AIMemory[]
   rankHistories     RankHistory[]
   notifications     Notification[]
   consentRecords    ConsentRecord[]
@@ -1225,5 +1226,19 @@ model AuditLog {
   ip          String?
   createdAt   DateTime @default(now()) @db.Timestamptz
   @@index([entity, entityId])
+  @@index([userId])
+}
+
+// ── Hermes OS — Persistent Memory (per-user, cross-session) ──
+model AIMemory {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String   // preference | fact | skill | summary
+  key       String
+  value     String   @db.Text
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+  @@unique([userId, key])
   @@index([userId])
 }

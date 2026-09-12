@@ -1,21 +1,44 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import Header from '@/components/Header';
-import Sidebar from '@/components/Sidebar';
+import { useSearchParams } from 'next/navigation';
 import { auth } from '@/lib/firebase-client';
-import { GoogleAuthProvider, FacebookAuthProvider, GithubAuthProvider, OAuthProvider, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, FacebookAuthProvider, GithubAuthProvider, signInWithPopup } from 'firebase/auth';
+
+export const dynamic = 'force-dynamic';
 
 type Provider = 'google' | 'facebook' | 'github' | 'tiktok';
 type MsgType = 'ok' | 'err' | '';
 
+function safeNext(v: string | null): string {
+  if(!v) return '/';
+  if(!v.startsWith('/')) return '/';
+  if(v.startsWith('//')) return '/';
+  if(v.startsWith('/login') || v.startsWith('/register')) return '/';
+  return v;
+}
+
 export default function LoginPage(){
+  return <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-slate-400">กำลังโหลด...</div>}><LoginInner/></Suspense>;
+}
+function LoginInner(){
+  const searchParams = useSearchParams();
+  const nextParam = safeNext(searchParams.get('next'));
+  const errorParam = searchParams.get('error');
+
   const [form, setForm] = useState({ email:'', password:'' });
   const [msg, setMsg] = useState('');
   const [msgType, setMsgType] = useState<MsgType>('');
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<Provider | null>(null);
   const [showPass, setShowPass] = useState(false);
+
+  useEffect(()=>{
+    if(errorParam==='suspended'){
+      setMsg('บัญชีถูกระงับสิทธิ กรุณาติดต่อผู้ดูแลระบบ');
+      setMsgType('err');
+    }
+  },[errorParam]);
 
   async function submit(e:any){
     e.preventDefault();
@@ -25,8 +48,8 @@ export default function LoginPage(){
       const res = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(form)});
       const j = await res.json();
       if(j.ok){
-        setMsg('เข้าสู่ระบบสำเร็จ — กำลังพาไปหน้าแรก'); setMsgType('ok');
-        setTimeout(()=> location.href='/', 600);
+        setMsg('เข้าสู่ระบบสำเร็จ — กำลังพาไปหน้าปลายทาง'); setMsgType('ok');
+        setTimeout(()=> location.href=nextParam, 600);
       } else { setMsg(j.error || 'เข้าสู่ระบบไม่สำเร็จ'); setMsgType('err'); }
     }catch{ setMsg('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'); setMsgType('err');}
     setLoading(false);
@@ -34,23 +57,17 @@ export default function LoginPage(){
 
   async function loginSocial(provider: Provider){
     if(provider==='tiktok'){
-      // TikTok: ใช้ OAuth หน้า TikTok โดยตรง — ถ้ายังไม่ได้ตั้ง Client จะแจ้งให้ใช้อีเมลก่อน
       setSocialLoading('tiktok'); setMsg('');
       try{
         const res = await fetch('/api/auth/tiktok', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'init' }) });
         const j = await res.json();
-        if(j.url){
-          location.href = j.url; // redirect ไป TikTok OAuth
-          return;
-        }
-        // ถ้าไม่มี config ให้แสดงข้อความ
+        if(j.url){ location.href = j.url; return; }
         setMsg(j.error || 'TikTok Login ยังไม่ได้ตั้งค่า — กรุณาใช้อีเมล/ Google / Facebook / GitHub ก่อน');
         setMsgType('err');
       }catch(e:any){ setMsg('TikTok Login ไม่พร้อมใช้งาน — ลองวิธีอื่นก่อน'); setMsgType('err'); }
       setSocialLoading(null);
       return;
     }
-
     setSocialLoading(provider); setMsg('');
     try{
       if(!auth) throw new Error('Firebase ยังไม่พร้อม');
@@ -73,7 +90,7 @@ export default function LoginPage(){
       if(j.ok){
         const label = provider==='google'?'Google':provider==='facebook'?'Facebook':'GitHub';
         setMsg(`เข้าสู่ระบบด้วย ${label} สำเร็จ`); setMsgType('ok');
-        setTimeout(()=> location.href='/', 600);
+        setTimeout(()=> location.href=nextParam, 600);
       } else { setMsg(j.error || `เข้าสู่ระบบด้วย ${provider} ไม่สำเร็จ`); setMsgType('err'); }
     }catch(e:any){
       const code = e?.code || '';
@@ -87,79 +104,96 @@ export default function LoginPage(){
     setSocialLoading(null);
   }
 
-  const btnBase = "w-full py-2.5 rounded-xl border-2 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50 transition";
-  const providerBtns: {id:Provider,label:string,style:string,icon:string}[] = [
-    {id:'google', label:'Google', style:'bg-white border-slate-200 hover:bg-slate-50 text-slate-700', icon:'G'},
-    {id:'facebook', label:'Facebook', style:'bg-[#1877F2] border-[#1877F2] hover:bg-[#166fe5] text-white', icon:'f'},
-    {id:'github', label:'GitHub', style:'bg-[#24292f] border-[#24292f] hover:bg-black text-white', icon:'⌁'},
-    {id:'tiktok', label:'TikTok', style:'bg-black border-black hover:bg-zinc-800 text-white', icon:'♪'},
+  const btnBase = "w-full py-3.5 rounded-2xl border text-[14px] font-medium flex items-center justify-center gap-3 disabled:opacity-50 transition-all shadow-sm hover:shadow-md hover:-translate-y-[1px] active:translate-y-0";
+  const providerBtns: {id:Provider,label:string,style:string,icon:string,iconStyle:string}[] = [
+    {id:'google', label:'ดำเนินการต่อด้วย Google', style:'bg-white border-[#e8eef5] hover:bg-[#f8fafc] text-slate-700', icon:'G', iconStyle:'bg-white border border-slate-200 text-slate-600 shadow-sm'},
+    {id:'facebook', label:'ดำเนินการต่อด้วย Facebook', style:'bg-[#f0f7ff] border-[#dbeafe] hover:bg-[#e8f0ff] text-[#2563eb]', icon:'f', iconStyle:'bg-white text-[#1877F2] shadow-sm'},
+    {id:'github', label:'ดำเนินการต่อด้วย GitHub', style:'bg-[#f8fafc] border-[#e2e8f0] hover:bg-[#f1f5f9] text-slate-700', icon:'⌁', iconStyle:'bg-slate-800 text-white shadow-sm'},
+    {id:'tiktok', label:'ดำเนินการต่อด้วย TikTok', style:'bg-[#fdf2f8] border-[#fce7f3] hover:bg-[#fce7f3] text-[#be185d]', icon:'♪', iconStyle:'bg-[#ec4899] text-white shadow-sm'},
   ];
 
   return (
-    <div>
-      <Header/>
-      <div className="flex max-w-[1280px] mx-auto">
-        <Sidebar/>
-        <main className="flex-1 p-6 flex justify-center">
-          <div className="w-full max-w-[440px]">
-            <h1 className="text-2xl font-bold text-navy">เข้าสู่ระบบ</h1>
-            <p className="text-xs text-slate-500 mt-1">เข้าสู่ระบบก่อนใช้งาน — รองรับ Google / Facebook / TikTok / GitHub / อีเมล</p>
+    <div className="min-h-screen bg-gradient-to-br from-[#f8fafc] via-[#f0f7ff] to-[#fdf2f8] flex flex-col">
+      {/* Top bar minimal */}
+      <div className="h-[56px] flex items-center justify-between px-4 md:px-8">
+        <Link href="/" className="flex items-center gap-2.5">
+          <img src="/logo.png" alt="AI Insurance" className="h-8 w-auto bg-white rounded-xl border border-slate-200 object-contain p-1 shadow-sm"/>
+          <span className="text-sm font-bold text-slate-800 hidden sm:inline">AI Insurance Network Tree</span>
+        </Link>
+        <Link href="/" className="text-xs text-slate-500 hover:text-slate-700">กลับหน้าแรก →</Link>
+      </div>
 
-            <div className="card p-5 mt-4 space-y-4">
-              {/* Social grid */}
-              <div className="grid grid-cols-2 gap-2">
-                {providerBtns.map(p=>(
-                  <button key={p.id} onClick={()=> loginSocial(p.id)} disabled={!!socialLoading || loading} className={`${btnBase} ${p.style}`}>
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${p.id==='google'?'border bg-white text-slate-700':p.id==='facebook'?'bg-white text-[#1877F2]':'bg-white/15 text-white'}`}>{p.icon}</span>
-                    {socialLoading===p.id ? 'กำลังเชื่อม...' : p.label}
-                  </button>
-                ))}
-              </div>
-              <p className="text-[11px] text-slate-400 text-center -mt-1">TikTok ต้องตั้งค่า Client Key ใน .env ก่อน (ดูคำแนะนำด้านล่าง)</p>
-
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-slate-200"/><span className="text-[11px] text-slate-400">หรือ อีเมล</span><div className="flex-1 h-px bg-slate-200"/>
-              </div>
-
-              {/* Email / Password */}
-              <form onSubmit={submit} className="space-y-3">
-                <div>
-                  <label className="text-xs font-semibold text-slate-700">อีเมล</label>
-                  <input value={form.email} onChange={e=> setForm({...form, email:e.target.value})} placeholder="you@example.com" type="email" autoComplete="email" className="mt-1 w-full px-3 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-navy/20 bg-white" />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-700">รหัสผ่าน</label>
-                  <div className="relative">
-                    <input value={form.password} onChange={e=> setForm({...form, password:e.target.value})} type={showPass ? 'text' : 'password'} placeholder="••••••••" autoComplete="current-password" className="mt-1 w-full px-3 py-2.5 rounded-xl border text-sm pr-10 focus:outline-none focus:ring-2 focus:ring-navy/20 bg-white" />
-                    <button type="button" onClick={()=> setShowPass(!showPass)} className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] px-2 py-1 rounded-full bg-slate-100">{showPass ? 'ซ่อน' : 'ดู'}</button>
-                  </div>
-                </div>
-                <button disabled={loading || !!socialLoading} className="w-full py-2.5 rounded-full bg-navy text-white text-sm font-semibold disabled:opacity-50">
-                  {loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบด้วยอีเมล'}
-                </button>
-              </form>
-
-              <div className="flex justify-between text-xs">
-                <Link href="/register" className="text-navy underline">สมัครสมาชิก</Link>
-                <Link href="/forgot-password" className="text-slate-500 hover:text-navy">ลืมรหัสผ่าน?</Link>
-              </div>
-
-              {msg && <div className={`p-2.5 rounded-xl border text-xs ${msgType==='ok' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-800'}`}>{msg}</div>}
-
-              <div className="text-[11px] text-slate-400 text-center leading-relaxed">
-                เข้าสู่ระบบ = ยอมรับเงื่อนไขการใช้งาน · บัญชีถูกระงับจะเข้าไม่ได้ (SUSPENDED/RESIGNED)
+      <div className="flex-1 flex items-center justify-center p-4 md:p-8">
+        <div className="w-full max-w-[960px] grid md:grid-cols-[1.05fr_1fr] gap-0 rounded-[28px] overflow-hidden bg-white shadow-[0_20px_60px_-16px_rgba(71,85,105,0.18)] border border-white">
+          {/* Left — Branding / Invite — ขาวนวลสดใส */}
+          <div className="hidden md:flex flex-col justify-between p-8 lg:p-10 bg-gradient-to-br from-[#ffffff] via-[#f8fbff] to-[#eff6ff] relative overflow-hidden border-r border-[#eef3ff]">
+            <div className="absolute inset-0">
+              <div className="absolute -top-14 -right-10 w-72 h-72 rounded-full bg-[#dbeafe]/40 blur-3xl"/>
+              <div className="absolute -bottom-16 -left-8 w-80 h-80 rounded-full bg-[#e0f2fe]/35 blur-3xl"/>
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[420px] h-[420px] rounded-full bg-white/70 blur-2xl"/>
+            </div>
+            <div className="relative">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-[#dbeafe] text-xs text-slate-600 shadow-sm">✦ ระบบค้นหาด้วย AI อัจฉริยะ</div>
+              <h1 className="mt-6 text-[28px] font-bold leading-tight text-slate-800">ยินดีต้อนรับกลับ</h1>
+              <p className="mt-3 text-sm text-slate-500 leading-relaxed">เข้าสู่ระบบเพื่อจัดการเครือข่าย ผัง 1 แตก 5 และข้อมูลสมาชิก — ปลอดภัย รวดเร็ว สไตล์สากลที่คุ้นเคย</p>
+              <div className="mt-8 space-y-3 text-xs text-slate-600">
+                <div className="flex items-center gap-2.5"><span className="w-7 h-7 rounded-full bg-white border border-[#dbeafe] text-[#3b82f6] flex items-center justify-center shadow-sm text-[11px]">✓</span> เข้าได้ด้วย Google / Facebook / GitHub / TikTok</div>
+                <div className="flex items-center gap-2.5"><span className="w-7 h-7 rounded-full bg-white border border-[#dbeafe] text-[#3b82f6] flex items-center justify-center shadow-sm text-[11px]">✓</span> ผังเครือข่าย 1×5 อัตโนมัติ พร้อม KPI</div>
+                <div className="flex items-center gap-2.5"><span className="w-7 h-7 rounded-full bg-white border border-[#dbeafe] text-[#3b82f6] flex items-center justify-center shadow-sm text-[11px]">✓</span> ข้อมูลปลอดภัย เข้ารหัสมาตรฐานสากล</div>
               </div>
             </div>
-
-            <div className="mt-3 p-3 rounded-xl bg-blue-50 border border-blue-200 text-[11px] text-blue-900 leading-relaxed">
-              <div className="font-semibold">วิธีเปิดใช้งาน Social Login:</div>
-              <div className="mt-1 space-y-1 text-slate-700">
-                <div><b>Google / Facebook / GitHub</b> → เปิดใน <code>Firebase Console &gt; Authentication &gt; Sign-in method</code> แล้วเพิ่ม provider</div>
-                <div><b>TikTok</b> → สมัคร <code>TikTok Developers</code> เอา <code>TIKTOK_CLIENT_KEY</code> / <code>TIKTOK_CLIENT_SECRET</code> ใส่ใน <code>.env</code> แล้วตั้ง Redirect เป็น <code>/api/auth/tiktok</code></div>
-              </div>
-            </div>
+            <div className="relative text-[11px] text-slate-400">© 2026 AI Insurance Network Tree • ระบบบริหารเครือข่ายตัวแทน</div>
           </div>
-        </main>
+
+          {/* Right — Form */}
+          <div className="p-6 md:p-8 lg:p-10 bg-white">
+            <div className="md:hidden flex items-center gap-2 mb-4">
+              <img src="/logo.png" alt="" className="h-7 w-auto border rounded-lg p-0.5"/>
+              <span className="text-sm font-bold text-slate-800">AI Insurance Network Tree</span>
+            </div>
+            <h2 className="text-[22px] font-bold text-slate-800">เข้าสู่ระบบ</h2>
+            <p className="text-xs text-slate-500 mt-1">เลือกวิธีที่สะดวก — นุ่มนวล ปลอดภัย แบบสากล</p>
+
+            <div className="mt-6 flex flex-col gap-2.5">
+              {providerBtns.map(p=>(
+                <button key={p.id} onClick={()=> loginSocial(p.id)} disabled={!!socialLoading || loading} className={`${btnBase} ${p.style}`}>
+                  <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${p.iconStyle}`}>{p.icon}</span>
+                  <span className="flex-1 text-left">{socialLoading===p.id ? 'กำลังเชื่อม...' : p.label}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-3 my-5">
+              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-200 to-slate-200"/><span className="text-[11px] tracking-widest text-slate-400 px-2">หรือ อีเมล</span><div className="flex-1 h-px bg-gradient-to-r from-slate-200 via-slate-200 to-transparent"/>
+            </div>
+
+            <form onSubmit={submit} className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-700">อีเมล</label>
+                <input value={form.email} onChange={e=> setForm({...form, email:e.target.value})} placeholder="you@example.com" type="email" autoComplete="email" className="mt-1.5 w-full px-4 py-3.5 rounded-2xl border border-[#e8eef5] bg-[#f8fafc] text-sm placeholder:text-slate-400 focus:outline-none focus:border-[#cbd5e1] focus:bg-white focus:ring-4 focus:ring-[#eff6ff] transition" />
+              </div>
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-700">รหัสผ่าน</label>
+                  <Link href="/forgot-password" className="text-[11px] text-slate-500 hover:text-[#475569]">ลืมรหัสผ่าน?</Link>
+                </div>
+                <div className="relative">
+                  <input value={form.password} onChange={e=> setForm({...form, password:e.target.value})} type={showPass ? 'text' : 'password'} placeholder="••••••••" autoComplete="current-password" className="mt-1.5 w-full px-4 py-3.5 rounded-2xl border border-[#e8eef5] bg-[#f8fafc] text-sm placeholder:text-slate-400 pr-12 focus:outline-none focus:border-[#cbd5e1] focus:bg-white focus:ring-4 focus:ring-[#eff6ff] transition" />
+                  <button type="button" onClick={()=> setShowPass(!showPass)} className="absolute right-1.5 top-1/2 -translate-y-1/2 h-8 px-3 rounded-full bg-white border border-slate-200 text-[11px] font-medium text-slate-600 shadow-sm hover:bg-slate-50">{showPass ? 'ซ่อน' : 'ดู'}</button>
+                </div>
+              </div>
+              <button disabled={loading || !!socialLoading} className="w-full py-3.5 rounded-2xl bg-[#475569] text-white text-sm font-bold shadow-[0_8px_20px_-8px_rgba(71,85,105,0.6)] hover:bg-slate-800 hover:shadow-lg hover:-translate-y-[1px] active:translate-y-0 disabled:opacity-50 transition-all">
+                {loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบด้วยอีเมล'}
+              </button>
+            </form>
+
+            {msg && <div className={`mt-4 p-3 rounded-2xl border text-xs leading-relaxed ${msgType==='ok' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : msgType==='err' ? 'bg-red-50 border-red-200 text-red-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>{msg}</div>}
+          </div>
+        </div>
+      </div>
+
+      <div className="py-4 text-center text-[11px] text-slate-400">
+        <Link href="/privacy" className="hover:underline">นโยบายความเป็นส่วนตัว</Link> • <Link href="/terms" className="hover:underline">ข้อกำหนดการใช้งาน</Link>
       </div>
     </div>
   );

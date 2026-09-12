@@ -236,12 +236,12 @@ export default function DocumentsPage() {
         <Sidebar />
         <main className="flex-1 p-6 space-y-5">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-[#0f2040]">เอกสารทางการเงิน</h1>
+            <h1 className="text-xl font-bold text-[#475569]">เอกสารทางการเงิน</h1>
           </div>
 
           {/* สแกน + อัปโหลดใบเสร็จ */}
           <div className="card p-5">
-            <h2 className="font-semibold text-[#0f2040] mb-1">↑ อัปโหลดสลิป/ใบเสร็จ — สแกนยอดเงินจริง</h2>
+            <h2 className="font-semibold text-[#475569] mb-1">↑ อัปโหลดสลิป/ใบเสร็จ — สแกนยอดเงินจริง</h2>
             <p className="text-xs text-slate-500 mb-4">
               ระบบจะสแกนยอดเงินจริงด้วย AI (Gemini Vision) แล้วตรวจคุณสมบัติเลื่อนตำแหน่งให้อัตโนมัติ
             </p>
@@ -264,7 +264,7 @@ export default function DocumentsPage() {
                 onDrop={onDrop}
                 onClick={() => inputRef.current?.click()}
                 className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition ${
-                  dragOver ? 'border-[#c8a84e] bg-amber-50' : 'border-slate-300 hover:border-[#0f2040] bg-slate-50'
+                  dragOver ? 'border-[#c8a84e] bg-amber-50' : 'border-slate-300 hover:border-[#475569] bg-slate-50'
                 }`}
               >
                 <input
@@ -280,7 +280,7 @@ export default function DocumentsPage() {
                 ) : (
                   <div className="text-slate-500">
                     <div className="text-3xl mb-2">📄</div>
-                    <div className="font-medium">ลากไฟล์มาวางที่นี่ หรือ <span className="text-[#0f2040] underline">เลือกไฟล์ / ถ่ายรูป</span></div>
+                    <div className="font-medium">ลากไฟล์มาวางที่นี่ หรือ <span className="text-[#475569] underline">เลือกไฟล์ / ถ่ายรูป</span></div>
                     <div className="text-xs mt-1">รองรับ JPG / PNG / WEBP</div>
                   </div>
                 )}
@@ -293,13 +293,13 @@ export default function DocumentsPage() {
                   <span className="font-mono text-xs">✓ {file.name}</span>
                   <span className="text-xs text-slate-400 ml-2">({(file.size / 1024).toFixed(1)} KB)</span>
                 </div>
-                <button onClick={scan} disabled={busy} className="px-4 py-2 rounded-full bg-[#0f2040] text-white text-sm font-semibold disabled:opacity-50">
+                <button onClick={scan} disabled={busy} className="px-4 py-2 rounded-full bg-[#475569] text-white text-sm font-semibold disabled:opacity-50">
                   🔍 สแกนยอดเงิน
                 </button>
               </div>
             )}
 
-            {busy && <div className="mt-3 text-sm text-[#0f2040] animate-pulse">{STAGE_LABEL[stage]}</div>}
+            {busy && <div className="mt-3 text-sm text-[#475569] animate-pulse">{STAGE_LABEL[stage]}</div>}
 
             {error && <div className="mt-3 text-sm text-red-700 bg-red-50 rounded-lg p-3">{error}</div>}
             {notice && <div className="mt-3 text-sm text-emerald-700 bg-emerald-50 rounded-lg p-3">{notice}</div>}
@@ -365,7 +365,7 @@ export default function DocumentsPage() {
                           <button onClick={scan} className="px-3 py-1.5 rounded-full text-xs border bg-white">🔄 สแกนใหม่</button>
                         </>
                       )}
-                      <button onClick={confirm} disabled={stage === 'saving'} className="px-4 py-1.5 rounded-full text-xs bg-[#0f2040] text-white font-semibold disabled:opacity-50">
+                      <button onClick={confirm} disabled={stage === 'saving'} className="px-4 py-1.5 rounded-full text-xs bg-[#475569] text-white font-semibold disabled:opacity-50">
                         {stage === 'saving' ? 'กำลังบันทึก…' : '✓ ยืนยันข้อมูล'}
                       </button>
                       <button onClick={reset} className="px-3 py-1.5 rounded-full text-xs border bg-white text-slate-500">ยกเลิก</button>
@@ -377,7 +377,7 @@ export default function DocumentsPage() {
 
             {/* ผลลัพธ์ตำแหน่ง */}
             {position && (
-              <div className="mt-4 rounded-lg bg-[#0f2040] text-white p-4 text-sm">
+              <div className="mt-4 rounded-lg bg-[#475569] text-white p-4 text-sm">
                 <div className="text-[11px] opacity-70">ตำแหน่งปัจจุบัน: {position.currentNameTh}</div>
                 {position.target && (
                   <>
@@ -406,14 +406,14 @@ export default function DocumentsPage() {
           {/* รายการใบเสร็จ */}
           <div className="card p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold text-[#0f2040]">ใบเสร็จที่บันทึกแล้ว</h2>
-              <button onClick={loadReceipts} className="text-xs text-[#0f2040] underline">รีเฟรช</button>
+              <h2 className="font-semibold text-[#475569]">ใบเสร็จที่บันทึกแล้ว</h2>
+              <button onClick={loadReceipts} className="text-xs text-[#475569] underline">รีเฟรช</button>
             </div>
             {receipts.length === 0 ? (
               <p className="text-sm text-slate-400">ยังไม่มีใบเสร็จ</p>
             ) : (
               <table className="w-full text-xs">
-                <thead className="bg-[#0f2040] text-white">
+                <thead className="bg-[#475569] text-white">
                   <tr>
                     <th className="text-left p-2">ยอด (฿)</th>
                     <th className="text-left p-2">วันที่</th>
@@ -429,7 +429,7 @@ export default function DocumentsPage() {
                       <td className="p-2">{r.date || '—'}</td>
                       <td className="p-2">{r.referenceNumber || '—'}</td>
                       <td className="p-2">
-                        <a href={r.storageUrl} target="_blank" rel="noreferrer" className="text-[#0f2040] underline">{r.filename}</a>
+                        <a href={r.storageUrl} target="_blank" rel="noreferrer" className="text-[#475569] underline">{r.filename}</a>
                       </td>
                       <td className="p-2 text-center">{new Date(r.createdAt).toLocaleString('th-TH')}</td>
                     </tr>

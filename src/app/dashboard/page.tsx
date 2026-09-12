@@ -47,7 +47,7 @@ export default function Dashboard(){
               <div className="mt-3 h-[120px] flex items-end gap-2">
                 {[18,42,28].map((v,i)=>(
                   <div key={i} className="flex-1 rounded-t-lg flex flex-col items-center justify-end" style={{height:'100%'}}>
-                    <div className="w-full rounded-t-lg" style={{height:`${v*2}px`, background: i===0?'#f59e0b': i===1?'#10b981':'#0f2040'}}/>
+                    <div className="w-full rounded-t-lg" style={{height:`${v*2}px`, background: i===0?'#f59e0b': i===1?'#10b981':'#475569'}}/>
                     <div className="text-[11px] mt-1">{['Est','App','Paid'][i]}</div>
                   </div>
                 ))}
@@ -56,7 +56,7 @@ export default function Dashboard(){
             </div>
           </div>
           <div className="flex gap-3 text-sm">
-            <Link href="/tree" className="px-4 py-2 rounded-full bg-[#0f2040] text-white">ดูผังเครือข่าย</Link>
+            <Link href="/tree" className="px-4 py-2 rounded-full bg-[#475569] text-white">ดูผังเครือข่าย</Link>
             <Link href="/income" className="px-4 py-2 rounded-full border bg-white">ดูรายได้</Link>
           </div>
         </main>
