@@ -35,7 +35,9 @@ const TOOL_MAP: Record<string, string[]> = {
 
 export function detectIntent(q: string): Intent {
   const s = q.toLowerCase();
-  if (/(คำนวณ|ยอดรวม|รวม.*บาท|sum|total|เฉลี่ย|หัก|บวก|ลบ|คูณ|หาร)/.test(s)) return 'CALCULATE';
+  // math expression like 1234*56, 2+2, 100/5 — catch before other intents
+  if (/\d+\s*[\+\-\*\/\%x×÷]\s*\d+/.test(q) || /\d+\s*[\+\-\*\/]/.test(q)) return 'CALCULATE';
+  if (/(คำนวณ|คิดเลข|คิดคำนวณ|ยอดรวม|รวม.*บาท|sum|total|เฉลี่ย|หัก|บวก|ลบ|คูณ|หาร|\b\d+\s*[\+\-\*\/]\s*\d+)/.test(s)) return 'CALCULATE';
   if (/(เปรียบเทียบ|compare|เทียบ|ต่างกัน)/.test(s)) return 'COMPARE';
   if (/(สรุป|summarize|ย่อ|สรุปให้)/.test(s)) return 'SUMMARIZE';
   if (/(วิเคราะห์|analyze|ตรวจ.*ข้อมูล|ใคร.*เกิน|ใคร.*สูงสุด|หา.*มากสุด)/.test(s)) return 'ANALYZE';

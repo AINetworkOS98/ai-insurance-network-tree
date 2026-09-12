@@ -100,14 +100,32 @@ export async function hermesExecute(params:{
 }
 
 function buildFallback(q:string, intent:string, mode:SearchMode, hasDataset:boolean, rows:number, toolResults:any[], skills:string[]): string {
-  const modeName: Record<SearchMode,string> = { FAST:"เร็ว", SMART:"อัจฉริยะ", DEEP:"วิเคราะห์เชิงลึก" };
-  const toolSummary = toolResults.length ? `\n• ผลเครื่องมือ: ${toolResults.map(r=> `${r.tool}=${r.ok?"✓":"✗"}`).join(" | ")}` : "";
-  const skillSummary = skills.length ? `\n• Skill: ${skills.join(", ")}` : "";
-  if (!q && hasDataset) return `วิเคราะห์ข้อมูลทั้งหมด ${rows} รายการแล้ว\n\n• โหมด: ${modeName[mode]}${skillSummary}${toolSummary}\n• พร้อมสรุป เปรียบเทียบ คำนวณ หรือค้นหาในระบบตามสิทธิ์ของคุณ`;
-  if (/ผัง|เครือข่าย|1 แตก 5/i.test(q)) return `กำลังเปิดผังเครือข่าย 1 แตก 5 — โหมด ${modeName[mode]}${toolSummary} • พิมพ์รหัสสมาชิกเพื่อค้นหาในผังได้ทันที`;
-  if (/ใบเสร็จ|receipt/i.test(q)) return `ระบบตรวจสอบใบเสร็จพร้อมใช้งาน — โหมด ${modeName[mode]}${toolSummary} • วางข้อมูลหรือแนบไฟล์เพื่อเริ่มตรวจสอบ`;
-  if (hasDataset) return `เข้าใจคำสั่ง: "${q}"\nIntent: ${intent} • โหมด: ${modeName[mode]} • Context: ${rows} รายการ${skillSummary}${toolSummary}\nพร้อมประมวลผลข้อมูลที่วางไว้โดยแบ่งเป็นส่วนย่อย`;
+  // Hermes style: สั้น ตรง ตรวจสอบแล้ว ไม่ฟุ่มเฟือย
+  // ถ้ามี Calculator result ให้ตอบด้วยผลคำนวณที่ตรวจสอบแล้ว
+  const calc = toolResults.find(r=> r.tool==="Calculator" && r.ok)?.data;
+  if (calc?.result !== undefined && !calc?.error) {
+    return `${calc.expression} = ${calc.result}`;
+  }
+  const sales = toolResults.find(r=> r.tool==="Sales Calculation" && r.ok)?.data;
+  if (sales && sales.numbers?.length >= 2 && intent==="CALCULATE") {
+    return `${sales.numbers.join(" + ")} = ${sales.sum} • เฉลี่ย ${sales.avg?.toFixed?.(2) ?? sales.avg} • สูงสุด ${sales.max} • ต่ำสุด ${sales.min}`;
+  }
+  if (!q && hasDataset) return `วิเคราะห์ ${rows} รายการ — พร้อมสรุป/เปรียบเทียบ/คำนวณ บอกได้เลยว่าต้องการอะไร`;
+  if (/ผัง|เครือข่าย|1 แตก 5/i.test(q)) {
+    const net = toolResults.find(r=> r.tool==="Network Engine")?.data;
+    if (net?.root) return `ผัง ${net.root.memberCode} — ${net.root.firstName} ${net.root.lastName} • สายตรง ${net.children?.length ?? net.placements ?? 0} คน`;
+    if (net?.mode==="sample") return `ตัวอย่างผัง ${net.nodes?.length ?? 0} โหนด — พิมพ์รหัสสมาชิกเพื่อดูผังเฉพาะคน`;
+    return `ผัง 1 แตก 5 — พิมพ์รหัสสมาชิก (เช่น M-000123) เพื่อดู`;
+  }
+  if (/ใบเสร็จ|receipt/i.test(q)) {
+    const rc = toolResults.find(r=> r.tool==="Receipt Validation")?.data;
+    if (rc?.count !== undefined) return `ใบเสร็จ ${rc.count} รายการล่าสุด — แนบไฟล์เพื่อตรวจ OCR/ซ้ำ`;
+    return `แนบไฟล์ใบเสร็จเพื่อตรวจ (รองรับ PDF/รูป)`;
+  }
+  if (hasDataset) return `${rows} รายการ — บอกได้เลย: สรุป / เทียบ / หาค่าสูงสุด / คำนวณ`;
   const hits = toolResults.find(r=> r.tool==="Database Search")?.data?.hits;
-  if (hits?.length) return `ระบบค้นหาด้วย AI อัจฉริยะ — โหมด ${modeName[mode]}\nคำถาม: "${q || "—"}"\nพบ ${hits.length} รายการ:\n${hits.map((h:any)=> `• ${h.type}: ${h.firstName ?? h.name ?? h.email ?? h.memberCode ?? JSON.stringify(h).slice(0,80)}`).join("\n")}`;
-  return `ระบบค้นหาด้วย AI อัจฉริยะ — โหมด ${modeName[mode]}\nคำถาม: "${q || "—"}"\nIntent: ${intent}${skillSummary}${toolSummary}\nพร้อมค้นหา วิเคราะห์ และจัดการข้อมูลตามสิทธิ์ของคุณ`;
+  if (hits?.length) return `พบ ${hits.length} รายการ:\n${hits.slice(0,5).map((h:any)=> `• ${h.type}: ${h.firstName ?? h.name ?? h.email ?? h.memberCode ?? JSON.stringify(h).slice(0,60)}`).join("\n")}`;
+  if (intent==="CALCULATE" && /\d/.test(q)) return `ไม่พบนิพจน์คำนวณที่ชัด — พิมพ์เช่น 1234*56 หรือ 15000+2500`;
+  if (!q.trim()) return `พิมพ์คำถามหรือวางข้อมูลได้เลย`;
+  return `รับทราบ: "${q.slice(0,120)}" — บอกเพิ่มได้ว่าต้องการค้นหา/วิเคราะห์/คำนวณอะไร`;
 }

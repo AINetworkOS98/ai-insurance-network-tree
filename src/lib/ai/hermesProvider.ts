@@ -2,10 +2,16 @@
 // เบื้องหลังใช้ Hermes (opencode-free / Muse Spark 1.2) แต่ Frontend ใช้ชื่อกลาง "ระบบค้นหาด้วย AI อัจฉริยะ"
 import type { AIProvider } from './provider';
 
-const HERMES_SYSTEM_PROMPT = `คุณคือระบบค้นหาด้วย AI อัจฉริยะ ของ AI INSURANCE NETWORK OS
+const HERMES_SYSTEM_PROMPT = `คุณคือระบบค้นหาด้วย AI อัจฉริยะ ของ AI INSURANCE NETWORK TREE
+กฎการตอบ (ยึดตามนี้เคร่งครัด):
+- ความยาวตามน้ำหนักคำถาม: ถามสั้นตอบสั้น ถามลึกตอบลึก ไม่ยืดเยื้อ
+- ห้ามคำฟุ่มเฟือย ("เป็นคำถามที่ดี", "ยินดีช่วยเหลือ") — เข้าประเด็นทันที
+- ไม่อธิบายซ้ำคำขอ ไม่สรุปสิ่งที่เพิ่งพูดไป
+- ข้อความธรรมดาเหนือคำคุณศัพท์ — ถ้าไม่แน่ใจให้บอกตรงๆ ว่าไม่แน่ใจ
+- ใช้เครื่องมือแล้วรายงานผลจริงที่ตรวจสอบแล้ว ไม่แต่งข้อมูล
+- ถ้ามีตัวเลขให้อ้างอิงผลจากเครื่องมือตรงๆ
 - ตอบเป็นภาษาไทย กระชับ ชัดเจน
-- ห้ามเปิดเผยชื่อ provider, model, API key, หรือคำว่า Hermes
-- ใช้ข้อมูลตามสิทธิ์ของผู้ใช้เท่านั้น`;
+- ห้ามเปิดเผยชื่อ provider, model, API key`;
 
 function getEnv(key: string): string | undefined {
   return process.env[key];
@@ -15,12 +21,16 @@ function resolveConfig() {
   const apiKey = getEnv('HERMES_API_KEY') || getEnv('AI_API_KEY') || getEnv('DEEPSEEK_API_KEY') || getEnv('OPENAI_API_KEY') || getEnv('GEMINI_API_KEY') || '';
   const baseUrl = getEnv('HERMES_BASE_URL') || getEnv('AI_BASE_URL') || getEnv('DEEPSEEK_BASE_URL') || (getEnv('GEMINI_API_KEY') ? 'https://generativelanguage.googleapis.com/v1beta/openai' : undefined);
   const rawProvider = (getEnv('AI_PROVIDER') || getEnv('HERMES_PROVIDER') || (getEnv('DEEPSEEK_API_KEY') ? 'deepseek' : getEnv('GEMINI_API_KEY') ? 'gemini' : '')).toLowerCase();
-  // ถ้าไม่ระบุแต่มี Muse Spark ใน AI_MODEL ให้เป็น opencode-free
   const modelEnv = getEnv('HERMES_MODEL') || getEnv('AI_MODEL') || getEnv('DEEPSEEK_MODEL') || '';
   let provider = rawProvider;
-  if (!provider && modelEnv.includes('muse-spark')) provider = 'opencode-free';
-  if (!provider) provider = 'opencode-free'; // default เป็น Muse Spark 1.2 Contributor ฟรี
-  const model = modelEnv || 'muse-spark-1.2-contributor-free';
+  // บนเซิร์ฟเวอร์ (Vercel) ให้优先 gemini ถ้ามี key — opencode-free ใช้ได้เฉพาะใน Hermes Desktop
+  if (provider === 'opencode-free' && getEnv('GEMINI_API_KEY')) provider = 'gemini';
+  if (!provider && modelEnv.includes('muse-spark') && !getEnv('GEMINI_API_KEY')) provider = 'opencode-free';
+  if (!provider) provider = getEnv('GEMINI_API_KEY') ? 'gemini' : 'opencode-free';
+  let model = modelEnv;
+  if (!model) model = provider === 'gemini' ? 'gemini-2.0-flash' : 'muse-spark-1.2-contributor-free';
+  // ถ้า provider เป็น gemini แต่ model ยังเป็น muse-spark ให้แก้เป็น gemini
+  if (provider === 'gemini' && /muse-spark/i.test(model)) model = 'gemini-2.0-flash';
   return { apiKey, baseUrl, provider, model };
 }
 
