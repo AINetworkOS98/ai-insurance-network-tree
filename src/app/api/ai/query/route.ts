@@ -48,12 +48,12 @@ export async function GET(){
     const { getHermesProvider } = await import('@/lib/ai/hermesProvider');
     const p = getHermesProvider();
     const info = p.getInfo();
-    // Also report skills + tools (Hermes OS inventory)
+    // Also report skills + tools (AI inventory)
     const { skills } = await import('@/lib/ai/skills');
     const { allTools } = await import('@/lib/ai/tools');
     return NextResponse.json({
       ok: true,
-      os: 'Hermes OS',
+      os: 'AI อัจฉริยะ',
       version: '1.0',
       ai: { configured: info.configured, provider: info.configured ? 'ระบบค้นหาด้วย AI อัจฉริยะ' : 'fallback', mode: 'SMART' },
       skills: skills.map(s=> ({ name:s.name, description:s.description })),

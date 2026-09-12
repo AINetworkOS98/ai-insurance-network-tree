@@ -8,7 +8,7 @@ export async function GET(req: Request){
   const q = url.searchParams.get('q') || url.searchParams.get('query') || '';
   const matched = q ? matchSkills(q) : skills;
   return NextResponse.json({
-    ok:true, os:'Hermes OS',
+    ok:true, os:'AI อัจฉริยะ',
     skills: matched.map(s=> ({ name:s.name, description:s.description, triggers:s.triggers, hint:s.hint })),
     tools: Object.keys(allTools()),
     totalSkills: skills.length,

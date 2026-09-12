@@ -21,7 +21,7 @@ export async function GET(req: NextRequest){
       prospects: await (prisma as any).prospect.count().catch(()=> -1),
       receipts: await (prisma as any).receiptFile.count().catch(()=> -1),
     };
-    return NextResponse.json({ ok:true, cron:'hermes-sync', at: now, counts, note:'Hermes OS heartbeat — memory & period checks light' });
+    return NextResponse.json({ ok:true, cron:'hermes-sync', at: now, counts, note:'AI heartbeat — memory & period checks light' });
   } catch (e:any){
     return NextResponse.json({ ok:true, cron:'hermes-sync', at: now, error:e?.message });
   }

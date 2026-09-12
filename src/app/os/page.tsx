@@ -15,7 +15,7 @@ const APPS: Record<AppId, {title:string; icon:string; color:string}> = {
   settings: {title:'ตั้งค่า', icon:'⚙', color:'bg-slate-500'},
 };
 
-export default function HermesOS(){
+export default function OsPage(){
   const [wins, setWins] = useState<Win[]>([
     {id:'ai', title:'AI ผู้ช่วย • ระบบค้นหาอัจฉริยะ', icon:'✦', x:80, y:48, w:720, h:520, z:10, minimized:false, maximized:false},
   ]);
@@ -57,8 +57,8 @@ export default function HermesOS(){
 
   const hero = (
     <div className="text-center py-2">
-      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#eff6ff] border border-blue-100 text-[11px] text-sky-700">✦ ระบบค้นหาด้วย AI อัจฉริยะ • Hermes Engine</div>
-      <p className="text-[11px] text-slate-400 mt-1">พิมพ์ วางข้อมูล แนบไฟล์ — สตรีมทีละคำแบบ Hermes</p>
+      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#eff6ff] border border-blue-100 text-[11px] text-sky-700">✦ ระบบค้นหาด้วย AI อัจฉริยะ </div>
+      <p className="text-[11px] text-slate-400 mt-1">พิมพ์ วางข้อมูล แนบไฟล์ — สตรีมทีละคำแบบเรียลไทม์</p>
     </div>
   );
 
@@ -67,7 +67,7 @@ export default function HermesOS(){
       {/* Top bar — macOS style */}
       <div className="h-7 shrink-0 bg-white/70 backdrop-blur border-b border-white/50 flex items-center justify-between px-3 text-xs">
         <div className="flex items-center gap-3">
-          <span className="font-bold text-slate-800">⬢ Hermes OS</span>
+          <span className="font-bold text-slate-800">⬢ AI อัจฉริยะ</span>
           <span className="hidden md:inline text-slate-500">AI Insurance Network Tree</span>
           <span className="hidden lg:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px]"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"/> Gateway active • Muse Spark 1.2</span>
         </div>
@@ -117,7 +117,7 @@ export default function HermesOS(){
                 </div>
                 <span className="ml-2 text-xs font-semibold text-slate-700 flex items-center gap-1.5"><span className="text-sm">{win.icon}</span> {win.title}</span>
               </div>
-              <span className="text-[11px] text-slate-400 hidden md:inline">{win.id==='ai' ? 'Streaming • SSE' : 'Hermes OS Window'}</span>
+              <span className="text-[11px] text-slate-400 hidden md:inline">{win.id==='ai' ? 'Streaming • SSE' : 'AI Window'}</span>
             </div>
 
             {/* Content */}
@@ -181,7 +181,7 @@ export default function HermesOS(){
               )}
               {win.id==='terminal' && (
                 <div className="h-full bg-slate-900 text-emerald-300 p-3 font-mono text-xs overflow-auto">
-                  <div className="text-slate-400"># Hermes OS Terminal — Muse Spark 1.2</div>
+                  <div className="text-slate-400"># AI Terminal</div>
                   <div className="mt-2">$ hermes status</div>
                   <div>Gateway: <span className="text-emerald-400">active</span> • Model: muse-spark-1.2-contributor-free</div>
                   <div>Provider: opencode-free • Base: https://opencode.ai/zen/v1</div>
@@ -194,7 +194,7 @@ export default function HermesOS(){
               )}
               {win.id==='settings' && (
                 <div className="h-full overflow-auto p-4 space-y-3">
-                  <h3 className="font-bold text-slate-800">⚙ ตั้งค่า Hermes OS</h3>
+                  <h3 className="font-bold text-slate-800">⚙ ตั้งค่าระบบ</h3>
                   <div className="rounded-2xl border border-slate-200 bg-white p-4">
                     <div className="text-xs font-semibold">AI Provider</div>
                     <div className="text-xs text-slate-500 mt-1">opencode-free • Muse Spark 1.2 Contributor (Streaming)</div>
@@ -204,7 +204,7 @@ export default function HermesOS(){
                     <div className="text-xs font-semibold">โหมดการค้นหา</div>
                     <div className="mt-2 flex gap-2"><span className="px-3 py-1 rounded-full bg-[#f0f7ff] border border-blue-100 text-xs">เร็ว</span><span className="px-3 py-1 rounded-full bg-slate-900 text-white text-xs">อัจฉริยะ</span><span className="px-3 py-1 rounded-full bg-white border text-xs">วิเคราะห์เชิงลึก</span></div>
                   </div>
-                  <div className="text-[11px] text-slate-400">เวอร์ชัน OS: Hermes OS 1.0 • Build: 2026.09.12 • หน้าเว็บหลัก: /</div>
+                  <div className="text-[11px] text-slate-400">เวอร์ชัน: AI อัจฉริยะ 1.0 • Build: 2026.09.12 • หน้าเว็บหลัก: /</div>
                 </div>
               )}
             </div>

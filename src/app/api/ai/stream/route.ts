@@ -26,7 +26,7 @@ export async function POST(req: NextRequest){
     async start(controller){
       const send = (obj:any)=> controller.enqueue(encoder.encode(sse(obj)));
       try {
-        // Hermes OS — plan + parallel tools + verify + synthesize with streaming trace
+        // AI — plan + parallel tools + verify + synthesize with streaming trace
         const result = await hermesExecute({
           query: query || (hasDataset ? 'วิเคราะห์ข้อมูลที่วาง' : query),
           mode,
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest){
         // Meta header for UI
         send({ type:'meta', intent: result.intent, tools: result.trace.tools, skills: result.trace.skills, mode, memoryUsed: result.trace.memoryUsed });
 
-        // Tool results — show verification (Hermes-style)
+        // Tool results — show verification
         if (result.trace.toolResults.length){
           for(const r of result.trace.toolResults){
             send({ type:'tool_result', tool: r.tool, ok: r.ok, elapsedMs: r.elapsedMs, data: r.data });

@@ -197,7 +197,7 @@ export default function AIIntelligentSearch({ variant='hero', topContent }: { va
     setLoading(true); setStreaming(true); setAbortFlag(false);
     const abort = new AbortController();
     const aiIndexRef = { idx: -1 };
-    // เพิ่มกรอบ AI ว่างไว้ก่อน แล้วค่อยเติมทีละ token แบบ Hermes streaming
+    // เพิ่มกรอบ AI ว่างไว้ก่อน แล้วค่อยเติมทีละ token แบบสตรีม
     setMsgs(m=> { const copy=[...m, {role:'ai' as const, text:'', actions: []}]; aiIndexRef.idx = copy.length-1; return copy; });
     // ถ้ามีลิงก์ค้นหา — ฉีดเข้าไปในกรอบ AI ทันที ก่อนสตรีม
     if(searchLinks.length>0){
@@ -428,7 +428,7 @@ function linkify(text: string){
         <div className="rounded-2xl border border-blue-100 bg-[#f8fbff] p-3 mb-3">
           <div className="flex items-center gap-2 text-sm text-sky-700">
             <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
-            {loading? 'Hermes OS กำลังคิด...' : 'กำลังสังเคราะห์คำตอบ...'}
+            {loading? 'AI กำลังคิด...' : 'กำลังสังเคราะห์คำตอบ...'}
             <span className="ml-auto text-[11px] px-2 py-0.5 rounded-full bg-white border border-blue-100 text-slate-500">โหมด {mode==='FAST'?'เร็ว':mode==='SMART'?'อัจฉริยะ':'วิเคราะห์เชิงลึก'}</span>
             {streaming && <button onClick={()=> setAbortFlag(true)} className="ml-2 px-3 py-1 rounded-full border border-slate-200 bg-white text-xs text-slate-600">หยุด</button>}
           </div>
