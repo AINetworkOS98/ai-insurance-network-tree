@@ -85,7 +85,7 @@ function LoginInner(){
       }
       const cred = await signInWithPopup(auth, authProvider);
       const idToken = await cred.user.getIdToken();
-      const res = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ idToken })});
+      const res = await fetch('/api/auth/google', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ idToken })});
       const j = await res.json();
       if(j.ok){
         const label = provider==='google'?'Google':provider==='facebook'?'Facebook':'GitHub';
