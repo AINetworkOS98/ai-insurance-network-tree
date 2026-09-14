@@ -18,13 +18,21 @@ export default function Home(){
   return (
     <div className="flex flex-col h-screen bg-[#fcfdff] overflow-hidden">
       {/* Top bar */}
-      <div className="h-[56px] shrink-0 border-b border-blue-100 bg-white/80 backdrop-blur flex items-center justify-between px-4 md:px-6 z-10">
+      <div className="min-h-[56px] shrink-0 border-b border-blue-100 bg-white/80 backdrop-blur flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 md:px-6 py-1.5 z-10">
         <div className="flex items-center gap-3">
           <img src="/logo.png" alt="AI Insurance" className="h-8 w-auto bg-white rounded-lg border border-[#f3e8d3] object-contain p-0.5 hidden md:block"/>
           <div className="text-sm font-bold text-slate-800">AI Insurance Network Tree</div>
           <span className="hidden md:inline text-xs text-slate-500">ระบบบริหารเครือข่ายตัวแทน</span>
-          <span className="hidden lg:inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-[#eff6ff] border border-blue-100 text-sky-700">⚡ AI อัจฉริยะ</span>
         </div>
+        {/* เมนูหลัก */}
+        <nav className="flex items-center gap-1 text-xs font-semibold text-slate-600 order-3 w-full md:order-none md:w-auto overflow-x-auto">
+          <Link href="/search_landing" className="px-3 py-2 rounded-full hover:bg-[#eff6ff] hover:text-sky-700 whitespace-nowrap">🔍 ค้นหา</Link>
+          <Link href="/tree" className="px-3 py-2 rounded-full hover:bg-[#eff6ff] hover:text-sky-700 whitespace-nowrap">🌳 ผัง 1 แตก 5</Link>
+          <Link href="/dashboard" className="px-3 py-2 rounded-full hover:bg-[#eff6ff] hover:text-sky-700 whitespace-nowrap">📊 แดชบอร์ด</Link>
+          <Link href="/income" className="px-3 py-2 rounded-full hover:bg-[#eff6ff] hover:text-sky-700 whitespace-nowrap">💰 รายได้</Link>
+          <Link href="/recruit" className="px-3 py-2 rounded-full hover:bg-[#eff6ff] hover:text-sky-700 whitespace-nowrap">🤝 ชวนสมาชิก</Link>
+          <Link href="/members" className="px-3 py-2 rounded-full hover:bg-[#eff6ff] hover:text-sky-700 whitespace-nowrap">👥 สมาชิก</Link>
+        </nav>
         <div className="flex items-center gap-2">
           <span className="hidden md:inline text-[11px] px-2 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700">● พร้อมใช้งาน</span>
           <Link href="/login" className="px-4 py-2 rounded-full border border-slate-200 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50">เข้าสู่ระบบ</Link>
