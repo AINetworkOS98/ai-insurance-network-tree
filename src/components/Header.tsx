@@ -7,23 +7,12 @@ export default function Header(){
   const [showMenu, setShowMenu] = useState(false);
   useEffect(()=>{ (async()=>{
     try{ const r=await fetch('/api/notifications'); const j=await r.json(); if(j.ok) setUnread(j.unread); }catch{}
-    // ลองเช็ค session จาก /api/auth/me หรือ decode cookie ง่ายๆ — ใช้ /api/members/me ถ้ามี
+    // ใช้ /api/auth/me เพื่อเช็ค auth status — cookie httpOnly อ่านได้ฝั่ง server
     try{
-      const r=await fetch('/api/auth/login', { method:'GET' } as any);
-      // fallback: ดู token ใน cookie แล้วเรียก /api/members?limit=1 เพื่อเช็ค auth
-    }catch{}
-    // อ่านจาก localStorage ที่ login อาจเก็บไว้
-    try{
-      const raw = document.cookie;
-      // ถ้ามี token ให้ถือว่า login แล้ว — ดึง email จาก JWT payload (base64 decode)
-      const m = raw.match(/(?:^|;\s*)token=([^;]+)/);
-      if(m){
-        const token = decodeURIComponent(m[1]);
-        const payload = token.split('.')[1];
-        if(payload){
-          const json = JSON.parse(atob(payload.replace(/-/g,'+').replace(/_/g,'/')));
-          setUser({ email: json.email || '', displayName: json.displayName || '' });
-        }
+      const r = await fetch('/api/auth/me');
+      const j = await r.json();
+      if(j.ok && j.authed && j.user){
+        setUser({ email: j.user.email || '', displayName: j.user.displayName || '' });
       }
     }catch{}
   })(); },[]);
