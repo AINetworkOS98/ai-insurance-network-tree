@@ -422,35 +422,19 @@ function linkify(text: string){
   });
 }
 
+  const WorkingBar = (loading || streaming) ? (
+    <div className="flex items-center justify-center gap-2 text-sm text-sky-700 py-2.5 px-3 rounded-2xl border border-blue-100 bg-[#f0f7ff] shadow-sm">
+      <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse shrink-0" />
+      กำลังทำงาน
+      <span className="ml-1 w-1 h-1 rounded-full bg-sky-300 animate-bounce [animation-delay:0ms]" />
+      <span className="w-1 h-1 rounded-full bg-sky-300 animate-bounce [animation-delay:150ms]" />
+      <span className="w-1 h-1 rounded-full bg-sky-300 animate-bounce [animation-delay:300ms]" />
+      {streaming && <button onClick={()=> setAbortFlag(true)} className="ml-3 px-3 py-1 rounded-full border border-slate-200 bg-white text-xs text-slate-600 hover:bg-slate-50">หยุด</button>}
+    </div>
+  ) : null;
+
   const ChatHistory = (
     <>
-      {(loading || streaming) && (
-        <div className="rounded-2xl border border-blue-100 bg-[#f8fbff] p-3 mb-3">
-          <div className="flex items-center gap-2 text-sm text-sky-700">
-            <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
-            {loading? 'AI กำลังคิด...' : 'กำลังสังเคราะห์คำตอบ...'}
-            <span className="ml-auto text-[11px] px-2 py-0.5 rounded-full bg-white border border-blue-100 text-slate-500">โหมด {mode==='FAST'?'เร็ว':mode==='SMART'?'อัจฉริยะ':'วิเคราะห์เชิงลึก'}</span>
-            {streaming && <button onClick={()=> setAbortFlag(true)} className="ml-2 px-3 py-1 rounded-full border border-slate-200 bg-white text-xs text-slate-600">หยุด</button>}
-          </div>
-          {traceSteps.length>0 && (
-            <div className="mt-2.5 flex flex-wrap gap-1.5">
-              {traceSteps.map((s,idx)=>(
-                <span key={idx} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] border ${s.status==='error'?'bg-red-50 border-red-200 text-red-700':'bg-white border-blue-100 text-slate-700'}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${s.status==='done'?'bg-emerald-500':s.status==='error'?'bg-red-500':'bg-sky-400 animate-pulse'}`} />
-                  {s.label}{s.detail ? `: ${String(s.detail).slice(0,80)}` : ''}
-                </span>
-              ))}
-            </div>
-          )}
-          {lastTrace?.toolResults && lastTrace.toolResults.length>0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {lastTrace.toolResults.map((r,i)=>(
-                <span key={i} className={`px-2 py-1 rounded-full text-[11px] border ${r.ok?'bg-emerald-50 border-emerald-200 text-emerald-700':'bg-amber-50 border-amber-200 text-amber-700'}`}>{r.tool} {r.ok?'✓':'✗'} {r.elapsedMs}ms</span>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
       {msgs.length>0 && (
         <>
           <div className="flex justify-end mb-2">
@@ -526,34 +510,42 @@ function linkify(text: string){
       );
     }
     // มีแชตแล้ว — ช่องพิมพ์ลงล่างอัตโนมัติ ตรึงล่าง แชตกว้างเต็มจอ
-    return (
-      <div className="w-full flex flex-col h-full">
-        <div ref={scrollRef} className="flex-1 overflow-auto scrollbar-none px-4 md:px-6 py-2 space-y-4 min-h-0">
-          <div className="shrink-0 max-w-[760px] mx-auto w-full">{ModeSwitch}</div>
-          {topContent && <div className="shrink-0 max-w-[760px] mx-auto w-full">{topContent}</div>}
-          <div className="w-full">{ChatHistory}</div>
-        </div>
-        <div className="shrink-0 sticky bottom-0 bg-gradient-to-t from-[#fcfdff] via-[#fcfdff] to-transparent pt-4 pb-2 px-4 md:px-6">
-          <div className="max-w-[760px] mx-auto">{InputCard}</div>
-        </div>
-      </div>
-    );
+        return (
+          <div className="w-full flex flex-col h-full">
+            <div ref={scrollRef} className="flex-1 overflow-auto scrollbar-none px-4 md:px-6 py-2 space-y-4 min-h-0">
+              <div className="shrink-0 max-w-[760px] mx-auto w-full">{ModeSwitch}</div>
+              {topContent && <div className="shrink-0 max-w-[760px] mx-auto w-full">{topContent}</div>}
+              {WorkingBar ? (
+                <div className="shrink-0 sticky top-0 z-10 max-w-[760px] mx-auto w-full pb-2 bg-gradient-to-b from-[#fcfdff] to-transparent">
+                  {WorkingBar}
+                </div>
+              ) : null}
+              <div className="w-full pt-2">{ChatHistory}</div>
+            </div>
+            <div className="shrink-0 sticky bottom-0 bg-gradient-to-t from-[#fcfdff] via-[#fcfdff] to-transparent pt-4 pb-2 px-4 md:px-6">
+              <div className="max-w-[760px] mx-auto">{InputCard}</div>
+            </div>
+          </div>
+        );
   }
 
   // hero (เดิม — กลางจอ เต็มจอ)
-  return (
-    <div className="w-full">
-      {ModeSwitch}
-      {InputCard}
-      {(loading || streaming) && (
-        <div className="mt-6 flex items-center justify-center gap-2 text-sm text-sky-700">
-          <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
-          {loading? 'AI กำลังวิเคราะห์...' : streaming? 'กำลังเตรียมคำตอบ...' : 'กำลังค้นหาข้อมูลที่เกี่ยวข้อง...'}
-          {streaming && <button onClick={()=> setAbortFlag(true)} className="ml-3 px-3 py-1 rounded-full border border-slate-200 bg-white text-xs text-slate-600">หยุด</button>}
+    return (
+      <div className="w-full flex flex-col min-h-[60vh]">
+        <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-6 py-8">
+          <div className="w-full max-w-[760px]">
+            {topContent && <div className="mb-4">{topContent}</div>}
+            {ModeSwitch}
+            <div className="mt-4">{InputCard}</div>
+          </div>
         </div>
-      )}
-      {msgs.length>0 && <div className="mt-6">{ChatHistory}</div>}
-      {msgs.length===0 && !pasteInfo && <div className="mt-8">{ChatHistory}</div>}
-    </div>
-  );
+        {(loading || streaming) && (
+          <div className="shrink-0 w-full max-w-[760px] mx-auto pb-8">
+            {WorkingBar}
+          </div>
+        )}
+        {msgs.length>0 && <div className="w-full max-w-[760px] mx-auto mt-4">{ChatHistory}</div>}
+        {msgs.length===0 && !pasteInfo && <div className="w-full max-w-[760px] mx-auto mt-6">{ChatHistory}</div>}
+      </div>
+    );
 }

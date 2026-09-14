@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from 'firebase-admin/auth';
+import { getAdminApp } from '@/lib/firebase-admin';
 import { prisma } from '@/lib/prisma';
 import { signToken } from '@/lib/auth';
 
@@ -10,6 +11,10 @@ export async function POST(req: NextRequest){
     const { idToken } = await req.json();
     if(!idToken) return NextResponse.json({ ok:false, error:'กรุณาส่ง idToken จาก Google' }, { status:400 });
 
+    // ต้อง init Admin SDK ก่อนเรียก getAuth() — ไม่งั้น default app ไม่มี (500)
+    try { getAdminApp(); } catch (e: any) {
+      return NextResponse.json({ ok:false, error:'เซิร์ฟเวอร์ยังไม่ได้ตั้งค่า Firebase Admin — ติดต่อผู้ดูแลระบบ' }, { status:500 });
+    }
     const decoded: any = await getAuth().verifyIdToken(idToken);
     const googleSub = decoded.uid as string;
     const email = String(decoded.email||'').toLowerCase();

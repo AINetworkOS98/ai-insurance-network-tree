@@ -2,7 +2,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { auth } from '@/lib/firebase-client';
+import { auth, firebaseConfigError } from '@/lib/firebase-client';
 import { GoogleAuthProvider, FacebookAuthProvider, GithubAuthProvider, signInWithPopup } from 'firebase/auth';
 
 export const dynamic = 'force-dynamic';
@@ -70,7 +70,7 @@ function LoginInner(){
     }
     setSocialLoading(provider); setMsg('');
     try{
-      if(!auth) throw new Error('Firebase ยังไม่พร้อม');
+      if(firebaseConfigError || !auth) throw new Error('Firebase ยังไม่ได้ตั้งค่า Web API Key — ดูวิธีแก้ที่กล่องด้านล่าง');
       let authProvider: any;
       if(provider==='google'){
         authProvider = new GoogleAuthProvider();
@@ -188,6 +188,18 @@ function LoginInner(){
             </form>
 
             {msg && <div className={`mt-4 p-3 rounded-2xl border text-xs leading-relaxed ${msgType==='ok' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : msgType==='err' ? 'bg-red-50 border-red-200 text-red-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>{msg}</div>}
+            {firebaseConfigError && (
+              <div className="mt-4 p-4 rounded-2xl border border-amber-200 bg-amber-50 text-xs leading-relaxed text-amber-900">
+                <div className="font-bold mb-1">⚠️ ปุ่ม Google/Facebook/GitHub ยังใช้ไม่ได้ — ขาด Firebase Web API Key</div>
+                <div>สาเหตุของ <span className="font-mono">auth/api-key-not-valid</span>: โค้ดยังมีคีย์ตัวอย่าง (<span className="font-mono">***</span>) ไม่ใช่คีย์จริงของโปรเจกต์ akarapol798</div>
+                <div className="mt-2 font-semibold">วิธีแก้ (ทำครั้งเดียว):</div>
+                <ol className="mt-1 ml-4 list-decimal space-y-1">
+                  <li>เปิด Firebase Console → Project settings → General → หัวข้อ Your apps → คัดลอก <b>Web API Key</b> (ขึ้นต้น AIza...)</li>
+                  <li>รันคำสั่ง: <span className="font-mono bg-white px-1.5 py-0.5 rounded border">npx vercel env add NEXT_PUBLIC_FIREBASE_API_KEY</span> แล้ววางคีย์ (เลือก Production + Preview)</li>
+                  <li> redeploy หนึ่งครั้ง — ปุ่ม Social จะใช้งานได้ทันที (อีเมล/รหัสผ่านใช้ได้ตามปกติอยู่แล้ว)</li>
+                </ol>
+              </div>
+            )}
           </div>
         </div>
       </div>

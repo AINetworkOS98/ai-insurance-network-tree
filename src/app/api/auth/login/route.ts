@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from 'firebase-admin/auth';
-import { getDb } from '@/lib/firebase-admin';
+import { getDb, getAdminApp } from '@/lib/firebase-admin';
 import { prisma } from '@/lib/prisma';
 import { signToken, verifyPassword } from '@/lib/auth';
 
@@ -10,6 +10,9 @@ export async function POST(req: NextRequest) {
     
     // Case 1: Firebase ID token (จาก Google OAuth หรือ client-side email/pass)
     if (idToken) {
+      try { getAdminApp(); } catch {
+        return NextResponse.json({ ok:false, error:'เซิร์ฟเวอร์ยังไม่ได้ตั้งค่า Firebase Admin — ติดต่อผู้ดูแลระบบ' }, { status:500 });
+      }
       const decoded: any = await getAuth().verifyIdToken(idToken);
       const uid = decoded.uid;
       const decodedEmail = String(decoded.email||'').toLowerCase();

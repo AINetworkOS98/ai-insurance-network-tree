@@ -32,6 +32,10 @@ function getAppInstance() {
   });
 }
 
+export function getAdminApp() {
+  return getAppInstance();
+}
+
 export function getDb(): Firestore {
   if (!_db) {
     _db = getFirestore(getAppInstance());
