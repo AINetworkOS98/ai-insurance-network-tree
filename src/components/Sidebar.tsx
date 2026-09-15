@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react';
 
 const items=[
   {href:"/", label:"หน้าแรก", icon:"⌂"},
-  {href:"/chat", label:"แชต AI", icon:"✦"},
   {href:"/dashboard", label:"ภาพรวม", icon:"▦"},
   {href:"/prospects", label:"สมาชิกและผู้สนใจ", icon:"◎"},
   {href:"/tree", label:"ผังทีม 1:5", icon:"⁂"},
@@ -63,17 +62,6 @@ export default function Sidebar(){
 
   const Nav = (
     <div className={`p-3 space-y-1 ${collapsed?'px-2':''}`}>
-      {/* ปุ่มแชตใหม่ */}
-      <div className={`${collapsed?'px-0':''} pb-2`}>
-        {collapsed ? (
-          <Link href={authed ? "/chat" : "/login"} title={authed ? "แชตใหม่ (Ctrl+B สลับเมนู)" : "เข้าสู่ระบบก่อนแชต"} className={`flex items-center justify-center w-10 h-10 mx-auto rounded-xl text-white hover:bg-sky-600 transition-colors ${authed===false?'bg-slate-400':'bg-sky-500'}`}>＋</Link>
-        ) : (
-          <Link href={authed ? "/chat" : "/login"} className={`flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-white text-sm font-semibold hover:bg-sky-600 transition-colors ${authed===false?'bg-slate-400':'bg-sky-500'}`}>
-            ＋ {authed===false?'เข้าสู่ระบบก่อนแชต':'แชตใหม่'}
-          </Link>
-        )}
-      </div>
-
       {/* ถ้ายังไม่ล็อกอิน — ซ่อนเมนูสมาชิกทั้งหมด */}
       {authed===false ? (
         <>
@@ -85,8 +73,8 @@ export default function Sidebar(){
       ) : (
         <>
           {!collapsed && <div className="text-[10px] tracking-widest text-slate-400 px-3 pb-1 pt-2">เมนูหลัก</div>}
-          {items.filter(it=>!(it.href==='/chat' && path?.startsWith('/chat'))).map(it=>{
-            const active = path===it.href || (it.href==='/chat' && path?.startsWith('/chat'));
+          {items.map(it=>{
+            const active = path===it.href;
             return (
               <Link key={it.href} href={it.href} onClick={()=>setMobileOpen(false)} title={collapsed?it.label:undefined}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${collapsed?'justify-center px-2':''} ${active?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-slate-50 text-slate-600'}`}>
