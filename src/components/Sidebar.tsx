@@ -89,10 +89,6 @@ export default function Sidebar(){
                   <span>👥</span><span>ตัวอย่างเครือข่าย</span>
                   {path==='/network-example' && <span className="ml-auto text-[10px]">●</span>}
                 </Link>
-                <Link href="/tree" onClick={()=>setMobileOpen(false)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-colors ${path==='/tree'?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`}>
-                  <span>⁂</span><span>ผัง 1 แตก 5</span>
-                </Link>
               </div>
             )}
             {collapsed && (
