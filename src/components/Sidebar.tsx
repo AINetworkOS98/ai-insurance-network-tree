@@ -105,7 +105,7 @@ export default function Sidebar(){
               </div>
             )}
           </div>
-          {extra.map(it=>{
+          {extra.filter(it=>!(it.href==='/admin' && path?.startsWith('/documents'))).map(it=>{
             const active = path===it.href;
             return (
               <Link key={it.href} href={it.href} onClick={()=>setMobileOpen(false)} title={collapsed?it.label:undefined}
