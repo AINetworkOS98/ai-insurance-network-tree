@@ -143,13 +143,6 @@ export default function Sidebar(){
       <aside className={`${collapsed?'w-[56px]':'w-[260px]'} shrink-0 bg-white flex flex-col
         ${mobileOpen ? 'fixed inset-y-0 left-0 z-50 overflow-auto w-[260px]' : 'hidden lg:flex'}
         transition-all duration-200`}>
-        {/* Logo — ซ่อนบนหน้าแรก (Header มีโลโก้แล้ว ไม่ให้ซ้ำ) */}
-        {path!=='/' && (
-        <div className={`h-[56px] flex items-center ${collapsed?'justify-center px-1':'gap-3 px-4'} shrink-0`}>
-          <img src="/logo.png" alt="AI Insurance" className="h-8 w-auto bg-white rounded-lg object-contain p-0.5"/>
-          {!collapsed && authed!==false && <div className="min-w-0"><div className="font-bold text-xs text-slate-700 leading-none truncate">AI Insurance Network</div><div className="text-[10px] text-slate-400 mt-0.5">ระบบค้นหาด้วย AI อัจฉริยะ</div></div>}
-        </div>
-        )}
         <div className="flex-1 overflow-auto">
           {Nav}
         </div>
