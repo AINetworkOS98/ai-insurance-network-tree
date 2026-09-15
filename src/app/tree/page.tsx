@@ -4,9 +4,6 @@ import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import TreeView from '@/components/TreeView';
 
-// 77 จังหวัด — ใช้ในช่องเลือกสาขา/จังหวัด
-const PROVINCES = ['กระบี่','กรุงเทพมหานคร','กาญจนบุรี','กาฬสินธุ์','กำแพงเพชร','ขอนแก่น','จันทบุรี','ฉะเชิงเทรา','ชลบุรี','ชัยนาท','ชัยภูมิ','ชุมพร','เชียงราย','เชียงใหม่','ตรัง','ตราด','ตาก','นครนายก','นครปฐม','นครพนม','นครราชสีมา','นครศรีธรรมราช','นครสวรรค์','นนทบุรี','นราธิวาส','น่าน','บึงกาฬ','บุรีรัมย์','ปทุมธานี','ประจวบคีรีขันธ์','ปราจีนบุรี','ปัตตานี','พระนครศรีอยุธยา','พะเยา','พังงา','พัทลุง','พิจิตร','พิษณุโลก','เพชรบุรี','เพชรบูรณ์','แพร่','ภูเก็ต','มหาสารคาม','มุกดาหาร','แม่ฮ่องสอน','ยะลา','ยโสธร','ร้อยเอ็ด','ระนอง','ระยอง','ราชบุรี','ลพบุรี','ลำปาง','ลำพูน','เลย','ศรีสะเกษ','สกลนคร','สงขลา','สตูล','สมุทรปราการ','สมุทรสงคราม','สมุทรสาคร','สระแก้ว','สระบุรี','สิงห์บุรี','สุโขทัย','สุพรรณบุรี','สุราษฎร์ธานี','สุรินทร์','หนองคาย','หนองบัวลำภู','อ่างทอง','อุดรธานี','อุทัยธานี','อุตรดิตถ์','อุบลราชธานี','อำนาจเจริญ'];
-
 export default function TreePage(){
   const [activeTab, setActiveTab] = useState<'real'|'simulate'>('real');
   const [preview, setPreview] = useState<any>(null);
@@ -17,6 +14,24 @@ export default function TreePage(){
   const [structResult, setStructResult] = useState<any>(null);
   const [rankResult, setRankResult] = useState<any>(null);
   const [closeResult, setCloseResult] = useState<any>(null);
+
+  // ที่อยู่ cascade: จังหวัด → อำเภอ/เขต → ตำบล (ข้อมูลจริงจาก public/data)
+  const [provList, setProvList] = useState<any[]>([]);
+  const [distList, setDistList] = useState<any[]>([]);
+  const [subList, setSubList] = useState<any[]|null>(null);
+  const [selProv, setSelProv] = useState('');
+  const [selDist, setSelDist] = useState('');
+  const [selTambon, setSelTambon] = useState('');
+  useEffect(()=>{ (async()=>{
+    try{ const r=await fetch('/data/provinces.json',{cache:'force-cache'}); const j=await r.json(); if(Array.isArray(j)) setProvList(j.filter((p:any)=>!p.deleted_at)); }catch{}
+    try{ const r=await fetch('/data/districts.json',{cache:'force-cache'}); const j=await r.json(); if(Array.isArray(j)) setDistList(j.filter((d:any)=>!d.deleted_at)); }catch{}
+  })(); },[]);
+  async function ensureSub(){
+    if(subList) return;
+    try{ const r=await fetch('/data/sub_districts.json',{cache:'force-cache'}); const j=await r.json(); if(Array.isArray(j)) setSubList(j.filter((s:any)=>!s.deleted_at)); }catch{ setSubList([]); }
+  }
+  const distOpts = selProv ? distList.filter((d:any)=>String(d.province_id)===String(selProv)) : [];
+  const subOpts = selDist && subList ? subList.filter((s:any)=>String(s.district_id)===String(selDist)) : [];
 
   async function loadPreview(){
     setLoading('preview');
@@ -149,7 +164,18 @@ export default function TreePage(){
                 <div className="flex flex-wrap gap-2 text-sm">
                   <input placeholder="ค้นหาชื่อหรือรหัสสมาชิก" className="border rounded-xl px-3 py-2 flex-1 min-w-[200px]" />
                   <select className="border rounded-xl px-3 py-2"><option>ทุกสถานะ</option><option>Active</option><option>Pending</option></select>
-                  <select className="border rounded-xl px-3 py-2"><option value="">ทุกสาขา/จังหวัด</option>{PROVINCES.map(p=>(<option key={p} value={p}>{p}</option>))}</select>
+                  <select className="border rounded-xl px-3 py-2" value={selProv} onChange={e=>{setSelProv(e.target.value);setSelDist('');setSelTambon('');}}>
+                    <option value="">ทุกสาขา/จังหวัด</option>
+                    {provList.map((p:any)=>(<option key={p.id} value={p.id}>{p.name_th}</option>))}
+                  </select>
+                  <select className="border rounded-xl px-3 py-2" value={selDist} disabled={!selProv} onChange={e=>{setSelDist(e.target.value);setSelTambon('');ensureSub();}}>
+                    <option value="">{selProv?'ทุกอำเภอ/เขต':'เลือกจังหวัดก่อน'}</option>
+                    {distOpts.map((d:any)=>(<option key={d.id} value={d.id}>{d.name_th}</option>))}
+                  </select>
+                  <select className="border rounded-xl px-3 py-2" value={selTambon} disabled={!selDist} onChange={e=>setSelTambon(e.target.value)}>
+                    <option value="">{selDist?'ทุกตำบล':'เลือกอำเภอก่อน'}</option>
+                    {subOpts.map((s:any)=>(<option key={s.id} value={s.id}>{s.name_th}</option>))}
+                  </select>
                   <button className="px-4 py-2 rounded-xl bg-[#475569] text-white">ค้นหา</button>
                   <button className="px-3 py-2 rounded-xl border text-xs">ซูม +</button>
                   <button className="px-3 py-2 rounded-xl border text-xs">ย้อนขึ้นชั้นบน</button>
