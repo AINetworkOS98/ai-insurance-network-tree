@@ -49,7 +49,7 @@ export default function MembersPage(){
   return (
     <div>
       <Header/>
-      <div className="flex max-w-[1280px] mx-auto">
+      <div className="flex w-full">
         <Sidebar/>
         <main className="flex-1 p-6 space-y-4">
           <div className="flex flex-wrap items-center gap-3">

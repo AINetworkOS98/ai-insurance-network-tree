@@ -22,7 +22,7 @@ export default function Header(){
   }
   return (
     <header className="bg-[#FFFBF5] sticky top-0 z-40 border-b border-[#f3e8d3] text-[#475569]">
-      <div className="max-w-[1280px] mx-auto px-4 py-3 flex items-center justify-between">
+      <div className="w-full px-4 py-3 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3">
           <img src="/logo.png" alt="AI Insurance Network Tree" className="h-9 w-auto bg-white rounded-xl px-1 py-1 object-contain border border-[#f3e8d3]" />
           <div>

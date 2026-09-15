@@ -14,7 +14,7 @@ export default function SettingsPage(){
   return (
     <div>
       <Header/>
-      <div className="flex max-w-[1280px] mx-auto">
+      <div className="flex w-full">
         <Sidebar/>
         <main className="flex-1 p-6 space-y-4 max-w-[560px]">
           <h1 className="text-xl font-bold text-navy">ตั้งค่าบัญชีและระบบ</h1>

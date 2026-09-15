@@ -3,28 +3,60 @@ import { useState, useEffect, Suspense } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
+interface Member {
+  id: string;
+  memberCode?: string;
+  displayName?: string;
+  name?: string;
+  positionId?: string;
+  personalFYC?: number;
+  personalCOM?: number;
+  status?: string;
+}
+
+interface IncomeItem {
+  memberId: string;
+  name?: string;
+  positionId?: string;
+  totalIncome: number;
+  summary: {
+    personalCommission: number;
+    unitIncomes: number;
+    centerIncomes: number;
+    regionIncomes: number;
+    bonusIncomes: number;
+  };
+}
+
+interface PositionData {
+  positionId: string;
+  positionName: string;
+  memberCount: number;
+  totalFYC: number;
+  totalCOM: number;
+}
+
+interface TreeNode {
+  id: string;
+  name?: string;
+  memberCode?: string;
+  positionName?: string;
+  positionId?: string;
+  personalFYC?: number;
+}
+
 function AdminContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirect') || '/dashboard';
   const [activeTab, setActiveTab] = useState<'members' | 'income' | 'positions' | 'audit'>('members');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [members, setMembers] = useState<any[]>([]);
-  const [incomes, setIncomes] = useState<any[]>([]);
-  const [positionData, setPositionData] = useState<any[]>([]);
-  const [treeStructure, setTreeStructure] = useState<any[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [incomes, setIncomes] = useState<IncomeItem[]>([]);
+  const [positionData, setPositionData] = useState<PositionData[]>([]);
+  const [treeStructure, setTreeStructure] = useState<TreeNode[]>([]);
   const [totalActiveMembers, setTotalActiveMembers] = useState(0);
-
-  useEffect(() => {
-    fetchMembers();
-    fetchIncomeSummary();
-    fetchPositionData();
-  }, []);
 
   const callApi = async (endpoint: string) => {
     const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api${endpoint}`);
@@ -32,44 +64,49 @@ function AdminContent() {
   };
 
   const fetchMembers = async () => {
-    setLoading(true);
-    try {
-      const data = await callApi('/admin/members');
-      if (data.ok) {
-        setMembers(data.members || []);
-        setTotalActiveMembers(data.summary?.totalActiveMembers || 0);
-      } else {
-        setError(data.error || 'ดึงข้อมูลไม่สำเร็จ');
+      try {
+        const data = await callApi('/admin/members');
+        if (data.ok) {
+          setMembers(data.members || []);
+          setTotalActiveMembers(data.summary?.totalActiveMembers || 0);
+        } else {
+          setError(data.error || 'ดึงข้อมูลไม่สำเร็จ');
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'เชื่อมต่อไม่สำเร็จ');
       }
-    } catch (err: any) {
-      setError(err.message || 'เชื่อมต่อไม่สำเร็จ');
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  const fetchIncomeSummary = async () => {
-    try {
-      const data = await callApi('/admin/income');
-      if (data.ok) {
-        setIncomes(data.incomes || []);
-      }
-    } catch (err: any) {
-      console.error('Income fetch error:', err);
-    }
-  };
+    const fetchIncomeSummary = async () => {
+        try {
+          const data = await callApi('/admin/income');
+          if (data.ok) {
+            setIncomes(data.incomes || []);
+          }
+        } catch (err) {
+          console.error('Income fetch error:', err);
+        } finally {
+          setLoading(false);
+        }
+      };
 
-  const fetchPositionData = async () => {
-    try {
-      const data = await callApi('/admin/positions');
-      if (data.ok) {
-        setPositionData(data.positions || []);
-        setTreeStructure(data.treeStructure || []);
+    const fetchPositionData = async () => {
+      try {
+        const data = await callApi('/admin/positions');
+        if (data.ok) {
+          setPositionData(data.positions || []);
+          setTreeStructure(data.treeStructure || []);
+        }
+      } catch (err) {
+        console.error('Position data fetch error:', err);
       }
-    } catch (err: any) {
-      console.error('Position data fetch error:', err);
-    }
-  };
+    };
+
+  useEffect(() => {
+      fetchMembers();
+      fetchIncomeSummary();
+      fetchPositionData();
+    }, []);
 
   if (loading) {
     return (
@@ -105,7 +142,7 @@ function AdminContent() {
   return (
     <div>
       <Header />
-      <div className="flex max-w-[1280px] mx-auto">
+      <div className="flex w-full">
         <Sidebar />
         <main className="flex-1 p-6 space-y-6 bg-white">
           <h1 className="text-xl font-bold text-slate-800">ผู้ดูแลระบบ — Admin Dashboard</h1>

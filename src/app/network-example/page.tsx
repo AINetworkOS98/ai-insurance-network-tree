@@ -144,7 +144,7 @@ export default function NetworkExamplePage(){
   return (
     <div>
       <Header/>
-      <div className="flex max-w-[1280px] mx-auto">
+      <div className="flex w-full">
         <Sidebar/>
         <main className="flex-1 p-4 lg:p-6 space-y-4 bg-[#fcfdff] min-h-[calc(100vh-56px)]">
           {/* Header */}

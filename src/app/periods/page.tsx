@@ -61,7 +61,7 @@ export default function PeriodMaintenancePage(){
   return (
     <div>
       <Header/>
-      <div className="flex max-w-[1280px] mx-auto">
+      <div className="flex w-full">
         <Sidebar/>
         <main className="flex-1 p-6 space-y-4">
           <h1 className="text-xl font-bold text-navy">ตัดยอดและรักษายอด</h1>

@@ -57,7 +57,7 @@ export default function RankPlansPage(){
   return (
     <div>
       <Header/>
-      <div className="flex max-w-[1280px] mx-auto">
+      <div className="flex w-full">
         <Sidebar/>
         <main className="flex-1 p-6 space-y-5">
           <h1 className="text-xl font-bold text-navy">แผนตำแหน่งและเส้นทางตำแหน่ง</h1>
