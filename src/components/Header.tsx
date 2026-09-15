@@ -1,9 +1,7 @@
 'use client';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 export default function Header(){
-  const path = usePathname();
   const [unread, setUnread] = useState<number|null>(null);
   const [user, setUser] = useState<{email:string, displayName?:string}|null>(null);
   const [showMenu, setShowMenu] = useState(false);
@@ -39,9 +37,6 @@ export default function Header(){
           <Link href={user ? "/prospects" : "/admin"} className="text-[#57534e] hover:text-[#475569] transition-colors">ผู้สนใจ</Link>
           <Link href={user ? "/tree" : "/admin"} className="text-[#57534e] hover:text-[#475569] transition-colors">ผังเครือข่าย</Link>
           <Link href={user ? "/income" : "/admin"} className="text-[#57534e] hover:text-[#475569] transition-colors">รายได้</Link>
-          {path?.startsWith('/documents') ? null : (
-          <Link href="/admin" className="text-[#57534e] hover:text-[#475569] transition-colors">ผู้ดูแล</Link>
-          )}
           <Link href={user ? "/notifications" : "/admin"} className="relative text-[#57534e] hover:text-[#475569] transition-colors">🔔 แจ้งเตือน {unread!=null && unread>0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-red-600 text-white text-[11px]">{unread}</span>}</Link>
         </nav>
         <div className="flex items-center gap-2">

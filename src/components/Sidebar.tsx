@@ -18,7 +18,6 @@ const extra=[
   {href:"/members", label:"สมาชิกของฉัน", icon:"◉"},
   {href:"/income", label:"รายได้", icon:"฿"},
   {href:"/documents", label:"เอกสารทางการเงิน", icon:"📄"},
-  {href:"/admin", label:"ผู้ดูแลระบบ", icon:"🛡"},
   {href:"/verify", label:"ตรวจสมาชิก", icon:"🔍"},
   {href:"/notifications", label:"แจ้งเตือน", icon:"🔔"},
 ];
@@ -105,7 +104,7 @@ export default function Sidebar(){
               </div>
             )}
           </div>
-          {extra.filter(it=>!(it.href==='/admin' && path?.startsWith('/documents'))).map(it=>{
+          {extra.map(it=>{
             const active = path===it.href;
             return (
               <Link key={it.href} href={it.href} onClick={()=>setMobileOpen(false)} title={collapsed?it.label:undefined}
