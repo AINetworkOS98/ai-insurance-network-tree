@@ -85,7 +85,7 @@ export default function Sidebar(){
       ) : (
         <>
           {!collapsed && <div className="text-[10px] tracking-widest text-slate-400 px-3 pb-1 pt-2">เมนูหลัก</div>}
-          {items.map(it=>{
+          {items.filter(it=>!(it.href==='/chat' && path?.startsWith('/chat'))).map(it=>{
             const active = path===it.href || (it.href==='/chat' && path?.startsWith('/chat'));
             return (
               <Link key={it.href} href={it.href} onClick={()=>setMobileOpen(false)} title={collapsed?it.label:undefined}
