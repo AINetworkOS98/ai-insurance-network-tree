@@ -9,7 +9,7 @@ export default function Header(){
     try{ const r=await fetch('/api/notifications'); const j=await r.json(); if(j.ok) setUnread(j.unread); }catch{}
     // ใช้ /api/auth/me เพื่อเช็ค auth status — cookie httpOnly อ่านได้ฝั่ง server
     try{
-      const r = await fetch('/api/auth/me');
+      const r = await fetch('/api/auth/me', { credentials: 'include' });
       const j = await r.json();
       if(j.ok && j.authed && j.user){
         setUser({ email: j.user.email || '', displayName: j.user.displayName || '' });
