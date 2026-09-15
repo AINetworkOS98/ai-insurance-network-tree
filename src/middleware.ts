@@ -35,6 +35,7 @@ const PUBLIC_PAGES = [
   '/privacy',
   '/terms',
   '/faq',
+  '/admin',
 ];
 
 function isPublicApi(pathname: string) {
@@ -102,7 +103,7 @@ export async function middleware(req: NextRequest) {
   // --- Page guard: ล็อกอินก่อนเข้าระบบ ---
   // ให้หน้าแรกและหน้าสาธารณะผ่านได้โดยไม่ต้องล็อกอิน
   // หน้าที่ต้องล็อกอิน: /dashboard, /tree, /income, /members, /admin, /reports, /receipts, /prospects, /appointments, /referral, /settings, /notifications, /periods, /rank-plans ฯลฯ
-  const protectedPrefixes = ['/dashboard','/chat','/tree','/income','/members','/admin','/reports','/receipts','/documents','/prospects','/appointments','/referral','/settings','/notifications','/periods','/rank-plans','/progress','/recruit'];
+  const protectedPrefixes = ['/dashboard','/chat','/tree','/income','/members','/reports','/receipts','/documents','/prospects','/appointments','/referral','/settings','/notifications','/periods','/rank-plans','/progress','/recruit'];
 
   const needsAuth = protectedPrefixes.some(p => pathname === p || pathname.startsWith(p + '/'));
 
@@ -117,11 +118,10 @@ export async function middleware(req: NextRequest) {
   }
 
   // หน้าที่ต้องล็อกอิน — ตรวจ token
+  // ยังไม่สมัครสมาชิก (ไม่มี token) → ส่งไปหน้า /admin ซึ่งมีการ์ดชวนเข้าสู่ระบบ
   const token = getToken(req);
   if(!token){
-    const loginUrl = new URL('/login', req.url);
-    loginUrl.searchParams.set('next', pathname);
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(new URL('/admin', req.url));
   }
   const payload = verifyTokenEdge(token);
   if(!payload){
