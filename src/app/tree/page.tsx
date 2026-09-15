@@ -4,6 +4,9 @@ import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import TreeView from '@/components/TreeView';
 
+// 77 จังหวัด — ใช้ในช่องเลือกสาขา/จังหวัด
+const PROVINCES = ['กระบี่','กรุงเทพมหานคร','กาญจนบุรี','กาฬสินธุ์','กำแพงเพชร','ขอนแก่น','จันทบุรี','ฉะเชิงเทรา','ชลบุรี','ชัยนาท','ชัยภูมิ','ชุมพร','เชียงราย','เชียงใหม่','ตรัง','ตราด','ตาก','นครนายก','นครปฐม','นครพนม','นครราชสีมา','นครศรีธรรมราช','นครสวรรค์','นนทบุรี','นราธิวาส','น่าน','บึงกาฬ','บุรีรัมย์','ปทุมธานี','ประจวบคีรีขันธ์','ปราจีนบุรี','ปัตตานี','พระนครศรีอยุธยา','พะเยา','พังงา','พัทลุง','พิจิตร','พิษณุโลก','เพชรบุรี','เพชรบูรณ์','แพร่','ภูเก็ต','มหาสารคาม','มุกดาหาร','แม่ฮ่องสอน','ยะลา','ยโสธร','ร้อยเอ็ด','ระนอง','ระยอง','ราชบุรี','ลพบุรี','ลำปาง','ลำพูน','เลย','ศรีสะเกษ','สกลนคร','สงขลา','สตูล','สมุทรปราการ','สมุทรสงคราม','สมุทรสาคร','สระแก้ว','สระบุรี','สิงห์บุรี','สุโขทัย','สุพรรณบุรี','สุราษฎร์ธานี','สุรินทร์','หนองคาย','หนองบัวลำภู','อ่างทอง','อุดรธานี','อุทัยธานี','อุตรดิตถ์','อุบลราชธานี','อำนาจเจริญ'];
+
 export default function TreePage(){
   const [activeTab, setActiveTab] = useState<'real'|'simulate'>('real');
   const [preview, setPreview] = useState<any>(null);
@@ -146,7 +149,7 @@ export default function TreePage(){
                 <div className="flex flex-wrap gap-2 text-sm">
                   <input placeholder="ค้นหาชื่อหรือรหัสสมาชิก" className="border rounded-xl px-3 py-2 flex-1 min-w-[200px]" />
                   <select className="border rounded-xl px-3 py-2"><option>ทุกสถานะ</option><option>Active</option><option>Pending</option></select>
-                  <select className="border rounded-xl px-3 py-2"><option>ทุกสาขา</option><option>กรุงเทพ</option><option>เชียงใหม่</option></select>
+                  <select className="border rounded-xl px-3 py-2"><option value="">ทุกสาขา/จังหวัด</option>{PROVINCES.map(p=>(<option key={p} value={p}>{p}</option>))}</select>
                   <button className="px-4 py-2 rounded-xl bg-[#475569] text-white">ค้นหา</button>
                   <button className="px-3 py-2 rounded-xl border text-xs">ซูม +</button>
                   <button className="px-3 py-2 rounded-xl border text-xs">ย้อนขึ้นชั้นบน</button>
