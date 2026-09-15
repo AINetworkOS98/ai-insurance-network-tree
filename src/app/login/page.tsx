@@ -115,7 +115,7 @@ function LoginInner(){
     setSocialLoading(null);
   }
 
-  const btnBase = "w-full py-3.5 rounded-2xl border text-[14px] font-medium flex items-center justify-center gap-3 disabled:opacity-50 transition-all shadow-sm hover:shadow-md hover:-translate-y-[1px] active:translate-y-0";
+  const btnBase = "w-full py-2.5 rounded-xl border text-[13px] font-medium flex items-center justify-center gap-2.5 disabled:opacity-50 transition-all shadow-sm hover:shadow hover:-translate-y-[1px] active:translate-y-0";
   const providerBtns: {id:Provider,label:string,style:string,icon:string,iconStyle:string}[] = [
     {id:'google', label:'ดำเนินการต่อด้วย Google', style:'bg-white border-[#e8eef5] hover:bg-[#f8fafc] text-slate-700', icon:'G', iconStyle:'bg-white border border-slate-200 text-slate-600 shadow-sm'},
     {id:'facebook', label:'ดำเนินการต่อด้วย Facebook', style:'bg-[#f0f7ff] border-[#dbeafe] hover:bg-[#e8f0ff] text-[#2563eb]', icon:'f', iconStyle:'bg-white text-[#1877F2] shadow-sm'},
@@ -134,10 +134,10 @@ function LoginInner(){
         <Link href="/" className="text-xs text-slate-500 hover:text-slate-700">กลับหน้าแรก →</Link>
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-4 md:p-8">
-        <div className="w-full max-w-[960px] grid md:grid-cols-[1.05fr_1fr] gap-0 rounded-[28px] overflow-hidden bg-white shadow-[0_20px_60px_-16px_rgba(71,85,105,0.18)] border border-white">
+      <div className="flex-1 flex items-center justify-center p-3 md:p-4">
+        <div className="w-full max-w-[820px] grid md:grid-cols-[1.05fr_1fr] gap-0 rounded-2xl overflow-hidden bg-white shadow-[0_16px_40px_-16px_rgba(71,85,105,0.18)] border border-white">
           {/* Left — Branding / Invite — ขาวนวลสดใส */}
-          <div className="hidden md:flex flex-col justify-between p-8 lg:p-10 bg-gradient-to-br from-[#ffffff] via-[#f8fbff] to-[#eff6ff] relative overflow-hidden border-r border-[#eef3ff]">
+          <div className="hidden md:flex flex-col justify-between p-6 lg:p-7 bg-gradient-to-br from-[#ffffff] via-[#f8fbff] to-[#eff6ff] relative overflow-hidden border-r border-[#eef3ff]">
             <div className="absolute inset-0">
               <div className="absolute -top-14 -right-10 w-72 h-72 rounded-full bg-[#dbeafe]/40 blur-3xl"/>
               <div className="absolute -bottom-16 -left-8 w-80 h-80 rounded-full bg-[#e0f2fe]/35 blur-3xl"/>
@@ -145,9 +145,9 @@ function LoginInner(){
             </div>
             <div className="relative">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-[#dbeafe] text-xs text-slate-600 shadow-sm">✦ ระบบค้นหาด้วย AI อัจฉริยะ</div>
-              <h1 className="mt-6 text-[28px] font-bold leading-tight text-slate-800">ยินดีต้อนรับกลับ</h1>
-              <p className="mt-3 text-sm text-slate-500 leading-relaxed">เข้าสู่ระบบเพื่อจัดการเครือข่าย ผัง 1 แตก 5 และข้อมูลสมาชิก — ปลอดภัย รวดเร็ว สไตล์สากลที่คุ้นเคย</p>
-              <div className="mt-8 space-y-3 text-xs text-slate-600">
+              <h1 className="mt-5 text-[24px] font-bold leading-tight text-slate-800">ยินดีต้อนรับกลับ</h1>
+              <p className="mt-2.5 text-[13px] text-slate-500 leading-relaxed">เข้าสู่ระบบเพื่อจัดการเครือข่าย ผัง 1 แตก 5 และข้อมูลสมาชิก — ปลอดภัย รวดเร็ว สไตล์สากลที่คุ้นเคย</p>
+              <div className="mt-6 space-y-2.5 text-xs text-slate-600">
                 <div className="flex items-center gap-2.5"><span className="w-7 h-7 rounded-full bg-white border border-[#dbeafe] text-[#3b82f6] flex items-center justify-center shadow-sm text-[11px]">✓</span> เข้าได้ด้วย Google / Facebook / GitHub / TikTok</div>
                 <div className="flex items-center gap-2.5"><span className="w-7 h-7 rounded-full bg-white border border-[#dbeafe] text-[#3b82f6] flex items-center justify-center shadow-sm text-[11px]">✓</span> ผังเครือข่าย 1×5 อัตโนมัติ พร้อม KPI</div>
                 <div className="flex items-center gap-2.5"><span className="w-7 h-7 rounded-full bg-white border border-[#dbeafe] text-[#3b82f6] flex items-center justify-center shadow-sm text-[11px]">✓</span> ข้อมูลปลอดภัย เข้ารหัสมาตรฐานสากล</div>
@@ -157,15 +157,15 @@ function LoginInner(){
           </div>
 
           {/* Right — Form */}
-          <div className="p-6 md:p-8 lg:p-10 bg-white">
-            <div className="md:hidden flex items-center gap-2 mb-4">
-              <img src="/logo.png" alt="" className="h-7 w-auto border rounded-lg p-0.5"/>
+          <div className="p-5 md:p-6 lg:p-7 bg-white">
+            <div className="md:hidden flex items-center gap-2 mb-3">
+              <img src="/logo.png" alt="" className="h-6 w-auto border rounded-lg p-0.5"/>
               <span className="text-sm font-bold text-slate-800">AI Insurance Network Tree</span>
             </div>
-            <h2 className="text-[22px] font-bold text-slate-800">เข้าสู่ระบบ</h2>
+            <h2 className="text-[19px] font-bold text-slate-800">เข้าสู่ระบบ</h2>
             <p className="text-xs text-slate-500 mt-1">เลือกวิธีที่สะดวก — นุ่มนวล ปลอดภัย แบบสากล</p>
 
-            <div className="mt-6 flex flex-col gap-2.5">
+            <div className="mt-4 flex flex-col gap-2">
               {providerBtns.map(p=>(
                 <button key={p.id} onClick={()=> loginSocial(p.id)} disabled={!!socialLoading || loading} className={`${btnBase} ${p.style}`}>
                   <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${p.iconStyle}`}>{p.icon}</span>
@@ -174,14 +174,14 @@ function LoginInner(){
               ))}
             </div>
 
-            <div className="flex items-center gap-3 my-5">
+            <div className="flex items-center gap-3 my-4">
               <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-200 to-slate-200"/><span className="text-[11px] tracking-widest text-slate-400 px-2">หรือ อีเมล</span><div className="flex-1 h-px bg-gradient-to-r from-slate-200 via-slate-200 to-transparent"/>
             </div>
 
-            <form onSubmit={submit} className="space-y-4">
+            <form onSubmit={submit} className="space-y-3">
               <div>
                 <label className="text-xs font-semibold text-slate-700">อีเมล</label>
-                <input value={form.email} onChange={e=> setForm({...form, email:e.target.value})} placeholder="you@example.com" type="email" autoComplete="email" className="mt-1.5 w-full px-4 py-3.5 rounded-2xl border border-[#e8eef5] bg-[#f8fafc] text-sm placeholder:text-slate-400 focus:outline-none focus:border-[#cbd5e1] focus:bg-white focus:ring-4 focus:ring-[#eff6ff] transition" />
+                <input value={form.email} onChange={e=> setForm({...form, email:e.target.value})} placeholder="you@example.com" type="email" autoComplete="email" className="mt-1.5 w-full px-3.5 py-2.5 rounded-xl border border-[#e8eef5] bg-[#f8fafc] text-sm placeholder:text-slate-400 focus:outline-none focus:border-[#cbd5e1] focus:bg-white focus:ring-4 focus:ring-[#eff6ff] transition" />
               </div>
               <div>
                 <div className="flex items-center justify-between">
@@ -189,11 +189,11 @@ function LoginInner(){
                   <Link href="/forgot-password" className="text-[11px] text-slate-500 hover:text-[#475569]">ลืมรหัสผ่าน?</Link>
                 </div>
                 <div className="relative">
-                  <input value={form.password} onChange={e=> setForm({...form, password:e.target.value})} type={showPass ? 'text' : 'password'} placeholder="••••••••" autoComplete="current-password" className="mt-1.5 w-full px-4 py-3.5 rounded-2xl border border-[#e8eef5] bg-[#f8fafc] text-sm placeholder:text-slate-400 pr-12 focus:outline-none focus:border-[#cbd5e1] focus:bg-white focus:ring-4 focus:ring-[#eff6ff] transition" />
-                  <button type="button" onClick={()=> setShowPass(!showPass)} className="absolute right-1.5 top-1/2 -translate-y-1/2 h-8 px-3 rounded-full bg-white border border-slate-200 text-[11px] font-medium text-slate-600 shadow-sm hover:bg-slate-50">{showPass ? 'ซ่อน' : 'ดู'}</button>
+                  <input value={form.password} onChange={e=> setForm({...form, password:e.target.value})} type={showPass ? 'text' : 'password'} placeholder="••••••••" autoComplete="current-password" className="mt-1.5 w-full px-3.5 py-2.5 rounded-xl border border-[#e8eef5] bg-[#f8fafc] text-sm placeholder:text-slate-400 pr-10 focus:outline-none focus:border-[#cbd5e1] focus:bg-white focus:ring-4 focus:ring-[#eff6ff] transition" />
+                  <button type="button" onClick={()=> setShowPass(!showPass)} className="absolute right-1 top-1/2 -translate-y-1/2 h-7 px-2.5 rounded-full bg-white border border-slate-200 text-[11px] font-medium text-slate-600 shadow-sm hover:bg-slate-50">{showPass ? 'ซ่อน' : 'ดู'}</button>
                 </div>
               </div>
-              <button disabled={loading || !!socialLoading} className="w-full py-3.5 rounded-2xl bg-[#475569] text-white text-sm font-bold shadow-[0_8px_20px_-8px_rgba(71,85,105,0.6)] hover:bg-slate-800 hover:shadow-lg hover:-translate-y-[1px] active:translate-y-0 disabled:opacity-50 transition-all">
+              <button disabled={loading || !!socialLoading} className="w-full py-2.5 rounded-xl bg-[#475569] text-white text-sm font-bold shadow-[0_6px_16px_-8px_rgba(71,85,105,0.6)] hover:bg-slate-800 hover:shadow-lg hover:-translate-y-[1px] active:translate-y-0 disabled:opacity-50 transition-all">
                 {loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบด้วยอีเมล'}
               </button>
             </form>
