@@ -62,15 +62,8 @@ export default function Sidebar(){
 
   const Nav = (
     <div className={`p-3 space-y-1 ${collapsed?'px-2':''}`}>
-      {/* ถ้ายังไม่ล็อกอิน — ซ่อนเมนูสมาชิกทั้งหมด */}
-      {authed===false ? (
-        <>
-          {!collapsed && <div className="text-[10px] tracking-widest text-slate-400 px-3 pb-1 pt-2">เมนู</div>}
-          <Link href="/admin" onClick={()=>setMobileOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${collapsed?'justify-center px-2':''} ${path==='/'?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-slate-50 text-slate-600'}`}>
-            <span className="w-5 text-center shrink-0">⌂</span>{!collapsed && <span>หน้าแรก</span>}
-          </Link>
-        </>
-      ) : (
+      {/* ถ้ายังไม่ล็อกอิน — ไม่แสดงเมนูอะไรเลย */}
+      {authed===false ? null : (
         <>
           {!collapsed && <div className="text-[10px] tracking-widest text-slate-400 px-3 pb-1 pt-2">เมนูหลัก</div>}
           {items.map(it=>{
@@ -149,7 +142,7 @@ export default function Sidebar(){
         {/* Logo */}
         <div className={`h-[56px] flex items-center ${collapsed?'justify-center px-1':'gap-3 px-4'} shrink-0`}>
           <img src="/logo.png" alt="AI Insurance" className="h-8 w-auto bg-white rounded-lg object-contain p-0.5"/>
-          {!collapsed && <div className="min-w-0"><div className="font-bold text-xs text-slate-700 leading-none truncate">AI Insurance Network</div><div className="text-[10px] text-slate-400 mt-0.5">ระบบค้นหาด้วย AI อัจฉริยะ</div></div>}
+          {!collapsed && authed!==false && <div className="min-w-0"><div className="font-bold text-xs text-slate-700 leading-none truncate">AI Insurance Network</div><div className="text-[10px] text-slate-400 mt-0.5">ระบบค้นหาด้วย AI อัจฉริยะ</div></div>}
         </div>
         <div className="flex-1 overflow-auto">
           {Nav}
