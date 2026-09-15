@@ -66,7 +66,7 @@ export default function Sidebar(){
       {authed===false ? (
         <>
           {!collapsed && <div className="text-[10px] tracking-widest text-slate-400 px-3 pb-1 pt-2">เมนู</div>}
-          <Link href="/" onClick={()=>setMobileOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${collapsed?'justify-center px-2':''} ${path==='/'?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-slate-50 text-slate-600'}`}>
+          <Link href="/admin" onClick={()=>setMobileOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${collapsed?'justify-center px-2':''} ${path==='/'?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-slate-50 text-slate-600'}`}>
             <span className="w-5 text-center shrink-0">⌂</span>{!collapsed && <span>หน้าแรก</span>}
           </Link>
         </>
