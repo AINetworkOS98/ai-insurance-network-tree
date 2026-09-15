@@ -33,7 +33,7 @@ export default function Sidebar(){
   const [authed,setAuthed]=useState<boolean|null>(null);
 
   useEffect(()=>{
-    fetch('/api/auth/me',{cache:'no-store'}).then(r=>setAuthed(r.ok)).catch(()=>setAuthed(false));
+    fetch('/api/auth/me', { credentials: 'include', cache:'no-store' }).then(r=>setAuthed(r.ok)).catch(()=>setAuthed(false));
   },[]);
 
   // คีย์บอร์ด: Ctrl+B / [ / \ เพื่อ หด/ขยาย
