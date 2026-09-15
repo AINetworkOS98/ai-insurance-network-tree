@@ -69,8 +69,14 @@ function LoginInner(){
       return;
     }
     setSocialLoading(provider); setMsg('');
+    // ถ้า Firebase ยังไม่พร้อม ให้ใช้ server-side redirect แทน popup
+    const useServerGoogle = provider==='google' && (firebaseConfigError || !auth);
+    if(useServerGoogle){
+      location.href = `/api/auth/google?next=${encodeURIComponent(nextParam)}`;
+      return;
+    }
     try{
-      if(firebaseConfigError || !auth) throw new Error('Firebase ยังไม่ได้ตั้งค่า Web API Key — ดูวิธีแก้ที่กล่องด้านล่าง');
+      if(firebaseConfigError || !auth) throw new Error('Firebase ยังไม่ได้ตั้งค่า Web API Key — กำลังพาไปวิธีสำรอง');
       let authProvider: any;
       if(provider==='google'){
         authProvider = new GoogleAuthProvider();
@@ -94,6 +100,11 @@ function LoginInner(){
       } else { setMsg(j.error || `เข้าสู่ระบบด้วย ${provider} ไม่สำเร็จ`); setMsgType('err'); }
     }catch(e:any){
       const code = e?.code || '';
+      // ถ้าเป็น api-key-not-valid ให้ fallback ไป server-side redirect อัตโนมัติ
+      if(code==='auth/api-key-not-valid' && provider==='google'){
+        location.href = `/api/auth/google?next=${encodeURIComponent(nextParam)}`;
+        return;
+      }
       if(code==='auth/popup-closed-by-user') setMsg('ปิดหน้าต่างก่อนเสร็จ');
       else if(code==='auth/cancelled-popup-request') setMsg('คำขอยกเลิก — ลองใหม่');
       else if(code==='auth/account-exists-with-different-credential') setMsg('อีเมลนี้เคยสมัครด้วยวิธีอื่น — กรุณาใช้อีเมล/รหัสผ่านเดิมแล้วเชื่อมบัญชีในตั้งค่า');
