@@ -21,7 +21,7 @@ export default function Header(){
     location.href = '/login';
   }
   return (
-    <header className="bg-[#FFFBF5] sticky top-0 z-40 border-b border-[#f3e8d3] text-[#475569]">
+    <header className="bg-[#FFFDF7] sticky top-0 z-40 border-b border-[#f3e8d3] text-[#475569]">
       <div className="w-full px-4 py-3 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3">
           <img src="/logo.png" alt="AI Insurance Network Tree" className="h-9 w-auto bg-white rounded-xl px-1 py-1 object-contain border border-[#f3e8d3]" />
@@ -32,12 +32,12 @@ export default function Header(){
         </Link>
         <nav className="hidden md:flex gap-5 text-sm items-center">
           {/* ยังไม่เข้าระบบ — ทุกเมนูลิงก์ไป /admin */}
-          <Link href={user ? "/" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-white rounded-full px-3 py-1.5 transition-colors">หน้าแรก</Link>
-          <Link href={user ? "/verify" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-white rounded-full px-3 py-1.5 transition-colors">ตรวจสมาชิก</Link>
-          <Link href={user ? "/prospects" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-white rounded-full px-3 py-1.5 transition-colors">ผู้สนใจ</Link>
-          <Link href={user ? "/tree" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-white rounded-full px-3 py-1.5 transition-colors">ผังเครือข่าย</Link>
-          <Link href={user ? "/income" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-white rounded-full px-3 py-1.5 transition-colors">รายได้</Link>
-          <Link href={user ? "/notifications" : "/admin"} className="relative text-[#57534e] hover:text-[#475569] hover:bg-white rounded-full px-3 py-1.5 transition-colors">🔔 แจ้งเตือน {unread!=null && unread>0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-red-600 text-white text-[11px]">{unread}</span>}</Link>
+          <Link href={user ? "/" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#F5EDDC] rounded-full px-3 py-1.5 transition-colors">หน้าแรก</Link>
+          <Link href={user ? "/verify" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#F5EDDC] rounded-full px-3 py-1.5 transition-colors">ตรวจสมาชิก</Link>
+          <Link href={user ? "/prospects" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#F5EDDC] rounded-full px-3 py-1.5 transition-colors">ผู้สนใจ</Link>
+          <Link href={user ? "/tree" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#F5EDDC] rounded-full px-3 py-1.5 transition-colors">ผังเครือข่าย</Link>
+          <Link href={user ? "/income" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#F5EDDC] rounded-full px-3 py-1.5 transition-colors">รายได้</Link>
+          <Link href={user ? "/notifications" : "/admin"} className="relative text-[#57534e] hover:text-[#475569] hover:bg-[#F5EDDC] rounded-full px-3 py-1.5 transition-colors">🔔 แจ้งเตือน {unread!=null && unread>0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-red-600 text-white text-[11px]">{unread}</span>}</Link>
         </nav>
         <div className="flex items-center gap-2">
           {user ? (
