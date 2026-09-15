@@ -121,6 +121,10 @@ export default function Sidebar(){
     </div>
   );
 
+  // หน้าแรกตอนยังไม่ล็อกอิน — ซ่อน Sidebar ทั้งแถบ (ว่างเปล่าแต่กินพื้นที่ดันแชต)
+  // กล่องแชตจะได้อยู่กลางหน้าจอจริง
+  if(path==='/' && authed===false) return null;
+
   return (
     <>
       {/* Mobile toggle */}
