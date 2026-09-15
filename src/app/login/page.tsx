@@ -37,6 +37,12 @@ function LoginInner(){
     if(errorParam==='suspended'){
       setMsg('บัญชีถูกระงับสิทธิ กรุณาติดต่อผู้ดูแลระบบ');
       setMsgType('err');
+    } else if(errorParam){
+      const m = String(errorParam);
+      if(m.includes('redirect_uri_mismatch')) setMsg('Google OAuth ยังไม่ได้เพิ่ม redirect URI — แจ้งผู้ดูแลเพิ่ม https://ai-insurance-network-tree.vercel.app/__/auth/handler ใน Google Cloud Console → Credentials → OAuth 2.0 Client');
+      else if(m==='google_failed' || m.includes('google')) setMsg('เข้าสู่ระบบด้วย Google ไม่สำเร็จ — ลองใหม่หรือใช้อีเมล/รหัสผ่าน');
+      else if(m!=='null' && m!=='') { setMsg(decodeURIComponent(m)); setMsgType('err'); }
+      if(m) setMsgType('err');
     }
   },[errorParam]);
 
