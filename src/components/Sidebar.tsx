@@ -112,7 +112,6 @@ export default function Sidebar(){
               </div>
             )}
           </div>
-          {!collapsed && <div className="text-[10px] tracking-widest text-slate-400 px-3 pb-1 pt-3">เสริม</div>}
           {extra.map(it=>{
             const active = path===it.href;
             return (
