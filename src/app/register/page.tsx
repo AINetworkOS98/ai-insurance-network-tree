@@ -13,6 +13,23 @@ function RegisterInner(){
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', password:'', confirm:'' });
   const [msg, setMsg] = useState('');
+  // ที่อยู่ตอนสมัคร (เก็บชื่อจังหวัด/อำเภอ/ตำบล)
+  const [provList, setProvList] = useState<any[]>([]);
+  const [distList, setDistList] = useState<any[]>([]);
+  const [subList, setSubList] = useState<any[]|null>(null);
+  const [addrP, setAddrP] = useState('');
+  const [addrD, setAddrD] = useState('');
+  const [addrS, setAddrS] = useState('');
+  useEffect(()=>{ (async()=>{
+    try{ const r=await fetch('/data/provinces.json',{cache:'force-cache'}); const j=await r.json(); if(Array.isArray(j)) setProvList(j.filter((p:any)=>!p.deleted_at)); }catch{}
+    try{ const r=await fetch('/data/districts.json',{cache:'force-cache'}); const j=await r.json(); if(Array.isArray(j)) setDistList(j.filter((d:any)=>!d.deleted_at)); }catch{}
+  })(); },[]);
+  async function ensureSub(){
+    if(subList) return;
+    try{ const r=await fetch('/data/sub_districts.json',{cache:'force-cache'}); const j=await r.json(); if(Array.isArray(j)) setSubList(j.filter((s:any)=>!s.deleted_at)); }catch{ setSubList([]); }
+  }
+  const distOpts = addrP ? distList.filter((d:any)=>String(d.province_id)===String(addrP)) : [];
+  const subOpts = addrD && subList ? subList.filter((s:any)=>String(s.district_id)===String(addrD)) : [];
 
   useEffect(()=>{ if(refFromUrl) verify(refFromUrl); }, [refFromUrl]);
 
@@ -30,10 +47,13 @@ function RegisterInner(){
     if(form.password.length < 8){ setMsg('รหัสผ่านต้องมีอย่างน้อย 8 อักขระ'); return; }
     if(form.password !== form.confirm){ setMsg('ยืนยันรหัสผ่านไม่ตรงกัน'); return; }
     setLoading(true); setMsg('');
+    const pname = provList.find((p:any)=>String(p.id)===addrP)?.name_th || undefined;
+    const dname = distOpts.find((d:any)=>String(d.id)===addrD)?.name_th || undefined;
+    const sname = (subOpts.find((s:any)=>String(s.id)===addrS)?.name_th) || undefined;
     try{
       const res = await fetch('/api/auth/register', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ ...form, referralCode: ref.trim().toUpperCase() || undefined })
+        body: JSON.stringify({ ...form, province:pname, district:dname, subdistrict:sname, referralCode: ref.trim().toUpperCase() || undefined })
       });
       const data = await res.json();
       if(data.ok){
@@ -70,6 +90,22 @@ function RegisterInner(){
             <input placeholder="เบอร์โทร" value={form.phone} onChange={e=> setForm({...form, phone:e.target.value})} className="border rounded-xl px-3 py-2.5 text-sm" />
             <input placeholder="รหัสผ่าน (≥8 อักขระ)" type="password" value={form.password} onChange={e=> setForm({...form, password:e.target.value})} className="border rounded-xl px-3 py-2.5 text-sm" />
             <input placeholder="ยืนยันรหัสผ่าน" type="password" value={form.confirm} onChange={e=> setForm({...form, confirm:e.target.value})} className="border rounded-xl px-3 py-2.5 text-sm" />
+          </div>
+
+          {/* ที่อยู่ (เก็บลงฐานข้อมูลตอนสมัคร) */}
+          <div className="mt-3 grid md:grid-cols-3 gap-3">
+            <select value={addrP} onChange={e=>{setAddrP(e.target.value);setAddrD('');setAddrS('');}} className="border rounded-xl px-3 py-2.5 text-sm">
+              <option value="">จังหวัด</option>
+              {provList.map((p:any)=>(<option key={p.id} value={p.id}>{p.name_th}</option>))}
+            </select>
+            <select value={addrD} disabled={!addrP} onChange={e=>{setAddrD(e.target.value);setAddrS('');ensureSub();}} className="border rounded-xl px-3 py-2.5 text-sm disabled:opacity-50">
+              <option value="">{addrP?'อำเภอ/เขต':'เลือกจังหวัดก่อน'}</option>
+              {distOpts.map((d:any)=>(<option key={d.id} value={d.id}>{d.name_th}</option>))}
+            </select>
+            <select value={addrS} disabled={!addrD} onChange={e=>setAddrS(e.target.value)} className="border rounded-xl px-3 py-2.5 text-sm disabled:opacity-50">
+              <option value="">{addrD?'ตำบล':'เลือกอำเภอก่อน'}</option>
+              {subOpts.map((s:any)=>(<option key={s.id} value={s.id}>{s.name_th}</option>))}
+            </select>
           </div>
 
           <label className="flex items-center gap-2 mt-3 text-xs"><input type="checkbox" defaultChecked /> ยอมรับเงื่อนไขการใช้งานและ PDPA (เก็บเวอร์ชันและเวลายินยอม)</label>

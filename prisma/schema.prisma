@@ -86,6 +86,8 @@ model User {
   displayName       String?
   dob               DateTime? @db.Date
   province          String?
+  district          String?
+  subdistrict       String?
   branch            String?
   avatarUrl         String?
   sponsorId         String?  @db.Uuid

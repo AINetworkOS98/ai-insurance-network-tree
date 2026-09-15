@@ -32,6 +32,15 @@ export default function TreePage(){
   }
   const distOpts = selProv ? distList.filter((d:any)=>String(d.province_id)===String(selProv)) : [];
   const subOpts = selDist && subList ? subList.filter((s:any)=>String(s.district_id)===String(selDist)) : [];
+  // เงื่อนไขค้นหาผัง: ข้อความ+สถานะใช้ปุ่มค้นหา/Enter, ที่อยู่กรองทันทีที่เลือก
+  const [q,setQ]=useState('');
+  const [statusQ,setStatusQ]=useState('');
+  const [fq,setFq]=useState('');
+  const [fStatus,setFStatus]=useState('');
+  function applySearch(){ setFq(q.trim()); setFStatus(statusQ); }
+  const fProv = provList.find((p:any)=>String(p.id)===selProv)?.name_th || '';
+  const fDist = distList.find((d:any)=>String(d.id)===selDist)?.name_th || '';
+  const fSub = (subList||[]).find((s:any)=>String(s.id)===selTambon)?.name_th || '';
 
   async function loadPreview(){
     setLoading('preview');
@@ -162,8 +171,8 @@ export default function TreePage(){
             <>
               <div className="card p-4">
                 <div className="flex flex-wrap gap-2 text-sm">
-                  <input placeholder="ค้นหาชื่อหรือรหัสสมาชิก" className="border rounded-xl px-3 py-2 flex-1 min-w-[200px]" />
-                  <select className="border rounded-xl px-3 py-2"><option>ทุกสถานะ</option><option>Active</option><option>Pending</option></select>
+                  <input placeholder="ค้นหาชื่อหรือรหัสสมาชิก" value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')applySearch();}} className="border rounded-xl px-3 py-2 flex-1 min-w-[200px]" />
+                  <select className="border rounded-xl px-3 py-2" value={statusQ} onChange={e=>setStatusQ(e.target.value)}><option value="">ทุกสถานะ</option><option value="ACTIVE">Active</option><option value="PENDING">Pending</option></select>
                   <select className="border rounded-xl px-3 py-2" value={selTambon} disabled={!selDist} onChange={e=>setSelTambon(e.target.value)}>
                     <option value="">{selDist?'ทุกตำบล':'เลือกอำเภอก่อน'}</option>
                     {subOpts.map((s:any)=>(<option key={s.id} value={s.id}>{s.name_th}</option>))}
@@ -176,13 +185,13 @@ export default function TreePage(){
                     <option value="">ทุกสาขา/จังหวัด</option>
                     {provList.map((p:any)=>(<option key={p.id} value={p.id}>{p.name_th}</option>))}
                   </select>
-                  <button className="px-4 py-2 rounded-xl bg-[#475569] text-white">ค้นหา</button>
+                  <button onClick={applySearch} className="px-4 py-2 rounded-xl bg-[#475569] text-white">ค้นหา</button>
                   <button className="px-3 py-2 rounded-xl border text-xs">ซูม +</button>
                   <button className="px-3 py-2 rounded-xl border text-xs">ย้อนขึ้นชั้นบน</button>
                 </div>
                 <div className="text-[11px] text-slate-500 mt-2">ค้นหา • กรองสาขา • ซูม/ย่อ/ขยาย • ย้อนขึ้นชั้นบน • โหลดทีละสาขา</div>
               </div>
-              <TreeView/>
+              <TreeView filter={{q:fq,status:fStatus,province:fProv,district:fDist,tambon:fSub}} />
 
               {preview && (
                 <div className="card p-4">

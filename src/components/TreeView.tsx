@@ -13,22 +13,35 @@ function NodeCard({node}:{node:Node}){
   );
 }
 
-export default function TreeView(){
+export default function TreeView({ filter }: { filter?: { q?:string; status?:string; province?:string; district?:string; tambon?:string } }){
   const [zoom,setZoom]=useState(100);
   const [tree, setTree]=useState<Node|null>(null);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState('');
+  const [count,setCount]=useState(0);
+  function applyFilter(ms:any[]){
+    const f = filter||{};
+    let list = ms;
+    if(f.q){ const s=String(f.q).toLowerCase(); list=list.filter((m:any)=>String(m.memberId||m.memberCode||'').toLowerCase().includes(s)||String(m.name||m.displayName||'').toLowerCase().includes(s)||String(m.email||'').toLowerCase().includes(s)); }
+    if(f.status){ list=list.filter((m:any)=>String(m.status||'').toUpperCase()===String(f.status).toUpperCase()); }
+    if(f.province){ list=list.filter((m:any)=>String(m.province||m.branch||'')===f.province); }
+    if(f.district){ list=list.filter((m:any)=>String(m.district||'')===f.district); }
+    if(f.tambon){ list=list.filter((m:any)=>String(m.subdistrict||m.tambon||'')===f.tambon); }
+    return list;
+  }
 
   useEffect(()=>{
     let cancelled=false;
     (async()=>{
+      setLoading(true);
       try{
         // พยายามดึงข้อมูลจริงจาก API (members + placements)
         // ถ้าไม่มีข้อมูล จะแสดงสถานะว่าง — ไม่ hardcode คนปลอม
         const r = await fetch('/api/members',{cache:'no-store'});
         const j = await r.json();
         if(cancelled) return;
-        const members = j.members||[];
+        const members = applyFilter(j.members||[]);
+        setCount(members.length);
         if(members.length===0){
           setTree(null);
         } else {
@@ -46,8 +59,8 @@ export default function TreeView(){
         if(!cancelled) setError(e.message||'โหลดไม่สำเร็จ');
       }finally{ if(!cancelled) setLoading(false); }
     })();
-    return ()=>{ cancelled=true; };
-  },[]);
+    return ()=>{ cancelled=true; }
+  },[JSON.stringify(filter)]);
 
   if(loading) return <div className="text-xs text-slate-500 py-6 text-center">กำลังโหลดผังเครือข่าย...</div>;
 
@@ -73,6 +86,7 @@ export default function TreeView(){
 
   return (
     <div>
+      <div className="text-xs text-slate-500 mb-2">พบสมาชิก {count} คน{filter && (filter.q||filter.status||filter.province||filter.district||filter.tambon) ? ' (ตามเงื่อนไขค้นหา)' : ''}</div>
       <div className="flex gap-2 mb-3">
         <button onClick={()=>setZoom(z=>Math.max(60,z-10))} className="px-3 py-1.5 rounded-lg border bg-white text-sm">−</button>
         <span className="px-3 py-1.5 text-sm">{zoom}%</span>

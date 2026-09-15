@@ -9,6 +9,10 @@ interface FirestoreMember {
   positionId?: string;
   role?: string;
   status?: string;
+  province?: string;
+  district?: string;
+  subdistrict?: string;
+  branch?: string;
   personalFYC?: number;
   personalCOM?: number;
   sponsorId?: string;
@@ -52,6 +56,10 @@ export async function GET(req: NextRequest) {
         positionId: data.positionId,
         role: data.role,
         status: data.status,
+        province: data.province,
+        district: data.district,
+        subdistrict: data.subdistrict,
+        branch: data.branch,
         sponsorId: data.sponsorId,
         joinDate: data.joinDate,
         personalFYC: data.personalFYC,

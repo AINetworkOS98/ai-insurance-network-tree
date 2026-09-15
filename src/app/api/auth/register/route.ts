@@ -9,7 +9,7 @@ import { generateMemberCode, generateReferralCode } from '@/lib/referral';
 // สเปคหมวด 4: ตรวจ referralCode, กันแนะนำตนเอง/วงวน, แยก sponsor_id / placement_parent_id / manager_id, คิวรอมอบหมาย
 export async function POST(req: NextRequest){
   try{
-    const { firstName, lastName, email, phone, password, referralCode, referral_code } = await req.json();
+    const { firstName, lastName, email, phone, password, referralCode, referral_code, province, district, subdistrict } = await req.json();
     const rawRef = String(referralCode || referral_code || '').trim().toUpperCase() || null;
     if(!email || !password || !firstName || !lastName){
       return NextResponse.json({ ok:false, error:'กรอกชื่อ อีเมล และรหัสผ่านให้ครบ' }, { status:400 });
@@ -81,6 +81,15 @@ export async function POST(req: NextRequest){
       }
     }
     if(!user) throw new Error('สร้างผู้ใช้ไม่สำเร็จ');
+
+    // เก็บที่อยู่ตอนสมัคร (optional — ข้ามเงียบถ้า DB ยังไม่รัน migration 1_add_address_fields)
+    const addr: any = {};
+    if(province) addr.province = String(province).trim() || null;
+    if(district) addr.district = String(district).trim() || null;
+    if(subdistrict) addr.subdistrict = String(subdistrict).trim() || null;
+    if(Object.keys(addr).length){
+      await prisma.user.update({ where:{ id: user.id }, data: addr }).catch((e:any)=>console.error('address save skipped — run: npx prisma migrate deploy', e?.code || e?.message));
+    }
 
     await prisma.authIdentity.create({ data:{ userId: user.id, provider:'password', email: normalizedEmail } }).catch(()=>null);
     await prisma.referralCode.create({ data:{ userId: user.id, code: newReferralCode! } }).catch(()=>null);
