@@ -66,7 +66,7 @@ export default function Sidebar(){
             const active = path===it.href;
             return (
               <Link key={it.href} href={it.href} onClick={()=>setMobileOpen(false)} title={collapsed?it.label:undefined}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${collapsed?'justify-center px-2':''} ${active?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-slate-50 text-slate-600'}`}>
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${collapsed?'justify-center px-2':''} ${active?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`}>
                 <span className="w-5 text-center shrink-0">{it.icon}</span>
                 {!collapsed && <span className="truncate">{it.label}</span>}
               </Link>
@@ -77,7 +77,7 @@ export default function Sidebar(){
             <button
               onClick={()=> collapsed ? setCollapsed(false) : setNetworkOpen(v=>!v)}
               title={collapsed?'สร้างเครือข่าย':undefined}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${collapsed?'justify-center px-2':''} ${(path?.startsWith('/network')||path?.startsWith('/tree')) ?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-slate-50 text-slate-600'}`}>
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${collapsed?'justify-center px-2':''} ${(path?.startsWith('/network')||path?.startsWith('/tree')) ?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`}>
               <span className="w-5 text-center shrink-0">🌐</span>
               {!collapsed && <span className="flex-1 text-left truncate">สร้างเครือข่าย</span>}
               {!collapsed && <span className={`text-xs transition-transform duration-200 ${networkOpen?'rotate-90':''}`}>›</span>}
@@ -85,19 +85,19 @@ export default function Sidebar(){
             {!collapsed && networkOpen && (
               <div className="ml-5 mt-1 space-y-1">
                 <Link href="/network-example" onClick={()=>setMobileOpen(false)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-colors ${path==='/network-example'?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-slate-50 text-slate-600'}`}>
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-colors ${path==='/network-example'?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`}>
                   <span>👥</span><span>ตัวอย่างเครือข่าย</span>
                   {path==='/network-example' && <span className="ml-auto text-[10px]">●</span>}
                 </Link>
                 <Link href="/tree" onClick={()=>setMobileOpen(false)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-colors ${path==='/tree'?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-slate-50 text-slate-600'}`}>
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-colors ${path==='/tree'?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`}>
                   <span>⁂</span><span>ผัง 1 แตก 5</span>
                 </Link>
               </div>
             )}
             {collapsed && (
               <div className="mt-1 flex justify-center">
-                <Link href="/network-example" title="ตัวอย่างเครือข่าย" className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-colors ${path==='/network-example'?'bg-[#eff6ff] text-sky-700':'hover:bg-slate-50 text-slate-600'}`}>👥</Link>
+                <Link href="/network-example" title="ตัวอย่างเครือข่าย" className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-colors ${path==='/network-example'?'bg-[#eff6ff] text-sky-700':'hover:bg-[#FFFBF5] text-slate-600'}`}>👥</Link>
               </div>
             )}
           </div>
@@ -105,7 +105,7 @@ export default function Sidebar(){
             const active = path===it.href;
             return (
               <Link key={it.href} href={it.href} onClick={()=>setMobileOpen(false)} title={collapsed?it.label:undefined}
-                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-colors ${collapsed?'justify-center px-2':''} ${active?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-slate-50 text-slate-600'}`}>
+                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-colors ${collapsed?'justify-center px-2':''} ${active?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`}>
                 <span className="w-5 text-center shrink-0">{it.icon}</span>
                 {!collapsed && <span className="truncate">{it.label}</span>}
               </Link>
@@ -130,7 +130,7 @@ export default function Sidebar(){
       <button
         onClick={()=>setCollapsed(v=>!v)}
         title={collapsed?'ขยายเมนู (Ctrl+B หรือ [)':'หดเมนู (Ctrl+B หรือ [)'}
-        className="hidden lg:flex fixed z-30 w-6 h-12 items-center justify-center bg-white hover:bg-slate-50 text-slate-500 rounded-r-xl shadow-sm transition-colors"
+        className="hidden lg:flex fixed z-30 w-6 h-12 items-center justify-center bg-white hover:bg-[#FFFBF5] text-slate-500 rounded-r-xl shadow-sm transition-colors"
         style={{left: collapsed? '56px' : '260px', top:'50%', transform:'translateY(-50%)'}}
       >
         {collapsed?'›':'‹'}
