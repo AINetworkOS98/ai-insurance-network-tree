@@ -16,7 +16,6 @@ const items=[
 ];
 const extra=[
   {href:"/members", label:"สมาชิกของฉัน", icon:"◉"},
-  {href:"/income", label:"รายได้", icon:"฿"},
   {href:"/documents", label:"เอกสารทางการเงิน", icon:"📄"},
 ];
 
