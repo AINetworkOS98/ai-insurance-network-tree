@@ -12,11 +12,11 @@ const items=[
   {href:"/progress", label:"ความก้าวหน้า", icon:"⬆"},
   {href:"/periods", label:"ปิดยอดรายเดือน", icon:"◷"},
   {href:"/reports", label:"รายงาน", icon:"▤"},
-  {href:"/settings", label:"ตั้งค่า", icon:"⚙"},
 ];
 const extra=[
   {href:"/members", label:"สมาชิกของฉัน", icon:"◉"},
   {href:"/documents", label:"เอกสารทางการเงิน", icon:"📄"},
+  {href:"/settings", label:"ตั้งค่า", icon:"⚙"},
 ];
 
 export default function Sidebar(){
