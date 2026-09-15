@@ -18,8 +18,6 @@ const extra=[
   {href:"/members", label:"สมาชิกของฉัน", icon:"◉"},
   {href:"/income", label:"รายได้", icon:"฿"},
   {href:"/documents", label:"เอกสารทางการเงิน", icon:"📄"},
-  {href:"/verify", label:"ตรวจสมาชิก", icon:"🔍"},
-  {href:"/notifications", label:"แจ้งเตือน", icon:"🔔"},
 ];
 
 export default function Sidebar(){
