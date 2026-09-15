@@ -88,6 +88,11 @@ model User {
   province          String?
   district          String?
   subdistrict       String?
+  addressLine       String?
+  zipCode           String?
+  lineId            String?
+  facebookUrl       String?
+  tiktokUrl         String?
   branch            String?
   avatarUrl         String?
   sponsorId         String?  @db.Uuid

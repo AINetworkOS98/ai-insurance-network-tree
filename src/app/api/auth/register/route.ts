@@ -9,7 +9,7 @@ import { generateMemberCode, generateReferralCode } from '@/lib/referral';
 // สเปคหมวด 4: ตรวจ referralCode, กันแนะนำตนเอง/วงวน, แยก sponsor_id / placement_parent_id / manager_id, คิวรอมอบหมาย
 export async function POST(req: NextRequest){
   try{
-    const { firstName, lastName, email, phone, password, referralCode, referral_code, province, district, subdistrict } = await req.json();
+    const { firstName, lastName, email, phone, password, referralCode, referral_code, province, district, subdistrict, addressLine, zipCode, lineId, facebookUrl, tiktokUrl } = await req.json();
     const rawRef = String(referralCode || referral_code || '').trim().toUpperCase() || null;
     if(!email || !password || !firstName || !lastName){
       return NextResponse.json({ ok:false, error:'กรอกชื่อ อีเมล และรหัสผ่านให้ครบ' }, { status:400 });
@@ -87,6 +87,11 @@ export async function POST(req: NextRequest){
     if(province) addr.province = String(province).trim() || null;
     if(district) addr.district = String(district).trim() || null;
     if(subdistrict) addr.subdistrict = String(subdistrict).trim() || null;
+    if(addressLine) addr.addressLine = String(addressLine).trim() || null;
+    if(zipCode) addr.zipCode = String(zipCode).trim() || null;
+    if(lineId) addr.lineId = String(lineId).trim() || null;
+    if(facebookUrl) addr.facebookUrl = String(facebookUrl).trim() || null;
+    if(tiktokUrl) addr.tiktokUrl = String(tiktokUrl).trim() || null;
     if(Object.keys(addr).length){
       await prisma.user.update({ where:{ id: user.id }, data: addr }).catch((e:any)=>console.error('address save skipped — run: npx prisma migrate deploy', e?.code || e?.message));
     }

@@ -3,9 +3,10 @@ import { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 export default function SettingsPage(){
-  const [form, setForm] = useState({ firstName:'', lastName:'', phone:'', province:'', district:'', subdistrict:'' });
+  const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', province:'', district:'', subdistrict:'', addressLine:'', zipCode:'', lineId:'', facebookUrl:'', tiktokUrl:'', referralCode:'', memberCode:'' });
   const [msg, setMsg] = useState('');
-  // cascade data same as /tree
+  const [origEmail, setOrigEmail] = useState('');
+  // cascade data same as /tree and register
   const [provList, setProvList] = useState<any[]>([]);
   const [distList, setDistList] = useState<any[]>([]);
   const [subList, setSubList] = useState<any[]|null>(null);
@@ -22,29 +23,39 @@ export default function SettingsPage(){
   }
   const distOpts = selProv ? distList.filter((d:any)=>String(d.province_id)===String(selProv)) : [];
   const subOpts = selDist && subList ? subList.filter((s:any)=>String(s.district_id)===String(selDist)) : [];
+  useEffect(()=>{ if(selTambon && subList){
+    const s=subList.find((x:any)=>String(x.id)===selTambon);
+    if(s?.zip_code) setForm(f=> f.zipCode ? f : {...f, zipCode: String(s.zip_code)});
+  }},[selTambon, subList]);
   useEffect(()=>{ (async()=>{
-    const r=await fetch('/api/members'); const j=await r.json();
-    if(j.ok && j.members?.[0]){
-      const m=j.members[0];
-      setForm({ firstName:m.firstName||m.name?.split(' ')?.[0]||'', lastName:m.lastName||m.name?.split(' ')?.slice(1).join(' ')||'', phone:m.phone||'', province:m.province||'', district:m.district||'', subdistrict:m.subdistrict||'' });
-      // try to map names to ids for selects
-      setTimeout(()=>{
-        if(m.province){
-          const p=provList.find((x:any)=>x.name_th===m.province);
-          if(p) setSelProv(String(p.id));
-        }
-        if(m.district){
-          const d=distList.find((x:any)=>x.name_th===m.district);
-          if(d) setSelDist(String(d.id));
-        }
-        if(m.subdistrict && subList){
-          const s=subList.find((x:any)=>x.name_th===m.subdistrict);
-          if(s) setSelTambon(String(s.id));
-        }
-      },300);
-    }
-  })(); },[provList.length, distList.length]);
-  // when province/district names loaded, sync ids
+    try{
+      const r=await fetch('/api/auth/me',{credentials:'include'});
+      const j=await r.json();
+      if(j.ok && j.user){
+        setOrigEmail(j.user.email||'');
+        // try fetch full profile via members? fallback to auth/me
+        setForm(f=>({...f, email: j.user.email||f.email}));
+      }
+    }catch{}
+    try{
+      const r=await fetch('/api/members');
+      const j=await r.json();
+      if(j.ok && j.members?.[0]){
+        const m=j.members[0];
+        setForm(f=>({ ...f, firstName:m.firstName||m.name?.split(' ')?.[0]||f.firstName, lastName:m.lastName||m.name?.split(' ')?.slice(1).join(' ')||f.lastName, phone:m.phone||f.phone, province:m.province||f.province, district:m.district||f.district, subdistrict:m.subdistrict||f.subdistrict, addressLine:m.addressLine||f.addressLine, zipCode:m.zipCode||f.zipCode, lineId:m.lineId||f.lineId, facebookUrl:m.facebookUrl||f.facebookUrl, tiktokUrl:m.tiktokUrl||f.tiktokUrl, referralCode:m.referralCode||f.referralCode, memberCode:m.memberCode||f.memberCode, email:m.email||f.email }));
+      }
+    }catch{}
+    // also try /api/auth/me to get codes if available
+    try{
+      const r=await fetch('/api/auth/me',{credentials:'include'});
+      const j=await r.json();
+      if(j.ok && j.user){
+        if(j.user.memberCode) setForm(f=>({...f, memberCode: j.user.memberCode}));
+        if(j.user.referralCode) setForm(f=>({...f, referralCode: j.user.referralCode}));
+      }
+    }catch{}
+  })(); },[]);
+  // map names to ids when lists loaded
   useEffect(()=>{
     if(form.province && provList.length && !selProv){
       const p=provList.find((x:any)=>x.name_th===form.province);
@@ -54,7 +65,7 @@ export default function SettingsPage(){
   useEffect(()=>{
     if(form.district && distList.length && !selDist && selProv){
       const d=distList.find((x:any)=>x.name_th===form.district);
-      if(d) setSelDist(String(d.id));
+      if(d){ setSelDist(String(d.id)); ensureSub(); }
     }
   },[distList, selProv, form.district]);
   useEffect(()=>{
@@ -70,23 +81,39 @@ export default function SettingsPage(){
     const sname = (subOpts.find((s:any)=>String(s.id)===selTambon)?.name_th) || form.subdistrict || '';
     const payload = { ...form, province:pname, district:dname, subdistrict:sname };
     const r = await fetch('/api/members', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
-    const j = await r.json();
-    setMsg(j.ok ? 'บันทึกสำเร็จ' : j.error || 'บันทึกไม่สำเร็จ');
+    const j = await r.json().catch(()=>({ok:false, error:'no response'}));
+    setMsg(j.ok ? 'บันทึกสำเร็จ' : (j.error || 'บันทึกไม่สำเร็จ — ลองใหม่'));
+    if(j.ok && (j.memberCode || j.referralCode)){
+      setForm(f=>({...f, memberCode: j.memberCode||f.memberCode, referralCode: j.referralCode||f.referralCode}));
+    }
   }
   return (
     <div>
       <Header/>
       <div className="flex w-full">
         <Sidebar/>
-        <main className="flex-1 p-6 space-y-4 max-w-[560px]">
+        <main className="flex-1 p-6 space-y-4 max-w-[640px]">
           <h1 className="text-xl font-bold text-navy">ตั้งค่าบัญชีและระบบ</h1>
+          <p className="text-xs text-slate-500">ข้อมูลมาตรฐาน — ระบบออกรหัสสมาชิก/รหัสแนะนำอัตโนมัติเมื่อสมัคร</p>
           <div className="card p-5 space-y-3">
-            <input value={form.firstName} onChange={e=> setForm({...form, firstName:e.target.value})} placeholder="ชื่อ" className="w-full px-3 py-2 rounded-xl border text-sm" />
-            <input value={form.lastName} onChange={e=> setForm({...form, lastName:e.target.value})} placeholder="นามสกุล" className="w-full px-3 py-2 rounded-xl border text-sm" />
-            <input value={form.phone} onChange={e=> setForm({...form, phone:e.target.value})} placeholder="โทรศัพท์" className="w-full px-3 py-2 rounded-xl border text-sm" />
+            <div className="grid md:grid-cols-2 gap-3">
+              <input value={form.firstName} onChange={e=> setForm({...form, firstName:e.target.value})} placeholder="ชื่อ *" className="w-full px-3 py-2 rounded-xl border text-sm" />
+              <input value={form.lastName} onChange={e=> setForm({...form, lastName:e.target.value})} placeholder="นามสกุล *" className="w-full px-3 py-2 rounded-xl border text-sm" />
+            </div>
+            <input value={form.email} onChange={e=> setForm({...form, email:e.target.value})} placeholder="อีเมล *" className="w-full px-3 py-2 rounded-xl border text-sm" />
+            <input value={form.phone} onChange={e=> setForm({...form, phone:e.target.value})} placeholder="เบอร์โทร *" className="w-full px-3 py-2 rounded-xl border text-sm" />
+            <div className="grid md:grid-cols-3 gap-3">
+              <input value={form.lineId} onChange={e=> setForm({...form, lineId:e.target.value})} placeholder="LINE ID" className="w-full px-3 py-2 rounded-xl border text-sm" />
+              <input value={form.facebookUrl} onChange={e=> setForm({...form, facebookUrl:e.target.value})} placeholder="Facebook (ลิงก์)" className="w-full px-3 py-2 rounded-xl border text-sm" />
+              <input value={form.tiktokUrl} onChange={e=> setForm({...form, tiktokUrl:e.target.value})} placeholder="TikTok (ลิงก์/ID)" className="w-full px-3 py-2 rounded-xl border text-sm" />
+            </div>
+            <div className="grid md:grid-cols-3 gap-2">
+              <input value={form.addressLine} onChange={e=> setForm({...form, addressLine:e.target.value})} placeholder="บ้านเลขที่/ถนน" className="w-full px-3 py-2 rounded-xl border text-sm md:col-span-2" />
+              <input value={form.zipCode} onChange={e=> setForm({...form, zipCode:e.target.value})} placeholder="รหัสไปรษณีย์" className="w-full px-3 py-2 rounded-xl border text-sm" />
+            </div>
             <div className="grid grid-cols-3 gap-2">
               <select value={selTambon} disabled={!selDist} onChange={e=>setSelTambon(e.target.value)} className="border rounded-xl px-3 py-2 text-sm disabled:opacity-50">
-                <option value="">{selDist?'ทุกตำบล':'ตำบล'}</option>
+                <option value="">{selDist?'ตำบล':'ตำบล'}</option>
                 {subOpts.map((s:any)=>(<option key={s.id} value={s.id}>{s.name_th}</option>))}
               </select>
               <select value={selDist} disabled={!selProv} onChange={e=>{setSelDist(e.target.value);setSelTambon('');ensureSub();}} className="border rounded-xl px-3 py-2 text-sm disabled:opacity-50">
@@ -98,7 +125,19 @@ export default function SettingsPage(){
                 {provList.map((p:any)=>(<option key={p.id} value={p.id}>{p.name_th}</option>))}
               </select>
             </div>
-            <div className="text-[11px] text-slate-500">จังหวัด/อำเภอ/ตำบล — ข้อมูลเดียวกับหน้า ผังทีม 1:5 (77/930/7452) • เล็กไปใหญ่ ตำบล→อำเภอ→จังหวัด</div>
+            <div className="text-[11px] text-slate-500">ตำบล→อำเภอ→จังหวัด — ชุดข้อมูลเดียวกับหน้า ผังทีม 1:5</div>
+            <div className="grid md:grid-cols-2 gap-3 pt-2 border-t">
+              <div>
+                <label className="text-xs text-slate-600">รหัสผู้แนะนำ</label>
+                <input value={form.referralCode} readOnly placeholder="เช่น R-XXXXXX (ถ้ามีผู้แนะนำ)" className="w-full mt-1 px-3 py-2 rounded-xl border text-sm bg-slate-50" />
+                <div className="text-[11px] text-slate-400 mt-1">รหัสที่ใช้สมัครเข้ามา (ถ้ามี)</div>
+              </div>
+              <div>
+                <label className="text-xs text-slate-600">รหัสของคุณ (ออโต้)</label>
+                <input value={form.memberCode} readOnly placeholder="เช่น M-XXXXXX — ระบบออกให้อัตโนมัติ" className="w-full mt-1 px-3 py-2 rounded-xl border text-sm bg-slate-50 font-mono" />
+                <div className="text-[11px] text-slate-400 mt-1">รหัสสมาชิก + รหัสแนะนำของคุณจะขึ้นหลังสมัคร</div>
+              </div>
+            </div>
             <button onClick={save} className="px-6 py-2 rounded-full bg-navy text-white text-sm">บันทึก</button>
             {msg && <div className="p-2 rounded-xl bg-amber-50 border text-xs">{msg}</div>}
             <div className="text-[11px] text-slate-500">ตั้งค่าระบบ: ชื่อระบบดูได้ที่ /api/system-config (GET) — เปลี่ยนได้ที่ผู้มีสิทธิ system.manage</div>
