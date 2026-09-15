@@ -164,17 +164,17 @@ export default function TreePage(){
                 <div className="flex flex-wrap gap-2 text-sm">
                   <input placeholder="ค้นหาชื่อหรือรหัสสมาชิก" className="border rounded-xl px-3 py-2 flex-1 min-w-[200px]" />
                   <select className="border rounded-xl px-3 py-2"><option>ทุกสถานะ</option><option>Active</option><option>Pending</option></select>
-                  <select className="border rounded-xl px-3 py-2" value={selProv} onChange={e=>{setSelProv(e.target.value);setSelDist('');setSelTambon('');}}>
-                    <option value="">ทุกสาขา/จังหวัด</option>
-                    {provList.map((p:any)=>(<option key={p.id} value={p.id}>{p.name_th}</option>))}
+                  <select className="border rounded-xl px-3 py-2" value={selTambon} disabled={!selDist} onChange={e=>setSelTambon(e.target.value)}>
+                    <option value="">{selDist?'ทุกตำบล':'เลือกอำเภอก่อน'}</option>
+                    {subOpts.map((s:any)=>(<option key={s.id} value={s.id}>{s.name_th}</option>))}
                   </select>
                   <select className="border rounded-xl px-3 py-2" value={selDist} disabled={!selProv} onChange={e=>{setSelDist(e.target.value);setSelTambon('');ensureSub();}}>
                     <option value="">{selProv?'ทุกอำเภอ/เขต':'เลือกจังหวัดก่อน'}</option>
                     {distOpts.map((d:any)=>(<option key={d.id} value={d.id}>{d.name_th}</option>))}
                   </select>
-                  <select className="border rounded-xl px-3 py-2" value={selTambon} disabled={!selDist} onChange={e=>setSelTambon(e.target.value)}>
-                    <option value="">{selDist?'ทุกตำบล':'เลือกอำเภอก่อน'}</option>
-                    {subOpts.map((s:any)=>(<option key={s.id} value={s.id}>{s.name_th}</option>))}
+                  <select className="border rounded-xl px-3 py-2" value={selProv} onChange={e=>{setSelProv(e.target.value);setSelDist('');setSelTambon('');}}>
+                    <option value="">ทุกสาขา/จังหวัด</option>
+                    {provList.map((p:any)=>(<option key={p.id} value={p.id}>{p.name_th}</option>))}
                   </select>
                   <button className="px-4 py-2 rounded-xl bg-[#475569] text-white">ค้นหา</button>
                   <button className="px-3 py-2 rounded-xl border text-xs">ซูม +</button>
