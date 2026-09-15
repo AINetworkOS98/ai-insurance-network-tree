@@ -21,7 +21,7 @@ export default function Header(){
     location.href = '/login';
   }
   return (
-    <header className="bg-[#FFFDF7] sticky top-0 z-40 border-b border-[#f3e8d3] text-[#475569]">
+    <header className="bg-white sticky top-0 z-40 border-b border-[#f3e8d3] text-[#475569]">
       <div className="w-full px-4 py-3 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3">
           <img src="/logo.png" alt="AI Insurance Network Tree" className="h-9 w-auto bg-white rounded-xl px-1 py-1 object-contain border border-[#f3e8d3]" />
