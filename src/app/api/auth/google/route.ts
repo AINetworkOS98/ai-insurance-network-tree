@@ -119,6 +119,7 @@ export async function GET(req: NextRequest){
     if(['SUSPENDED','RESIGNED','INACTIVE'].includes(String(user.status))) return NextResponse.redirect(new URL('/login?error=suspended', req.url));
     const token = signToken({ sub: user.id, email: user.email, rankLevel: user.rankLevel ?? 0, status: String(user.status) });
     await prisma.userSession.create({ data:{ userId: user.id, tokenHash: token.slice(-32), expiresAt: new Date(Date.now()+7*24*60*60*1000) } }).catch(()=>null);
+    try{ const __adm = await import('@/lib/admin'); if(__adm.isAdminEmail(user.email)) await __adm.ensureSuperAdmin(user.id); }catch{}
     const stateRaw = searchParams.get('state');
     let next = '/';
     try{ if(stateRaw){ const s=JSON.parse(Buffer.from(stateRaw,'base64url').toString()); if(s.next && String(s.next).startsWith('/')) next=s.next; } }catch{}

@@ -99,6 +99,7 @@ export async function POST(req: NextRequest){
       }
       const token = signToken({ sub: user.id, email: user.email, rankLevel: user.rankLevel ?? 0, status: String(user.status) });
       await prisma.userSession.create({ data:{ userId: user.id, tokenHash: token.slice(-32), expiresAt: new Date(Date.now()+7*24*60*60*1000) }}).catch(()=>{});
+      try{ const __adm = await import('@/lib/admin'); if(__adm.isAdminEmail(user.email)) await __adm.ensureSuperAdmin(user.id); }catch{}
       const res = NextResponse.json({ ok:true, token, user:{ id:user.id, email:user.email, displayName }});
       res.cookies.set('token', token, { httpOnly:true, path:'/', maxAge:60*60*24*7, sameSite:'lax' });
       return res;
@@ -196,6 +197,7 @@ export async function GET(req: NextRequest){
     if(!user) return NextResponse.redirect(new URL('/login?error=user_create_failed', req.url));
     const token = signToken({ sub: user.id, email: user.email, rankLevel: user.rankLevel ?? 0, status: String(user.status) });
     await prisma.userSession.create({ data:{ userId: user.id, tokenHash: token.slice(-32), expiresAt: new Date(Date.now()+7*24*60*60*1000) }}).catch(()=>{});
+    try{ const __adm = await import('@/lib/admin'); if(__adm.isAdminEmail(user.email)) await __adm.ensureSuperAdmin(user.id); }catch{}
     const res = NextResponse.redirect(new URL('/', req.url));
     res.cookies.set('token', token, { httpOnly:true, path:'/', maxAge:60*60*24*7, sameSite:'lax' });
     return res;

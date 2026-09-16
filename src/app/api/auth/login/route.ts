@@ -75,6 +75,7 @@ export async function POST(req: NextRequest) {
 
       const token = signToken({ sub: user.id, email: user.email, rankLevel: user.rankLevel ?? 0, status: String(user.status) });
       await prisma.userSession.create({ data:{ userId: user.id, tokenHash: token.slice(-32), expiresAt: new Date(Date.now()+7*24*60*60*1000) } }).catch(()=>null);
+      try{ const __adm = await import('@/lib/admin'); if(__adm.isAdminEmail(user.email)) await __adm.ensureSuperAdmin(user.id); }catch{}
       const res = NextResponse.json({ ok:true, token, user:{ id:user.id, email:user.email, rankLevel:user.rankLevel, status:user.status } });
       res.cookies.set('token', token, { httpOnly:true, path:'/', maxAge:60*60*24*7, sameSite:'lax' });
       return res;
