@@ -20,6 +20,7 @@ const PUBLIC_API = [
   '/api/ai/status',
   '/api/ai/stream',
   '/api/cron/hermes-sync',
+  '/api/cron/backup',
   '/api/read-file',
   '/api/fetch-url',
   '/api/search',
