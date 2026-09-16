@@ -2,26 +2,28 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { useT } from '@/i18n';
 
 const items=[
-  {href:"/", label:"หน้าแรก", icon:"⌂"},
-  {href:"/dashboard", label:"ภาพรวม", icon:"▦"},
-  {href:"/prospects", label:"สมาชิกและผู้สนใจ", icon:"◎"},
-  {href:"/tree", label:"ผังทีม 1:5", icon:"⁂"},
-  {href:"/receipts", label:"หลักฐานและผลงาน", icon:"▭"},
-  {href:"/progress", label:"ความก้าวหน้า", icon:"⬆"},
-  {href:"/career", label:"ขึ้นตำแหน่ง", icon:"▲"},
-  {href:"/periods", label:"ปิดยอดรายเดือน", icon:"◷"},
-  {href:"/criteria", label:"เกณฑ์มาตรฐาน", icon:"✓"},
-  {href:"/reports", label:"รายงาน", icon:"▤"},
+  {href:"/", key:"nav_home", icon:"⌂"},
+  {href:"/dashboard", key:"sb_dashboard", icon:"▦"},
+  {href:"/prospects", key:"sb_members_prospects", icon:"◎"},
+  {href:"/tree", key:"sb_tree", icon:"⁂"},
+  {href:"/receipts", key:"sb_receipts", icon:"▭"},
+  {href:"/progress", key:"sb_progress", icon:"⬆"},
+  {href:"/career", key:"sb_career", icon:"▲"},
+  {href:"/periods", key:"sb_periods", icon:"◷"},
+  {href:"/criteria", key:"sb_criteria", icon:"✓"},
+  {href:"/reports", key:"sb_reports", icon:"▤"},
 ];
 const extra=[
-  {href:"/members", label:"สมาชิกของฉัน", icon:"◉"},
-  {href:"/documents", label:"เอกสารทางการเงิน", icon:"📄"},
-  {href:"/settings", label:"ตั้งค่า", icon:"⚙"},
+  {href:"/members", key:"sb_my_members", icon:"◉"},
+  {href:"/documents", key:"sb_documents", icon:"📄"},
+  {href:"/settings", key:"sb_settings", icon:"⚙"},
 ];
 
 export default function Sidebar(){
+  const { t } = useT();
   const path=usePathname();
   const router=useRouter();
   const [collapsed,setCollapsed]=useState(false);
@@ -63,14 +65,14 @@ export default function Sidebar(){
       {/* ถ้ายังไม่ล็อกอิน — ไม่แสดงเมนูอะไรเลย */}
       {authed===false ? null : (
         <>
-          {!collapsed && <div className="text-[10px] tracking-widest text-slate-400 px-3 pb-1 pt-2">เมนูหลัก</div>}
+          {!collapsed && <div className="text-[10px] tracking-widest text-slate-400 px-3 pb-1 pt-2" >{t('menu_main')}</div>}
           {items.map(it=>{
             const active = path===it.href;
             return (
-              <Link key={it.href} href={it.href} onClick={()=>setMobileOpen(false)} title={collapsed?it.label:undefined}
+              <Link key={it.href} href={it.href} onClick={()=>setMobileOpen(false)} title={collapsed?t(it.key):undefined}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${collapsed?'justify-center px-2':''} ${active?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`}>
                 <span className="w-5 text-center shrink-0">{it.icon}</span>
-                {!collapsed && <span className="truncate">{it.label}</span>}
+                {!collapsed && <span className="truncate">{t(it.key)}</span>}
               </Link>
             )
           })}
@@ -78,46 +80,46 @@ export default function Sidebar(){
           <div className={`${collapsed?'px-1':''} mt-1`}>
             <button
               onClick={()=> collapsed ? setCollapsed(false) : setNetworkOpen(v=>!v)}
-              title={collapsed?'สร้างเครือข่าย':undefined}
+              title={collapsed?t('sb_network'):undefined}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${collapsed?'justify-center px-2':''} ${(path?.startsWith('/network')||path?.startsWith('/tree')) ?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`}>
               <span className="w-5 text-center shrink-0">🌐</span>
-              {!collapsed && <span className="flex-1 text-left truncate">สร้างเครือข่าย</span>}
+              {!collapsed && <span className="flex-1 text-left truncate" >{t('sb_network')}</span>}
               {!collapsed && <span className={`text-xs transition-transform duration-200 ${networkOpen?'rotate-90':''}`}>›</span>}
             </button>
             {!collapsed && networkOpen && (
               <div className="ml-5 mt-1 space-y-1">
                 <Link href="/network-example" onClick={()=>setMobileOpen(false)}
                   className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-colors ${path==='/network-example'?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`}>
-                  <span>👥</span><span>ตัวอย่างเครือข่าย</span>
+                  <span>👥</span><span>{t('sb_network_example')}</span>
                   {path==='/network-example' && <span className="ml-auto text-[10px]">●</span>}
                 </Link>
                 <Link href="/referral" onClick={()=>setMobileOpen(false)}
                   className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-colors ${path==='/referral'?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`}>
-                  <span>✉</span><span>ชวนสมาชิก</span>
+                  <span>✉</span><span>{t('sb_invite')}</span>
                   {path==='/referral' && <span className="ml-auto text-[10px]">●</span>}
                 </Link>
                 <Link href="/receipts" onClick={()=>setMobileOpen(false)}
                   className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-colors ${path==='/receipts'?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`}>
-                  <span>🧾</span><span>สแกนใบเสร็จ</span>
+                  <span>🧾</span><span>{t('sb_scan')}</span>
                   {path==='/receipts' && <span className="ml-auto text-[10px]">●</span>}
                 </Link>
               </div>
             )}
             {collapsed && (
               <div className="mt-1 flex flex-col items-center gap-1">
-                <Link href="/network-example" title="ตัวอย่างเครือข่าย" className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-colors ${path==='/network-example'?'bg-[#eff6ff] text-sky-700':'hover:bg-[#FFFBF5] text-slate-600'}`}>👥</Link>
-                <Link href="/referral" title="ชวนสมาชิก" className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-colors ${path==='/referral'?'bg-[#eff6ff] text-sky-700':'hover:bg-[#FFFBF5] text-slate-600'}`}>✉</Link>
-                <Link href="/receipts" title="สแกนใบเสร็จ" className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-colors ${path==='/receipts'?'bg-[#eff6ff] text-sky-700':'hover:bg-[#FFFBF5] text-slate-600'}`}>🧾</Link>
+                <Link href="/network-example" title={t('sb_network_example')} className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-colors ${path==='/network-example'?'bg-[#eff6ff] text-sky-700':'hover:bg-[#FFFBF5] text-slate-600'}`}>👥</Link>
+                <Link href="/referral" title={t('sb_invite')} className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-colors ${path==='/referral'?'bg-[#eff6ff] text-sky-700':'hover:bg-[#FFFBF5] text-slate-600'}`}>✉</Link>
+                <Link href="/receipts" title={t('sb_scan')} className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-colors ${path==='/receipts'?'bg-[#eff6ff] text-sky-700':'hover:bg-[#FFFBF5] text-slate-600'}`}>🧾</Link>
               </div>
             )}
           </div>
           {extra.map(it=>{
             const active = path===it.href;
             return (
-              <Link key={it.href} href={it.href} onClick={()=>setMobileOpen(false)} title={collapsed?it.label:undefined}
+              <Link key={it.href} href={it.href} onClick={()=>setMobileOpen(false)} title={collapsed?t(it.key):undefined}
                 className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-colors ${collapsed?'justify-center px-2':''} ${active?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`}>
                 <span className="w-5 text-center shrink-0">{it.icon}</span>
-                {!collapsed && <span className="truncate">{it.label}</span>}
+                {!collapsed && <span className="truncate">{t(it.key)}</span>}
               </Link>
             )
           })}
