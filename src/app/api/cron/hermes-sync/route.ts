@@ -21,7 +21,22 @@ export async function GET(req: NextRequest){
       prospects: await (prisma as any).prospect.count().catch(()=> -1),
       receipts: await (prisma as any).receiptFile.count().catch(()=> -1),
     };
-    return NextResponse.json({ ok:true, cron:'hermes-sync', at: now, counts, note:'AI heartbeat — memory & period checks light' });
+    // ตัดยอดสิ้นเดือนอัตโนมัติ (ถ้าเปิดไว้ + พ้น cutoff แล้ว) — idempotent
+    let autoClose: any = null;
+    try{
+      const rule = await (prisma as any).periodRule.findUnique({ where:{ kind_period: { kind:'monthly_auto_close', period:'*' } } }).catch(()=>null);
+      if(rule){
+        const { previousPeriod, monthBounds, closePeriodJob } = await import('@/lib/periodEngine');
+        const target = previousPeriod();
+        const { endAt } = monthBounds(target);
+        if(new Date() >= endAt){
+          autoClose = await closePeriodJob(target, undefined).catch((e:any)=> ({ ok:false, error: e?.message }));
+        } else {
+          autoClose = { ok:true, skipped:true, reason:`ยังไม่ถึง cutoff ${target}` };
+        }
+      }
+    }catch(e:any){ autoClose = { ok:false, error: e?.message }; }
+    return NextResponse.json({ ok:true, cron:'hermes-sync', at: now, counts, autoClose, note:'AI heartbeat — memory & period checks light' });
   } catch (e:any){
     return NextResponse.json({ ok:true, cron:'hermes-sync', at: now, error:e?.message });
   }

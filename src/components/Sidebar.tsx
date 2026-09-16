@@ -89,11 +89,23 @@ export default function Sidebar(){
                   <span>👥</span><span>ตัวอย่างเครือข่าย</span>
                   {path==='/network-example' && <span className="ml-auto text-[10px]">●</span>}
                 </Link>
+                <Link href="/referral" onClick={()=>setMobileOpen(false)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-colors ${path==='/referral'?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`}>
+                  <span>✉</span><span>ชวนสมาชิก</span>
+                  {path==='/referral' && <span className="ml-auto text-[10px]">●</span>}
+                </Link>
+                <Link href="/receipts" onClick={()=>setMobileOpen(false)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-colors ${path==='/receipts'?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`}>
+                  <span>🧾</span><span>สแกนใบเสร็จ</span>
+                  {path==='/receipts' && <span className="ml-auto text-[10px]">●</span>}
+                </Link>
               </div>
             )}
             {collapsed && (
-              <div className="mt-1 flex justify-center">
+              <div className="mt-1 flex flex-col items-center gap-1">
                 <Link href="/network-example" title="ตัวอย่างเครือข่าย" className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-colors ${path==='/network-example'?'bg-[#eff6ff] text-sky-700':'hover:bg-[#FFFBF5] text-slate-600'}`}>👥</Link>
+                <Link href="/referral" title="ชวนสมาชิก" className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-colors ${path==='/referral'?'bg-[#eff6ff] text-sky-700':'hover:bg-[#FFFBF5] text-slate-600'}`}>✉</Link>
+                <Link href="/receipts" title="สแกนใบเสร็จ" className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-colors ${path==='/receipts'?'bg-[#eff6ff] text-sky-700':'hover:bg-[#FFFBF5] text-slate-600'}`}>🧾</Link>
               </div>
             )}
           </div>

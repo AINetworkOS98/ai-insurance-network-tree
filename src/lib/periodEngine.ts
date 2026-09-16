@@ -45,6 +45,46 @@ export function getBangkokPeriod(d: Date = new Date()){
   return `${b.getUTCFullYear()}-${String(b.getUTCMonth()+1).padStart(2,'0')}`;
 }
 
+// เดือนก่อนหน้า (YYYY-MM)
+export function previousPeriod(period?: string){
+  const base = period || currentPeriod();
+  const [y,m] = base.split('-').map(Number);
+  const d = new Date(Date.UTC(y, m-1, 1));
+  d.setUTCMonth(d.getUTCMonth() - 1);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}`;
+}
+
+const TH_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+
+// ป้าย พ.ศ. เต็ม: "กันยายน 2569" — วันสิ้นเดือนถือปีพุทธศักราช
+export function toBuddhistLabel(period: string){
+  const [y,m] = period.split('-').map(Number);
+  if(!y || !m) return period;
+  return `${TH_MONTHS[m-1]} ${y+543}`;
+}
+
+// ตารางตัดยอดสิ้นเดือนล่วงหน้า n เดือน: period + cutoff (Bangkok month-end) + ป้าย พ.ศ.
+export function monthEndSchedule(n: number = 12){
+  const out: Array<{ period:string; label:string; cutoffBangkok:string; cutoffAt:string }> = [];
+  const [cy,cm] = currentPeriod().split('-').map(Number);
+  for(let i=0; i<n; i++){
+    const d = new Date(Date.UTC(cy, cm-1+i, 1));
+    const y = d.getUTCFullYear();
+    const m = d.getUTCMonth()+1;
+    const period = `${y}-${String(m).padStart(2,'0')}`;
+    const { endAt } = monthBounds(period);
+    // แสดงเป็นวันสิ้นเดือน: วันที่สุดท้ายของเดือนนั้น เวลา 24:00 น.
+    const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    out.push({
+      period,
+      label: toBuddhistLabel(period),
+      cutoffBangkok: `${lastDay} ${TH_MONTHS[m-1]} ${y+543} 24:00 น. (เที่ยงคืนสิ้นเดือน)`,
+      cutoffAt: endAt.toISOString(),
+    });
+  }
+  return out;
+}
+
 // ปิดยอด: สร้าง snapshot ทุกคน — เรียกซ้ำได้ไม่ลงซ้ำ (idempotent)
 export async function closePeriodJob(period: string, closedBy?: string){
   const cal: any = await ensurePeriod(period);

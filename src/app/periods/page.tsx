@@ -10,6 +10,9 @@ export default function PeriodMaintenancePage(){
   const [plans, setPlans] = useState<any[]>([]);
   const [results, setResults] = useState<any[]>([]);
   const [cur, setCur] = useState('');
+  const [curLabel, setCurLabel] = useState('');
+  const [schedule, setSchedule] = useState<any[]>([]);
+  const [autoClose, setAutoClose] = useState(false);
   const [msg, setMsg] = useState('');
   const [tab, setTab] = useState<'perf'|'maintain'|'removed'>('perf');
   const [maintainForm, setMaintainForm] = useState({ name:'แผนรักษายอดรายเดือน', metric:'commission', cycle:'monthly' as any });
@@ -18,6 +21,11 @@ export default function PeriodMaintenancePage(){
     const r = await fetch('/api/periods');
     const j = await r.json();
     if(j.ok){ setPeriods(j.periods||[]); setSnaps(j.snapshots||[]); setCur(j.currentPeriod||''); }
+    try{
+      const s = await fetch('/api/periods/schedule');
+      const sj = await s.json();
+      if(sj.ok){ setSchedule(sj.schedule||[]); setAutoClose(!!sj.autoClose); setCurLabel(sj.currentLabel||''); }
+    }catch{}
     const m = await fetch('/api/maintenance');
     const mj = await m.json();
     if(mj.ok) setPlans(mj.plans||[]);
@@ -65,8 +73,37 @@ export default function PeriodMaintenancePage(){
         <Sidebar/>
         <main className="flex-1 p-6 space-y-4">
           <h1 className="text-xl font-bold text-navy">ตัดยอดและรักษายอด</h1>
-          <p className="text-[11px] text-slate-500">เขตเวลา Asia/Bangkok — มกราคมถึงธันวาคม, cutoff แยกจากขอบเขตเดือน — ปิดยอดสร้าง snapshot ห้ามแก้ย้อนหลังเงียบๆ</p>
+          <p className="text-[11px] text-slate-500">เขตเวลา Asia/Bangkok — ตัดยอดทุกวันสิ้นเดือน 24:00 น. วันสิ้นเดือนถือปีพุทธศักราช — ปิดยอดสร้าง snapshot ห้ามแก้ย้อนหลังเงียบๆ สมาชิกทุกคนดูตารางได้</p>
           {msg && <div className="p-2 rounded-xl bg-amber-50 border text-xs">{msg}</div>}
+
+          <div className="card p-4">
+            <div className="flex flex-wrap gap-2 items-center">
+              <span className="text-xs">รอบปัจจุบัน: <span className="font-bold">{curLabel||cur||'-'}</span> <span className="font-mono text-slate-400">({cur})</span></span>
+              <span className={`px-2 py-0.5 rounded-full text-[11px] ${autoClose?'bg-emerald-600 text-white':'bg-slate-200'}`}>{autoClose?'ตัดยอดสิ้นเดือนอัตโนมัติ: เปิด':'ตัดยอดสิ้นเดือนอัตโนมัติ: ปิด'}</span>
+              <span className="ml-auto flex gap-2">
+                <button onClick={async()=>{
+                  const res = await fetch('/api/periods/schedule', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ autoClose: !autoClose }) });
+                  const j = await res.json(); setMsg(j.ok ? `ตัดยอดอัตโนมัติ: ${j.autoClose?'เปิด':'ปิด'} แล้ว` : (j.error||'ทำไม่สำเร็จ')); load();
+                }} className="px-4 py-1.5 rounded-full border text-xs bg-white">{autoClose?'ปิดอัตโนมัติ':'เปิดอัตโนมัติ'}</button>
+                <button onClick={async()=>{
+                  if(!confirm('ตัดยอดเดือนก่อนทันที?')) return;
+                  const res = await fetch('/api/periods/close', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ auto:true }) });
+                  const j = await res.json(); setMsg(j.ok ? `ตัดยอด ${j.period} — snapshot ${j.snapshots} รายการ` : (j.error||'ทำไม่สำเร็จ')); load();
+                }} className="px-4 py-1.5 rounded-full bg-navy text-white text-xs">ตัดยอดเดือนก่อนทันที</button>
+              </span>
+            </div>
+            <div className="mt-3">
+              <div className="text-xs font-semibold mb-1">ตารางตัดยอดสิ้นเดือนล่วงหน้า (พ.ศ.)</div>
+              <div className="grid md:grid-cols-2 gap-1 max-h-[180px] overflow-auto">
+                {schedule.map((s:any)=>(
+                  <div key={s.period} className="flex gap-2 text-[11px] p-1.5 rounded border bg-slate-50">
+                    <span className="font-bold">{s.label}</span>
+                    <span className="text-slate-500">{s.cutoffBangkok}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
 
           <div className="flex gap-2">
             <button onClick={()=> setTab('perf')} className={`px-4 py-1.5 rounded-full text-xs border ${tab==='perf'?'bg-navy text-white':'bg-white'}`}>ผลงาน/ปิดยอด</button>
@@ -87,8 +124,10 @@ export default function PeriodMaintenancePage(){
                 <div className="mt-2 space-y-1 max-h-[200px] overflow-auto">
                   {periods.map((p:any)=>(
                     <div key={p.period} className="flex gap-2 text-xs p-1 rounded border bg-slate-50">
-                      <span className="font-mono">{p.period}</span>
+                      <span className="font-bold">{(schedule.find(s=> s.period===p.period)?.label) || p.period}</span>
+                      <span className="font-mono text-slate-400">{p.period}</span>
                       <span className={`px-2 py-0.5 rounded-full text-[10px] ${p.status==='Closed'?'bg-emerald-600 text-white': p.status==='PendingFinalization'?'bg-amber-400':'bg-slate-200'}`}>{p.status}</span>
+                      <span className="text-[10px] text-slate-500">{p.endAt ? `ตัด ${new Date(p.endAt).toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'})}` : ''}</span>
                       <span className="ml-auto">{p.status!=='Closed' && <button onClick={()=> closePeriod(p.period)} className="px-2 py-0.5 rounded-full border bg-white text-[11px]">ปิดยอด</button>}</span>
                     </div>
                   ))}
