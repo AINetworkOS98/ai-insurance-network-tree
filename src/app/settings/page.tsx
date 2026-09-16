@@ -28,30 +28,21 @@ export default function SettingsPage(){
     if(s?.zip_code) setForm(f=> f.zipCode ? f : {...f, zipCode: String(s.zip_code)});
   }},[selTambon, subList]);
   useEffect(()=>{ (async()=>{
+    // โหลดโปรไฟล์ของตัวเองเท่านั้น (ห้ามใช้ members[0] — นั่นคือคนอื่น)
     try{
       const r=await fetch('/api/auth/me',{credentials:'include'});
       const j=await r.json();
       if(j.ok && j.user){
-        setOrigEmail(j.user.email||'');
-        // try fetch full profile via members? fallback to auth/me
-        setForm(f=>({...f, email: j.user.email||f.email}));
-      }
-    }catch{}
-    try{
-      const r=await fetch('/api/members');
-      const j=await r.json();
-      if(j.ok && j.members?.[0]){
-        const m=j.members[0];
-        setForm(f=>({ ...f, firstName:m.firstName||m.name?.split(' ')?.[0]||f.firstName, lastName:m.lastName||m.name?.split(' ')?.slice(1).join(' ')||f.lastName, phone:m.phone||f.phone, province:m.province||f.province, district:m.district||f.district, subdistrict:m.subdistrict||f.subdistrict, addressLine:m.addressLine||f.addressLine, zipCode:m.zipCode||f.zipCode, lineId:m.lineId||f.lineId, facebookUrl:m.facebookUrl||f.facebookUrl, tiktokUrl:m.tiktokUrl||f.tiktokUrl, referralCode:m.referralCode||f.referralCode, memberCode:m.memberCode||f.memberCode, email:m.email||f.email }));
-      }
-    }catch{}
-    // also try /api/auth/me to get codes if available
-    try{
-      const r=await fetch('/api/auth/me',{credentials:'include'});
-      const j=await r.json();
-      if(j.ok && j.user){
-        if(j.user.memberCode) setForm(f=>({...f, memberCode: j.user.memberCode}));
-        if(j.user.referralCode) setForm(f=>({...f, referralCode: j.user.referralCode}));
+        const u=j.user;
+        setOrigEmail(u.email||'');
+        setForm(f=>({...f,
+          firstName:u.firstName||f.firstName, lastName:u.lastName||f.lastName,
+          email:u.email||f.email, phone:u.phone||f.phone,
+          province:u.province||f.province, district:u.district||f.district, subdistrict:u.subdistrict||f.subdistrict,
+          addressLine:u.addressLine||f.addressLine, zipCode:u.zipCode||f.zipCode,
+          lineId:u.lineId||f.lineId, facebookUrl:u.facebookUrl||f.facebookUrl, tiktokUrl:u.tiktokUrl||f.tiktokUrl,
+          referralCode:u.referralCode||f.referralCode, memberCode:u.memberCode||f.memberCode,
+        }));
       }
     }catch{}
   })(); },[]);

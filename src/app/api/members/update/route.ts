@@ -39,15 +39,7 @@ export async function PUT(req: NextRequest){
       }catch{}
       return NextResponse.json({ ok:true, memberCode: updated.memberCode, referralCode: updated.referralCode });
     }
-    // no auth — try firestore first member for demo
-    try{
-      const db=getDb();
-      const snap = await db.collection('members').limit(1).get();
-      if(!snap.empty){
-        await snap.docs[0].ref.update({ ...data, updatedAt: new Date().toISOString() });
-        return NextResponse.json({ ok:true });
-      }
-    }catch{}
+    // ไม่ล็อกอิน = บันทึกไม่ได้ (ห้ามแตะข้อมูลคนอื่นเด็ดขาด)
     return NextResponse.json({ ok:false, error:'กรุณาเข้าสู่ระบบก่อนบันทึก' }, {status:401});
   }catch(e:any){
     return NextResponse.json({ ok:false, error:e?.message||'error' }, {status:500});
