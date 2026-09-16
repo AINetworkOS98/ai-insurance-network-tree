@@ -99,7 +99,14 @@ export async function GET(req: NextRequest){
         if(!emailVerified) return NextResponse.redirect(new URL('/login?error=google_email_not_verified', req.url));
         const emailIdentity = await prisma.authIdentity.findFirst({ where:{ provider:'google', email } }).catch(()=>null);
         if(emailIdentity && emailIdentity.userId !== user.id) return NextResponse.redirect(new URL('/login?error=email_linked_to_other', req.url));
-        identity = await prisma.authIdentity.create({ data:{ userId: user.id, provider:'google', providerUserId: googleSub, email } });
+        if(emailIdentity){
+          identity = emailIdentity;
+          if(emailIdentity.providerUserId !== googleSub){
+            identity = await prisma.authIdentity.update({ where:{ id: emailIdentity.id }, data:{ providerUserId: googleSub } }).catch(()=>emailIdentity);
+          }
+        } else {
+          identity = await prisma.authIdentity.create({ data:{ userId: user.id, provider:'google', providerUserId: googleSub, email } });
+        }
         await prisma.auditLog.create({ data:{ userId: user.id, action:'auth.link_google', entity:'User', entityId: user.id, newValue:{ googleSub, email } } });
       } else {
         user = await createGoogleUser(email, emailVerified, name);
@@ -154,14 +161,21 @@ export async function POST(req: NextRequest){
         if(!emailVerified){
           return NextResponse.json({ ok:false, error:'กรุณายืนยันอีเมล Google ก่อนเชื่อมบัญชี' }, { status:403 });
         }
-        // กันชน provider+email ซ้ำ
+        // กันชน provider+email ซ้ำ — ถ้าเคยเชื่อม user เดียวกันแล้วให้ reuse
         const emailIdentity = await prisma.authIdentity.findFirst({ where:{ provider:'google', email } }).catch(()=>null);
         if(emailIdentity && emailIdentity.userId !== user.id){
           return NextResponse.json({ ok:false, error:'อีเมลนี้ถูกเชื่อมกับบัญชีอื่นแล้ว' }, { status:409 });
         }
-        identity = await prisma.authIdentity.create({
-          data:{ userId: user.id, provider:'google', providerUserId: googleSub, email }
-        });
+        if(emailIdentity){
+          identity = emailIdentity;
+          if(emailIdentity.providerUserId !== googleSub){
+            identity = await prisma.authIdentity.update({ where:{ id: emailIdentity.id }, data:{ providerUserId: googleSub } }).catch(()=>emailIdentity);
+          }
+        } else {
+          identity = await prisma.authIdentity.create({
+            data:{ userId: user.id, provider:'google', providerUserId: googleSub, email }
+          });
+        }
         await prisma.auditLog.create({ data:{ userId: user.id, action:'auth.link_google', entity:'User', entityId: user.id, newValue:{ googleSub, email } } });
       } else {
         // 3) สมัครใหม่จาก Google — ทุกคนเริ่ม rankLevel 0 พร้อมรหัสสมาชิก/คิวผัง

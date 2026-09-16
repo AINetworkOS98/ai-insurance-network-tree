@@ -51,7 +51,15 @@ export async function GET(req: NextRequest){
         if(!emailVerified) return NextResponse.redirect(new URL('/login?error=google_email_not_verified', req.url));
         const emailIdentity = await prisma.authIdentity.findFirst({ where:{ provider:'google', email } }).catch(()=>null);
         if(emailIdentity && emailIdentity.userId !== user.id) return NextResponse.redirect(new URL('/login?error=email_linked_to_other', req.url));
-        identity = await prisma.authIdentity.create({ data:{ userId: user.id, provider:'google', providerUserId: googleSub, email } });
+        if(emailIdentity){
+          // เคยเชื่อมไว้แล้ว (อาจค้างจากรอบก่อน) — reuse ไม่สร้างซ้ำ
+          identity = emailIdentity;
+          if(emailIdentity.providerUserId !== googleSub){
+            identity = await prisma.authIdentity.update({ where:{ id: emailIdentity.id }, data:{ providerUserId: googleSub } }).catch(()=>emailIdentity);
+          }
+        } else {
+          identity = await prisma.authIdentity.create({ data:{ userId: user.id, provider:'google', providerUserId: googleSub, email } });
+        }
         await prisma.auditLog.create({ data:{ userId: user.id, action:'auth.link_google', entity:'User', entityId: user.id, newValue:{ googleSub, email } } });
       } else {
         const [firstName, ...rest] = name.split(' ');
