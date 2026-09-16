@@ -119,6 +119,17 @@ export async function POST(req: NextRequest){
     const verifyUrl = `${process.env.APP_BASE_URL || 'http://localhost:3000'}/api/auth/verify-email?token=${raw}&email=${encodeURIComponent(normalizedEmail)}`;
     await prisma.auditLog.create({ data:{ userId: user.id, action:'user.register', entity:'User', entityId:user.id, newValue:{ email: normalizedEmail, rankLevel:0, sponsorId: sponsorUser?.id || null } } });
 
+    // แจ้งเตือน: ตัวเอง + ผู้แนะนำ + ผู้บริหารระบบ (สมัครเข้า)
+    try{
+      const { emitNotification, notifyAdmins } = await import('@/lib/notify');
+      const nm = `${String(firstName).trim()} ${String(lastName).trim()}`;
+      await emitNotification({ userId: user.id, type:'register_welcome', title:'สมัครสมาชิกสำเร็จ', body:`ยินดีต้อนรับ ${nm} — รหัสสมาชิก ${user.memberCode}`, referenceId:'/members' }).catch(()=>null);
+      if(sponsorUser){
+        await emitNotification({ userId: sponsorUser.id, type:'new_downline', title:'มีสมาชิกใหม่ในสายงาน', body:`${nm} สมัครด้วยรหัสแนะนำของคุณ`, referenceId:'/members' }).catch(()=>null);
+      }
+      await notifyAdmins({ type:'member_registered', title:'สมาชิกสมัครใหม่', body:`${nm} (${normalizedEmail})`, referenceId:'/admin/members' });
+    }catch{}
+
     return NextResponse.json({
       ok:true,
       userId: user.id,

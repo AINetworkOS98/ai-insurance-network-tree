@@ -54,6 +54,24 @@ export async function emitNotification(opts:{
   return { ok:true, eventId };
 }
 
+// แจ้งผู้บริหารระบบทุกคน (super_admin + อีเมล admin) — สมัครใหม่/ขึ้น-ตกตำแหน่ง/ออก
+export async function notifyAdmins(opts:{ type:string; title:string; body?:string; referenceId?:string }){
+  try{
+    const { ADMIN_EMAILS } = await import('@/lib/admin');
+    const ids = new Set<string>();
+    const roleRow: any = await prisma.role.findUnique({ where:{ code:'super_admin' } }).catch(()=>null);
+    if(roleRow){
+      const urs: any[] = await prisma.userRole.findMany({ where:{ roleId: roleRow.id }, select:{ userId:true } }).catch(()=>[]);
+      for(const u of urs) ids.add(String(u.userId));
+    }
+    const emailAdmins: any[] = await prisma.user.findMany({ where:{ email:{ in: ADMIN_EMAILS } }, select:{ id:true } }).catch(()=>[]);
+    for(const u of emailAdmins) ids.add(String(u.id));
+    for(const id of ids){
+      await emitNotification({ userId: id, type: opts.type, title: opts.title, body: opts.body, referenceId: opts.referenceId }).catch(()=>null);
+    }
+  }catch{}
+}
+
 export async function maintenanceWarningTemplate(periodLabel: string, metricLabel: string, verified: number, required: number){
   const remaining = Math.max(0, required - verified);
   const link = `${process.env.NEXT_PUBLIC_APP_URL||''}/periods`;

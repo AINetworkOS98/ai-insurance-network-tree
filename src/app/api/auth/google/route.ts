@@ -20,6 +20,13 @@ async function createGoogleUser(email:string, emailVerified:boolean, name:string
   if(!user) return null;
   await prisma.referralCode.create({ data:{ userId: user.id, code: newReferralCode! } }).catch(()=>null);
   await prisma.placementQueue.create({ data:{ userId: user.id, sponsorId: null, reason:'สมัครด้วย Google — รออนุมัติและจัดวางผัง' } }).catch(()=>null);
+
+      // แจ้งเตือนสมัครเข้า (social): ตัวเอง + ผู้บริหารระบบ
+      try{
+        const { emitNotification: __em, notifyAdmins: __na } = await import('@/lib/notify');
+        await __em({ userId: user.id, type:'register_welcome', title:'สมัครสมาชิกสำเร็จ', body:`รหัสสมาชิก ${user.memberCode}`, referenceId:'/members' }).catch(()=>null);
+        await __na({ type:'member_registered', title:'สมาชิกสมัครใหม่', body:`${user.email}`, referenceId:'/admin/members' });
+      }catch{}
   return user;
 }
 

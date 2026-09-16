@@ -90,6 +90,13 @@ export async function POST(req: NextRequest){
           if(!user) return NextResponse.json({ ok:false, error:'สร้างบัญชีไม่สำเร็จ' }, { status:500 });
           await prisma.referralCode.create({ data:{ userId: user.id, code: newReferralCode! } }).catch(()=>null);
           await prisma.placementQueue.create({ data:{ userId: user.id, sponsorId: null, reason:'สมัครด้วย TikTok — รออนุมัติและจัดวางผัง' } }).catch(()=>null);
+
+      // แจ้งเตือนสมัครเข้า (social): ตัวเอง + ผู้บริหารระบบ
+      try{
+        const { emitNotification: __em, notifyAdmins: __na } = await import('@/lib/notify');
+        await __em({ userId: user.id, type:'register_welcome', title:'สมัครสมาชิกสำเร็จ', body:`รหัสสมาชิก ${user.memberCode}`, referenceId:'/members' }).catch(()=>null);
+        await __na({ type:'member_registered', title:'สมาชิกสมัครใหม่', body:`${user.email}`, referenceId:'/admin/members' });
+      }catch{}
         }
         identity = await prisma.authIdentity.create({ data:{ userId: user.id, provider:'tiktok', providerUserId: openId, email: pseudoEmail } });
         await prisma.auditLog.create({ data:{ userId: user.id, action:'auth.register_tiktok', entity:'User', entityId: user.id, newValue:{ openId } }}).catch(()=>{});
@@ -191,6 +198,13 @@ export async function GET(req: NextRequest){
         if(!user) return NextResponse.redirect(new URL('/login?error=user_create_failed', req.url));
         await prisma.referralCode.create({ data:{ userId: user.id, code: newReferralCode! } }).catch(()=>null);
         await prisma.placementQueue.create({ data:{ userId: user.id, sponsorId: null, reason:'สมัครด้วย TikTok — รออนุมัติและจัดวางผัง' } }).catch(()=>null);
+
+      // แจ้งเตือนสมัครเข้า (social): ตัวเอง + ผู้บริหารระบบ
+      try{
+        const { emitNotification: __em, notifyAdmins: __na } = await import('@/lib/notify');
+        await __em({ userId: user.id, type:'register_welcome', title:'สมัครสมาชิกสำเร็จ', body:`รหัสสมาชิก ${user.memberCode}`, referenceId:'/members' }).catch(()=>null);
+        await __na({ type:'member_registered', title:'สมาชิกสมัครใหม่', body:`${user.email}`, referenceId:'/admin/members' });
+      }catch{}
       }
       identity = await prisma.authIdentity.create({ data:{ userId: user.id, provider:'tiktok', providerUserId: openId, email: pseudoEmail }}).catch(()=> identity);
     }

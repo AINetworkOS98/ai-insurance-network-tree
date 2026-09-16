@@ -154,6 +154,18 @@ export async function POST(req: NextRequest){
     });
 
     if(!result) return NextResponse.json({ ok:false, error:'ไม่สามารถจัดวางได้ — ไม่มีตำแหน่งว่าง' }, { status:500 });
+    // แจ้งเตือนจัดวางผัง 1 แตก 5: สมาชิกที่ถูกวาง + แม่ทีม
+    try{
+      const { emitNotification } = await import('@/lib/notify');
+      const pl:any = result;
+      const child: any = await prisma.user.findUnique({ where:{ id: childId }, select:{ displayName:true, firstName:true } }).catch(()=>null);
+      const parentNode: any = await prisma.treeNode.findUnique({ where:{ id: pl.parentId } }).catch(()=>null);
+      const nm = child?.displayName || child?.firstName || 'สมาชิกใหม่';
+      await emitNotification({ userId: childId, type:'tree_placed', title:'คุณถูกจัดวางในผัง 1 แตก 5 แล้ว', body:`ช่องที่ ${pl.slot} ระดับ ${pl.level}`, referenceId:'/tree' }).catch(()=>null);
+      if(parentNode && parentNode.userId !== childId){
+        await emitNotification({ userId: parentNode.userId, type:'tree_new_child', title:'มีสมาชิกใหม่ในผังของคุณ', body:`${nm} เข้าช่องที่ ${pl.slot}`, referenceId:'/tree' }).catch(()=>null);
+      }
+    }catch{}
     return NextResponse.json({ ok:true, placement: result });
   }catch(e:any){
     if(String(e.code)==='P2002'){

@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 // ผู้บริหารระบบเท่านั้นที่เปลี่ยนเกณฑ์/ตั้งค่าระบบได้:
 // - มี role super_admin / admin / สิทธิ system.manage, หรือ
 // - อีเมล Admin Akarapol (รองรับรูปเขียนตามที่แจ้ง + gmail มาตรฐาน กันล็อกตัวเอง)
-const ADMIN_EMAILS = [
+export const ADMIN_EMAILS = [
   'akarapol.pro798@gmai.com',
   'akarapol.pro798@gmail.com',
   'akarapol.pro@gmail.com',

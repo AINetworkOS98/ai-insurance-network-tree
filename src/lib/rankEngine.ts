@@ -106,6 +106,13 @@ export async function applyRankPromotion(userId: string, approvedById?: string){
   const plan: any = await prisma.rankPlan.findFirst({ where:{ status:'Active' } });
   const updated = await prisma.user.update({ where:{ id: userId }, data:{ rankLevel: ev.targetRank, rankUpdatedAt: new Date() } });
   await prisma.rankHistory.create({ data:{ userId, fromRank: ev.currentRank, toRank: ev.targetRank, planId: plan?.id || null, result:'promoted', reason: approvedById ? `อนุมัติโดย ${approvedById}` : 'เลื่อนอัตโนมัติตามแผน Active', snapshot: { evaluatedAt: new Date().toISOString() } as any } });
-  await prisma.auditLog.create({ data:{ userId: approvedById || userId, action:'rank.promoted', entity:'User', entityId: userId, oldValue:{ rankLevel: ev.currentRank } as any, newValue:{ rankLevel: ev.targetRank } as any, reason: plan?.version || '' } });
+  await prisma.auditLog.create({ data:{ userId: approvedById || userId, action:'rank.promoted', entity:'User', entityId:userId, oldValue:{ rankLevel: ev.currentRank } as any, newValue:{ rankLevel: ev.targetRank } as any, reason: plan?.version || '' } });
+  // แจ้งเตือนขึ้นตำแหน่ง: ตัวเอง + ผู้บริหารระบบ
+  try{
+    const { emitNotification, notifyAdmins } = await import('@/lib/notify');
+    const nm = RANK_CATALOG.find(r=> r.level===ev.targetRank)?.nameTh || `ระดับ ${ev.targetRank}`;
+    await emitNotification({ userId, type:'rank_promoted', title:`เลื่อนตำแหน่งเป็น${nm}`, body:'ยินดีด้วย — ดูเส้นทางต่อได้ที่เมนูขึ้นตำแหน่ง', referenceId:'/career' }).catch(()=>null);
+    await notifyAdmins({ type:'rank_promoted', title:'สมาชิกเลื่อนตำแหน่ง', body:`${(user as any)?.displayName || userId} → ${nm}`, referenceId:'/admin/members' });
+  }catch{}
   return { ok:true as const, result:'promoted', message:`เลื่อนตำแหน่ง ${RANK_CATALOG.find(r=> r.level===ev.targetRank)?.nameTh} สำเร็จ`, currentRank: ev.targetRank };
 }

@@ -166,6 +166,10 @@ export async function POST(req: NextRequest){
         });
 
         await prisma.placementRunEntry.create({ data:{ runId: run.id, userId: q.userId, parentId: (placement as any).parentId, slot: (placement as any).slot, status:'success' } });
+        try{
+          const { emitNotification } = await import('@/lib/notify');
+          await emitNotification({ userId: q.userId, type:'tree_placed', title:'คุณถูกจัดวางในผัง 1 แตก 5 แล้ว', body:`ช่องที่ ${(placement as any).slot}`, referenceId:'/tree' }).catch(()=>null);
+        }catch{}
         success++;
       }catch(e:any){
         const isSlotConflict = String(e.code)==='P2002' || String(e.message).includes('ว่าง');

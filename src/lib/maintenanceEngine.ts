@@ -90,6 +90,22 @@ export async function runMaintenanceForPeriod(planId: string, period: string, ru
       const node: any = await prisma.treeNode.findUnique({ where:{ userId: u.id } }).catch(()=> null);
       if(node) await prisma.treeNode.update({ where:{ userId: u.id }, data:{ isActive:false } as any }).catch(()=> {});
       await prisma.auditLog.create({ data:{ userId: runBy || null, action:'maintenance.'+status, entity:'User', entityId: u.id, oldValue:{ status: from } as any, newValue:{ status: to } as any, reason: period } as any });
+      // แจ้งเตือนพักสิทธิ/ออกจากระบบ: ตัวเอง + ผู้แนะนำ + ผู้บริหารระบบ
+      try{
+        const { emitNotification, notifyAdmins } = await import('@/lib/notify');
+        const nm = (u as any)?.displayName || `${(u as any)?.firstName || ''} ${(u as any)?.lastName || ''}`.trim() || u.id;
+        const isOut = status==='removed';
+        await emitNotification({ userId: u.id, type: isOut ? 'member_removed' : 'member_suspended',
+          title: isOut ? 'พ้นสภาพสมาชิก' : 'ถูกพักสิทธิชั่วคราว',
+          body: isOut ? 'ไม่ผ่านเกณฑ์รักษายอด — ติดต่อผู้แนะนำเพื่อขอทบทวน' : 'ผลงานไม่ถึงเกณฑ์รอบนี้ — เร่งทำยอดตามเกณฑ์แก้สตาร์',
+          referenceId:'/criteria' }).catch(()=>null);
+        if((u as any)?.sponsorId){
+          await emitNotification({ userId: (u as any).sponsorId, type:'downline_status',
+            title:`สายงาน${isOut ? 'ออกจากระบบ' : 'ถูกพักสิทธิ'}`, body:`${nm} — ${period}`, referenceId:'/members' }).catch(()=>null);
+        }
+        await notifyAdmins({ type: isOut ? 'member_removed' : 'member_suspended',
+          title:`สมาชิก${isOut ? 'ออกจากระบบ' : 'ถูกพักสิทธิ'}`, body:`${nm} — ${period} (${ev.reason || status})`, referenceId:'/periods' });
+      }catch{}
       // ดีดออกแล้ว — หาตัวแทนชั้นต่ำกว่าที่คุณสมบัติครบเลื่อนขึ้นแทนอัตโนมัติ
       if(status==='removed'){
         try{ await promoteReplacement(u.id, u.rankLevel ?? 0, runBy); }catch(e:any){ console.error('promoteReplacement', e?.message); }
