@@ -90,10 +90,7 @@ function LoginInner(){
     try{
       if(firebaseConfigError || !auth) throw new Error('Firebase ยังไม่ได้ตั้งค่า Web API Key — กำลังพาไปวิธีสำรอง');
       let authProvider: any;
-      if(provider==='google'){
-        authProvider = new GoogleAuthProvider();
-        authProvider.setCustomParameters({ prompt:'select_account' });
-      }else if(provider==='facebook'){
+      if(provider==='facebook'){
         authProvider = new FacebookAuthProvider();
         authProvider.setCustomParameters({ display:'popup' });
         authProvider.addScope('email');
@@ -106,7 +103,7 @@ function LoginInner(){
       const res = await fetch('/api/auth/google', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ idToken })});
       const j = await res.json();
       if(j.ok){
-        const label = provider==='google'?'Google':provider==='facebook'?'Facebook':'GitHub';
+        const label = provider==='facebook'?'Facebook':'GitHub';
         setMsg(`เข้าสู่ระบบด้วย ${label} สำเร็จ`); setMsgType('ok');
         setTimeout(()=> location.href=nextParam, 600);
       } else { setMsg(j.error || `เข้าสู่ระบบด้วย ${provider} ไม่สำเร็จ`); setMsgType('err'); }
