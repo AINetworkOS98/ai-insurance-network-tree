@@ -30,10 +30,12 @@ export async function POST(req: NextRequest){
     const body = await req.json().catch(()=> ({}));
     const { runBackup, restoreMissing } = await import('@/lib/backup');
     if(body.action === 'backup'){
-      return NextResponse.json({ ok:true, ...(await runBackup()) });
+      const r = await runBackup();
+      return NextResponse.json(r);
     }
     if(body.action === 'restore'){
-      return NextResponse.json({ ok:true, ...(await restoreMissing(body.stamp)) });
+      const r = await restoreMissing(body.stamp);
+      return NextResponse.json(r);
     }
     return NextResponse.json({ ok:false, error:'action ไม่ถูกต้อง' }, { status:400 });
   }catch(e:any){ return NextResponse.json({ ok:false, error:e?.message || 'error' }, { status:500 }); }
