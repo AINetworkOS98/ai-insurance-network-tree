@@ -39,7 +39,7 @@ function LoginInner(){
       setMsgType('err');
     } else if(errorParam){
       const m = String(errorParam);
-      if(m.includes('redirect_uri_mismatch')) setMsg('Google OAuth ยังไม่ได้เพิ่ม redirect URI — แจ้งผู้ดูแลเพิ่ม https://ai-insurance-network-tree.vercel.app/__/auth/handler ใน Google Cloud Console → Credentials → OAuth 2.0 Client');
+      if(m.includes('redirect_uri_mismatch')) setMsg('Google OAuth ยังไม่ได้เพิ่ม redirect URI — แจ้งผู้ดูแลเพิ่ม https://ai-insurance-network-tree.vercel.app/auth/callback ใน Google Cloud Console → Credentials → OAuth 2.0 Client');
       else if(m==='google_failed' || m.includes('google')) setMsg('เข้าสู่ระบบด้วย Google ไม่สำเร็จ — ลองใหม่หรือใช้อีเมล/รหัสผ่าน');
       else if(m!=='null' && m!=='') { setMsg(decodeURIComponent(m)); setMsgType('err'); }
       if(m) setMsgType('err');
@@ -203,6 +203,13 @@ function LoginInner(){
                 {loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบด้วยอีเมล'}
               </button>
             </form>
+
+            <div className="mt-4 text-center text-xs text-slate-500">
+              ยังไม่มีบัญชี?{' '}
+              <Link href={`/register${nextParam !== '/' ? `?next=${encodeURIComponent(nextParam)}` : ''}`} className="font-semibold text-[#475569] underline underline-offset-4 hover:text-slate-800">
+                ลงทะเบียนด้วยอีเมล
+              </Link>
+            </div>
 
             {msg && <div className={`mt-4 p-3 rounded-2xl border text-xs leading-relaxed ${msgType==='ok' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : msgType==='err' ? 'bg-red-50 border-red-200 text-red-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>{msg}</div>}
             {firebaseConfigError && (
