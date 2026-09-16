@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 
@@ -16,6 +16,10 @@ export default function ReceiptsPage(){
   const [manual, setManual] = useState<Manual>(emptyManual);
   const [manualFor, setManualFor] = useState<string|null>(null);
   const [manualMode, setManualMode] = useState<'create'|'edit'>('create');
+  const [camOpen, setCamOpen] = useState(false);
+  const [camError, setCamError] = useState('');
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream|null>(null);
 
   async function load(){
     const res = await fetch('/api/receipts/upload');
@@ -41,6 +45,36 @@ export default function ReceiptsPage(){
       load();
     }catch{ setMsg('อัปโหลดไม่สำเร็จ'); }
     setLoading('');
+  }
+
+  // สแกนด้วยกล้องมือถือ — เปิดกล้องหลัง ถ่าย แล้วส่งเข้าสายอัปโหลด+OCR เดิม
+  async function openCamera(){
+    setCamError(''); setMsg('');
+    try{
+      if(!navigator.mediaDevices?.getUserMedia){ setCamError('อุปกรณ์นี้ไม่รองรับกล้องเว็บ — ใช้ปุ่มเลือกไฟล์แทน'); return; }
+      const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' }, audio:false });
+      streamRef.current = stream;
+      setCamOpen(true);
+      setTimeout(()=>{ if(videoRef.current){ videoRef.current.srcObject = stream; videoRef.current.play().catch(()=>{}); } }, 50);
+    }catch{ setCamError('เปิดกล้องไม่ได้ — อนุญาตสิทธิ์กล้องในเบราว์เซอร์ก่อน หรือใช้ปุ่มเลือกไฟล์'); }
+  }
+  function closeCamera(){
+    try{ streamRef.current?.getTracks().forEach(t=> t.stop()); }catch{}
+    streamRef.current = null;
+    setCamOpen(false);
+  }
+  useEffect(()=> ()=>{ try{ streamRef.current?.getTracks().forEach(t=> t.stop()); }catch{} },[]);
+  async function capturePhoto(){
+    const v = videoRef.current;
+    if(!v || !v.videoWidth){ setCamError('กล้องยังไม่พร้อม'); return; }
+    const canvas = document.createElement('canvas');
+    canvas.width = v.videoWidth; canvas.height = v.videoHeight;
+    canvas.getContext('2d')?.drawImage(v, 0, 0);
+    const blob: Blob | null = await new Promise(res=> canvas.toBlob(b=> res(b), 'image/jpeg', 0.92));
+    if(!blob){ setCamError('ถ่ายภาพไม่สำเร็จ'); return; }
+    setFile(new File([blob], `scan-${Date.now()}.jpg`, { type:'image/jpeg' }));
+    closeCamera();
+    setMsg('ถ่ายภาพแล้ว — กดอัปโหลด+สแกนได้เลย');
   }
 
   // ส่งไฟล์จริงไป /api/ocr (vision) แล้วบันทึกผล — ถ้าไม่มีคีย์ให้กรอกเอง
@@ -165,6 +199,17 @@ export default function ReceiptsPage(){
 
           {msg && <div className="p-2 rounded-xl bg-amber-50 border text-xs">{msg}</div>}
 
+          {camOpen && (
+            <div className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-4">
+              <video ref={videoRef} playsInline muted className="w-full max-w-[520px] rounded-xl bg-black" />
+              <div className="mt-3 flex gap-2">
+                <button onClick={capturePhoto} className="px-8 py-2.5 rounded-full bg-white text-sm font-bold">📷 ถ่าย</button>
+                <button onClick={closeCamera} className="px-6 py-2.5 rounded-full border border-white text-white text-sm">ปิด</button>
+              </div>
+              <div className="mt-2 text-[11px] text-white/70">เล็งใบเสร็จให้เต็มจอแล้วกดถ่าย</div>
+            </div>
+          )}
+
           {tab==='upload' && (
             <div className="card p-5">
               <div
@@ -176,10 +221,12 @@ export default function ReceiptsPage(){
                 <div className="text-sm font-semibold">ถ่ายภาพผ่านมือถือ / ลากไฟล์มาวาง</div>
                 <div className="text-xs text-slate-500 mt-1">รองรับ JPG/PNG/PDF หลายหน้า — อัปโหลดแล้วอ่านค่าจริงทันที</div>
                 <input id="receipt-file-input" type="file" accept="image/*,application/pdf" capture="environment" onChange={e=> setFile(e.target.files?.[0] || null)} className="hidden" />
-                <div className="mt-3 flex items-center justify-center gap-2">
+                <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
                   <label htmlFor="receipt-file-input" className="px-6 py-2 rounded-full border bg-white text-xs font-semibold cursor-pointer hover:bg-slate-50 shadow-sm">📁 เลือกไฟล์</label>
-                  <span className="text-xs text-slate-500">{file ? `${file.name} (${(file.size/1024).toFixed(0)} KB)` : 'ยังไม่ได้เลือกไฟล์'}</span>
+                  <button onClick={openCamera} className="px-6 py-2 rounded-full bg-[#475569] text-white text-xs font-semibold shadow-sm">📷 สแกนด้วยกล้อง</button>
+                  <span className="text-xs text-slate-500 w-full">{file ? `${file.name} (${(file.size/1024).toFixed(0)} KB)` : 'ยังไม่ได้เลือกไฟล์'}</span>
                 </div>
+                {camError && <div className="mt-2 text-xs text-red-600">{camError}</div>}
                 <button onClick={upload} disabled={loading==='upload'} className="mt-3 px-6 py-2 rounded-full bg-navy text-white text-xs disabled:opacity-50">
                   {loading==='upload' ? 'กำลังอัปโหลด+อ่าน...' : 'อัปโหลด+สแกน'}
                 </button>
