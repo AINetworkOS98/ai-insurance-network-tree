@@ -18,7 +18,7 @@ console.log('[migrate] deploying pending migrations...');
 try {
   // ล้างสถานะ failed ของ migration seed ที่รู้ว่าไม่เคย apply สำเร็จ
   // ถ้า resolve ไม่สำเร็จหรือไม่จำเป็น ให้ deploy ตัดสิน (ignore error ตรงนี้เสมอ)
-  for(const m of ["3_seed_thailife_2569", "4_seed_rankplan_2564"]){
+  for(const m of ["3_seed_thailife_2569", "4_seed_rankplan_2564", "5_receipt_settings", "6_commission_q3_2569"]){
     try { execSync(`npx prisma migrate resolve --rolled-back "${m}"`, { stdio: 'ignore' }); } catch {}
   }
 } catch {}

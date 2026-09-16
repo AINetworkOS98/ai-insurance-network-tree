@@ -15,6 +15,7 @@ const items=[
   {href:"/career", key:"sb_career", icon:"▲"},
   {href:"/periods", key:"sb_periods", icon:"◷"},
   {href:"/criteria", key:"sb_criteria", icon:"✓"},
+  {href:"/commissions", key:"sb_commissions", icon:"฿"},
   {href:"/reports", key:"sb_reports", icon:"▤"},
 ];
 const extra=[
