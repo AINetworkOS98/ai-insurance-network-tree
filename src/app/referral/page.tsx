@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Header from '@/components/Header';
+import Sidebar from '@/components/Sidebar';
 
 export default function ReferralPage(){
   const [data, setData] = useState<any>(null);
@@ -26,15 +27,17 @@ export default function ReferralPage(){
     setTimeout(()=> setCopied(''), 2000);
   }
 
-  if(loading) return <div><Header/><div className="max-w-[720px] mx-auto p-6 text-sm">กำลังโหลด...</div></div>;
-  if(err) return <div><Header/><div className="max-w-[720px] mx-auto p-6"><div className="p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">{err} — กรุณาเข้าสู่ระบบ</div></div></div>;
+  if(loading) return <div><Header/><Sidebar/><div className="max-w-[720px] mx-auto p-6 text-sm">กำลังโหลด...</div></div></div>;
+    if(err) return <div><Header/><Sidebar/><div className="max-w-[720px] mx-auto p-6"><div className="p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">{err} — กรุณาเข้าสู่ระบบ</div></div></div></div>;
 
-  const link = data?.referralLink || '';
+    const link = data?.referralLink || '';
 
-  return (
-    <div>
-      <Header/>
-      <div className="max-w-[720px] mx-auto p-6 space-y-4">
+    return (
+      <div>
+        <Header/>
+        <div className="flex w-full">
+          <Sidebar/>
+          <main className="flex-1 p-6 space-y-4 max-w-[720px]">
         <h1 className="text-xl font-bold text-navy">รหัสแนะนำของฉัน</h1>
         <p className="text-xs text-slate-500">การมีรหัสแนะนำไม่ทำให้ได้รับสถานะตัวแทนหรือผลตอบแทนอัตโนมัติ — ต้องผ่านการอนุมัติตามเกณฑ์</p>
 
@@ -98,6 +101,8 @@ export default function ReferralPage(){
           ) : <div className="mt-3 text-xs text-slate-500 p-3 rounded-xl bg-slate-50 border">ยังไม่มีผู้ที่ได้รับการแนะนำ</div>}
         </div>
       </div>
-    </div>
+    </main>
+  </div>
+</div>
   );
 }
