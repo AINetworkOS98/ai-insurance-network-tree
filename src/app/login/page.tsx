@@ -75,8 +75,14 @@ function LoginInner(){
       return;
     }
     setSocialLoading(provider); setMsg('');
+    // Google: ใช้ server-side OAuth ตรง ไม่ผ่าน Firebase popup
+    // (กัน auth/unauthorized-domain ถาวร — ไม่ต้องเพิ่ม domain ใน Firebase Console)
+    if(provider==='google'){
+      location.href = `/api/auth/google?next=${encodeURIComponent(nextParam)}`;
+      return;
+    }
     // ถ้า Firebase ยังไม่พร้อม ให้ใช้ server-side redirect แทน popup
-    const useServerGoogle = provider==='google' && (firebaseConfigError || !auth);
+    const useServerGoogle = firebaseConfigError || !auth;
     if(useServerGoogle){
       location.href = `/api/auth/google?next=${encodeURIComponent(nextParam)}`;
       return;
@@ -106,8 +112,8 @@ function LoginInner(){
       } else { setMsg(j.error || `เข้าสู่ระบบด้วย ${provider} ไม่สำเร็จ`); setMsgType('err'); }
     }catch(e:any){
       const code = e?.code || '';
-      // ถ้าเป็น api-key-not-valid ให้ fallback ไป server-side redirect อัตโนมัติ
-      if(code==='auth/api-key-not-valid' && provider==='google'){
+      // Firebase popup ล้มเหลว (key/domain) ให้ fallback ไป server-side redirect อัตโนมัติ
+      if(code==='auth/api-key-not-valid' || code==='auth/unauthorized-domain' || code==='auth/operation-not-allowed'){
         location.href = `/api/auth/google?next=${encodeURIComponent(nextParam)}`;
         return;
       }
