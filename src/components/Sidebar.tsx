@@ -10,6 +10,7 @@ const items=[
   {href:"/prospects", key:"sb_members_prospects", icon:"◎"},
   {href:"/tree", key:"sb_tree", icon:"⁂"},
   {href:"/receipts", key:"sb_receipts", icon:"▭"},
+  {href:"/receipts/settings", key:"sb_receipt_settings", icon:"⚙"},
   {href:"/progress", key:"sb_progress", icon:"⬆"},
   {href:"/career", key:"sb_career", icon:"▲"},
   {href:"/periods", key:"sb_periods", icon:"◷"},

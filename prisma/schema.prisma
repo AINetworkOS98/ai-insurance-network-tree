@@ -1237,6 +1237,14 @@ model AuditLog {
   @@index([userId])
 }
 
+// ── Receipt Settings (เมนูตั้งค่าใบเสร็จ — admin เท่านั้นที่เปลี่ยน) ──
+model ReceiptSettings {
+  id        String   @id @default("default")
+  settings  Json
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+}
+
 // ── Hermes OS — Persistent Memory (per-user, cross-session) ──
 model AIMemory {
   id        String   @id @default(uuid()) @db.Uuid
