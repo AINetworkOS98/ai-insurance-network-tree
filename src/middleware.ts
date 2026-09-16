@@ -13,6 +13,7 @@ const PUBLIC_API = [
   '/api/auth/reset-password',
   '/api/auth/verify-otp',
   '/api/auth/tiktok',
+  '/api/auth/oauth',
   '/api/auth/google',
   '/api/ocr/health',
   '/api/ai/query',

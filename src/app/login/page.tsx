@@ -41,6 +41,11 @@ function LoginInner(){
       const m = String(errorParam);
       if(m.includes('redirect_uri_mismatch')) setMsg('Google OAuth ยังไม่ได้เพิ่ม redirect URI — แจ้งผู้ดูแลเพิ่ม https://ai-insurance-network-tree.vercel.app/auth/callback ใน Google Cloud Console → Credentials → OAuth 2.0 Client');
       else if(m==='google_failed' || m.includes('google')) setMsg('เข้าสู่ระบบด้วย Google ไม่สำเร็จ — ลองใหม่หรือใช้อีเมล/รหัสผ่าน');
+      else if(m==='facebook_not_configured') setMsg('Facebook Login ยังไม่ได้ตั้งค่า — ผู้ดูแลต้องเพิ่ม FB_APP_ID/FB_APP_SECRET ใน Vercel ก่อน');
+      else if(m==='github_not_configured') setMsg('GitHub Login ยังไม่ได้ตั้งค่า — ผู้ดูแลต้องเพิ่ม GITHUB_CLIENT_ID/GITHUB_CLIENT_SECRET ใน Vercel ก่อน');
+      else if(m==='facebook_failed') setMsg('เข้าสู่ระบบด้วย Facebook ไม่สำเร็จ — ลองใหม่หรือใช้อีเมล/Google');
+      else if(m==='github_failed') setMsg('เข้าสู่ระบบด้วย GitHub ไม่สำเร็จ — ลองใหม่หรือใช้อีเมล/Google');
+      else if(m==='facebook_no_email' || m==='github_no_email') setMsg('บัญชีนี้ไม่มีอีเมล — กรุณาเปิดเผยอีเมลในขั้นตอนขอสิทธิ์แล้วลองใหม่');
       else if(m!=='null' && m!=='') { setMsg(decodeURIComponent(m)); setMsgType('err'); }
       if(m) setMsgType('err');
     }
@@ -75,26 +80,33 @@ function LoginInner(){
       return;
     }
     setSocialLoading(provider); setMsg('');
-    // Google: ใช้ server-side OAuth ตรง ไม่ผ่าน Firebase popup
+    // Social ทั้งหมดใช้ server-side OAuth ตรง ไม่ผ่าน Firebase popup
     // (กัน auth/unauthorized-domain ถาวร — ไม่ต้องเพิ่ม domain ใน Firebase Console)
     if(provider==='google'){
       location.href = `/api/auth/google?next=${encodeURIComponent(nextParam)}`;
       return;
     }
+    if(provider==='facebook' || provider==='github'){
+      location.href = `/api/auth/oauth?provider=${provider}&next=${encodeURIComponent(nextParam)}`;
+      return;
+    }
     // ถ้า Firebase ยังไม่พร้อม ให้ใช้ server-side redirect แทน popup
-    const useServerGoogle = firebaseConfigError || !auth;
-    if(useServerGoogle){
-      location.href = `/api/auth/google?next=${encodeURIComponent(nextParam)}`;
+    const p: string = provider;
+    const useServerFallback = firebaseConfigError || !auth;
+    if(useServerFallback){
+      setMsg('ช่องทางนี้ยังไม่ได้ตั้งค่า — กรุณาใช้อีเมลหรือ Google ก่อน');
+      setMsgType('err');
+      setSocialLoading(null);
       return;
     }
     try{
       if(firebaseConfigError || !auth) throw new Error('Firebase ยังไม่ได้ตั้งค่า Web API Key — กำลังพาไปวิธีสำรอง');
       let authProvider: any;
-      if(provider==='facebook'){
+      if(p==='facebook'){
         authProvider = new FacebookAuthProvider();
         authProvider.setCustomParameters({ display:'popup' });
         authProvider.addScope('email');
-      }else if(provider==='github'){
+      }else if(p==='github'){
         authProvider = new GithubAuthProvider();
         authProvider.addScope('user:email');
       }
