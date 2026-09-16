@@ -90,8 +90,54 @@ export async function runMaintenanceForPeriod(planId: string, period: string, ru
       const node: any = await prisma.treeNode.findUnique({ where:{ userId: u.id } }).catch(()=> null);
       if(node) await prisma.treeNode.update({ where:{ userId: u.id }, data:{ isActive:false } as any }).catch(()=> {});
       await prisma.auditLog.create({ data:{ userId: runBy || null, action:'maintenance.'+status, entity:'User', entityId: u.id, oldValue:{ status: from } as any, newValue:{ status: to } as any, reason: period } as any });
+      // ดีดออกแล้ว — หาตัวแทนชั้นต่ำกว่าที่คุณสมบัติครบเลื่อนขึ้นแทนอัตโนมัติ
+      if(status==='removed'){
+        try{ await promoteReplacement(u.id, u.rankLevel ?? 0, runBy); }catch(e:any){ console.error('promoteReplacement', e?.message); }
+      }
     }
     created++;
   }
   return { ok:true as const, created, eligible: eligibleUsers.length };
+}
+
+// หาผู้มีคุณสมบัติครบในชั้นต่ำกว่ามาเลื่อนแทนตำแหน่งที่ว่างอัตโนมัติ
+// ลำดับ: ลูกตรงในผังของคนที่หลุดก่อน -> ทีมใต้ manager เดียวกัน -> ใครก็ได้ในชั้นนั้น (ผลงานสูงสุดก่อน)
+export async function promoteReplacement(removedUserId: string, removedRank: number, runBy?: string){
+  const lowerRank = removedRank - 1;
+  if(lowerRank < 1) return { ok:false as const, reason:'ไม่มีชั้นต่ำกว่าให้เลื่อนแทน' };
+  const { evaluateRank, applyRankPromotion } = await import('@/lib/rankEngine');
+
+  // รายชื่อผู้มีสิทธิ: ACTIVE + ชั้นต่ำกว่า 1 ระดับ
+  const candidates: any[] = await prisma.user.findMany({
+    where:{ rankLevel: lowerRank, status:'ACTIVE' },
+    select:{ id:true, displayName:true, firstName:true, lastName:true, placementParentId:true, managerId:true, sponsorId:true },
+  });
+  if(!candidates.length) return { ok:false as const, reason:'ไม่มีผู้มีสิทธิในชั้นต่ำกว่า' };
+
+  // จัดลำดับ: ลูกตรงในผัง > ทีมเดียวกัน > อื่นๆ, ในกลุ่มเดียวกันเอาผลงานรับรองสูงสุดก่อน
+  const removed: any = await prisma.user.findUnique({ where:{ id: removedUserId }, select:{ id:true, managerId:true, sponsorId:true } }).catch(()=>null);
+  const ledgerSums = new Map<string, number>();
+  for(const c of candidates){
+    const rows: any[] = await prisma.performanceLedger.findMany({ where:{ userId: c.id, status:'active' }, select:{ amount:true } }).catch(()=>[]);
+    ledgerSums.set(c.id, rows.reduce((s:any,r:any)=> s + Number(r.amount), 0));
+  }
+  const score = (c:any) => {
+    let proximity = 0;
+    if(removed && (c.placementParentId === removedUserId || c.managerId === removedUserId || c.managerId === removed.managerId)) proximity = 2;
+    else if(removed && (c.sponsorId === removed.sponsorId || c.managerId === removed.managerId)) proximity = 1;
+    return proximity * 1e12 + (ledgerSums.get(c.id) || 0);
+  };
+  candidates.sort((a,b)=> score(b) - score(a));
+
+  for(const c of candidates){
+    const ev: any = await evaluateRank(c.id).catch(()=>null);
+    if(ev?.result === 'qualified_auto'){
+      const res: any = await applyRankPromotion(c.id, runBy);
+      if(res?.result === 'promoted'){
+        await prisma.auditLog.create({ data:{ userId: runBy || null, action:'rank.auto_replace', entity:'User', entityId: c.id, newValue:{ fromRank: lowerRank, toRank: lowerRank+1, replacedUserId: removedUserId } as any, reason:'เลื่อนแทนตำแหน่งที่ว่างอัตโนมัติ' } as any }).catch(()=>null);
+        return { ok:true as const, promotedUserId: c.id, fromRank: lowerRank, toRank: lowerRank+1 };
+      }
+    }
+  }
+  return { ok:false as const, reason:'ไม่มีผู้คุณสมบัติครบในชั้นต่ำกว่า — ตำแหน่งว่างรอรอบถัดไป' };
 }
