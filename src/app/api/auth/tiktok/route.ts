@@ -68,15 +68,28 @@ export async function POST(req: NextRequest){
         user = await prisma.user.findUnique({ where:{ email: pseudoEmail } }).catch(()=>null);
         if(!user){
           const [first,...rest] = displayName.split(' ');
-          user = await prisma.user.create({ data:{
-            email: pseudoEmail,
-            emailVerified: false,
-            firstName: first || displayName,
-            lastName: rest.join(' ') || '',
-            displayName,
-            status: 'PENDING',
-            rankLevel: 0,
-          }});
+          const { generateMemberCode, generateReferralCode } = await import('@/lib/referral');
+          let newReferralCode: string | null = null;
+          for(let attempt=0; attempt<3; attempt++){
+            try{
+              newReferralCode = generateReferralCode();
+              user = await prisma.user.create({ data:{
+                email: pseudoEmail,
+                emailVerified: false,
+                firstName: first || displayName,
+                lastName: rest.join(' ') || '',
+                displayName,
+                memberCode: generateMemberCode(),
+                referralCode: newReferralCode,
+                status: 'PENDING',
+                rankLevel: 0,
+              }});
+              break;
+            }catch(e:any){ if(String(e.code)==='P2002' && attempt<2) continue; throw e; }
+          }
+          if(!user) return NextResponse.json({ ok:false, error:'สร้างบัญชีไม่สำเร็จ' }, { status:500 });
+          await prisma.referralCode.create({ data:{ userId: user.id, code: newReferralCode! } }).catch(()=>null);
+          await prisma.placementQueue.create({ data:{ userId: user.id, sponsorId: null, reason:'สมัครด้วย TikTok — รออนุมัติและจัดวางผัง' } }).catch(()=>null);
         }
         identity = await prisma.authIdentity.create({ data:{ userId: user.id, provider:'tiktok', providerUserId: openId, email: pseudoEmail } });
         await prisma.auditLog.create({ data:{ userId: user.id, action:'auth.register_tiktok', entity:'User', entityId: user.id, newValue:{ openId } }}).catch(()=>{});
@@ -155,15 +168,28 @@ export async function GET(req: NextRequest){
       user = await prisma.user.findUnique({ where:{ email: pseudoEmail } }).catch(()=>null);
       if(!user){
         const [first,...rest] = displayName.split(' ');
-        user = await prisma.user.create({ data:{
-          email: pseudoEmail,
-          emailVerified:false,
-          firstName: first || displayName,
-          lastName: rest.join(' ') || '',
-          displayName,
-          status:'PENDING',
-          rankLevel:0,
-        }});
+        const { generateMemberCode, generateReferralCode } = await import('@/lib/referral');
+        let newReferralCode: string | null = null;
+        for(let attempt=0; attempt<3; attempt++){
+          try{
+            newReferralCode = generateReferralCode();
+            user = await prisma.user.create({ data:{
+              email: pseudoEmail,
+              emailVerified:false,
+              firstName: first || displayName,
+              lastName: rest.join(' ') || '',
+              displayName,
+              memberCode: generateMemberCode(),
+              referralCode: newReferralCode,
+              status:'PENDING',
+              rankLevel:0,
+            }});
+            break;
+          }catch(e:any){ if(String(e.code)==='P2002' && attempt<2) continue; throw e; }
+        }
+        if(!user) return NextResponse.redirect(new URL('/login?error=user_create_failed', req.url));
+        await prisma.referralCode.create({ data:{ userId: user.id, code: newReferralCode! } }).catch(()=>null);
+        await prisma.placementQueue.create({ data:{ userId: user.id, sponsorId: null, reason:'สมัครด้วย TikTok — รออนุมัติและจัดวางผัง' } }).catch(()=>null);
       }
       identity = await prisma.authIdentity.create({ data:{ userId: user.id, provider:'tiktok', providerUserId: openId, email: pseudoEmail }}).catch(()=> identity);
     }
