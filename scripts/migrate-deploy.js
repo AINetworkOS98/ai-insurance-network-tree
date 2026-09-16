@@ -15,5 +15,11 @@ if (dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1')) {
 }
 
 console.log('[migrate] deploying pending migrations...');
+try {
+  // ล้างสถานะ failed ของ migration ที่รู้ว่าไม่เคย apply สำเร็จ (syntax error ตั้งแต่ statement แรก)
+  // ถ้า resolve ไม่สำเร็จหรือไม่จำเป็น ให้ deploy ตัดสิน (ignore error ตรงนี้เสมอ)
+  execSync('npx prisma migrate resolve --rolled-back "3_seed_thailife_2569"', { stdio: 'ignore' });
+  console.log('[migrate] resolved rolled-back 3_seed_thailife_2569');
+} catch {}
 execSync('npx prisma migrate deploy', { stdio: 'inherit' });
 console.log('[migrate] done');
