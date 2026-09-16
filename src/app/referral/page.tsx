@@ -15,8 +15,8 @@ export default function ReferralPage(){
         const res = await fetch('/api/referral');
         const j = await res.json();
         if(j.ok) setData(j);
-        else setErr(j.error || 'โหลดไม่สำเร็จ');
-      }catch{ setErr('เกิดข้อผิดพลาด'); }
+        else setErr(j.error || 'Load failed');
+      }catch{ setErr('Error occurred'); }
       setLoading(false);
     })();
   },[]);
@@ -27,8 +27,28 @@ export default function ReferralPage(){
     setTimeout(()=> setCopied(''), 2000);
   }
 
-  if(loading) return <div><Header/><Sidebar/><div className="max-w-[720px] mx-auto p-6 text-sm">กำลังโหลด...</div></div></div>;
-  if(err) return <div><Header/><Sidebar/><div className="max-w-[720px] mx-auto p-6"><div className="p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">{err} \u2014 กรุณาเข้าสู่ระบบ</div></div></div></div>;
+  if(loading) {
+    return (
+      <div>
+        <Header/>
+        <Sidebar/>
+        <div className="max-w-3xl mx-auto p-6 text-sm">Loading...</div>
+      </div>
+    );
+  }
+  if(err) {
+    return (
+      <div>
+        <Header/>
+        <Sidebar/>
+        <div className="max-w-3xl mx-auto p-6">
+          <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">
+            {err} — Please login
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const link = data?.referralLink || '';
 
@@ -37,9 +57,9 @@ export default function ReferralPage(){
       <Header/>
       <div className="flex w-full">
         <Sidebar/>
-        <main className="flex-1 p-6 space-y-4 max-w-[720px]">
+        <main className="flex-1 p-6 space-y-4 max-w-3xl">
           <h1 className="text-xl font-bold text-navy">รหัสแนะนำของฉัน</h1>
-          <p className="text-xs text-slate-500">การมีรหัสแนะนำไม่ทำให้ได้รับสถานะตัวแทนหรือผลตอบแทนอัตโนมัติ \u2014 ต้องผ่านการอนุมัติตามเกณฑ์</p>
+          <p className="text-xs text-slate-500">การมีรหัสแนะนำไม่ทำให้ได้รับสถานะตัวแทนหรือผลตอบแทนอัตโนมัติ — ต้องผ่านการอนุมัติตามเกณฑ์</p>
 
           <div className="card p-5 space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
@@ -68,7 +88,6 @@ export default function ReferralPage(){
               </div>
             </div>
 
-            {/* QR Code */}
             <div className="p-4 rounded-xl border text-center">
               <div className="text-xs text-slate-500 mb-2">QR Code สำหรับลิงก์สมัคร</div>
               {link ? (
@@ -78,7 +97,7 @@ export default function ReferralPage(){
                   className="mx-auto border rounded-xl p-2 bg-white"
                   width={180} height={180}
                 />
-              ) : <div className="text-xs text-slate-400">\u2014</div>}
+              ) : <div className="text-xs text-slate-400">—</div>}
               <div className="text-[11px] text-slate-500 mt-2 break-all">{link}</div>
             </div>
           </div>
@@ -92,7 +111,7 @@ export default function ReferralPage(){
                     <div className="w-8 h-8 rounded-full bg-navy text-white flex items-center justify-center text-xs">{u.firstName?.[0] || '?'}</div>
                     <div>
                       <div className="font-semibold">{u.displayName || `${u.firstName} ${u.lastName}`}</div>
-                      <div className="text-xs text-slate-500">{u.memberCode || '-'} \u2022 rank {u.rankLevel} \u2022 {u.status}</div>
+                      <div className="text-xs text-slate-500">{u.memberCode || '-'} • rank {u.rankLevel} • {u.status}</div>
                     </div>
                     <div className="ml-auto text-xs text-slate-500">{new Date(u.createdAt).toLocaleDateString('th-TH')}</div>
                   </div>
@@ -100,10 +119,8 @@ export default function ReferralPage(){
               </div>
             ) : <div className="mt-3 text-xs text-slate-500 p-3 rounded-xl bg-slate-50 border">ยังไม่มีผู้ที่ได้รับการแนะนำ</div>}
           </div>
-        </div>
+        </main>
       </div>
-    </main>
-  </div>
-</div>
+    </div>
   );
 }
