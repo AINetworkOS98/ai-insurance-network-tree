@@ -11,12 +11,9 @@ function getBaseUrl(req: NextRequest){
   return process.env.NEXT_PUBLIC_APP_URL || process.env.APP_BASE_URL || `${req.nextUrl.protocol}//${req.nextUrl.host}`;
 }
 function getRedirectUri(req: NextRequest){
-  // ใช้ Firebase auth handler ที่ Google อนุญาตไว้แล้ว (กัน redirect_uri_mismatch)
-  // ถ้าตั้ง GOOGLE_CALLBACK_URL ไว้ให้ใช้ค่านั้น
+  // ใช้ /auth/callback ที่ Next.js build ได้ปกติ (ไม่ใช้ __ prefix ที่อาจถูก ignore)
   if(process.env.GOOGLE_CALLBACK_URL) return process.env.GOOGLE_CALLBACK_URL;
-  // ลองใช้ /__/auth/handler ที่ Firebase สร้างให้โดยอัตโนมัติเมื่อเพิ่ม domain ใน authorizedDomains
-  // ถ้าไม่ได้ผล ให้ fallback เป็น /api/auth/google แล้วไปเพิ่มใน Google Cloud Console
-  return `${getBaseUrl(req)}/__/auth/handler`;
+  return `${getBaseUrl(req)}/auth/callback`;
 }
 
 // GET /api/auth/google — เริ่ม OAuth หรือรับ callback ?code=

@@ -17,7 +17,7 @@ export async function GET(req: NextRequest){
   try{
     const clientId = process.env.GOOGLE_CLIENT_ID!;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET!;
-    const redirectUri = process.env.GOOGLE_CALLBACK_URL || `${getBaseUrl(req)}/__/auth/handler`;
+    const redirectUri = process.env.GOOGLE_CALLBACK_URL || `${getBaseUrl(req)}/auth/callback`;
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method:'POST',
       headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
