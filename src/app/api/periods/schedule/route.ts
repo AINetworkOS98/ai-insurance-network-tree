@@ -28,14 +28,9 @@ export async function PUT(req: NextRequest){
     const token = req.cookies.get('token')?.value || req.cookies.get('auth_token')?.value;
     if(!token) return NextResponse.json({ ok:false, error:'กรุณาเข้าสู่ระบบ' }, { status:401 });
     let payload:any; try{ payload = verifyToken(token); }catch{ return NextResponse.json({ ok:false, error:'โทเค็นไม่ถูกต้อง' }, { status:401 }); }
-    const roles = payload.roles || [];
-    let allowed = roles.includes('admin') || roles.includes('finance');
-    if(!allowed){
-      const actorRoles = await prisma.userRole.findMany({ where:{ userId: payload.sub }, include:{ role:{ include:{ permissions:true } } } }).catch(()=>[]);
-      const keys = actorRoles.flatMap((ur:any)=> ur.role.permissions.map((rp:any)=> rp.permission.key));
-      allowed = keys.includes('period.close');
-    }
-    if(!allowed) return NextResponse.json({ ok:false, error:'ไม่มีสิทธิตั้งค่าตัดยอด — ต้องมี period.close' }, { status:403 });
+    // เปิด/ปิดตัดยอดอัตโนมัติได้เฉพาะผู้บริหารระบบ / Admin Akarapol เท่านั้น
+    const { isSystemAdmin } = await import('@/lib/admin');
+    if(!(await isSystemAdmin(payload.sub)).ok) return NextResponse.json({ ok:false, error:'เปลี่ยนได้เฉพาะผู้บริหารระบบ / Admin Akarapol' }, { status:403 });
     const body = await req.json().catch(()=> ({}));
     if(body.autoClose){
       await prisma.periodRule.upsert({

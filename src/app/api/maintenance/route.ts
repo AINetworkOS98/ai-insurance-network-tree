@@ -16,6 +16,9 @@ export async function POST(req: NextRequest){
     const token = req.cookies.get('token')?.value || req.cookies.get('auth_token')?.value;
     if(!token) return NextResponse.json({ error:'กรุณาเข้าสู่ระบบ'},{status:401});
     let p:any; try{ p=verifyToken(token);}catch{ return NextResponse.json({error:'โทเค็นไม่ถูกต้อง'},{status:401});}
+    // สร้าง/เปลี่ยนแผนรักษายอดได้เฉพาะผู้บริหารระบบ / Admin Akarapol เท่านั้น
+    const { isSystemAdmin } = await import('@/lib/admin');
+    if(!(await isSystemAdmin(p.sub||p.id)).ok) return NextResponse.json({ error:'เปลี่ยนเกณฑ์ได้เฉพาะผู้บริหารระบบ / Admin Akarapol' }, { status:403 });
     const body = await req.json();
     const { name, kind, metric, cycle, graceMonths, allowedFailCycles, rules, isLegacyRef } = body;
     if(!name || !metric) return NextResponse.json({ error:'ต้องระบุ name และ metric'},{status:400});
@@ -44,6 +47,8 @@ export async function PUT(req: NextRequest){
     const token = req.cookies.get('token')?.value || req.cookies.get('auth_token')?.value;
     if(!token) return NextResponse.json({ error:'กรุณาเข้าสู่ระบบ'},{status:401});
     let p:any; try{ p=verifyToken(token);}catch{ return NextResponse.json({error:'โทเค็นไม่ถูกต้อง'},{status:401});}
+    const { isSystemAdmin: isSysAdmin } = await import('@/lib/admin');
+    if(!(await isSysAdmin(p.sub||p.id)).ok) return NextResponse.json({ error:'เปลี่ยนเกณฑ์ได้เฉพาะผู้บริหารระบบ / Admin Akarapol' }, { status:403 });
     const body = await req.json();
     const { planId, status } = body;
     if(!planId || !['Draft','Active','Archived'].includes(status)) return NextResponse.json({error:'ต้องระบุ planId และ status'},{status:400});

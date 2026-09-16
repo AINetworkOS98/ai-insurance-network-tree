@@ -10,6 +10,7 @@ const items=[
   {href:"/tree", label:"ผังทีม 1:5", icon:"⁂"},
   {href:"/receipts", label:"หลักฐานและผลงาน", icon:"▭"},
   {href:"/progress", label:"ความก้าวหน้า", icon:"⬆"},
+  {href:"/career", label:"ขึ้นตำแหน่ง", icon:"▲"},
   {href:"/periods", label:"ปิดยอดรายเดือน", icon:"◷"},
   {href:"/criteria", label:"เกณฑ์มาตรฐาน", icon:"✓"},
   {href:"/reports", label:"รายงาน", icon:"▤"},

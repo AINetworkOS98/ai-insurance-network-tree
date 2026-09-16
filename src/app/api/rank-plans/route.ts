@@ -21,13 +21,13 @@ export async function POST(req: NextRequest){
     if(!token) return NextResponse.json({ error:'กรุณาเข้าสู่ระบบ' }, { status:401 });
     let payload: any; try{ payload = verifyToken(token); }catch{ return NextResponse.json({ error:'โทเค็นไม่ถูกต้อง' }, { status:401 }); }
     const userId = payload.sub || payload.id;
-    const userDb: any = await prisma.user.findUnique({ where:{ id: userId }, include:{ roles:{ include:{ role:true } } } as any });
-    const perms: string[] = [];
-    const isAdmin = perms.includes('rank.manage') || perms.includes('system.manage') || (payload.roles && payload.roles.includes('admin'));
-    if(!isAdmin){
+    // เปลี่ยนเกณฑ์ระบบได้เฉพาะผู้บริหารระบบ / Admin Akarapol เท่านั้น
+    const { isSystemAdmin } = await import('@/lib/admin');
+    const adm = await isSystemAdmin(userId);
+    if(!adm.ok){
       // อนุญาตสร้าง Draft ได้ถ้ายังไม่มีแผนเลย (bootstrap)
       const cnt = await prisma.rankPlan.count();
-      if(cnt > 0) return NextResponse.json({ error:'ต้องมีสิทธิ rank.manage' }, { status:403 });
+      if(cnt > 0) return NextResponse.json({ error:'เปลี่ยนเกณฑ์ได้เฉพาะผู้บริหารระบบ / Admin Akarapol' }, { status:403 });
     }
     const body = await req.json();
     const { name, version, validFrom, validTo, sourceRef, isLegacyRef, rules } = body;
@@ -82,6 +82,9 @@ export async function PUT(req: NextRequest){
     const body = await req.json();
     const { planId, status, validFrom, validTo } = body;
     if(!planId || !['Draft','Active','Archived'].includes(status)) return NextResponse.json({ error:'ต้องระบุ planId และ status (Draft/Active/Archived)' }, { status:400 });
+    // เปลี่ยนสถานะเกณฑ์ได้เฉพาะผู้บริหารระบบ / Admin Akarapol เท่านั้น
+    const { isSystemAdmin } = await import('@/lib/admin');
+    if(!(await isSystemAdmin(userId)).ok) return NextResponse.json({ error:'เปลี่ยนเกณฑ์ได้เฉพาะผู้บริหารระบบ / Admin Akarapol' }, { status:403 });
     const plan: any = await prisma.rankPlan.findUnique({ where:{ id: planId }, include:{ rules:true } });
     if(!plan) return NextResponse.json({ error:'ไม่พบแผน' }, { status:404 });
     if(status==='Active'){

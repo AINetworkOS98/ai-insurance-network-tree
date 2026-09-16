@@ -39,11 +39,55 @@ export async function evaluateRank(userId: string){
       const profile: any = await prisma.memberProfile.findUnique({ where:{ userId } });
       if(profile?.licenseStatus !== 'approved'){ missing.push('ต้องสอบใบอนุญาตตัวแทนประกันชีวิตและผ่านอนุมัติ'); allPass=false; }
     }
-    // qualifiedUnits / qualifiedCenters / duration — ถ้ากำหนดไว้ต้องตรวจ, ไม่เดาค่า
+    // จำนวนหน่วย/ศูนย์ที่ผ่านคุณสมบัติ — นับจากผัง 1 แตก 5 จริง:
+    // 1 ช่องตรง (slot) ใต้สมาชิก = 1 หน่วยถ้าสายนั้นมีสมาชิก ACTIVE; ผ่านคุณสมบัติถ้ามี rank>=2 (หน่วย) / rank>=3 (ศูนย์)
     if(rule.qualifiedUnits != null || rule.qualifiedCenters != null){
-      missing.push('นิยามหน่วย/ศูนย์ที่ผ่านคุณสมบัติยังไม่ยืนยัน — กดตรวจสอบรายละเอียด');
-      // ถือว่าไม่ครบจนยืนยันนิยาม
-      allPass = false;
+      const myNode: any = await prisma.treeNode.findUnique({ where:{ userId } }).catch(()=>null);
+      let units = 0, centers = 0;
+      if(myNode){
+        const placements: any[] = await prisma.treePlacement.findMany({ where:{ parentId: myNode.id }, select:{ childId:true } });
+        // ลูกตรงแต่ละคน -> เดินสายลงไปทั้ง subtree
+        const descendantsOf = async (childUserId: string) => {
+          const out: string[] = [];
+          const q = [childUserId]; const seen = new Set<string>([childUserId]);
+          const nodeByUser = new Map<string,string>();
+          const allNodes: any[] = await prisma.treeNode.findMany({ select:{ id:true, userId:true } });
+          for(const n of allNodes) nodeByUser.set(n.userId, n.id);
+          const allP: any[] = await prisma.treePlacement.findMany({ select:{ parentId:true, childId:true } });
+          const kids = new Map<string,string[]>();
+          const id2user = new Map<string,string>();
+          for(const n of allNodes) id2user.set(n.id, n.userId);
+          for(const p of allP){
+            const pu = id2user.get(p.parentId);
+            if(!pu) continue;
+            const l = kids.get(pu) || []; l.push(p.childId); kids.set(pu, l);
+          }
+          while(q.length){
+            const cur = q.shift()!;
+            const nodeId = nodeByUser.get(cur);
+            const childPlacements = kids.get(cur) || [];
+            void nodeId;
+            for(const c of childPlacements){ if(!seen.has(c)){ seen.add(c); out.push(c); q.push(c); } }
+          }
+          return out;
+        };
+        for(const p of placements){
+          const sub = await descendantsOf(p.childId);
+          const members: any[] = await prisma.user.findMany({ where:{ id:{ in:[p.childId, ...sub] }, status:'ACTIVE' }, select:{ rankLevel:true } });
+          if(members.length){
+            units++;
+            if(members.some((m:any)=> (m.rankLevel ?? 0) >= 3)) centers++;
+          }
+        }
+      }
+      if(rule.qualifiedUnits != null && units < Number(rule.qualifiedUnits)){ missing.push(`หน่วยที่ผ่านคุณสมบัติ ${units} / ${Number(rule.qualifiedUnits)}`); allPass=false; }
+      if(rule.qualifiedCenters != null && centers < Number(rule.qualifiedCenters)){ missing.push(`ศูนย์ที่ผ่านคุณสมบัติ ${centers} / ${Number(rule.qualifiedCenters)}`); allPass=false; }
+    }
+    // ระยะเวลาอยู่ในตำแหน่ง (นับจากเลื่อนขั้นครั้งล่าสุด): ต้องไม่น้อยกว่าเกณฑ์ขั้นต่ำ
+    if(rule.durationMinMonths != null){
+      const base = (user as any).rankUpdatedAt || (user as any).createdAt || new Date();
+      const tenure = (new Date().getFullYear()-new Date(base).getFullYear())*12 + (new Date().getMonth()-new Date(base).getMonth());
+      if(tenure < Number(rule.durationMinMonths)){ missing.push(`ระยะเวลาในตำแหน่ง ${tenure} / ${Number(rule.durationMinMonths)} เดือน`); allPass=false; }
     }
   }
 
