@@ -102,6 +102,8 @@ export async function POST(req: NextRequest){
     // สร้าง Sponsorship ถ้ามี sponsor ที่ถูกต้อง
     if(sponsorUser){
       await prisma.sponsorship.create({ data:{ childId: user.id, sponsorId: sponsorUser.id, referralCode: rawRef } }).catch(()=>null);
+      // ผู้สมัครทุกคนเข้าคิวผังจากฐานข้อมูลเดียวกัน; ระบบจะจัดวางเมื่อผ่านสถานะ ACTIVE
+      await prisma.placementQueue.create({ data:{ userId:user.id, sponsorId:sponsorUser.id, reason:'สมัครผ่านรหัสผู้แนะนำ — รออนุมัติและจัดวางผัง' } }).catch(()=>null);
       await prisma.auditLog.create({ data:{ userId: user.id, action:'sponsorship.create', entity:'Sponsorship', entityId:user.id, newValue:{ sponsorId: sponsorUser.id, referralCode: rawRef } } });
     } else if(rawRef && sponsorError){
       // รหัสผิด — เข้าคิวรอมอบหมาย ระบุเหตุผลชัด ห้ามสุ่มอ้างชื่อ
