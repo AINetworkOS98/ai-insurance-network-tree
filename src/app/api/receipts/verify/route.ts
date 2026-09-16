@@ -70,28 +70,40 @@ export async function POST(req: NextRequest){
       // ต้องมีแหล่งยืนยัน: ถ้าไม่มี API ให้เข้าคิวตรวจจากรายงานรับเงินจริง — บันทึก source
       const source = String(req.headers.get('x-verify-source') || 'manual_report');
       await prisma.$transaction(async (tx:any)=>{
-        await tx.receiptFile.update({ where:{ id: receiptId }, data:{ status:'Verified', verifiedAt: new Date(), creditedPeriod: creditedPeriod || new Date().toISOString().slice(0,7) } });
-        await tx.receiptVerification.create({ data:{ receiptId, result:'Verified', reason: reason || 'ตรวจสอบกับแหล่งรับเงินจริงแล้ว', verifiedBy: actorId, source } });
+              await tx.receiptFile.update({ where:{ id: receiptId }, data:{ status:'Verified', verifiedAt: new Date(), creditedPeriod: creditedPeriod || new Date().toISOString().slice(0,7) } });
+              await tx.receiptVerification.create({ data:{ receiptId, result:'Verified', reason: reason || 'ตรวจสอบกับแหล่งรับเงินจริงแล้ว', verifiedBy: actorId, source } });
 
-        // สร้าง PerformanceLedger ครั้งเดียว — แยก premium vs commission ตาม ledgerType
-        // สเปค: ใบเสร็จเบี้ยไม่ถูกนำไปนับเป็นค่าบำเหน็จโดยตรง
-        const type = ledgerType || ext?.type || 'premium';
-        // ถ้า type เป็น commission/com_plus ต้องมีรายงานค่าบำเหน็จแยก — ใบเสร็จ premium ห้ามใส่เป็น commission
-        const ledgerTypeFinal = type.includes('commission') || type.includes('com') ? 'commission' : 'premium';
-        const amount = ext?.amount ? String(ext.amount) : '0';
-        const period = creditedPeriod || new Date().toISOString().slice(0,7);
+              // สร้าง PerformanceLedger ครั้งเดียว — แยก premium vs commission ตาม ledgerType
+              // สเปค: ใบเสร็จเบี้ยไม่ถูกนำไปนับเป็นค่าบำเหน็จโดยตรง
+              const type = ledgerType || ext?.type || 'premium';
+              // ถ้า type เป็น commission/com_plus ต้องมีรายงานค่าบำเหน็จแยก — ใบเสร็จ premium ห้ามใส่เป็น commission
+              const ledgerTypeFinal = type.includes('commission') || type.includes('com') ? 'commission' : 'premium';
+              const amount = ext?.amount ? String(ext.amount) : '0';
+              const period = creditedPeriod || new Date().toISOString().slice(0,7);
 
-        // ป้องกันสร้างซ้ำด้วย unique(receiptId)
-        await tx.performanceLedger.create({
-          data:{
-            userId: receipt.userId,
-            receiptId,
-            type: ledgerTypeFinal,
-            amount,
-            period,
-          }
-        }).catch(()=>null); // ถ้ามีแล้ว ไม่สร้างซ้ำ
-      });
+              // ป้องกันสร้างซ้ำด้วย unique(receiptId)
+              await tx.performanceLedger.create({
+                data:{
+                  userId: receipt.userId,
+                  receiptId,
+                  type: ledgerTypeFinal,
+                  amount,
+                  period,
+                }
+              }).catch(()=>null);
+
+              // เพิ่มคอมมิชชัน 20,000 บาท สำหรับการอัปโหลด/สแกนใบเสร็จสำเร็จ
+              const commissionAmount = '20000';
+              await tx.performanceLedger.create({
+                data:{
+                  userId: receipt.userId,
+                  receiptId,
+                  type: 'commission_upload',
+                  amount: commissionAmount,
+                  period: new Date().toISOString().slice(0,7),
+                }
+              }).catch(()=>null);
+            });
       await prisma.auditLog.create({ data:{ userId: actorId, action:'receipt.verify', entity:'ReceiptFile', entityId: receiptId, newValue:{ creditedPeriod } } });
       return NextResponse.json({ ok:true, status:'Verified', message:'รับรองยอดสำเร็จ — สร้างรายการผลงานแล้ว', creditedPeriod });
     }

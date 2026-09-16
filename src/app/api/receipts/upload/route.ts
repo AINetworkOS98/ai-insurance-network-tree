@@ -64,7 +64,11 @@ export async function POST(req: NextRequest){
     });
 
     await prisma.auditLog.create({ data:{ userId, action:'receipt.upload', entity:'ReceiptFile', entityId: receipt.id, newValue:{ fileHash, originalName: file.name } } });
-
+    // แจ้งเตือนอัปโหลดสำเร็จ — ให้ไปหน้า preview OCR
+    try{
+      const { emitNotification } = await import('@/lib/notify');
+      await emitNotification({ userId, type:'receipt_uploaded', title:'อัปโหลดใบเสร็จสำเร็จ', body:'กำลังประมวลผล OCR — กรุณาตรวจทานข้อมูลก่อนส่งตรวจสอบ', referenceId:'/receipts' }).catch(()=>null);
+    }catch{}
     return NextResponse.json({
       ok:true,
       receipt: { id: receipt.id, status: receipt.status, fileHash },

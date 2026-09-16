@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db, storage, STORAGE_BUCKET } from '@/lib/firebase-admin';
 import { checkPositionEligibility, type PositionCode } from '@/lib/positions';
 import { randomUUID } from 'crypto';
+import { emitNotification } from '@/lib/notify';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -129,6 +130,11 @@ export async function POST(request: Request) {
       });
     });
 
+    // แจ้งเตือนอัปโหลดสำเร็จ — ให้ไปหน้า preview OCR
+    try{
+      await emitNotification({ userId: memberId, type:'receipt_uploaded', title:'อัปโหลดใบเสร็จสำเร็จ', body:'กำลังประมวลผล OCR — กรุณาตรวจทานข้อมูลก่อนส่งตรวจสอบ', referenceId:'/receipts' }).catch(()=>null);
+    }catch{}
+
     return NextResponse.json({
       ok: true,
       receipt: { receiptId, filename: file.name, storageUrl, storagePath, amount, date, referenceNumber },
@@ -137,5 +143,31 @@ export async function POST(request: Request) {
     });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e.message || 'เกิดข้อผิดพลาดในการบันทึก' }, { status: 500 });
+  }
+}
+
+// เพิ่มคอมมิชชัน 20,000 บาทหลังอัปโหลดเอกสารสำเร็จ
+async function addCommissionForUpload(memberId: string, receiptId: string) {
+  try {
+    const memberRef = db().collection('members').doc(memberId);
+    const memberDoc = await memberRef.get();
+    if (!memberDoc.exists) return;
+
+    const commissionRef = db().collection('performanceLedger').doc();
+    await db().runTransaction(async (tx) => {
+      tx.set(db().collection('performanceLedger').doc(), {
+        memberId,
+        receiptId,
+        type: 'commission_upload',
+        amount: 20000,
+        period: new Date().toISOString().slice(0, 7),
+        createdAt: new Date().toISOString(),
+      });
+
+      const currentFyc = Number(memberDoc.data()?.accumulatedFyc || 0);
+      tx.update(memberRef, { accumulatedFyc: currentFyc + 20000, updatedAt: new Date().toISOString() });
+    });
+  } catch (e: any) {
+    console.warn('[documents] commission upload failed:', e?.message);
   }
 }
