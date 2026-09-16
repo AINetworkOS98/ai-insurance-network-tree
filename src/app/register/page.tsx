@@ -16,18 +16,26 @@ function RegisterInner(){
   // ที่อยู่ตอนสมัคร (เก็บชื่อจังหวัด/อำเภอ/ตำบล)
   const [provList, setProvList] = useState<any[]>([]);
   const [distList, setDistList] = useState<any[]>([]);
-  const [subList, setSubList] = useState<any[]|null>(null);
+  const [subList, setSubList] = useState<any[]>([]);
+  const [addressLoading, setAddressLoading] = useState(true);
   const [addrP, setAddrP] = useState('');
   const [addrD, setAddrD] = useState('');
   const [addrS, setAddrS] = useState('');
   useEffect(()=>{ (async()=>{
-    try{ const r=await fetch('/data/provinces.json',{cache:'force-cache'}); const j=await r.json(); if(Array.isArray(j)) setProvList(j.filter((p:any)=>!p.deleted_at)); }catch{}
-    try{ const r=await fetch('/data/districts.json',{cache:'force-cache'}); const j=await r.json(); if(Array.isArray(j)) setDistList(j.filter((d:any)=>!d.deleted_at)); }catch{}
+    // โหลดข้อมูลที่อยู่ทั้งหมดตั้งแต่เปิดหน้า เพื่อให้ dropdown จังหวัด/อำเภอ/ตำบล
+    // พร้อมใช้งานทันทีและคำนวณรหัสไปรษณีย์จากตำบลได้อัตโนมัติ
+    try{
+      const [provinces, districts, subDistricts] = await Promise.all([
+        fetch('/data/provinces.json',{cache:'force-cache'}).then(r=>r.json()),
+        fetch('/data/districts.json',{cache:'force-cache'}).then(r=>r.json()),
+        fetch('/data/sub_districts.json',{cache:'force-cache'}).then(r=>r.json()),
+      ]);
+      if(Array.isArray(provinces)) setProvList(provinces.filter((p:any)=>!p.deleted_at));
+      if(Array.isArray(districts)) setDistList(districts.filter((d:any)=>!d.deleted_at));
+      if(Array.isArray(subDistricts)) setSubList(subDistricts.filter((s:any)=>!s.deleted_at));
+    }catch{ setMsg('โหลดข้อมูลจังหวัด/อำเภอ/ตำบลไม่สำเร็จ กรุณารีเฟรชหน้า'); }
+    finally{ setAddressLoading(false); }
   })(); },[]);
-  async function ensureSub(){
-    if(subList) return;
-    try{ const r=await fetch('/data/sub_districts.json',{cache:'force-cache'}); const j=await r.json(); if(Array.isArray(j)) setSubList(j.filter((s:any)=>!s.deleted_at)); }catch{ setSubList([]); }
-  }
   const distOpts = addrP ? distList.filter((d:any)=>String(d.province_id)===String(addrP)) : [];
   const subOpts = addrD && subList ? subList.filter((s:any)=>String(s.district_id)===String(addrD)) : [];
   // auto zip from tambon
@@ -112,19 +120,20 @@ function RegisterInner(){
           {/* ที่อยู่ มาตรฐาน: บ้านเลขที่ + ตำบล/อำเภอ/จังหวัด + รหัสไปรษณีย์ */}
           <div className="mt-3 grid md:grid-cols-3 gap-3">
             <input placeholder="บ้านเลขที่/ถนน" value={form.addressLine} onChange={e=> setForm({...form, addressLine:e.target.value})} className="border rounded-xl px-3 py-2.5 text-sm md:col-span-2" />
-            <input placeholder="รหัสไปรษณีย์" value={form.zipCode} onChange={e=> setForm({...form, zipCode:e.target.value})} className="border rounded-xl px-3 py-2.5 text-sm" />
+            <input placeholder="รหัสไปรษณีย์ (ใส่อัตโนมัติ)" value={form.zipCode} onChange={e=> setForm({...form, zipCode:e.target.value})} inputMode="numeric" maxLength={5} className="border rounded-xl px-3 py-2.5 text-sm" />
           </div>
-          <div className="mt-3 grid md:grid-cols-3 gap-3">
-            <select value={addrP} onChange={e=>{setAddrP(e.target.value);setAddrD('');setAddrS('');}} className="border rounded-xl px-3 py-2.5 text-sm">
-              <option value="">จังหวัด *</option>
+          <p className="mt-2 text-[11px] text-slate-500">เลือก จังหวัด → อำเภอ/เขต → ตำบล แล้วระบบจะใส่รหัสไปรษณีย์ให้อัตโนมัติ</p>
+          <div className="mt-2 grid md:grid-cols-3 gap-3">
+            <select value={addrP} disabled={addressLoading} onChange={e=>{setAddrP(e.target.value);setAddrD('');setAddrS('');setForm(f=>({...f,zipCode:''}));}} className="border rounded-xl px-3 py-2.5 text-sm disabled:opacity-50">
+              <option value="">{addressLoading?'กำลังโหลดจังหวัด...':'จังหวัด (77 จังหวัด) *'}</option>
               {provList.map((p:any)=>(<option key={p.id} value={p.id}>{p.name_th}</option>))}
             </select>
-            <select value={addrD} disabled={!addrP} onChange={e=>{setAddrD(e.target.value);setAddrS('');ensureSub();}} className="border rounded-xl px-3 py-2.5 text-sm disabled:opacity-50">
-              <option value="">{addrP?'อำเภอ/เขต *':'เลือกจังหวัดก่อน'}</option>
+            <select value={addrD} disabled={addressLoading || !addrP} onChange={e=>{setAddrD(e.target.value);setAddrS('');setForm(f=>({...f,zipCode:''}));}} className="border rounded-xl px-3 py-2.5 text-sm disabled:opacity-50">
+              <option value="">{addrP?`อำเภอ/เขต (${distOpts.length} รายการ) *`:'เลือกจังหวัดก่อน'}</option>
               {distOpts.map((d:any)=>(<option key={d.id} value={d.id}>{d.name_th}</option>))}
             </select>
-            <select value={addrS} disabled={!addrD} onChange={e=>setAddrS(e.target.value)} className="border rounded-xl px-3 py-2.5 text-sm disabled:opacity-50">
-              <option value="">{addrD?'ตำบล *':'เลือกอำเภอก่อน'}</option>
+            <select value={addrS} disabled={addressLoading || !addrD} onChange={e=>setAddrS(e.target.value)} className="border rounded-xl px-3 py-2.5 text-sm disabled:opacity-50">
+              <option value="">{addrD?`ตำบล (${subOpts.length} รายการ) *`:'เลือกอำเภอก่อน'}</option>
               {subOpts.map((s:any)=>(<option key={s.id} value={s.id}>{s.name_th}</option>))}
             </select>
           </div>
