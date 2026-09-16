@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { signToken } from '@/lib/auth';
+import { generateMemberCode, generateReferralCode } from '@/lib/referral';
 
 function getBaseUrl(req: NextRequest){
   return process.env.NEXT_PUBLIC_APP_URL || process.env.APP_BASE_URL || `${req.nextUrl.protocol}//${req.nextUrl.host}`;
 }
 
-// GET /__/auth/handler — รับ callback จาก Google (ใช้เป็น redirect_uri ที่ Firebase อนุญาต)
+// GET /auth/callback — รับ callback จาก Google (server-side OAuth ไม่ผ่าน Firebase)
 export async function GET(req: NextRequest){
   const { searchParams } = new URL(req.url);
   const code = searchParams.get('code');
@@ -54,7 +55,20 @@ export async function GET(req: NextRequest){
         await prisma.auditLog.create({ data:{ userId: user.id, action:'auth.link_google', entity:'User', entityId: user.id, newValue:{ googleSub, email } } });
       } else {
         const [firstName, ...rest] = name.split(' ');
-        user = await prisma.user.create({ data:{ email, emailVerified: !!emailVerified, firstName: firstName||name, lastName: rest.join(' ')||'', displayName: name, status:'PENDING', rankLevel:0 }});
+        // ออกรหัสสมาชิก/รหัสแนะนำเหมือนสมัครอีเมล — ฐานเดียวกันสำหรับสร้างทีมและคำนวณผลประโยชน์
+        let memberCode: string | null = null;
+        let newReferralCode: string | null = null;
+        for(let attempt=0; attempt<3; attempt++){
+          try{
+            memberCode = generateMemberCode();
+            newReferralCode = generateReferralCode();
+            user = await prisma.user.create({ data:{ email, emailVerified: !!emailVerified, firstName: firstName||name, lastName: rest.join(' ')||'', displayName: name, memberCode, referralCode: newReferralCode, status:'PENDING', rankLevel:0 }});
+            break;
+          }catch(e:any){ if(String(e.code)==='P2002' && attempt<2) continue; throw e; }
+        }
+        if(!user) return NextResponse.redirect(new URL('/login?error=server', req.url));
+        await prisma.referralCode.create({ data:{ userId: user.id, code: newReferralCode! } }).catch(()=>null);
+        await prisma.placementQueue.create({ data:{ userId: user.id, sponsorId: null, reason:'สมัครด้วย Google — รออนุมัติและจัดวางผัง' } }).catch(()=>null);
         identity = await prisma.authIdentity.create({ data:{ userId: user.id, provider:'google', providerUserId: googleSub, email } });
         await prisma.auditLog.create({ data:{ userId: user.id, action:'auth.register_google', entity:'User', entityId: user.id, newValue:{ email, rankLevel:0 } } });
       }

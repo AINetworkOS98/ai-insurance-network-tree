@@ -3,6 +3,25 @@ import { getAuth } from 'firebase-admin/auth';
 import { getAdminApp } from '@/lib/firebase-admin';
 import { prisma } from '@/lib/prisma';
 import { signToken } from '@/lib/auth';
+import { generateMemberCode, generateReferralCode } from '@/lib/referral';
+
+// สร้าง user ใหม่พร้อมรหัสสมาชิก/รหัสแนะนำ + เข้าคิวผัง — ฐานเดียวกับสมัครอีเมล
+async function createGoogleUser(email:string, emailVerified:boolean, name:string){
+  const [firstName, ...rest] = name.split(' ');
+  let user:any = null;
+  let newReferralCode: string | null = null;
+  for(let attempt=0; attempt<3; attempt++){
+    try{
+      newReferralCode = generateReferralCode();
+      user = await prisma.user.create({ data:{ email, emailVerified, firstName: firstName||name, lastName: rest.join(' ')||'', displayName: name, memberCode: generateMemberCode(), referralCode: newReferralCode, status:'PENDING', rankLevel:0 }});
+      break;
+    }catch(e:any){ if(String(e.code)==='P2002' && attempt<2) continue; throw e; }
+  }
+  if(!user) return null;
+  await prisma.referralCode.create({ data:{ userId: user.id, code: newReferralCode! } }).catch(()=>null);
+  await prisma.placementQueue.create({ data:{ userId: user.id, sponsorId: null, reason:'สมัครด้วย Google — รออนุมัติและจัดวางผัง' } }).catch(()=>null);
+  return user;
+}
 
 // POST /api/auth/google {idToken} — สเปคหมวด 3: เข้าสู่ระบบด้วย Google
 // รองรับ 2 ทาง: Firebase idToken (popup) + OAuth code (server-side redirect ไม่ต้องพึ่ง Firebase Web API Key)
@@ -83,8 +102,8 @@ export async function GET(req: NextRequest){
         identity = await prisma.authIdentity.create({ data:{ userId: user.id, provider:'google', providerUserId: googleSub, email } });
         await prisma.auditLog.create({ data:{ userId: user.id, action:'auth.link_google', entity:'User', entityId: user.id, newValue:{ googleSub, email } } });
       } else {
-        const [firstName, ...rest] = name.split(' ');
-        user = await prisma.user.create({ data:{ email, emailVerified: !!emailVerified, firstName: firstName||name, lastName: rest.join(' ')||'', displayName: name, status:'PENDING', rankLevel:0 }});
+        user = await createGoogleUser(email, emailVerified, name);
+        if(!user) return NextResponse.redirect(new URL('/login?error=server', req.url));
         identity = await prisma.authIdentity.create({ data:{ userId: user.id, provider:'google', providerUserId: googleSub, email } });
         await prisma.auditLog.create({ data:{ userId: user.id, action:'auth.register_google', entity:'User', entityId: user.id, newValue:{ email, rankLevel:0 } } });
       }
@@ -145,19 +164,9 @@ export async function POST(req: NextRequest){
         });
         await prisma.auditLog.create({ data:{ userId: user.id, action:'auth.link_google', entity:'User', entityId: user.id, newValue:{ googleSub, email } } });
       } else {
-        // 3) สมัครใหม่จาก Google — ทุกคนเริ่ม rankLevel 0
-        const [firstName, ...rest] = name.split(' ');
-        user = await prisma.user.create({
-          data:{
-            email,
-            emailVerified: !!emailVerified,
-            firstName: firstName || name,
-            lastName: rest.join(' ') || '',
-            displayName: name,
-            status: 'PENDING',
-            rankLevel: 0,
-          }
-        });
+        // 3) สมัครใหม่จาก Google — ทุกคนเริ่ม rankLevel 0 พร้อมรหัสสมาชิก/คิวผัง
+        user = await createGoogleUser(email, emailVerified, name);
+        if(!user) return NextResponse.json({ ok:false, error:'เกิดข้อผิดพลาด' }, { status:500 });
         identity = await prisma.authIdentity.create({
           data:{ userId: user.id, provider:'google', providerUserId: googleSub, email }
         });
