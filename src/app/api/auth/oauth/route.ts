@@ -92,7 +92,16 @@ async function getGitHubProfile(accessToken: string){
 // GET /api/auth/oauth — เริ่ม OAuth (?provider=facebook|github&next=/) หรือรับ callback (?provider=&code=&state=)
 export async function GET(req: NextRequest){
   const { searchParams } = new URL(req.url);
-  const provider = searchParams.get('provider') as Provider | null;
+  // callback จาก provider จะไม่มี ?provider= ติดมา — อ่านจาก state แทน
+  let stateObj: any = null;
+  try{
+    const raw = searchParams.get('state') || '';
+    if(raw) stateObj = JSON.parse(Buffer.from(raw,'base64url').toString());
+  }catch{}
+  let provider = searchParams.get('provider') as Provider | null;
+  if(provider !== 'facebook' && provider !== 'github'){
+    provider = (stateObj?.provider === 'facebook' || stateObj?.provider === 'github') ? stateObj.provider : null;
+  }
   if(provider !== 'facebook' && provider !== 'github'){
     return NextResponse.redirect(failUrl(req, 'oauth_unknown_provider'));
   }
