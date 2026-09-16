@@ -105,6 +105,11 @@ export default function Sidebar(){
                   <span>🧾</span><span>{t('sb_scan')}</span>
                   {path==='/receipts' && <span className="ml-auto text-[10px]">●</span>}
                 </Link>
+                <Link href="/network/promotions" onClick={()=>setMobileOpen(false)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-colors ${path==='/network/promotions'?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`}>
+                  <span>🎖</span><span>{t('sb_promotions')}</span>
+                  {path==='/network/promotions' && <span className="ml-auto text-[10px]">●</span>}
+                </Link>
               </div>
             )}
             {collapsed && (
@@ -112,6 +117,7 @@ export default function Sidebar(){
                 <Link href="/network-example" title={t('sb_network_example')} className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-colors ${path==='/network-example'?'bg-[#eff6ff] text-sky-700':'hover:bg-[#FFFBF5] text-slate-600'}`}>👥</Link>
                 <Link href="/referral" title={t('sb_invite')} className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-colors ${path==='/referral'?'bg-[#eff6ff] text-sky-700':'hover:bg-[#FFFBF5] text-slate-600'}`}>✉</Link>
                 <Link href="/receipts" title={t('sb_scan')} className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-colors ${path==='/receipts'?'bg-[#eff6ff] text-sky-700':'hover:bg-[#FFFBF5] text-slate-600'}`}>🧾</Link>
+                <Link href="/network/promotions" title={t('sb_promotions')} className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-colors ${path==='/network/promotions'?'bg-[#eff6ff] text-sky-700':'hover:bg-[#FFFBF5] text-slate-600'}`}>🎖</Link>
               </div>
             )}
           </div>
