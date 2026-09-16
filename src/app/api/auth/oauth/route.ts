@@ -156,7 +156,10 @@ export async function GET(req: NextRequest){
     const profile = provider === 'facebook' ? await getFacebookProfile(accessToken) : await getGitHubProfile(accessToken);
     if(!profile.email) return NextResponse.redirect(failUrl(req, `${provider}_no_email`));
     const result = await findOrCreateUser(provider, profile.id, profile.email, true, profile.name);
-    if('error' in result) return NextResponse.redirect(failUrl(req, result.error === 'email_not_verified' ? `${provider}_failed` : result.error));
+    if('error' in result){
+      const code = result.error === 'email_not_verified' ? `${provider}_failed` : String(result.error);
+      return NextResponse.redirect(failUrl(req, code));
+    }
     const user = result.user!;
     const token = signToken({ sub: user.id, email: user.email, rankLevel: user.rankLevel ?? 0, status: String(user.status) });
     await prisma.userSession.create({ data:{ userId: user.id, tokenHash: token.slice(-32), expiresAt: new Date(Date.now()+7*24*60*60*1000) } }).catch(()=>null);
