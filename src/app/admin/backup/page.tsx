@@ -41,7 +41,7 @@ export default function BackupPage(){
         <main className="flex-1 p-6 space-y-4 max-w-[720px]">
           <div>
             <h1 className="text-xl font-bold text-navy">สำรองและกู้คืนข้อมูล</h1>
-            <p className="text-xs text-slate-500 mt-1">สำรองอัตโนมัติทุกชั่วโมงเมื่อมีสมาชิกใช้งาน — ถ้าฐานหลักล่ม ระบบเติมข้อมูลที่หายจากสำรองให้ทันทีที่กลับมา</p>
+            <p className="text-xs text-slate-500 mt-1">สำรองอัตโนมัติทุกวัน + กดสำรองทันทีได้ — ถ้าฐานหลักล่ม ระบบเติมข้อมูลที่หายจากสำรองให้ทันทีที่กลับมา</p>
           </div>
           {msg && <div className="p-2 rounded-xl bg-amber-50 border text-xs">{msg}</div>}
           <div className="card p-5 space-y-2 text-sm">
