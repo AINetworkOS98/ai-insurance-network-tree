@@ -175,8 +175,11 @@ export default function ReceiptsPage(){
               >
                 <div className="text-sm font-semibold">ถ่ายภาพผ่านมือถือ / ลากไฟล์มาวาง</div>
                 <div className="text-xs text-slate-500 mt-1">รองรับ JPG/PNG/PDF หลายหน้า — อัปโหลดแล้วอ่านค่าจริงทันที</div>
-                <input type="file" accept="image/*,application/pdf" capture="environment" onChange={e=> setFile(e.target.files?.[0] || null)} className="mt-3 text-xs" />
-                {file && <div className="mt-2 text-xs">เลือกแล้ว: {file.name} ({(file.size/1024).toFixed(0)} KB)</div>}
+                <input id="receipt-file-input" type="file" accept="image/*,application/pdf" capture="environment" onChange={e=> setFile(e.target.files?.[0] || null)} className="hidden" />
+                <div className="mt-3 flex items-center justify-center gap-2">
+                  <label htmlFor="receipt-file-input" className="px-6 py-2 rounded-full border bg-white text-xs font-semibold cursor-pointer hover:bg-slate-50 shadow-sm">📁 เลือกไฟล์</label>
+                  <span className="text-xs text-slate-500">{file ? `${file.name} (${(file.size/1024).toFixed(0)} KB)` : 'ยังไม่ได้เลือกไฟล์'}</span>
+                </div>
                 <button onClick={upload} disabled={loading==='upload'} className="mt-3 px-6 py-2 rounded-full bg-navy text-white text-xs disabled:opacity-50">
                   {loading==='upload' ? 'กำลังอัปโหลด+อ่าน...' : 'อัปโหลด+สแกน'}
                 </button>
