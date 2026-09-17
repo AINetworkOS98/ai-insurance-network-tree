@@ -9,7 +9,11 @@ export async function GET(req: NextRequest){
     const token = req.cookies.get('token')?.value || req.headers.get('authorization')?.replace(/^Bearer\s+/i,'') || '';
     if(!token) return NextResponse.json({ ok:false, error:'กรุณาเข้าสู่ระบบ' }, { status:401 });
     let payload:any; try{ payload = verifyToken(token); }catch{ return NextResponse.json({ ok:false, error:'โทเค็นไม่ถูกต้อง' }, { status:401 }); }
-    if((payload.rankLevel ?? 0) < 1) return NextResponse.json({ ok:false, error:'สมาชิกทั่วไปดูได้เฉพาะหน้าแรก' }, { status:403 });
+    // ดึง rank ปัจจุบันจาก DB (token อาจ stale หลัง admin ปรับระดับ)
+    const userId = (payload as any).sub;
+    const me = userId ? await prisma.user.findUnique({ where:{ id: userId }, select:{ rankLevel:true } }).catch(()=>null) : null;
+    const rankLevel = me?.rankLevel ?? (payload.rankLevel ?? 0);
+    if(rankLevel < 1) return NextResponse.json({ ok:false, error:'สมาชิกทั่วไปดูได้เฉพาะหน้าแรก' }, { status:403 });
 
     const history: any[] = await prisma.rankHistory.findMany({
       where:{ result:'promoted' }, orderBy:{ evaluatedAt:'desc' }, take:50,
