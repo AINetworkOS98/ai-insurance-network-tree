@@ -2,15 +2,13 @@
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import Kanban from '@/components/Kanban';
+import Link from 'next/link';
 import { useEffect, useState, useRef } from 'react';
 
 export default function Prospects(){
   const [prospects, setProspects]=useState<any[]>([]);
   const [q, setQ]=useState('');
   const [statusQ, setStatusQ]=useState('');
-  const [showAdd, setShowAdd]=useState(false);
-  const [form, setForm]=useState({ firstName:'', lastName:'', phone:'', email:'', province:'' });
-  const [msg, setMsg]=useState('');
   const [importMsg, setImportMsg]=useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -25,15 +23,6 @@ export default function Prospects(){
     if(q){ const s=q.toLowerCase(); const hay = `${p.name||''} ${p.email||''} ${p.phone||''}`.toLowerCase(); if(!hay.includes(s)) return false; }
     return true;
   });
-
-  async function addProspect(){
-    setMsg('');
-    if(!form.firstName.trim() || !form.lastName.trim()){ setMsg('กรุณากรอกชื่อและนามสกุล'); return; }
-    const res = await fetch('/api/prospects', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(form) }).catch(()=>null);
-    const j = res ? await res.json().catch(()=>({ok:false})) : {ok:false};
-    if(j.ok){ setMsg('เพิ่มผู้สนใจแล้ว'); setShowAdd(false); setForm({ firstName:'', lastName:'', phone:'', email:'', province:'' }); load(); }
-    else setMsg(j.error || 'เพิ่มไม่สำเร็จ');
-  }
 
   // นำเข้า CSV (และ xlsx ผ่าน parsing พื้นฐานถ้าเป็นข้อความ) — batch POST
   async function handleImport(file: File){
@@ -69,7 +58,6 @@ export default function Prospects(){
   }
 
   const by = (s:string)=> prospects.filter((p:any)=> p.status===s).length;
-  const inp = "w-full px-3 py-2 rounded-xl border text-sm";
 
   return (
     <div>
@@ -80,7 +68,7 @@ export default function Prospects(){
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-xl font-bold text-[#475569]">ผู้สนใจ (Prospect CRM)</h1>
             {prospects.length===0 && <span className="text-xs px-2 py-1 rounded-full border bg-white text-slate-500">ไม่มีข้อมูลปลอม — แสดงเฉพาะข้อมูลจริงจาก DB</span>}
-            <button onClick={()=>{ setShowAdd(true); setMsg(''); }} className="ml-auto px-4 py-2 rounded-full bg-[#475569] text-white text-sm">+ เพิ่มผู้สนใจ</button>
+            <Link href="/register" className="ml-auto px-4 py-2 rounded-full bg-[#475569] text-white text-sm">+ เพิ่มผู้สนใจ</Link>
             <button onClick={()=> fileRef.current?.click()} className="px-4 py-2 rounded-full border bg-white text-sm">นำเข้า CSV/Excel</button>
             <input ref={fileRef} type="file" accept=".csv,.txt,.xlsx,.xls" className="hidden" onChange={e=>{ const f=e.target.files?.[0]; if(f) handleImport(f); e.target.value=''; }} />
           </div>
@@ -93,7 +81,7 @@ export default function Prospects(){
               <select value={statusQ} onChange={e=> setStatusQ(e.target.value)} className="border rounded-xl px-3 py-2 text-sm"><option value="">ทุกสถานะ</option><option>NEW</option><option>APPOINTMENT</option><option>FOLLOW_UP</option><option>CONVERTED</option><option>PENDING_REVIEW</option></select>
               <button onClick={()=>{ setQ(''); setStatusQ(''); }} className="px-4 py-2 rounded-xl border bg-white text-sm">ล้างตัวกรอง</button>
             </div>
-            <div className="text-xs text-slate-500 mb-3">ผู้สนใจยังไม่ถือเป็นสมาชิกและไม่อยู่ในต้นไม้ฐาน 5 คน • แปลงเป็นสมาชิกต้องผ่าน OTP + เอกสาร + Admin อนุมัติ • ไม่แสดงข้อมูลปลอม</div>
+            <div className="text-xs text-slate-500 mb-3">ผู้สนใจกรอกข้อมูลผ่านหน้าสมัคร → เข้าระบบเป็นผู้สนใจทั่วไป (ฐานเดียวกับ register) • ยังไม่ถือเป็นสมาชิกเต็มรูปแบบจนกว่าจะผ่านการอนุมัติ</div>
             <Kanban prospects={filtered}/>
           </div>
 
@@ -125,30 +113,6 @@ export default function Prospects(){
           </div>
         </main>
       </div>
-
-      {/* Modal เพิ่มผู้สนใจ */}
-      {showAdd && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={()=> setShowAdd(false)}>
-          <div className="bg-white rounded-2xl border shadow-xl w-full max-w-md p-5 space-y-3" onClick={e=> e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-slate-800">เพิ่มผู้สนใจ</h3>
-              <button onClick={()=> setShowAdd(false)} className="w-8 h-8 rounded-full border flex items-center justify-center text-slate-500 hover:bg-slate-50">×</button>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <input placeholder="ชื่อ *" value={form.firstName} onChange={e=> setForm({...form, firstName:e.target.value})} className={inp}/>
-              <input placeholder="นามสกุล *" value={form.lastName} onChange={e=> setForm({...form, lastName:e.target.value})} className={inp}/>
-            </div>
-            <input placeholder="เบอร์โทร" value={form.phone} onChange={e=> setForm({...form, phone:e.target.value})} className={inp}/>
-            <input placeholder="อีเมล" value={form.email} onChange={e=> setForm({...form, email:e.target.value})} className={inp}/>
-            <input placeholder="จังหวัด" value={form.province} onChange={e=> setForm({...form, province:e.target.value})} className={inp}/>
-            {msg && <div className="p-2 rounded-xl bg-amber-50 border text-xs">{msg}</div>}
-            <div className="flex gap-2 justify-end">
-              <button onClick={()=> setShowAdd(false)} className="px-4 py-2 rounded-full border text-sm">ยกเลิก</button>
-              <button onClick={addProspect} className="px-5 py-2 rounded-full bg-[#475569] text-white text-sm">บันทึก</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
