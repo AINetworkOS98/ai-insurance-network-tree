@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 import { generateMemberCode, generateReferralCode, referralLink } from '@/lib/referral';
+import { rankName } from '@/lib/rankCatalog';
 
 // GET /api/referral — ดูรหัสของตนเอง + ลิงก์ + QR data + รายชื่อที่แนะนำ
 export async function GET(req: NextRequest){
@@ -60,6 +61,8 @@ export async function GET(req: NextRequest){
       memberCode: user!.memberCode,
       referralCode: user!.referralCode,
       referralLink: link,
+      rankLevel: user!.rankLevel ?? 0,
+      rankName: rankName((user!.rankLevel ?? 0) as any),
       // QR ให้ frontend สร้างจาก link ด้วย <qrcode> lib (ไม่ต้องส่งรูปจาก server)
       sponsored,
       totalSponsored,

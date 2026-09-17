@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-type Node = {id:string; name:string; memberId:string; status:'active'|'pending'|'inactive'|'vacant'; children?:Node[]; slot?:number};
+type Node = {id:string; name:string; memberId:string; status:'active'|'pending'|'inactive'|'vacant'; rankName?:string; children?:Node[]; slot?:number};
 
 function NodeCard({node}:{node:Node}){
   const color = node.status==='vacant' ? 'border-dashed bg-slate-50 text-slate-500' : node.status==='active' ? 'bg-emerald-50 border-emerald-200' : node.status==='pending' ? 'bg-amber-50 border-amber-200' : 'bg-slate-50';
@@ -8,6 +8,7 @@ function NodeCard({node}:{node:Node}){
     <div className={`rounded-xl border p-3 min-w-[160px] text-center ${color}`}>
       <div className="text-xs font-semibold truncate">{node.name}</div>
       <div className="text-[11px]">{node.memberId}</div>
+      {node.rankName && <div className="text-[10px] font-semibold text-sky-700 mt-0.5">{node.rankName}</div>}
       <div className="text-[10px] mt-1">{node.status==='vacant'?'ตำแหน่งว่าง': node.status==='active'?'Active': node.status==='pending'?'Pending':'Inactive'}</div>
     </div>
   );
@@ -51,10 +52,10 @@ export default function TreeView({ filter }: { filter?: { q?:string; status?:str
           const rest = members.slice(1,5);
           const children: Node[] = [1,2,3,4,5].map((slot,idx)=>{
             const m = rest[idx];
-            if(m) return { id:m.memberId, name:m.name, memberId:m.memberId, status: m.status==='ACTIVE'?'active': m.status==='PENDING'?'pending':'inactive', slot };
+            if(m) return { id:m.memberId, name:m.name, memberId:m.memberId, rankName: m.rankName, status: m.status==='ACTIVE'?'active': m.status==='PENDING'?'pending':'inactive', slot };
             return { id:`vacant-${slot}`, name:'ตำแหน่งว่าง', memberId:'-', status:'vacant', slot };
           });
-          setTree({ id:root.memberId, name:root.name, memberId:root.memberId, status: root.status==='ACTIVE'?'active':'pending', children });
+          setTree({ id:root.memberId, name:root.name, memberId:root.memberId, rankName: root.rankName, status: root.status==='ACTIVE'?'active':'pending', children });
         }
       }catch(e:any){
         if(!cancelled) setError(e.message||'โหลดไม่สำเร็จ');

@@ -58,7 +58,10 @@ export default function ReferralPage(){
       <div className="flex w-full">
         <Sidebar/>
         <main className="flex-1 p-6 space-y-4 w-full min-w-0">
-          <h1 className="text-xl font-bold text-navy">รหัสแนะนำของฉัน</h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-xl font-bold text-navy">รหัสแนะนำของฉัน</h1>
+            {data?.rankName && <span className="px-3 py-1 rounded-full bg-[#eff6ff] border border-[#dbeafe] text-sky-700 text-xs font-semibold">ตำแหน่งปัจจุบัน: {data.rankName}</span>}
+          </div>
           <p className="text-xs text-slate-500">การมีรหัสแนะนำไม่ทำให้ได้รับสถานะตัวแทนหรือผลตอบแทนอัตโนมัติ — ต้องผ่านการอนุมัติตามเกณฑ์</p>
 
           <div className="card p-5 space-y-4">

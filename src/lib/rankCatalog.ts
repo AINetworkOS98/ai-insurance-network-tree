@@ -17,7 +17,7 @@ export interface RankDef {
 export const RANK_CATALOG: RankDef[] = [
   { level: 0, code: 'general',          nameTh: 'ผู้สนใจทั่วไป / สมาชิกทั่วไป', nameRef: 'ระดับเริ่มต้นที่เพิ่มใหม่', isCareerTop: false, description: 'เห็นเฉพาะหน้าแรก — สมัครตัวแทน/แก้ข้อมูลพื้นฐาน/ดูสถานะคำขอ/อ่านแจ้งเตือนตนเอง' },
   { level: 1, code: 'agent',            nameTh: 'ตัวแทน',                      nameRef: 'ตัวแทน',                isCareerTop: false, description: 'เข้าระบบงานและดูเส้นทางตำแหน่งถึงผู้จัดการภาค' },
-  { level: 2, code: 'unit_manager',     nameTh: 'ผู้จัดการหน่วย',              nameRef: 'ผู้บริหารหน่วย',        isCareerTop: false, description: 'บริหารข้อมูลหน่วยที่ได้รับมอบหมาย' },
+  { level: 2, code: 'unit_manager',     nameTh: 'หัวหน้าหน่วย',              nameRef: 'ผู้บริหารหน่วย',        isCareerTop: false, description: 'บริหารข้อมูลหน่วยที่ได้รับมอบหมาย' },
   { level: 3, code: 'center_manager',   nameTh: 'ผู้จัดการศูนย์',              nameRef: 'ผู้บริหารศูนย์',        isCareerTop: false, description: 'บริหารข้อมูลศูนย์ที่ได้รับมอบหมาย' },
   { level: 4, code: 'regional_manager', nameTh: 'ผู้จัดการภาค',                nameRef: 'ผู้บริหารภาค',          isCareerTop: true,  description: 'ระดับสูงสุดของสายงาน บริหารภาคที่ได้รับมอบหมาย' },
 ];

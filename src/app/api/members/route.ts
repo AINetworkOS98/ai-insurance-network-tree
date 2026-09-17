@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebase-admin';
+import { rankName } from '@/lib/rankCatalog';
 
 interface FirestoreMember {
   id: string;
@@ -9,6 +10,8 @@ interface FirestoreMember {
   positionId?: string;
   role?: string;
   status?: string;
+  rankLevel?: number;
+  rankName?: string;
   province?: string;
   district?: string;
   subdistrict?: string;
@@ -64,6 +67,8 @@ export async function GET(req: NextRequest) {
           memberCode: u.memberCode || undefined,
           name: u.displayName || `${u.firstName||''} ${u.lastName||''}`.trim() || u.email,
           status: String(u.status||'PENDING'),
+          rankLevel: (u as any).rankLevel ?? 0,
+          rankName: rankName((u as any).rankLevel ?? 0),
           province: u.province || undefined,
           district: u.district || undefined,
           subdistrict: u.subdistrict || undefined,
