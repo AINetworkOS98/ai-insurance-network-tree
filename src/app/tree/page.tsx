@@ -32,15 +32,24 @@ export default function TreePage(){
   }
   const distOpts = selProv ? distList.filter((d:any)=>String(d.province_id)===String(selProv)) : [];
   const subOpts = selDist && subList ? subList.filter((s:any)=>String(s.district_id)===String(selDist)) : [];
-  // เงื่อนไขค้นหาผัง: ข้อความ+สถานะใช้ปุ่มค้นหา/Enter, ที่อยู่กรองทันทีที่เลือก
+  // เงื่อนไขค้นหาผัง: ข้อความ+สถานะใช้ปุ่มค้นหา/Enter, ที่อยู่+รหัสไปรษณีย์กรองทันที
   const [q,setQ]=useState('');
   const [statusQ,setStatusQ]=useState('');
   const [fq,setFq]=useState('');
   const [fStatus,setFStatus]=useState('');
+  const [zipQ,setZipQ]=useState('');
   function applySearch(){ setFq(q.trim()); setFStatus(statusQ); }
   const fProv = provList.find((p:any)=>String(p.id)===selProv)?.name_th || '';
   const fDist = distList.find((d:any)=>String(d.id)===selDist)?.name_th || '';
   const fSub = (subList||[]).find((s:any)=>String(s.id)===selTambon)?.name_th || '';
+  const fZip = zipQ.trim();
+  // รหัสไปรษณีย์ auto-fill เมื่อเลือกตำบล (ระบบค้นหาอัตโนมัติ)
+  useEffect(()=>{
+    if(selTambon && subList){
+      const s = subList.find((x:any)=>String(x.id)===selTambon);
+      if(s?.zip_code) setZipQ(String(s.zip_code));
+    }
+  },[selTambon, subList]);
 
   async function loadPreview(){
     setLoading('preview');
@@ -185,13 +194,14 @@ export default function TreePage(){
                     <option value="">ทุกสาขา/จังหวัด</option>
                     {provList.map((p:any)=>(<option key={p.id} value={p.id}>{p.name_th}</option>))}
                   </select>
+                  <input placeholder="รหัสไปรษณีย์" value={zipQ} onChange={e=>setZipQ(e.target.value)} inputMode="numeric" className="border rounded-xl px-3 py-2 w-[130px]" />
                   <button onClick={applySearch} className="px-4 py-2 rounded-xl bg-[#eff6ff] border border-[#dbeafe] text-sky-700 text-xs font-semibold hover:bg-[#e0f0ff]">ค้นหา</button>
                   <button className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 text-xs hover:bg-slate-50">ซูม +</button>
                   <button className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 text-xs hover:bg-slate-50">ย้อนขึ้นชั้นบน</button>
                 </div>
                 <div className="text-[11px] text-slate-500 mt-2">ค้นหา • กรองสาขา • ซูม/ย่อ/ขยาย • ย้อนขึ้นชั้นบน • โหลดทีละสาขา</div>
               </div>
-              <TreeView filter={{q:fq,status:fStatus,province:fProv,district:fDist,tambon:fSub}} />
+              <TreeView filter={{q:fq,status:fStatus,province:fProv,district:fDist,tambon:fSub,zipCode:fZip}} />
 
               {preview && (
                 <div className="card p-4">

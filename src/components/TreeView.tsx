@@ -13,7 +13,7 @@ function NodeCard({node}:{node:Node}){
   );
 }
 
-export default function TreeView({ filter }: { filter?: { q?:string; status?:string; province?:string; district?:string; tambon?:string } }){
+export default function TreeView({ filter }: { filter?: { q?:string; status?:string; province?:string; district?:string; tambon?:string; zipCode?:string } }){
   const [zoom,setZoom]=useState(100);
   const [tree, setTree]=useState<Node|null>(null);
   const [loading,setLoading]=useState(true);
@@ -27,6 +27,7 @@ export default function TreeView({ filter }: { filter?: { q?:string; status?:str
     if(f.province){ list=list.filter((m:any)=>String(m.province||m.branch||'')===f.province); }
     if(f.district){ list=list.filter((m:any)=>String(m.district||'')===f.district); }
     if(f.tambon){ list=list.filter((m:any)=>String(m.subdistrict||m.tambon||'')===f.tambon); }
+    if(f.zipCode){ list=list.filter((m:any)=>String(m.zipCode||'').includes(f.zipCode)); }
     return list;
   }
 
@@ -86,7 +87,7 @@ export default function TreeView({ filter }: { filter?: { q?:string; status?:str
 
   return (
     <div>
-      <div className="text-xs text-slate-500 mb-2">พบสมาชิก {count} คน{filter && (filter.q||filter.status||filter.province||filter.district||filter.tambon) ? ' (ตามเงื่อนไขค้นหา)' : ''}</div>
+      <div className="text-xs text-slate-500 mb-2">พบสมาชิก {count} คน{filter && (filter.q||filter.status||filter.province||filter.district||filter.tambon||filter.zipCode) ? ' (ตามเงื่อนไขค้นหา)' : ''}</div>
       <div className="flex gap-2 mb-3">
         <button onClick={()=>setZoom(z=>Math.max(60,z-10))} className="px-3 py-1.5 rounded-lg border bg-white text-sm">−</button>
         <span className="px-3 py-1.5 text-sm">{zoom}%</span>
