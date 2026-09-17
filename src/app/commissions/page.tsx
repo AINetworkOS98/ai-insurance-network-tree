@@ -26,7 +26,7 @@ export default function CommissionsPage(){
   const opts = (data?.products || []).map((p:any)=> `${p.c} — ${p.n}`);
   const tierMsg = data?.tier==='names_only' ? 'ระดับผู้สนใจ: เห็นชื่อผลิตภัณฑ์อย่างเดียว'
     : data?.tier==='first_year' ? 'ระดับตัวแทน: เห็นค่าคอมปีแรก'
-    : data?.tier==='full' ? 'ระดับศูนย์ขึ้นไป: เห็นข้อมูลทั้งหมด' : '';
+    : data?.tier==='full' ? 'หัวหน้าหน่วยขึ้นไป: เห็นข้อมูลทั้งหมด' : '';
 
   async function runCheck(){
     setCheckRes(null); setMsg('');

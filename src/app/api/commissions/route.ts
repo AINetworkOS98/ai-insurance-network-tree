@@ -27,14 +27,14 @@ function rateForYear(v: any, policyYear: number){
   return v.y4;
 }
 
-// ระดับการเห็นข้อมูล: 0 = ชื่ออย่างเดียว, 1-2 = +คอมปีแรก, 3+ = ทั้งหมด
+// ระดับการเห็นข้อมูล: 0 = ชื่ออย่างเดียว, 1 = +คอมปีแรก, 2+ = ทั้งหมด (หัวหน้าหน่วย/ศูนย์/ภาค)
 function gateProduct(p: any, rank: number){
   const base: any = { c: p.c, n: p.n, cat: p.cat };
   if((p.aka || []).length) base.aka = p.aka;
   if(rank <= 0) return base;
   const y1 = (p.v || []).map((v: any)=> ({ ...(v.a ? { a: v.a } : {}), ...(v.cap ? { cap: v.cap } : {}), ...(v.pay ? { pay: v.pay } : {}), ...(v.pl ? { pl: v.pl } : {}), y1: v.y1 ?? null, ...(v.note ? { note: v.note } : {}) }));
   base.v = y1;
-  if(rank <= 2) return base;
+  if(rank <= 1) return base;
   base.v = p.v;
   return base;
 }
@@ -55,7 +55,10 @@ export async function GET(req: NextRequest){
   try{
     const payload = authed(req);
     if(!payload) return NextResponse.json({ ok:false, error:'กรุณาเข้าสู่ระบบ' }, { status:401 });
-    const rank = payload.rankLevel ?? 0;
+    // ดึง rank ปัจจุบันจาก DB (token อาจ stale หลัง admin ปรับระดับ)
+    const userId = (payload as any).sub;
+    const me = userId ? await prisma.user.findUnique({ where:{ id: userId }, select:{ rankLevel:true } }).catch(()=>null) : null;
+    const rank = me?.rankLevel ?? (payload.rankLevel ?? 0);
     const { searchParams } = new URL(req.url);
     if(searchParams.get('versions') === '1'){
       const vers: any[] = await (prisma as any).commissionTable.findMany({ select:{ version:true, effectiveFrom:true, effectiveTo:true, sourceRef:true, isActive:true }, orderBy:{ effectiveFrom:'desc' } }).catch(()=>[]);
@@ -79,7 +82,7 @@ export async function GET(req: NextRequest){
     const categories = [...new Set(((data.products || []) as any[]).map(p=> p.cat))];
     return NextResponse.json({
       ok:true, version: t.version, effectiveFrom: t.effectiveFrom, effectiveTo: t.effectiveTo,
-      rank, tier: rank <= 0 ? 'names_only' : rank <= 2 ? 'first_year' : 'full',
+      rank, tier: rank <= 0 ? 'names_only' : rank <= 1 ? 'first_year' : 'full',
       categories, count: products.length, products: products.map(p=> gateProduct(p, rank)),
     });
   }catch(e:any){ return NextResponse.json({ ok:false, error:e?.message || 'error' }, { status:500 }); }
