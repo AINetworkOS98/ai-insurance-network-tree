@@ -55,7 +55,7 @@ export default function ReceiptSettingsPage(){
       <Header/>
       <div className="flex w-full">
         <Sidebar/>
-        <main className="flex-1 p-6 space-y-4 max-w-[640px]">
+        <main className="flex-1 p-6 space-y-4 w-full min-w-0">
           <h1 className="text-xl font-bold text-navy">ตั้งค่าใบเสร็จ</h1>
           <p className="text-xs text-slate-500">กำหนดค่าใบเสร็จลงระบบ — มีผลกับการส่งตรวจ/รับรองยอดทันที {canEdit ? '' : '• ดูได้อย่างเดียว (เปลี่ยนได้เฉพาะผู้บริหารระบบ)'}</p>
           {msg && <div className="p-2 rounded-xl bg-amber-50 border text-xs">{msg}</div>}
