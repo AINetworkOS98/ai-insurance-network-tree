@@ -15,6 +15,12 @@ export async function GET(req: NextRequest){
       where:{ id: String((payload as any).sub) },
       select:{ id:true, email:true, firstName:true, lastName:true, displayName:true, phone:true, province:true, district:true, subdistrict:true, addressLine:true, zipCode:true, lineId:true, facebookUrl:true, tiktokUrl:true, branch:true, memberCode:true, referralCode:true, status:true, rankLevel:true },
     });
+    // รหัสสมาชิก/รหัสแนะนำรันอัตโนมัติ — ถ้ายังว่าง (บัญชี OAuth เก่า) เติมให้ทันที
+    if(profile && (!profile.memberCode || !profile.referralCode)){
+      const { ensureMemberCodes } = await import('@/lib/referral');
+      const filled = await ensureMemberCodes(prisma, profile.id);
+      if(filled) profile = { ...profile, ...filled };
+    }
   }catch{}
   return NextResponse.json({ ok:true, authed:true, user: { ...payload, ...(profile || {}) } });
 }

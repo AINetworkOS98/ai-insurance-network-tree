@@ -19,6 +19,50 @@ export function referralLink(baseUrl: string, code: string): string {
   return `${base}/register?ref=${encodeURIComponent(code)}`;
 }
 
+// เติมรหัสสมาชิก/รหัสแนะนำอัตโนมัติถ้ายังว่าง (เช่นบัญชี OAuth เก่าที่สมัครก่อนมีระบบรหัส)
+// เรียกตอนโหลดโปรไฟล์ (/api/auth/me) เพื่อให้รหัส "รันอัตโนมัติ" ทุกครั้งที่เข้าใช้
+export async function ensureMemberCodes(prisma: any, userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { memberCode: true, referralCode: true },
+  });
+  if (!user) return null;
+
+  const data: any = {};
+  if (!user.memberCode) data.memberCode = generateMemberCode();
+  if (!user.referralCode) data.referralCode = generateReferralCode();
+
+  if (Object.keys(data).length) {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        await prisma.user.update({ where: { id: userId }, data });
+        break;
+      } catch (e: any) {
+        if (String(e.code) === 'P2002' && attempt < 4) {
+          if (data.memberCode) data.memberCode = generateMemberCode();
+          if (data.referralCode) data.referralCode = generateReferralCode();
+          continue;
+        }
+        throw e;
+      }
+    }
+  }
+
+  const updated = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { memberCode: true, referralCode: true },
+  });
+
+  // เก็บรหัสแนะนำลงตาราง ReferralCode (ใช้ตอนสมัครด้วย ref=)
+  if (updated?.referralCode) {
+    const existing = await prisma.referralCode.findUnique({ where: { userId } }).catch(() => null);
+    if (!existing) {
+      await prisma.referralCode.create({ data: { userId, code: updated.referralCode } }).catch(() => null);
+    }
+  }
+  return updated;
+}
+
 // ตรวจวงวน: เดิน sponsor chain ขึ้นไปว่า child จะกลายเป็นบรรพบุรุษของตนเองหรือไม่
 export async function wouldCreateLoop(
   prisma: any,
