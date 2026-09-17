@@ -9,10 +9,11 @@ const cols=[
   {key:'CONVERTED', label:'Converted', color:'bg-emerald-100'},
 ];
 type Prospect = { id:string; name:string; phone:string; status:string; score:number };
-export default function Kanban(){
+export default function Kanban({ prospects }: { prospects?: any[] }){
   const [demo, setDemo]=useState<Prospect[]>([]);
   const [loading, setLoading]=useState(true);
   useEffect(()=>{
+    if(prospects){ setDemo(prospects); setLoading(false); return; }
     let cancelled=false;
     (async()=>{
       try{
@@ -23,7 +24,7 @@ export default function Kanban(){
       finally{ if(!cancelled) setLoading(false); }
     })();
     return ()=>{ cancelled=true; };
-  },[]);
+  },[prospects]);
   if(loading) return <div className="text-xs text-slate-500 py-4">กำลังโหลดผู้สนใจ...</div>;
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
