@@ -36,7 +36,27 @@ export async function GET(req: NextRequest){
         }
       }
     }catch(e:any){ autoClose = { ok:false, error: e?.message }; }
-    return NextResponse.json({ ok:true, cron:'hermes-sync', at: now, counts, autoClose, note:'AI heartbeat — memory & period checks light' });
+
+    // รักษายอด/ดีดออกอัตโนมัติ — หลังปิดยอดแล้ว ประเมินแผน Active ทุกแผน (idempotent)
+    let autoMaintenance: any = null;
+    try{
+      const { previousPeriod } = await import('@/lib/periodEngine');
+      const target = previousPeriod();
+      const plans: any[] = await (prisma as any).maintenancePlan.findMany({ where:{ status:'Active' }, select:{ id:true } }).catch(()=>[]);
+      if(plans.length){
+        const { runMaintenanceForPeriod } = await import('@/lib/maintenanceEngine');
+        const results: any[] = [];
+        for(const plan of plans){
+          const r: any = await runMaintenanceForPeriod(plan.id, target, 'cron').catch((e:any)=> ({ ok:false, error: e?.message }));
+          results.push({ planId: plan.id, ...r });
+        }
+        autoMaintenance = { ok:true, period: target, plans: results };
+      } else {
+        autoMaintenance = { ok:true, skipped:true, reason:'ไม่มีแผนรักษายอด Active' };
+      }
+    }catch(e:any){ autoMaintenance = { ok:false, error: e?.message }; }
+
+    return NextResponse.json({ ok:true, cron:'hermes-sync', at: now, counts, autoClose, autoMaintenance, note:'AI heartbeat — memory & period checks light' });
   } catch (e:any){
     return NextResponse.json({ ok:true, cron:'hermes-sync', at: now, error:e?.message });
   }
