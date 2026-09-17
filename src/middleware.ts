@@ -91,10 +91,8 @@ export async function middleware(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'บัญชีถูกระงับสิทธิ กรุณาติดต่อผู้ดูแลระบบ' }, { status: 403 });
     }
     const rankLevel = typeof payload.rankLevel === 'number' ? payload.rankLevel : 0;
-    const blockedForGeneralPrefixes = ['/api/admin', '/api/tree', '/api/income', '/api/members/approve', '/api/documents'];
-    if (rankLevel === 0 && blockedForGeneralPrefixes.some(p => pathname.startsWith(p))) {
-      return NextResponse.json({ ok: false, error: 'สมาชิกทั่วไปเข้าถึงได้เฉพาะหน้าแรก — กรุณาสมัครเป็นตัวแทนเพื่อใช้งานระบบหลังบ้าน' }, { status: 403 });
-    }
+    // หมายเหตุ: ไม่บล็อกตาม rankLevel ที่นี่ — ค่าใน token อาจ stale หลัง admin ปรับระดับ
+    // การเช็กสิทธิ์ระดับตำแหน่งทำที่ API แต่ละตัว (อ่าน rank ปัจจุบันจาก DB) เช่น /api/income/summary, /api/career/board
     const res = NextResponse.next();
     res.headers.set('x-user-id', String(payload.sub || ''));
     res.headers.set('x-user-rank', String(rankLevel));
