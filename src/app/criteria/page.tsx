@@ -45,7 +45,7 @@ export default function CriteriaPage(){
       <Header/>
       <div className="flex w-full">
         <Sidebar/>
-        <main className="flex-1 p-6 space-y-4 max-w-[860px]">
+        <main className="flex-1 p-6 space-y-4 w-full min-w-0">
           <div>
             <div className="text-xs text-slate-500">ฝ่าย 19 • ไทยประกันชีวิต</div>
             <h1 className="text-xl font-bold text-navy">เกณฑ์วัดรอบผลงานบริษัท</h1>
