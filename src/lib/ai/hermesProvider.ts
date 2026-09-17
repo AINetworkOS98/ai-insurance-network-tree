@@ -911,9 +911,9 @@ function resolveConfig() {
   if (!provider && modelEnv.includes('muse-spark') && !getEnv('GEMINI_API_KEY')) provider = 'opencode-free';
   if (!provider) provider = getEnv('GEMINI_API_KEY') ? 'gemini' : 'opencode-free';
   let model = modelEnv;
-  if (!model) model = provider === 'gemini' ? 'gemini-2.0-flash' : provider === 'deepseek' ? 'deepseek-chat' : 'muse-spark-1.2-contributor-free';
+  if (!model) model = provider === 'gemini' ? 'gemini-3.6-flash' : provider === 'deepseek' ? 'deepseek-chat' : 'muse-spark-1.2-contributor-free';
   // ถ้า provider เป็น gemini แต่ model ยังเป็น muse-spark ให้แก้เป็น gemini
-  if (provider === 'gemini' && /muse-spark/i.test(model)) model = 'gemini-2.0-flash';
+  if (provider === 'gemini' && /muse-spark/i.test(model)) model = 'gemini-3.6-flash';
   return { apiKey, baseUrl, provider, model };
 }
 
@@ -947,7 +947,7 @@ export class HermesProvider implements AIProvider {
 
   isConfigured(): boolean {
     if (this.provider === 'opencode-free') return true;
-    if (this.provider === 'gemini') return !!this.apiKey && this.apiKey.startsWith('AIza');
+    if (this.provider === 'gemini') return !!this.apiKey; // รองรับทั้ง AIza (ฟรี) และ AQ (OAuth)
     return !!this.apiKey;
   }
 
