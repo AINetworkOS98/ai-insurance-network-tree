@@ -99,10 +99,9 @@ export default function SettingsPage(){
               <input value={form.tiktokUrl} onChange={e=> setForm({...form, tiktokUrl:e.target.value})} placeholder="TikTok (ลิงก์/ID)" className="w-full px-3 py-2 rounded-xl border text-sm" />
             </div>
             <div className="grid md:grid-cols-3 gap-2">
-              <input value={form.addressLine} onChange={e=> setForm({...form, addressLine:e.target.value})} placeholder="บ้านเลขที่/ถนน" className="w-full px-3 py-2 rounded-xl border text-sm md:col-span-2" />
-              <input value={form.zipCode} onChange={e=> setForm({...form, zipCode:e.target.value})} placeholder="รหัสไปรษณีย์" className="w-full px-3 py-2 rounded-xl border text-sm" />
+              <input value={form.addressLine} onChange={e=> setForm({...form, addressLine:e.target.value})} placeholder="บ้านเลขที่/ถนน" className="w-full px-3 py-2 rounded-xl border text-sm md:col-span-3" />
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               <select value={selTambon} disabled={!selDist} onChange={e=>setSelTambon(e.target.value)} className="border rounded-xl px-3 py-2 text-sm disabled:opacity-50">
                 <option value="">{selDist?'ตำบล':'ตำบล'}</option>
                 {subOpts.map((s:any)=>(<option key={s.id} value={s.id}>{s.name_th}</option>))}
@@ -115,8 +114,9 @@ export default function SettingsPage(){
                 <option value="">จังหวัด</option>
                 {provList.map((p:any)=>(<option key={p.id} value={p.id}>{p.name_th}</option>))}
               </select>
+              <input value={form.zipCode} onChange={e=> setForm({...form, zipCode:e.target.value})} placeholder="รหัสไปรษณีย์" inputMode="numeric" className="w-full px-3 py-2 rounded-xl border text-sm" />
             </div>
-            <div className="text-[11px] text-slate-500">ตำบล→อำเภอ→จังหวัด — ชุดข้อมูลเดียวกับหน้า ผังทีม 1:5</div>
+            <div className="text-[11px] text-slate-500">ตำบล→อำเภอ→จังหวัด→รหัสไปรษณีย์ — ชุดข้อมูลเดียวกับหน้า ผังทีม 1:5</div>
             <div className="grid md:grid-cols-2 gap-3 pt-2 border-t">
               <div>
                 <label className="text-xs text-slate-600">รหัสผู้แนะนำ</label>
