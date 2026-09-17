@@ -911,7 +911,7 @@ function resolveConfig() {
   if (!provider && modelEnv.includes('muse-spark') && !getEnv('GEMINI_API_KEY')) provider = 'opencode-free';
   if (!provider) provider = getEnv('GEMINI_API_KEY') ? 'gemini' : 'opencode-free';
   let model = modelEnv;
-  if (!model) model = provider === 'gemini' ? 'gemini-2.0-flash' : 'muse-spark-1.2-contributor-free';
+  if (!model) model = provider === 'gemini' ? 'gemini-2.0-flash' : provider === 'deepseek' ? 'deepseek-chat' : 'muse-spark-1.2-contributor-free';
   // ถ้า provider เป็น gemini แต่ model ยังเป็น muse-spark ให้แก้เป็น gemini
   if (provider === 'gemini' && /muse-spark/i.test(model)) model = 'gemini-2.0-flash';
   return { apiKey, baseUrl, provider, model };
