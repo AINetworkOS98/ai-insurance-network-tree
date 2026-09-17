@@ -32,7 +32,7 @@ export default function ReferralPage(){
       <div>
         <Header/>
         <Sidebar/>
-        <div className="max-w-3xl mx-auto p-6 text-sm">Loading...</div>
+        <div className="p-6 text-sm">Loading...</div>
       </div>
     );
   }
@@ -41,7 +41,7 @@ export default function ReferralPage(){
       <div>
         <Header/>
         <Sidebar/>
-        <div className="max-w-3xl mx-auto p-6">
+        <div className="p-6">
           <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">
             {err} — Please login
           </div>
@@ -57,7 +57,7 @@ export default function ReferralPage(){
       <Header/>
       <div className="flex w-full">
         <Sidebar/>
-        <main className="flex-1 p-6 space-y-4 max-w-3xl">
+        <main className="flex-1 p-6 space-y-4 w-full min-w-0">
           <h1 className="text-xl font-bold text-navy">รหัสแนะนำของฉัน</h1>
           <p className="text-xs text-slate-500">การมีรหัสแนะนำไม่ทำให้ได้รับสถานะตัวแทนหรือผลตอบแทนอัตโนมัติ — ต้องผ่านการอนุมัติตามเกณฑ์</p>
 

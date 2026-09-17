@@ -44,7 +44,7 @@ export default function CommissionsPage(){
       <Header/>
       <div className="flex w-full">
         <Sidebar/>
-        <main className="flex-1 p-6 space-y-4 max-w-[900px]">
+        <main className="flex-1 p-6 space-y-4 w-full min-w-0">
           <div>
             <h1 className="text-xl font-bold text-navy">ตารางค่าคอมมิชชั่น</h1>
             <p className="text-xs text-slate-500 mt-1">

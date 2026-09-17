@@ -83,7 +83,7 @@ export default function SettingsPage(){
       <Header/>
       <div className="flex w-full">
         <Sidebar/>
-        <main className="flex-1 p-6 space-y-4 max-w-[640px]">
+        <main className="flex-1 p-6 space-y-4 w-full min-w-0">
           <h1 className="text-xl font-bold text-navy">ตั้งค่าบัญชีและระบบ</h1>
           <p className="text-xs text-slate-500">ข้อมูลมาตรฐาน — ระบบออกรหัสสมาชิก/รหัสแนะนำอัตโนมัติเมื่อสมัคร</p>
           <div className="card p-5 space-y-3">

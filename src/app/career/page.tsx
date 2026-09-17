@@ -48,7 +48,7 @@ export default function CareerPage(){
   if(me && rank < 1){
     return (
       <div><Header/><div className="flex w-full"><Sidebar/>
-        <main className="flex-1 p-6 max-w-[640px]">
+        <main className="flex-1 p-6 max-w-none w-full min-w-0">
           <h1 className="text-xl font-bold text-navy">ขึ้นตำแหน่ง</h1>
           <div className="card p-5 mt-4 text-sm">เมนูนี้สำหรับระดับตัวแทนขึ้นไป — สมัครเป็นตัวแทนก่อนเพื่อดูเส้นทางความก้าวหน้า</div>
         </main>
@@ -61,7 +61,7 @@ export default function CareerPage(){
       <Header/>
       <div className="flex w-full">
         <Sidebar/>
-        <main className="flex-1 p-6 space-y-4 max-w-[860px]">
+        <main className="flex-1 p-6 space-y-4 w-full min-w-0">
           <div>
             <h1 className="text-xl font-bold text-navy">ขึ้นตำแหน่ง</h1>
             <p className="text-xs text-slate-500 mt-1">เกณฑ์โครงสร้างรายได้ ไทยประกันชีวิต (15 Jan 64) — เลื่อนตามผัง 1 แตก 5 • ปัจจุบัน: <span className="font-bold">{progress?.currentRankNameTh || '-'}</span></p>

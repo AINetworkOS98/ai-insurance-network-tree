@@ -24,7 +24,7 @@ export default function PromotionsBoardPage(){
       <Header/>
       <div className="flex w-full">
         <Sidebar/>
-        <main className="flex-1 p-6 space-y-4 max-w-[860px]">
+        <main className="flex-1 p-6 space-y-4 w-full min-w-0">
           <div>
             <h1 className="text-xl font-bold text-navy">ผู้ขึ้นตำแหน่งและรายได้</h1>
             <p className="text-xs text-slate-500 mt-1">เฉพาะระดับตัวแทนขึ้นไป • เลื่อนแล้วรายได้ตามโครงสร้างตำแหน่ง</p>
