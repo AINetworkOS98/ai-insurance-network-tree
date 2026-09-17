@@ -118,8 +118,8 @@ export default function TreePage(){
             <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[11px] font-bold">โครงสร้างล็อก 1:5</span>
             <span className="text-xs text-slate-500">Breadth-first • ซ้ายไปขวา • ไม่เกิน 5 ช่อง/ชั้น</span>
             <div className="ml-auto flex gap-2">
-              <button onClick={()=> setActiveTab('real')} className={`px-4 py-1.5 rounded-full text-xs font-semibold border ${activeTab==='real' ? 'bg-[#475569] text-white' : 'bg-white'}`}>ดูผัง 1:5</button>
-              <button onClick={()=> setActiveTab('simulate')} className={`px-4 py-1.5 rounded-full text-xs font-semibold border ${activeTab==='simulate' ? 'bg-[#475569] text-white' : 'bg-white'}`}>ทดลองรัน</button>
+              <button onClick={()=> setActiveTab('real')} className={`px-4 py-1.5 rounded-full text-xs font-semibold border ${activeTab==='real' ? 'bg-[#eff6ff] border-[#dbeafe] text-sky-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>ดูผัง 1:5</button>
+              <button onClick={()=> setActiveTab('simulate')} className={`px-4 py-1.5 rounded-full text-xs font-semibold border ${activeTab==='simulate' ? 'bg-[#eff6ff] border-[#dbeafe] text-sky-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>ทดลองรัน</button>
             </div>
           </div>
 
@@ -127,12 +127,12 @@ export default function TreePage(){
           <div className="card p-4">
             <div className="text-[11px] text-slate-500 mb-2">ปุ่มควบคุม — ทุกปุ่มทำงานจริง (ไม่โชว์สำเร็จปลอม)</div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              <button onClick={()=> setActiveTab('real')} className="px-4 py-3 rounded-xl bg-[#475569] text-white text-xs font-semibold">ดูผัง 1:5</button>
-              <button onClick={()=> setActiveTab('simulate')} className="px-4 py-3 rounded-xl border bg-white text-xs font-semibold hover:bg-slate-50">ทดลองรัน</button>
-              <button onClick={runPlacement} disabled={loading==='run'} className="px-4 py-3 rounded-xl bg-emerald-600 text-white text-xs font-semibold disabled:opacity-50">รันจัดวางอัตโนมัติ</button>
-              <button onClick={checkStructure} disabled={loading==='struct'} className="px-4 py-3 rounded-xl border bg-amber-50 text-xs font-semibold disabled:opacity-50">ตรวจโครงสร้าง</button>
-              <button onClick={checkRank} disabled={loading==='rank'} className="px-4 py-3 rounded-xl border bg-white text-xs font-semibold disabled:opacity-50">ตรวจคุณสมบัติตำแหน่ง</button>
-              <button onClick={closePeriod} disabled={loading==='close'} className="px-4 py-3 rounded-xl bg-[#c8a84e] text-[#475569] text-xs font-bold disabled:opacity-50">ปิดยอดรายเดือน</button>
+              <button onClick={()=> setActiveTab('real')} className="px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50">ดูผัง 1:5</button>
+              <button onClick={()=> setActiveTab('simulate')} className="px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50">ทดลองรัน</button>
+              <button onClick={runPlacement} disabled={loading==='run'} className="px-4 py-3 rounded-xl bg-[#eff6ff] border border-[#dbeafe] text-sky-700 text-xs font-semibold disabled:opacity-50 hover:bg-[#e0f0ff]">รันจัดวางอัตโนมัติ</button>
+              <button onClick={checkStructure} disabled={loading==='struct'} className="px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-600 text-xs font-semibold disabled:opacity-50 hover:bg-slate-50">ตรวจโครงสร้าง</button>
+              <button onClick={checkRank} disabled={loading==='rank'} className="px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-600 text-xs font-semibold disabled:opacity-50 hover:bg-slate-50">ตรวจคุณสมบัติตำแหน่ง</button>
+              <button onClick={closePeriod} disabled={loading==='close'} className="px-4 py-3 rounded-xl bg-white border border-amber-200 text-amber-700 text-xs font-semibold disabled:opacity-50 hover:bg-amber-50">ปิดยอดรายเดือน</button>
             </div>
             {msg && <div className="mt-3 text-xs p-2.5 rounded-xl bg-slate-50 border">{msg}</div>}
             <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-500">
@@ -185,9 +185,9 @@ export default function TreePage(){
                     <option value="">ทุกสาขา/จังหวัด</option>
                     {provList.map((p:any)=>(<option key={p.id} value={p.id}>{p.name_th}</option>))}
                   </select>
-                  <button onClick={applySearch} className="px-4 py-2 rounded-xl bg-[#475569] text-white">ค้นหา</button>
-                  <button className="px-3 py-2 rounded-xl border text-xs">ซูม +</button>
-                  <button className="px-3 py-2 rounded-xl border text-xs">ย้อนขึ้นชั้นบน</button>
+                  <button onClick={applySearch} className="px-4 py-2 rounded-xl bg-[#eff6ff] border border-[#dbeafe] text-sky-700 text-xs font-semibold hover:bg-[#e0f0ff]">ค้นหา</button>
+                  <button className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 text-xs hover:bg-slate-50">ซูม +</button>
+                  <button className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 text-xs hover:bg-slate-50">ย้อนขึ้นชั้นบน</button>
                 </div>
                 <div className="text-[11px] text-slate-500 mt-2">ค้นหา • กรองสาขา • ซูม/ย่อ/ขยาย • ย้อนขึ้นชั้นบน • โหลดทีละสาขา</div>
               </div>
