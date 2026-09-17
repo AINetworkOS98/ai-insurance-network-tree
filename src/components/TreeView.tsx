@@ -27,7 +27,7 @@ export default function TreeView({ filter }: { filter?: { q?:string; status?:str
     if(f.province){ list=list.filter((m:any)=>String(m.province||m.branch||'')===f.province); }
     if(f.district){ list=list.filter((m:any)=>String(m.district||'')===f.district); }
     if(f.tambon){ list=list.filter((m:any)=>String(m.subdistrict||m.tambon||'')===f.tambon); }
-    if(f.zipCode){ list=list.filter((m:any)=>String(m.zipCode||'').includes(f.zipCode)); }
+    if(f.zipCode){ const z=String(f.zipCode); list=list.filter((m:any)=>String(m.zipCode||'').includes(z)); }
     return list;
   }
 
