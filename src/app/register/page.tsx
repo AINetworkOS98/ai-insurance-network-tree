@@ -115,7 +115,7 @@ function RegisterInner(){
   return (
     <div>
       <Header/>
-      <div className="max-w-[640px] mx-auto p-6">
+      <div className="w-full p-6">
         <div className="card p-6">
           <h1 className="text-xl font-bold text-navy">สมัครแสดงความสนใจ</h1>
           <p className="text-xs text-slate-500 mt-1">ทุกคนเริ่มที่ผู้สนใจทั่วไป — ระบบออกรหัสสมาชิก/รหัสแนะนำอัตโนมัติ</p>
