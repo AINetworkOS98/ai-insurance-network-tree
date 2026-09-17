@@ -28,6 +28,52 @@ function sumPerformance(rows: Array<{ type: string; amount: unknown }>) {
   };
 }
 
+// GET /api/income/summary — รายงานสรุปยอด (verified / pending / rejected + ธุรกรรม)
+// เห็นได้ระดับตัวแทนขึ้นไป (หัวหน้าหน่วย ศูนย์ ภาค)
+export async function GET(req: NextRequest) {
+  try {
+    const token = req.cookies.get('token')?.value || req.headers.get('authorization')?.replace(/^Bearer\s+/i, '') || '';
+    const payload: any = token ? verifyToken(token) : null;
+    if (!payload?.sub) return NextResponse.json({ ok:false, error:'กรุณาเข้าสู่ระบบ' }, { status:401 });
+    const userId = String(payload.sub);
+    // ดึง rank ปัจจุบันจาก DB (token อาจ stale)
+    const me = await prisma.user.findUnique({ where:{ id:userId }, select:{ rankLevel:true } }).catch(()=>null);
+    const rank = me?.rankLevel ?? (payload.rankLevel ?? 0);
+    if (rank < 1) return NextResponse.json({ ok:false, error:'รายงานนี้สำหรับระดับตัวแทนขึ้นไป' }, { status:403 });
+
+    // ยอดรับรองแล้ว + ธุรกรรมย้อนหลัง จาก performanceLedger
+    const ledgers: any[] = await prisma.performanceLedger.findMany({
+      orderBy:{ createdAt:'desc' }, take:200,
+      select:{ type:true, amount:true, status:true, period:true, createdAt:true },
+    }).catch(()=>[]);
+    const verified = ledgers.filter(l => String(l.status)==='active').reduce((s,l)=> s + Number(l.amount||0), 0);
+
+    // รอตรวจ / ไม่ผ่าน จากใบเสร็จ (ดึงยอดจาก extraction ล่าสุด)
+    const pendingRows: any[] = await prisma.receiptFile.findMany({
+      where:{ status:{ in:['Uploaded','Extracted','PendingVerification'] } },
+      include:{ extractions:{ orderBy:{ createdAt:'desc' }, take:1 } },
+    }).catch(()=>[]);
+    const rejectedRows: any[] = await prisma.receiptFile.findMany({
+      where:{ status:{ in:['Rejected','Duplicate','Reversed'] } },
+      include:{ extractions:{ orderBy:{ createdAt:'desc' }, take:1 } },
+    }).catch(()=>[]);
+    const pending = pendingRows.reduce((s,r)=> s + Number(r.extractions?.[0]?.amount||0), 0);
+    const rejected = rejectedRows.reduce((s,r)=> s + Number(r.extractions?.[0]?.amount||0), 0);
+
+    return NextResponse.json({
+      ok:true,
+      rank,
+      verified,
+      pending,
+      rejected,
+      transactions: ledgers,
+    });
+  } catch (e:any) {
+    console.error('income summary GET error:', e);
+    return NextResponse.json({ ok:false, error:e?.message || 'โหลดรายงานไม่สำเร็จ' }, { status:500 });
+  }
+}
+
 // POST /api/income/summary
 // ใช้สมาชิกและผลงานที่บันทึกจริงจากฐานข้อมูลเท่านั้น — ไม่รับยอดจาก browser
 export async function POST(req: NextRequest) {
