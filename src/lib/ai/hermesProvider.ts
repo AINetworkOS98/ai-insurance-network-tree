@@ -901,8 +901,6 @@ function getEnv(key: string): string | undefined {
 }
 
 function resolveConfig() {
-  const apiKey = getEnv('HERMES_API_KEY') || getEnv('AI_API_KEY') || getEnv('DEEPSEEK_API_KEY') || getEnv('OPENAI_API_KEY') || getEnv('GEMINI_API_KEY') || '';
-  const baseUrl = getEnv('HERMES_BASE_URL') || getEnv('AI_BASE_URL') || getEnv('DEEPSEEK_BASE_URL') || (getEnv('GEMINI_API_KEY') ? 'https://generativelanguage.googleapis.com/v1beta/openai' : undefined);
   const rawProvider = (getEnv('AI_PROVIDER') || getEnv('HERMES_PROVIDER') || (getEnv('DEEPSEEK_API_KEY') ? 'deepseek' : getEnv('GEMINI_API_KEY') ? 'gemini' : '')).toLowerCase();
   const modelEnv = getEnv('HERMES_MODEL') || getEnv('AI_MODEL') || getEnv('DEEPSEEK_MODEL') || '';
   let provider = rawProvider;
@@ -910,6 +908,14 @@ function resolveConfig() {
   if (provider === 'opencode-free' && getEnv('GEMINI_API_KEY')) provider = 'gemini';
   if (!provider && modelEnv.includes('muse-spark') && !getEnv('GEMINI_API_KEY')) provider = 'opencode-free';
   if (!provider) provider = getEnv('GEMINI_API_KEY') ? 'gemini' : 'opencode-free';
+
+  // เลือก API key ตาม provider ที่เลือก (ไม่ใช่ตามลำดับ env ทั่วไป — กันใช้ key ผิด provider)
+  let apiKey = '';
+  if (provider === 'gemini') apiKey = getEnv('GEMINI_API_KEY') || getEnv('HERMES_API_KEY') || getEnv('AI_API_KEY') || '';
+  else if (provider === 'deepseek') apiKey = getEnv('DEEPSEEK_API_KEY') || getEnv('HERMES_API_KEY') || getEnv('AI_API_KEY') || '';
+  else apiKey = getEnv('HERMES_API_KEY') || getEnv('AI_API_KEY') || getEnv('OPENAI_API_KEY') || getEnv('DEEPSEEK_API_KEY') || getEnv('GEMINI_API_KEY') || '';
+
+  const baseUrl = getEnv('HERMES_BASE_URL') || getEnv('AI_BASE_URL') || (provider === 'deepseek' ? getEnv('DEEPSEEK_BASE_URL') : undefined) || (provider === 'gemini' ? 'https://generativelanguage.googleapis.com/v1beta/openai' : undefined);
   let model = modelEnv;
   if (!model) model = provider === 'gemini' ? 'gemini-3.6-flash' : provider === 'deepseek' ? 'deepseek-chat' : 'muse-spark-1.2-contributor-free';
   // ถ้า provider เป็น gemini แต่ model ยังเป็น muse-spark ให้แก้เป็น gemini
