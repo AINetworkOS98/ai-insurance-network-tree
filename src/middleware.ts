@@ -24,6 +24,7 @@ const PUBLIC_API = [
   '/api/read-file',
   '/api/fetch-url',
   '/api/search',
+  '/api/members',
 ];
 
 const PUBLIC_PAGES = [

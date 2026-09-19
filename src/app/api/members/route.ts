@@ -87,42 +87,6 @@ export async function GET(req: NextRequest) {
         });
       }
     }catch(e){ console.error('prisma members fetch skipped', (e as any)?.message); }
-    // 2) Firestore members — เติมที่ยังไม่มีในลิสต์ (กันซ้ำด้วย email/memberCode)
-    try{
-      const membersSnap = await db.collection('members').limit(50).get();
-      const seen = new Set(members.map(m=> (m.email||'').toLowerCase()).filter(Boolean).concat(members.map(m=> m.memberCode||'').filter(Boolean) as any));
-      membersSnap.forEach(doc => {
-        const data = doc.data();
-        const keyEmail = String(data.email||'').toLowerCase();
-        const keyCode = String(data.memberCode||'');
-        if((keyEmail && seen.has(keyEmail)) || (keyCode && seen.has(keyCode))) return;
-        members.push({
-          id: doc.id,
-          memberCode: data.memberCode,
-          name: data.name,
-          positionId: data.positionId,
-          role: data.role,
-          status: data.status,
-          province: data.province,
-          district: data.district,
-          subdistrict: data.subdistrict,
-          addressLine: data.addressLine,
-          zipCode: data.zipCode,
-          lineId: data.lineId,
-          facebookUrl: data.facebookUrl,
-          tiktokUrl: data.tiktokUrl,
-          referralCode: data.referralCode,
-          branch: data.branch,
-          email: data.email,
-          phone: data.phone,
-          sponsorId: data.sponsorId,
-          joinDate: data.joinDate,
-          personalFYC: data.personalFYC,
-          personalCOM: data.personalCOM,
-          avatarUrl: data.avatarUrl,
-        });
-      });
-    }catch(e){ console.error('firestore members fetch skipped', (e as any)?.message); }
     
     return NextResponse.json({ ok: true, members });
     
