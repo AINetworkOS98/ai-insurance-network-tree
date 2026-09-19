@@ -145,3 +145,4 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: ['/api/:path*', '/((?!_next/static|_next/image|favicon.ico).*)'],
 };
+// force redeploy
