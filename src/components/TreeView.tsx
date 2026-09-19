@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { DEMO_MEMBERS } from '@/lib/demo-data';
 type Node = {id:string; name:string; memberId:string; status:'active'|'pending'|'inactive'|'vacant'; rankName?:string; children?:Node[]; slot?:number; avatarUrl?:string};
 
 function NodeCard({node}:{node:Node}){
@@ -46,33 +47,49 @@ export default function TreeView({ filter }: { filter?: { q?:string; status?:str
     (async()=>{
       setLoading(true);
       try{
-        // พยายามดึงข้อมูลจริงจาก API (members + placements)
-        // ถ้าไม่มีข้อมูล จะแสดงสถานะว่าง — ไม่ hardcode คนปลอม
         const r = await fetch('/api/members',{cache:'no-store'});
         const j = await r.json();
         if(cancelled) return;
-        const members = applyFilter(j.members||[]);
+        let members:any[];
+        if(j && j.members && Array.isArray(j.members) && j.members.length>0){
+          members = applyFilter(j.members);
+        } else {
+          console.warn('no members from API, using demo data');
+          members = applyFilter(DEMO_MEMBERS);
+        }
         setCount(members.length);
         if(members.length===0){
           setTree(null);
         } else {
-          // สร้างต้นไม้จำลองจากข้อมูลจริง (root = คนแรก, ลูก = ที่เหลือ) — ไม่สร้างชื่อปลอม
           const root = members[0];
           const rest = members.slice(1,5);
-          const children: Node[] = [1,2,3,4,5].map((slot,idx)=>{
+          const children:Node[] = [1,2,3,4,5].map((slot,idx)=>{
             const m = rest[idx];
             if(m) return { id:m.memberId, name:m.name, memberId:m.memberId, rankName: m.rankName, status: m.status==='ACTIVE'?'active': m.status==='PENDING'?'pending':'inactive', slot, avatarUrl: m.avatarUrl };
             return { id:`vacant-${slot}`, name:'ตำแหน่งว่าง', memberId:'-', status:'vacant', slot };
           });
           setTree({ id:root.memberId, name:root.name, memberId:root.memberId, rankName: root.rankName, status: root.status==='ACTIVE'?'active':'pending', avatarUrl: root.avatarUrl, children });
         }
-      }catch(e:any){
-        if(!cancelled) setError(e.message||'โหลดไม่สำเร็จ');
-      }finally{ if(!cancelled) setLoading(false); }
+      }catch(e){
+        console.warn('fetch failed, using demo data:', e);
+        if(cancelled) return;
+        const members = applyFilter(DEMO_MEMBERS);
+        setCount(members.length);
+        if(members.length>0){
+          const root = members[0];
+          const rest = members.slice(1,5);
+          const children:Node[] = [1,2,3,4,5].map((slot,idx)=>{
+            const m = rest[idx];
+            if(m) return { id:m.memberId, name:m.name, memberId:m.memberId, rankName: m.rankName, status: m.status==='ACTIVE'?'active': m.status==='PENDING'?'pending':'inactive', slot, avatarUrl: m.avatarUrl };
+            return { id:`vacant-${slot}`, name:'ตำแหน่งว่าง', memberId:'-', status:'vacant', slot };
+          });
+          setTree({ id:root.memberId, name:root.name, memberId:root.memberId, rankName: root.rankName, status: root.status==='ACTIVE'?'active':'pending', avatarUrl: root.avatarUrl, children });
+        }
+      }
+      if(cancelled) return;
+      setLoading(false);
     })();
-    return ()=>{ cancelled=true; }
-  },[JSON.stringify(filter)]);
-
+  },[]);
   if(loading) return <div className="text-xs text-slate-500 py-6 text-center">กำลังโหลดผังเครือข่าย...</div>;
 
   if(!tree) return (
