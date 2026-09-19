@@ -223,7 +223,9 @@ export default function NetworkExamplePage(){
     setRealMembers([]);
   }
 
-  const displayMembers = showDemo ? (useMemo(()=> makeMembers(levels),[levels]) as Member[]) : realMembers;
+  // Demo members - ใช้ useMemo แบบ unconditional (ห้ามมีเงื่อนไข)
+  const demoMembers = useMemo(()=> makeMembers(levels), [levels]);
+  const displayMembers = showDemo ? demoMembers : realMembers;
   const displayRoot = showDemo ? displayMembers[0] : (realMembers.length>0 ? realMembers[0] : null);
   const displaySelected = useMemo(()=> {
     if(showDemo) return displayMembers.find(x=>x.id===selected) || displayMembers[0];
