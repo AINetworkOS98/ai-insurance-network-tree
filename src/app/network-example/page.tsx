@@ -1,14 +1,16 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import { auth } from '@/lib/firebase-client';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 
 // ---------- Types ----------
 type Status = 'ACTIVE'|'PASS'|'WARNING'|'FAIL'|'SUSPENDED'|'REMOVED'|'PROMOTED'|'VACANT';
 type Member = {
   id:string; memberId:string; name:string; level:number;
   parentId:string|null; slot:number; kpi:number; status:Status;
-  children:Member[];
+  children:Member[]; avatarUrl?:string;
 };
 
 // ---------- Demo data generator ----------
@@ -57,9 +59,21 @@ function statusStyle(s:Status){
   }
 }
 function Avatar({m,selected,onClick}:{m:Member;selected:boolean;onClick:()=>void}){
+  const initials = m.name.split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('').toUpperCase();
+  const avatarSrc = m.avatarUrl && m.avatarUrl.trim() ? m.avatarUrl : '';
   return (
     <button onClick={onClick} className={`min-w-[92px] max-w-[110px] p-2.5 rounded-2xl border-2 bg-white shadow-sm hover:shadow-md transition text-center ${selected?'ring-2 ring-[#475569] border-[#475569]':statusStyle(m.status)}`}>
-      <div className="w-10 h-10 mx-auto rounded-full bg-gradient-to-br from-[#f0f7ff] to-[#e8f0ff] border border-[#dbeafe] flex items-center justify-center text-lg">{m.status==='REMOVED'?'❌':m.status==='PROMOTED'?'⭐':'👤'}</div>
+      <div className="w-10 h-10 mx-auto rounded-full overflow-hidden border-2 border-[#dbeafe] bg-white flex items-center justify-center">
+        {avatarSrc ? (
+          <img src={avatarSrc} alt={m.name} className="w-full h-full object-cover rounded-full"/>
+        ) : m.status==='REMOVED' ? (
+          <span className="text-lg">❌</span>
+        ) : m.status==='PROMOTED' ? (
+          <span className="text-lg">⭐</span>
+        ) : (
+          <span className="text-lg font-bold text-[#475569]">{initials}</span>
+        )}
+      </div>
       <div className="text-[10px] font-mono mt-1 font-bold truncate">{m.memberId}</div>
       <div className="text-[11px] font-semibold truncate">{m.name}</div>
       <div className="text-[10px] opacity-70">Lv.{m.level} • Slot {m.slot||'-'}</div>
@@ -118,10 +132,86 @@ function TreeNode({m,depth,selectedId,setSelected}:{m:Member;depth:number;select
 export default function NetworkExamplePage(){
   const [levels,setLevels]=useState(3);
   const [selected,setSelected]=useState<string|null>('1');
-  const all = useMemo(()=> makeMembers(levels),[levels]);
-  const root = all[0];
-  const selectedMember = useMemo(()=> all.find(x=>x.id===selected) || root,[all,selected,root]);
+
+  // Firebase Auth state
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [realMembers, setRealMembers] = useState<Member[]>([]);
+  const [showDemo, setShowDemo] = useState(true);
+
+  useEffect(()=>{
+    if(!auth) return;
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      setCurrentUser(user);
+      if(user) {
+        // ดึงสมาชิกจริงจากระบบเมื่อล็อกอิน
+        setMembersLoading(true);
+        try {
+          const res = await fetch('/api/members',{cache:'no-store'});
+          const j = await res.json();
+          const members:any[] = j.members || [];
+          if(members.length > 0) {
+            // สร้าง tree จากสมาชิกจริง - คนแรกคือ root
+            const rootMember:Member = {
+              id: members[0].id || members[0].memberId,
+              memberId: members[0].memberId,
+              name: members[0].name || members[0].displayName || 'สมาชิก',
+              level: 0,
+              parentId: null,
+              slot: 0,
+              kpi: members[0].kpi || 0,
+              status: (members[0].status || 'ACTIVE') as Status,
+              children: [],
+              avatarUrl: members[0].avatarUrl,
+            };
+            // ลูกคนที่ 1-5 (ถ้ามี)
+            const children:Member[] = [1,2,3,4,5].map((slot,idx) => {
+              const m = members[idx+1];
+              if(!m) return { id:`vacant-${slot}`, memberId:'-', name:'ตำแหน่งว่าง', level:1, parentId:rootMember.id, slot, kpi:0, status:'VACANT' as Status, children:[], avatarUrl:undefined };
+              return {
+                id: m.id || m.memberId,
+                memberId: m.memberId,
+                name: m.name || m.displayName || 'สมาชิก',
+                level: 1,
+                parentId: rootMember.id,
+                slot,
+                kpi: m.kpi || 0,
+                status: (m.status || 'ACTIVE') as Status,
+                children: [],
+                avatarUrl: m.avatarUrl,
+              };
+            });
+            rootMember.children = children;
+            setRealMembers([rootMember, ...children]);
+            setShowDemo(false);
+          } else {
+            setShowDemo(true);
+          }
+        } catch { setShowDemo(true); }
+        finally { setMembersLoading(false); }
+      } else {
+        setShowDemo(true);
+        setRealMembers([]);
+      }
+    });
+    return () => unsub();
+  },[]);
+
+  async function handleLogout(){
+    if(!auth) return;
+    try { await signOut(auth); } catch {}
+  }
+
+  // ใช้ข้อมูลจริงเมื่อล็อกอินและได้ข้อมูล หรือใช้ demo เมื่อไม่ได้ล็อกอิน
+  const displayMembers = showDemo ? (useMemo(()=> makeMembers(levels),[levels]) as Member[]) : realMembers;
+  const displayRoot = showDemo ? displayMembers[0] : (realMembers.length>0 ? realMembers[0] : null);
+  const displaySelected = useMemo(()=> {
+    if(showDemo) return displayMembers.find(x=>x.id===selected) || displayMembers[0];
+    return realMembers.find(x=>x.id===selected) || (realMembers.length>0 ? realMembers[0] : null);
+  },[showDemo, selected, displayMembers, realMembers]);
+
   const stats = useMemo(()=>{
+    const all = showDemo ? displayMembers : realMembers;
     const c=(s:Status)=> all.filter(x=>x.status===s).length;
     return {
       total:all.length,
@@ -131,14 +221,14 @@ export default function NetworkExamplePage(){
       fail: c('FAIL'),
       removed: c('REMOVED'),
       promoted: c('PROMOTED'),
-      depth: Math.max(...all.map(x=>x.level)),
+      depth: showDemo ? Math.max(...all.map(x=>x.level)) : 1,
       vacant: all.reduce((acc,m)=> acc + (5 - m.children.length),0)
     };
-  },[all]);
+  },[showDemo, displayMembers, realMembers]);
 
   // promotion demo: pick first REMOVED
-  const removed = all.find(x=>x.status==='REMOVED');
-  const candidates = removed ? (all.find(x=>x.id===removed.parentId)?.children.filter(c=>c.status==='PASS'||c.status==='ACTIVE').sort((a,b)=>b.kpi-a.kpi) || []) : [];
+  const removed = showDemo ? displayMembers.find(x=>x.status==='REMOVED') : null;
+  const candidates = removed ? (displayMembers.find(x=>x.id===removed.parentId)?.children.filter(c=>c.status==='PASS'||c.status==='ACTIVE').sort((a,b)=>b.kpi-a.kpi) || []) : [];
   const best = candidates[0];
 
   return (
@@ -151,7 +241,22 @@ export default function NetworkExamplePage(){
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-xl font-bold text-[#475569]">ตัวอย่างเครือข่าย — 1 แตก 5</h1>
             <span className="text-xs px-2.5 py-1 rounded-full bg-[#f0f7ff] border border-[#dbeafe] text-[#2563eb]">🌐 สร้างเครือข่าย</span>
+            {currentUser && (
+              <span className="text-xs px-2 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700">
+                ✓ ล็อกอินในฐานะ {currentUser.displayName || currentUser.email?.split('@')[0] || 'สมาชิก'}
+              </span>
+            )}
             <span className="text-xs px-2 py-1 rounded-full bg-white border text-slate-600">Lv.{stats.depth} • {stats.total} คน • สูตร 5^level</span>
+            {currentUser && (
+              <button onClick={handleLogout} className="px-3 py-1 rounded-full border bg-white text-xs text-slate-600 hover:bg-slate-50">
+                ออกจากระบบ
+              </button>
+            )}
+            {!currentUser && (
+              <a href="/login" className="px-3 py-1 rounded-full bg-[#475569] text-white text-xs hover:bg-slate-800">
+                ล็อกอินเพื่อดูผังจริง
+              </a>
+            )}
           </div>
 
           {/* KPI bar */}
@@ -206,7 +311,7 @@ export default function NetworkExamplePage(){
             <div className="card p-4 overflow-auto">
               <div className="text-sm font-semibold mb-3">ต้นไม้เครือข่าย — Interactive Tree (รูปคนทุก Node)</div>
               <div className="min-w-[720px] flex justify-center py-4">
-                <TreeNode m={root} depth={0} selectedId={selected} setSelected={setSelected}/>
+                {displayRoot ? <TreeNode m={displayRoot} depth={0} selectedId={selected} setSelected={setSelected}/> : <div className="text-sm text-slate-500 py-8 text-center">กำลังโหลด...</div>}
               </div>
               <div className="mt-4 flex flex-wrap gap-2 text-[11px]">
                 <span className="px-2 py-1 rounded-full bg-emerald-50 border border-emerald-200">● PASS/ACTIVE</span>
@@ -224,16 +329,26 @@ export default function NetworkExamplePage(){
               <div className="card p-4">
                 <div className="text-sm font-semibold">รายละเอียดสมาชิก</div>
                 <div className="mt-3 p-3 rounded-2xl border bg-[#f8fafc] text-center">
-                  <div className="w-14 h-14 mx-auto rounded-full bg-white border-2 border-[#dbeafe] flex items-center justify-center text-2xl">{selectedMember.status==='REMOVED'?'❌':selectedMember.status==='PROMOTED'?'⭐':'👤'}</div>
-                  <div className="mt-2 font-bold text-sm">{selectedMember.name}</div>
-                  <div className="font-mono text-xs px-2 py-1 rounded-full bg-white border inline-block mt-1">{selectedMember.memberId}</div>
-                  <div className={`mt-2 inline-flex px-2.5 py-1 rounded-full border text-xs font-semibold ${statusStyle(selectedMember.status)}`}>{selectedMember.status} • KPI {selectedMember.kpi}/100</div>
+                  <div className="w-14 h-14 mx-auto rounded-full overflow-hidden border-2 border-[#dbeafe] bg-white flex items-center justify-center">
+                    {displaySelected && displaySelected.avatarUrl && displaySelected.avatarUrl.trim() ? (
+                      <img src={displaySelected.avatarUrl} alt={displaySelected.name} className="w-full h-full object-cover rounded-full"/>
+                    ) : displaySelected && displaySelected.status==='REMOVED' ? (
+                      <span className="text-2xl">❌</span>
+                    ) : displaySelected && displaySelected.status==='PROMOTED' ? (
+                      <span className="text-2xl">⭐</span>
+                    ) : (
+                      <span className="text-2xl font-bold text-[#475569]">{displaySelected?.name.split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('').toUpperCase() || 'SV'}</span>
+                    )}
+                  </div>
+                  <div className="mt-2 font-bold text-sm">{displaySelected?.name}</div>
+                  <div className="font-mono text-xs px-2 py-1 rounded-full bg-white border inline-block mt-1">{displaySelected?.memberId}</div>
+                  <div className={`mt-2 inline-flex px-2.5 py-1 rounded-full border text-xs font-semibold ${statusStyle(displaySelected?.status || 'ACTIVE')}`}>{displaySelected?.status} • KPI {displaySelected?.kpi}/100</div>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                  <div className="p-2 rounded-xl bg-white border"><div className="text-slate-400">Level</div><div className="font-bold">{selectedMember.level}</div></div>
-                  <div className="p-2 rounded-xl bg-white border"><div className="text-slate-400">Slot</div><div className="font-bold">{selectedMember.slot||'-'}</div></div>
-                  <div className="p-2 rounded-xl bg-white border"><div className="text-slate-400">Parent</div><div className="font-mono">{selectedMember.parentId ? all.find(x=>x.id===selectedMember.parentId)?.memberId : '-'}</div></div>
-                  <div className="p-2 rounded-xl bg-white border"><div className="text-slate-400">ทีมตรง</div><div className="font-bold">{selectedMember.children.length}/5</div></div>
+                  <div className="p-2 rounded-xl bg-white border"><div className="text-slate-400">Level</div><div className="font-bold">{displaySelected?.level}</div></div>
+                  <div className="p-2 rounded-xl bg-white border"><div className="text-slate-400">Slot</div><div className="font-bold">{displaySelected?.slot||'-'}</div></div>
+                  <div className="p-2 rounded-xl bg-white border"><div className="text-slate-400">Parent</div><div className="font-mono">{displaySelected?.parentId ? (showDemo ? displayMembers.find(x=>x.id===displaySelected.parentId)?.memberId : realMembers.find(x=>x.id===displaySelected.parentId)?.memberId) : '-'}</div></div>
+                  <div className="p-2 rounded-xl bg-white border"><div className="text-slate-400">ทีมตรง</div><div className="font-bold">{displaySelected?.children.length}/5</div></div>
                 </div>
                 <div className="mt-3 space-y-1 text-[11px] text-slate-600">
                   <div>• Sponsor / Placement แยกกัน • Sponsor ไม่เปลี่ยนเมื่อ Promote</div>
