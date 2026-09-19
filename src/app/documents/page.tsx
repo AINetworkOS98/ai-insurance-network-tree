@@ -71,6 +71,11 @@ export default function DocumentsPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const camVideoRef = useRef<HTMLVideoElement>(null);
+  const camStreamRef = useRef<MediaStream | null>(null);
+  const [camOpen, setCamOpen] = useState(false);
+  const [camError, setCamError] = useState<string | null>(null);
+  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
 
   const loadReceipts = useCallback(async () => {
     try {
@@ -100,6 +105,12 @@ export default function DocumentsPage() {
     setNotice(null);
     setEditing(false);
     setStage('idle');
+    setCamOpen(false);
+    setCapturedPhoto(null);
+    if (camStreamRef.current) {
+      camStreamRef.current.getTracks().forEach(t => t.stop());
+      camStreamRef.current = null;
+    }
     if (inputRef.current) inputRef.current.value = '';
   };
 
@@ -116,6 +127,75 @@ export default function DocumentsPage() {
     setOcr(null);
     setPosition(null);
     setPreviewUrl(URL.createObjectURL(f));
+  }, []);
+
+  // --- กล้องมือถือ ---
+  const openCamera = async () => {
+    setCamError(null);
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setCamError('เบราว์เซอร์นี้ไม่รองรับกล้องเว็บ');
+        return;
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      });
+      camStreamRef.current = stream;
+      if (camVideoRef.current) {
+        camVideoRef.current.srcObject = stream;
+        await camVideoRef.current.play();
+      }
+      setCamOpen(true);
+    } catch (err: any) {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setCamError('อนุญาตสิทธิ์กล้องไม่ถูกต้อง — ให้เปิดใช้งานกล้องใน 설정เบราว์เซอร์');
+      } else if (err.name === 'NotFoundError') {
+        setCamError('ไม่พบอุปกรณ์กล้อง');
+      } else {
+        setCamError('เปิดกล้องไม่ได้: ' + (err.message || 'ไม่ทราบสาเหตุ'));
+      }
+    }
+  };
+
+  const closeCamera = () => {
+    if (camStreamRef.current) {
+      camStreamRef.current.getTracks().forEach(t => t.stop());
+      camStreamRef.current = null;
+    }
+    setCamOpen(false);
+    setCapturedPhoto(null);
+  };
+
+  const capturePhoto = async () => {
+    const video = camVideoRef.current;
+    if (!video || !video.videoWidth) {
+      setCamError('กล้องยังไม่พร้อม');
+      return;
+    }
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { setCamError('ไม่สามารถสร้าง canvas ได้'); return; }
+      ctx.drawImage(video, 0, 0);
+      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(b => resolve(b), 'image/jpeg', 0.92));
+      if (!blob) { setCamError('ถ่ายภาพไม่สำเร็จ'); return; }
+      const file = new File([blob], `scan-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      closeCamera();
+      acceptFile(file);
+    } catch (err: any) {
+      setCamError('ถ่ายภาพไม่สำเร็จ: ' + (err.message || ''));
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (camStreamRef.current) {
+        camStreamRef.current.getTracks().forEach(t => t.stop());
+      }
+    };
   }, []);
 
   const onDrop = useCallback(
@@ -236,7 +316,7 @@ export default function DocumentsPage() {
         <Sidebar />
         <main className="flex-1 p-6 space-y-5">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-[#475569]">เอกสารทางการเงิน</h1>
+            <h1 className="text-xl font-bold text-[#475569]">สแกนใบเสร็จรับเงิน เข้าระบบ</h1>
           </div>
 
           {/* สแกน + อัปโหลดใบเสร็จ */}
@@ -259,33 +339,60 @@ export default function DocumentsPage() {
 
             {!ocr && (
               <div
-                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={onDrop}
-                onClick={() => inputRef.current?.click()}
-                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition ${
-                  dragOver ? 'border-[#c8a84e] bg-amber-50' : 'border-slate-300 hover:border-[#475569] bg-slate-50'
-                }`}
-              >
-                <input
-                  ref={inputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
-                  className="hidden"
-                  onChange={(e) => e.target.files?.[0] && acceptFile(e.target.files[0])}
-                />
-                {previewUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={previewUrl} alt="preview" className="max-h-48 mx-auto rounded-lg shadow" />
-                ) : (
-                  <div className="text-slate-500">
-                    <div className="text-3xl mb-2">📄</div>
-                    <div className="font-medium">ลากไฟล์มาวางที่นี่ หรือ <span className="text-[#475569] underline">เลือกไฟล์ / ถ่ายรูป</span></div>
-                    <div className="text-xs mt-1">รองรับ JPG / PNG / WEBP</div>
-                  </div>
-                )}
-              </div>
-            )}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={onDrop}
+                  onClick={() => inputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition ${\
+                    dragOver ? 'border-[#c8a84e] bg-amber-50' : 'border-slate-300 hover:border-[#475569] bg-slate-50'\
+                  }`}
+                >
+                  <input
+                    ref={inputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                    className="hidden"
+                    onChange={(e) => e.target.files?.[0] && acceptFile(e.target.files[0])}
+                  />
+                  {/* Hidden file input for gallery picker */}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        // On iOS, capture="environment" opens camera; on Android it may open gallery
+                        acceptFile(file);
+                      }
+                    }}
+                    id="mobile-gallery-input"
+                  />
+                  {previewUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={previewUrl} alt="preview" className="max-h-48 mx-auto rounded-lg shadow" />
+                  ) : (
+                    <div className="text-slate-500">
+                      <div className="text-3xl mb-2">📄</div>
+                      <div className="font-medium">
+                        ลากไฟล์มาวางที่นี่ หรือ {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <span className="text-[#475569] underline cursor-pointer" onClick={() => inputRef.current?.click()}>เลือกไฟล์</span>
+                        {' '}/{' '}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <span className="text-[#475569] underline cursor-pointer" onClick={openCamera}>ถ่ายรูป</span>
+                        {' '}/{' '}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <span className="text-[#475569] underline cursor-pointer" onClick={() => document.getElementById('mobile-gallery-input')?.click()}>เลือกจากแกลเลอรี</span>
+                      </div>
+                      <div className="text-xs mt-1">รองรับ JPG / PNG / WEBP</div>
+                      <div className="text-xs mt-2 text-slate-400">
+                        📱 ใช้ได้ทั้ง Android และ iOS — เลือก "ถ่ายรูป" เพื่อเปิดกล้อง หรือ "เลือกจากแกลเลอรี" เพื่อเลือกจากรูปที่มี
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
             {file && !ocr && (
               <div className="mt-3 flex items-center justify-between text-sm">
@@ -303,6 +410,30 @@ export default function DocumentsPage() {
 
             {error && <div className="mt-3 text-sm text-red-700 bg-red-50 rounded-lg p-3">{error}</div>}
             {notice && <div className="mt-3 text-sm text-emerald-700 bg-emerald-50 rounded-lg p-3">{notice}</div>}
+
+            {/* Overlay กล้องมือถือ */}
+            {camOpen && (
+              <div className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-4">
+                <video
+                  ref={camVideoRef}
+                  playsInline
+                  muted
+                  className="w-full max-w-[520px] rounded-xl bg-black aspect-video object-cover"
+                />
+                {camError && <div className="mt-2 text-xs text-red-300 text-center">{camError}</div>}
+                <div className="mt-3 flex gap-2">
+                  <button onClick={capturePhoto} className="px-8 py-2.5 rounded-full bg-white text-sm font-bold shadow-lg">
+                    📷 ถ่าย
+                  </button>
+                  <button onClick={closeCamera} className="px-6 py-2.5 rounded-full border border-white text-white text-sm font-semibold">
+                    ปิด
+                  </button>
+                </div>
+                <div className="mt-2 text-[11px] text-white/70 text-center">
+                  วางใบเสร็จให้เต็มจอ แล้วกด "ถ่าย" เพื่อสแกน
+                </div>
+              </div>
+            )}
 
             {/* Preview ผลลัพธ์ OCR */}
             {ocr && (
