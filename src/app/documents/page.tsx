@@ -116,7 +116,7 @@ export default function DocumentsPage() {
 
   const acceptFile = useCallback((f: File) => {
     if (!f) return;
-    const okType = /^(image\/(jpeg|png|webp))$/i.test(f.type) || /\.(jpe?g|png|webp)$/i.test(f.name);
+    const okType = /^(image\/(jpeg|png|webp))$/i.test(f.type) || /\\.(jpe?g|png|webp)$/i.test(f.name);
     if (!okType) {
       setError('รองรับเฉพาะ JPG / PNG / WEBP');
       return;
@@ -223,12 +223,10 @@ export default function DocumentsPage() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        // ถ้า key ไม่ถูกต้อง / โควตาหมด → เปิดโหมดกรอกเองแทนการบล็อก
         const isKeyError = data.code === 'INVALID_KEY' || data.code === 'MISSING_KEY' || data.code === 'QUOTA_EXCEEDED';
         if (isKeyError && file) {
           setError(null);
           setNotice(null);
-          // สร้าง OCR เปล่าให้กรอกเองได้เลย
           setOcr({
             documentType: null, amount: null, currency: 'THB', date: null, time: null,
             referenceNumber: null, payerName: null, receiverName: null, bank: null,
@@ -339,60 +337,56 @@ export default function DocumentsPage() {
 
             {!ocr && (
               <div
-                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                  onDragLeave={() => setDragOver(false)}
-                  onDrop={onDrop}
-                  onClick={() => inputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition ${\
-                    dragOver ? 'border-[#c8a84e] bg-amber-50' : 'border-slate-300 hover:border-[#475569] bg-slate-50'\
-                  }`}
-                >
-                  <input
-                    ref={inputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
-                    className="hidden"
-                    onChange={(e) => e.target.files?.[0] && acceptFile(e.target.files[0])}
-                  />
-                  {/* Hidden file input for gallery picker */}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        // On iOS, capture="environment" opens camera; on Android it may open gallery
-                        acceptFile(file);
-                      }
-                    }}
-                    id="mobile-gallery-input"
-                  />
-                  {previewUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={previewUrl} alt="preview" className="max-h-48 mx-auto rounded-lg shadow" />
-                  ) : (
-                    <div className="text-slate-500">
-                      <div className="text-3xl mb-2">📄</div>
-                      <div className="font-medium">
-                        ลากไฟล์มาวางที่นี่ หรือ {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <span className="text-[#475569] underline cursor-pointer" onClick={() => inputRef.current?.click()}>เลือกไฟล์</span>
-                        {' '}/{' '}
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <span className="text-[#475569] underline cursor-pointer" onClick={openCamera}>ถ่ายรูป</span>
-                        {' '}/{' '}
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <span className="text-[#475569] underline cursor-pointer" onClick={() => document.getElementById('mobile-gallery-input')?.click()}>เลือกจากแกลเลอรี</span>
-                      </div>
-                      <div className="text-xs mt-1">รองรับ JPG / PNG / WEBP</div>
-                      <div className="text-xs mt-2 text-slate-400">
-                        📱 ใช้ได้ทั้ง Android และ iOS — เลือก "ถ่ายรูป" เพื่อเปิดกล้อง หรือ "เลือกจากแกลเลอรี" เพื่อเลือกจากรูปที่มี
-                      </div>
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={onDrop}
+                onClick={() => inputRef.current?.click()}
+                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition ${
+                  dragOver ? 'border-[#c8a84e] bg-amber-50' : 'border-slate-300 hover:border-[#475569] bg-slate-50'
+                }`}
+              >
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                  className="hidden"
+                  onChange={(e) => e.target.files?.[0] && acceptFile(e.target.files[0])}
+                />
+                {/* Hidden file input for gallery picker */}
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      acceptFile(file);
+                    }
+                  }}
+                  id="mobile-gallery-input"
+                />
+                {previewUrl ? (
+                  <img src={previewUrl} alt="preview" className="max-h-48 mx-auto rounded-lg shadow" />
+                ) : (
+                  <div className="text-slate-500">
+                    <div className="text-3xl mb-2">📄</div>
+                    <div className="font-medium">
+                      ลากไฟล์มาวางที่นี่ หรือ
+                      <span className="text-[#475569] underline cursor-pointer" onClick={() => inputRef.current?.click()}>เลือกไฟล์</span>
+                      {' '}/{' '}
+                      <span className="text-[#475569] underline cursor-pointer" onClick={openCamera}>ถ่ายรูป</span>
+                      {' '}/{' '}
+                      <span className="text-[#475569] underline cursor-pointer" onClick={() => document.getElementById('mobile-gallery-input')?.click()}>เลือกจากแกลเลอรี</span>
                     </div>
-                  )}
-                </div>
-              )}
+                    <div className="text-xs mt-1">รองรับ JPG / PNG / WEBP</div>
+                    <div className="text-xs mt-2 text-slate-400">
+                      📱 ใช้ได้ทั้ง Android และ iOS — เลือก "ถ่ายรูป" เพื่อเปิดกล้อง หรือ "เลือกจากแกลเลอรี" เพื่อเลือกจากรูปที่มี
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {file && !ocr && (
               <div className="mt-3 flex items-center justify-between text-sm">
@@ -439,14 +433,11 @@ export default function DocumentsPage() {
             {ocr && (
               <div className="mt-4 space-y-3">
                 <div className="grid md:grid-cols-2 gap-4">
-                  {/* รูปต้นฉบับ */}
                   <div>
                     {previewUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
                       <img src={previewUrl} alt="ต้นฉบับ" className="w-full rounded-lg border shadow-sm" />
                     )}
                   </div>
-                  {/* ข้อมูลที่อ่านได้ */}
                   <div className="space-y-2 text-sm">
                     <div className={`rounded-full px-3 py-1 text-xs inline-block ${ocr.needsManualReview ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
                       {ocr.status} (ความมั่นใจ {confPct}%)
