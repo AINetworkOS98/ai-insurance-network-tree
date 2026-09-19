@@ -2,8 +2,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
-import { auth } from '@/lib/firebase-client';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
 
 // ---------- Types ----------
 type Status = 'ACTIVE'|'PASS'|'WARNING'|'FAIL'|'SUSPENDED'|'REMOVED'|'PROMOTED'|'VACANT';
@@ -18,7 +16,6 @@ const NAMES = ['สมชาย','สมหญิง','วิชัย','นา�
 function randName(i:number){ return NAMES[i%NAMES.length] + (i>=NAMES.length ? ` ${Math.floor(i/NAMES.length)+1}`:''); }
 const STATUS_POOL:Status[] = ['PASS','PASS','PASS','WARNING','FAIL','ACTIVE'];
 function makeMembers(levels:number):Member[]{
-  // BFS 1x5
   let counter=1;
   const all:Member[]=[];
   const root:Member={id:'1',memberId:'MEM000001',name:'ROOT • ประธาน',level:0,parentId:null,slot:0,kpi:96,status:'ACTIVE',children:[]};
@@ -58,14 +55,24 @@ function statusStyle(s:Status){
     default: return 'bg-white border-slate-200 text-slate-600';
   }
 }
+
+// ---------- Avatar - วงกลม 100% ----------
 function Avatar({m,selected,onClick}:{m:Member;selected:boolean;onClick:()=>void}){
   const initials = m.name.split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('').toUpperCase();
   const avatarSrc = m.avatarUrl && m.avatarUrl.trim() ? m.avatarUrl : '';
+  
   return (
     <button onClick={onClick} className={`min-w-[92px] max-w-[110px] p-2.5 rounded-2xl border-2 bg-white shadow-sm hover:shadow-md transition text-center ${selected?'ring-2 ring-[#475569] border-[#475569]':statusStyle(m.status)}`}>
-      <div className="w-10 h-10 mx-auto overflow-hidden border-2 border-[#dbeafe] bg-white flex items-center justify-center" style={{borderRadius:'50%'}}>
+      {/* วงกลม: ใช้ทั้ง Tailwind rounded-full และ inline style เพื่อความมั่นใจ */}
+      <div className="w-10 h-10 mx-auto overflow-hidden border-2 border-[#dbeafe] bg-white flex items-center justify-center rounded-full" style={{borderRadius:'50%'}}>
         {avatarSrc ? (
-          <img src={avatarSrc} alt={m.name} className="w-full h-full object-cover" style={{borderRadius:'50%'}}/>
+          <img 
+            src={avatarSrc} 
+            alt={m.name} 
+            className="w-full h-full object-cover rounded-full" 
+            style={{borderRadius:'50%'}}
+            onError={(e)=>{ e.currentTarget.style.display='none'; }}
+          />
         ) : m.status==='REMOVED' ? (
           <span className="text-lg">❌</span>
         ) : m.status==='PROMOTED' ? (
@@ -133,76 +140,87 @@ export default function NetworkExamplePage(){
   const [levels,setLevels]=useState(3);
   const [selected,setSelected]=useState<string|null>('1');
 
-  // Firebase Auth state
+  // JWT Auth state (ใช้ระบบ登录จริง ไม่ใช่ Firebase)
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [membersLoading, setMembersLoading] = useState(false);
   const [realMembers, setRealMembers] = useState<Member[]>([]);
   const [showDemo, setShowDemo] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
 
+  // ตรวจสอบการล็อกอินผ่าน /api/auth/me
   useEffect(()=>{
-    if(!auth) return;
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      setCurrentUser(user);
-      if(user) {
-        // ดึงสมาชิกจริงจากระบบเมื่อล็อกอิน
-        setMembersLoading(true);
-        try {
-          const res = await fetch('/api/members',{cache:'no-store'});
-          const j = await res.json();
-          const members:any[] = j.members || [];
-          if(members.length > 0) {
-            // สร้าง tree จากสมาชิกจริง - คนแรกคือ root
-            const rootMember:Member = {
-              id: members[0].id || members[0].memberId,
-              memberId: members[0].memberId,
-              name: members[0].name || members[0].displayName || 'สมาชิก',
-              level: 0,
-              parentId: null,
-              slot: 0,
-              kpi: members[0].kpi || 0,
-              status: (members[0].status || 'ACTIVE') as Status,
+    const checkAuth = async () => {
+      try {
+        const res = await fetch('/api/auth/me', { cache:'no-store' });
+        const j = await res.json();
+        if(j.ok && j.authed) {
+          setCurrentUser(j.user || null);
+        }
+      } catch {}
+      setAuthChecked(true);
+    };
+    checkAuth();
+  }, []);
+
+  // ดึงสมาชิกจริงเมื่อล็อกอิน
+  useEffect(()=>{
+    if(!currentUser || !authChecked) return;
+    const fetchMembers = async () => {
+      setMembersLoading(true);
+      try {
+        const res = await fetch('/api/members', { cache:'no-store' });
+        const j = await res.json();
+        if(j.ok && j.members && Array.isArray(j.members) && j.members.length > 0) {
+          // สร้าง tree จากสมาชิกจริง
+          // ใช้สมาชิกคนแรกเป็น root และลูก 5 คนถัดไป
+          const members:any[] = j.members;
+          const rootMember:Member = {
+            id: members[0].id || members[0].memberCode || 'root',
+            memberId: members[0].memberCode || members[0].id || 'ROOT',
+            name: members[0].displayName || members[0].name || members[0].email || 'สมาชิก',
+            level: 0,
+            parentId: null,
+            slot: 0,
+            kpi: members[0].rankLevel ? members[0].rankLevel * 25 : 80,
+            status: (members[0].status || 'ACTIVE') as Status,
+            children: [],
+            avatarUrl: members[0].avatarUrl,
+          };
+          const children:Member[] = [1,2,3,4,5].map((slot,idx) => {
+            const m = members[idx+1];
+            if(!m) return { id:`vacant-${slot}`, memberId:'-', name:'ตำแหน่งว่าง', level:1, parentId:rootMember.id, slot, kpi:0, status:'VACANT' as Status, children:[], avatarUrl:undefined };
+            return {
+              id: m.id || m.memberCode || `m${idx+1}`,
+              memberId: m.memberCode || m.id || `MEM${String(idx+1).padStart(6,'0')}`,
+              name: m.displayName || m.name || m.email || `สมาชิก ${idx+1}`,
+              level: 1,
+              parentId: rootMember.id,
+              slot,
+              kpi: m.rankLevel ? m.rankLevel * 25 : 60,
+              status: (m.status || 'ACTIVE') as Status,
               children: [],
-              avatarUrl: members[0].avatarUrl,
+              avatarUrl: m.avatarUrl,
             };
-            // ลูกคนที่ 1-5 (ถ้ามี)
-            const children:Member[] = [1,2,3,4,5].map((slot,idx) => {
-              const m = members[idx+1];
-              if(!m) return { id:`vacant-${slot}`, memberId:'-', name:'ตำแหน่งว่าง', level:1, parentId:rootMember.id, slot, kpi:0, status:'VACANT' as Status, children:[], avatarUrl:undefined };
-              return {
-                id: m.id || m.memberId,
-                memberId: m.memberId,
-                name: m.name || m.displayName || 'สมาชิก',
-                level: 1,
-                parentId: rootMember.id,
-                slot,
-                kpi: m.kpi || 0,
-                status: (m.status || 'ACTIVE') as Status,
-                children: [],
-                avatarUrl: m.avatarUrl,
-              };
-            });
-            rootMember.children = children;
-            setRealMembers([rootMember, ...children]);
-            setShowDemo(false);
-          } else {
-            setShowDemo(true);
-          }
-        } catch { setShowDemo(true); }
-        finally { setMembersLoading(false); }
-      } else {
-        setShowDemo(true);
-        setRealMembers([]);
-      }
-    });
-    return () => unsub();
-  },[]);
+          });
+          rootMember.children = children;
+          setRealMembers([rootMember, ...children]);
+          setShowDemo(false);
+        } else {
+          setShowDemo(true);
+        }
+      } catch { setShowDemo(true); }
+      finally { setMembersLoading(false); }
+    };
+    fetchMembers();
+  }, [currentUser, authChecked]);
 
   async function handleLogout(){
-    if(!auth) return;
-    try { await signOut(auth); } catch {}
+    try { await fetch('/api/auth/logout', { method:'POST' }); } catch {}
+    setCurrentUser(null);
+    setShowDemo(true);
+    setRealMembers([]);
   }
 
-  // ใช้ข้อมูลจริงเมื่อล็อกอินและได้ข้อมูล หรือใช้ demo เมื่อไม่ได้ล็อกอิน
   const displayMembers = showDemo ? (useMemo(()=> makeMembers(levels),[levels]) as Member[]) : realMembers;
   const displayRoot = showDemo ? displayMembers[0] : (realMembers.length>0 ? realMembers[0] : null);
   const displaySelected = useMemo(()=> {
@@ -226,7 +244,6 @@ export default function NetworkExamplePage(){
     };
   },[showDemo, displayMembers, realMembers]);
 
-  // promotion demo: pick first REMOVED
   const removed = showDemo ? displayMembers.find(x=>x.status==='REMOVED') : null;
   const candidates = removed ? (displayMembers.find(x=>x.id===removed.parentId)?.children.filter(c=>c.status==='PASS'||c.status==='ACTIVE').sort((a,b)=>b.kpi-a.kpi) || []) : [];
   const best = candidates[0];
@@ -252,7 +269,7 @@ export default function NetworkExamplePage(){
                 ออกจากระบบ
               </button>
             )}
-            {!currentUser && (
+            {!currentUser && !membersLoading && (
               <a href="/login" className="px-3 py-1 rounded-full bg-[#475569] text-white text-xs hover:bg-slate-800">
                 ล็อกอินเพื่อดูผังจริง
               </a>
@@ -329,9 +346,16 @@ export default function NetworkExamplePage(){
               <div className="card p-4">
                 <div className="text-sm font-semibold">รายละเอียดสมาชิก</div>
                 <div className="mt-3 p-3 rounded-2xl border bg-[#f8fafc] text-center">
-                  <div className="w-14 h-14 mx-auto overflow-hidden border-2 border-[#dbeafe] bg-white flex items-center justify-center" style={{borderRadius:'50%'}}>
+                  {/* วงกลม 100% สำหรับ detail panel */}
+                  <div className="w-14 h-14 mx-auto overflow-hidden border-2 border-[#dbeafe] bg-white flex items-center justify-center rounded-full" style={{borderRadius:'50%'}}>
                     {displaySelected && displaySelected.avatarUrl && displaySelected.avatarUrl.trim() ? (
-                      <img src={displaySelected.avatarUrl} alt={displaySelected.name} className="w-full h-full object-cover" style={{borderRadius:'50%'}}/>
+                      <img 
+                        src={displaySelected.avatarUrl} 
+                        alt={displaySelected.name} 
+                        className="w-full h-full object-cover rounded-full" 
+                        style={{borderRadius:'50%'}}
+                        onError={(e)=>{ e.currentTarget.style.display='none'; }}
+                      />
                     ) : displaySelected && displaySelected.status==='REMOVED' ? (
                       <span className="text-2xl">❌</span>
                     ) : displaySelected && displaySelected.status==='PROMOTED' ? (

@@ -29,6 +29,7 @@ interface FirestoreMember {
   uid?: string;
   email?: string;
   phone?: string;
+  avatarUrl?: string;
 }
 
 export async function GET(req: NextRequest) {
@@ -82,6 +83,7 @@ export async function GET(req: NextRequest) {
           phone: u.phone || undefined,
           joinDate: u.createdAt ? new Date(u.createdAt).toISOString() : undefined,
           uid: u.id,
+          avatarUrl: u.avatarUrl || undefined,
         });
       }
     }catch(e){ console.error('prisma members fetch skipped', (e as any)?.message); }
@@ -117,6 +119,7 @@ export async function GET(req: NextRequest) {
           joinDate: data.joinDate,
           personalFYC: data.personalFYC,
           personalCOM: data.personalCOM,
+          avatarUrl: data.avatarUrl,
         });
       });
     }catch(e){ console.error('firestore members fetch skipped', (e as any)?.message); }
