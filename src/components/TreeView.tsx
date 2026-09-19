@@ -1,11 +1,20 @@
 'use client';
 import { useEffect, useState } from 'react';
-type Node = {id:string; name:string; memberId:string; status:'active'|'pending'|'inactive'|'vacant'; rankName?:string; children?:Node[]; slot?:number};
+type Node = {id:string; name:string; memberId:string; status:'active'|'pending'|'inactive'|'vacant'; rankName?:string; children?:Node[]; slot?:number; avatarUrl?:string};
 
 function NodeCard({node}:{node:Node}){
   const color = node.status==='vacant' ? 'border-dashed bg-slate-50 text-slate-500' : node.status==='active' ? 'bg-emerald-50 border-emerald-200' : node.status==='pending' ? 'bg-amber-50 border-amber-200' : 'bg-slate-50';
+  const initials = node.name.split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('').toUpperCase();
   return (
     <div className={`rounded-xl border p-3 min-w-[160px] text-center ${color}`}>
+      {/* Avatar วงกลมจาก avatarUrl หรือ initials */}
+      <div className="w-10 h-10 mx-auto mb-2 overflow-hidden border-2 border-[#dbeafe] bg-white flex items-center justify-center rounded-full" style={{borderRadius:'50%'}}>
+        {node.avatarUrl ? (
+          <img src={node.avatarUrl} alt={node.name} className="w-full h-full object-cover" style={{borderRadius:'50%'}} onError={(e)=>{e.currentTarget.style.display='none'}}/>
+        ) : (
+          <span className="text-sm font-bold text-[#475569]">{initials}</span>
+        )}
+      </div>
       <div className="text-xs font-semibold truncate">{node.name}</div>
       <div className="text-[11px]">{node.memberId}</div>
       {node.rankName && <div className="text-[10px] font-semibold text-sky-700 mt-0.5">{node.rankName}</div>}
@@ -52,10 +61,10 @@ export default function TreeView({ filter }: { filter?: { q?:string; status?:str
           const rest = members.slice(1,5);
           const children: Node[] = [1,2,3,4,5].map((slot,idx)=>{
             const m = rest[idx];
-            if(m) return { id:m.memberId, name:m.name, memberId:m.memberId, rankName: m.rankName, status: m.status==='ACTIVE'?'active': m.status==='PENDING'?'pending':'inactive', slot };
+            if(m) return { id:m.memberId, name:m.name, memberId:m.memberId, rankName: m.rankName, status: m.status==='ACTIVE'?'active': m.status==='PENDING'?'pending':'inactive', slot, avatarUrl: m.avatarUrl };
             return { id:`vacant-${slot}`, name:'ตำแหน่งว่าง', memberId:'-', status:'vacant', slot };
           });
-          setTree({ id:root.memberId, name:root.name, memberId:root.memberId, rankName: root.rankName, status: root.status==='ACTIVE'?'active':'pending', children });
+          setTree({ id:root.memberId, name:root.name, memberId:root.memberId, rankName: root.rankName, status: root.status==='ACTIVE'?'active':'pending', avatarUrl: root.avatarUrl, children });
         }
       }catch(e:any){
         if(!cancelled) setError(e.message||'โหลดไม่สำเร็จ');
