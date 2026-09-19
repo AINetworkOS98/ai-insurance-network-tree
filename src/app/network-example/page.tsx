@@ -63,9 +63,9 @@ function Avatar({m,selected,onClick}:{m:Member;selected:boolean;onClick:()=>void
   const avatarSrc = m.avatarUrl && m.avatarUrl.trim() ? m.avatarUrl : '';
   return (
     <button onClick={onClick} className={`min-w-[92px] max-w-[110px] p-2.5 rounded-2xl border-2 bg-white shadow-sm hover:shadow-md transition text-center ${selected?'ring-2 ring-[#475569] border-[#475569]':statusStyle(m.status)}`}>
-      <div className="w-10 h-10 mx-auto rounded-full overflow-hidden border-2 border-[#dbeafe] bg-white flex items-center justify-center">
+      <div className="w-10 h-10 mx-auto overflow-hidden border-2 border-[#dbeafe] bg-white flex items-center justify-center" style={{borderRadius:'50%'}}>
         {avatarSrc ? (
-          <img src={avatarSrc} alt={m.name} className="w-full h-full object-cover rounded-full"/>
+          <img src={avatarSrc} alt={m.name} className="w-full h-full object-cover" style={{borderRadius:'50%'}}/>
         ) : m.status==='REMOVED' ? (
           <span className="text-lg">❌</span>
         ) : m.status==='PROMOTED' ? (
@@ -329,9 +329,9 @@ export default function NetworkExamplePage(){
               <div className="card p-4">
                 <div className="text-sm font-semibold">รายละเอียดสมาชิก</div>
                 <div className="mt-3 p-3 rounded-2xl border bg-[#f8fafc] text-center">
-                  <div className="w-14 h-14 mx-auto rounded-full overflow-hidden border-2 border-[#dbeafe] bg-white flex items-center justify-center">
+                  <div className="w-14 h-14 mx-auto overflow-hidden border-2 border-[#dbeafe] bg-white flex items-center justify-center" style={{borderRadius:'50%'}}>
                     {displaySelected && displaySelected.avatarUrl && displaySelected.avatarUrl.trim() ? (
-                      <img src={displaySelected.avatarUrl} alt={displaySelected.name} className="w-full h-full object-cover rounded-full"/>
+                      <img src={displaySelected.avatarUrl} alt={displaySelected.name} className="w-full h-full object-cover" style={{borderRadius:'50%'}}/>
                     ) : displaySelected && displaySelected.status==='REMOVED' ? (
                       <span className="text-2xl">❌</span>
                     ) : displaySelected && displaySelected.status==='PROMOTED' ? (
