@@ -98,20 +98,22 @@ function TreeNode({m,depth,selectedId,setSelected}:{m:Member;depth:number;select
   return (
     <div className="flex flex-col items-center">
       <Avatar m={m} selected={selectedId===m.id} onClick={()=>setSelected(m.id)}/>
-      {(m.children.length>0 || isVacant) && <div className="w-px h-4 bg-[#dbeafe] mt-1"/>}
+      {(m.children.length>0 || isVacant) && (<><div className="w-3 h-3 rounded-full bg-sky-500 border-2 border-white shadow-sm mt-1.5 z-10"/><div className="w-px h-4 bg-sky-400 mt-0.5"/></>)}
       {m.children.length>0 && (
         <>
           <div className="h-px bg-[#dbeafe] w-full max-w-[560px]"/>
           <div className="flex gap-2 mt-2 flex-wrap justify-center">
             {m.children.map(c=>(
               <div key={c.id} className="flex flex-col items-center">
-                <div className="w-px h-3 bg-[#dbeafe]"/>
+                <div className="w-3 h-3 rounded-full bg-sky-500 border-2 border-white shadow-sm"/>
+                <div className="w-px h-3 bg-sky-400"/>
                 <TreeNode m={c} depth={depth+1} selectedId={selectedId} setSelected={setSelected}/>
               </div>
             ))}
             {isVacant && Array.from({length:5-m.children.length}).map((_,i)=>(
               <div key={'v'+i} className="flex flex-col items-center opacity-60">
-                <div className="w-px h-3 bg-[#dbeafe] border-dashed"/>
+                <div className="w-3 h-3 rounded-full bg-slate-300 border-2 border-white"/>
+                <div className="w-px h-3 bg-slate-300"/>
                 <div className="min-w-[92px] p-2.5 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 text-center">
                   <div className="w-10 h-10 mx-auto rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400">＋</div>
                   <div className="text-[10px] text-slate-400 mt-1">ว่าง Slot {m.children.length+i+1}</div>
