@@ -7,6 +7,7 @@ export default function Header(){
   const { t } = useT();
   const [unread, setUnread] = useState<number|null>(null);
   const [user, setUser] = useState<{email:string, displayName?:string}|null>(null);
+  const [n8nOpen, setN8nOpen] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   useEffect(()=>{ (async()=>{
     try{ const r=await fetch('/api/notifications'); const j=await r.json(); if(j.ok) setUnread(j.unread); }catch{}
@@ -39,6 +40,41 @@ export default function Header(){
           <Link href={user ? "/verify" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_verify')}</Link>
           <Link href={user ? "/prospects" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_prospects')}</Link>
           <Link href={user ? "/income" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_income')}</Link>
+          {/* N8N Submenu */}
+          <div className="relative">
+            <button onClick={() => setN8nOpen(!n8nOpen)} className="flex items-center gap-1.5 text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">
+              <span className="text-base">⚡</span>
+              <span className="text-sm font-medium">{t('nav_n8n')}</span>
+              <svg className="w-3.5 h-3.5 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            {n8nOpen && (
+              <div className="absolute right-0 mt-2 w-64 rounded-xl border border-[#e2e8f0] bg-white shadow-xl z-50 overflow-hidden">
+                <div className="px-4 py-2.5 bg-[#f8fafc] border-b border-[#e2e8f0] text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('nav_n8n')}</div>
+                <div className="py-1">
+                  <a href="http://localhost:5678/" target="_blank" rel="noopener noreferrer"
+                     className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-[#eff6ff] hover:text-sky-700 transition-colors">
+                    <span className="text-base">🖥️</span>
+                    <span>{t('n8n_editor')}</span>
+                    <span className="ml-auto text-[11px] text-slate-400">ใหม่หน้า</span>
+                  </a>
+                  <a href="/n8n" className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-[#eff6ff] hover:text-sky-700 transition-colors">
+                    <span className="text-base">🔗</span>
+                    <span>{t('n8n_webhooks')}</span>
+                    <span className="ml-auto text-[11px] text-slate-400">คัดลอก URL</span>
+                  </a>
+                  <a href="/n8n/workflows" className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-[#eff6ff] hover:text-sky-700 transition-colors">
+                    <span className="text-base">⚙️</span>
+                    <span>{t('n8n_workflows')}</span>
+                  </a>
+                  <div className="my-1 border-t border-[#e2e8f0]"></div>
+                  <div className="px-4 py-2 text-xs text-slate-400 bg-slate-50">
+                    <span className="block">{t('n8n_status_running')}</span>
+                    <span className="block mt-0.5 text-green-600 font-medium">● localhost:5678</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
           <Link href={user ? "/notifications" : "/admin"} className="relative text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">🔔 {t('nav_notif')} {unread!=null && unread>0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-red-600 text-white text-[11px]">{unread}</span>}</Link>
         </nav>
         <div className="flex items-center gap-2">
