@@ -28,6 +28,7 @@ const PUBLIC_API = [
   '/api/fetch-url',
   '/api/search',
   '/api/members',
+  '/api/visitor',
 ];
 
 const PUBLIC_PAGES = [
