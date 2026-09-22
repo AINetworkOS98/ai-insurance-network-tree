@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import VisitorCounter from "@/components/VisitorCounter";
 
 export const metadata: Metadata = {
   title: "AI Insurance Network Tree — ระบบบริหารเครือข่ายตัวแทน",
@@ -14,6 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-full flex flex-col bg-soft-white text-slate-medium font-sans antialiased" style={{fontFamily:"'Sarabun','Noto Sans Thai',sans-serif"}}>
         {children}
+        <VisitorCounter />
       </body>
     </html>
   );
