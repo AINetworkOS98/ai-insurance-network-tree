@@ -51,6 +51,11 @@ export default function Header(){
               <div className="absolute right-0 mt-2 w-64 rounded-xl border border-[#e2e8f0] bg-white shadow-xl z-50 overflow-hidden">
                 <div className="px-4 py-2.5 bg-[#f8fafc] border-b border-[#e2e8f0] text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('nav_n8n')}</div>
                 <div className="py-1">
+                  <a href="/n8n_automation" className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-[#eff6ff] hover:text-sky-700 transition-colors">
+                    <span className="text-base">🤖</span>
+                    <span>{t('n8n_automation')}</span>
+                    <span className="ml-auto text-[11px] text-slate-400">หน้า Automation</span>
+                  </a>
                   <a href="http://localhost:5678/" target="_blank" rel="noopener noreferrer"
                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-[#eff6ff] hover:text-sky-700 transition-colors">
                     <span className="text-base">🖥️</span>
