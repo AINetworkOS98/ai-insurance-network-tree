@@ -8,6 +8,7 @@ export default function ReferralPage(){
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
   const [copied, setCopied] = useState('');
+  const [qrOpen, setQrOpen] = useState(false);
 
   useEffect(()=>{
     (async()=>{
@@ -92,18 +93,36 @@ export default function ReferralPage(){
             </div>
 
             <div className="p-4 rounded-xl border text-center">
-              <div className="text-xs text-slate-500 mb-2">QR Code สำหรับลิงก์สมัคร</div>
+              <div className="text-xs text-slate-500 mb-2">QR Code สำหรับลิงก์สมัคร (แตะเพื่อขยาย)</div>
               {link ? (
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(link)}`}
-                  alt="QR"
-                  className="mx-auto border rounded-xl p-2 bg-white"
-                  width={180} height={180}
-                />
+                <button onClick={()=> setQrOpen(true)} className="block mx-auto focus:outline-none" aria-label="ขยาย QR Code">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=512x512&data=${encodeURIComponent(link)}`}
+                    alt="QR"
+                    className="mx-auto border rounded-xl p-2 bg-white"
+                    width={180} height={180}
+                  />
+                </button>
               ) : <div className="text-xs text-slate-400">—</div>}
               <div className="text-[11px] text-slate-500 mt-2 break-all">{link}</div>
             </div>
           </div>
+
+          {qrOpen && link && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4" onClick={()=> setQrOpen(false)}>
+              <div className="bg-white rounded-2xl p-6 flex flex-col items-center max-w-[90vw]" onClick={(e)=> e.stopPropagation()}>
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=512x512&data=${encodeURIComponent(link)}`}
+                  alt="QR Code ขนาดใหญ่"
+                  className="rounded-xl border p-2"
+                  width={340} height={340}
+                  style={{ maxWidth:'70vw', maxHeight:'70vw', width:'auto', height:'auto' }}
+                />
+                <div className="mt-4 text-xs text-slate-500 break-all text-center">{link}</div>
+                <button onClick={()=> setQrOpen(false)} className="mt-4 px-5 py-2 rounded-full bg-navy text-white text-sm">ปิด</button>
+              </div>
+            </div>
+          )}
 
           <div className="card p-5">
             <h3 className="font-semibold text-sm">รายชื่อที่ฉันแนะนำ ({data.totalSponsored || 0} คน)</h3>
