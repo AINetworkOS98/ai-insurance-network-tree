@@ -56,7 +56,7 @@ export async function POST(req: NextRequest){
         const chars = Array.from(ans);
         for(let i=0;i<chars.length;i++){
           send({ type:'token', text: chars[i] });
-          if (i % 8 === 0) await new Promise(r=> setTimeout(r, 8));
+          if (i % 24 === 0) await new Promise(r=> setTimeout(r, 0));
         }
         send({ type:'done', via: result.via, answer: ans, trace: result.trace });
         controller.close();
