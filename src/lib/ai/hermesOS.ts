@@ -77,6 +77,23 @@ export async function hermesExecute(params:{
     return { intent, via:"fallback", trace, answer: buildFallback(params.query, intent, params.mode, !!params.hasDataset, params.rows ?? 0, toolResults, skills) };
   }
 
+  // ⚡ Fast-path: ถ้า tool ตอบได้ชัด (คำนวณ/ค้นหา/ผัง/ใบเสร็จ) → ตอบตรงทันที ไม่เรียก LLM (ลด 3-5s)
+  if (!params.hasDataset) {
+    const direct = tryDirectAnswer(params.query, intent, toolResults, skills);
+    if (direct) {
+      params.onStep?.({ step:"llm", label:"ตอบทันที", detail:"ไม่ต้องเรียก AI — ได้ผลจากเครื่องมือโดยตรง", status:"done" });
+      return { intent, via:"fallback", trace, answer: direct };
+    }
+  }
+
+  // ⚡ Cache คำตอบ LLM — คำถามซ้ำตอบทันที
+  const cacheKey = `${params.mode}|${intent}|${(params.query||"").slice(0,120)}`;
+  const cached = llmCache.get(cacheKey);
+  if (cached) {
+    params.onStep?.({ step:"llm", label:"ตอบจากแคช", detail:"คำถามซ้ำ — ตอบทันที", status:"done" });
+    return { intent, via:"hermes", trace, answer: cached };
+  }
+
   const provider = getHermesProvider();
   if (provider.isConfigured()) {
     try {
@@ -89,6 +106,8 @@ export async function hermesExecute(params:{
       const memoryInfo = memoryCtx ? `User Memory:\n${memoryCtx}` : "";
       const userContent = `คำถาม/คำสั่ง: ${params.query || "(ให้วิเคราะห์ข้อมูลที่วาง)"}\nIntent: ${intent}\nMode: ${params.mode}\n${skillInfo}\nTools: ${tools.join(", ")}\n${memoryInfo}\n${contextInfo}\n${toolInfo}\n\nกฎ: ตอบเป็นภาษาไทย กระชับ มีประโยชน์ ถ้ามีผลจาก tools ให้อ้างอิงโดยตรง ห้ามสร้างข้อมูลที่ไม่มีใน tool results ถ้าข้อมูลไม่พอให้บอกว่าต้องการอะไรเพิ่ม แยก Skills/Memory/Tools ออกจากคำตอบหลัก`;
       const answer = await provider.chat([{ role:"user", content: userContent }], { temperature: params.mode==="DEEP"?0.32:0.4, maxTokens: params.mode==="DEEP"?1600:1100 });
+      llmCache.set(cacheKey, answer);
+      if (llmCache.size > 200){ const k = llmCache.keys().next().value; if(k) llmCache.delete(k); }
       params.onStep?.({ step:"llm", label:"สังเคราะห์คำตอบ", detail:"เสร็จ", status:"done" });
       return { intent, via:"hermes", trace, answer };
     } catch (e:any) {
@@ -97,6 +116,32 @@ export async function hermesExecute(params:{
     }
   }
   return { intent, via:"fallback", trace, answer: buildFallback(params.query, intent, params.mode, !!params.hasDataset, params.rows ?? 0, toolResults, skills) };
+}
+
+// In-memory cache คำตอบ LLM — คำถามซ้ำตอบทันที (ต่อ instance)
+const llmCache = new Map<string, string>();
+
+// ตอบตรงจากผล tool โดยไม่เรียก LLM — สำหรับคำถามที่เครื่องมือตอบได้ชัด
+function tryDirectAnswer(q: string, intent: string, toolResults: any[], skills: string[]): string | null {
+  const calc = toolResults.find(r=> r.tool==="Calculator" && r.ok)?.data;
+  if (calc?.result !== undefined && !calc?.error) return `${calc.expression} = ${calc.result}`;
+  const sales = toolResults.find(r=> r.tool==="Sales Calculation" && r.ok)?.data;
+  if (sales?.numbers?.length >= 2 && intent==="CALCULATE") return `${sales.numbers.join(" + ")} = ${sales.sum} • เฉลี่ย ${typeof sales.avg==="number" ? sales.avg.toFixed(2) : sales.avg} • สูงสุด ${sales.max} • ต่ำสุด ${sales.min}`;
+  if (/ผัง|เครือข่าย|1 แตก 5/i.test(q)) {
+    const net = toolResults.find(r=> r.tool==="Network Engine")?.data;
+    if (net?.root) return `ผัง ${net.root.memberCode} — ${net.root.firstName} ${net.root.lastName} • สายตรง ${net.children?.length ?? net.placements ?? 0} คน`;
+    if (net?.mode==="sample") return `ตัวอย่างผัง ${net.nodes?.length ?? 0} โหนด — พิมพ์รหัสสมาชิกเพื่อดูผังเฉพาะคน`;
+  }
+  if (/ใบเสร็จ|receipt/i.test(q)) {
+    const rc = toolResults.find(r=> r.tool==="Receipt Validation")?.data;
+    if (rc?.count !== undefined) return `ใบเสร็จ ${rc.count} รายการล่าสุด — แนบไฟล์เพื่อตรวจ OCR/ซ้ำ`;
+  }
+  const hits = toolResults.find(r=> r.tool==="Database Search")?.data?.hits;
+  if (hits?.length) return `พบ ${hits.length} รายการ:\n${hits.slice(0,5).map((h:any)=> `• ${h.type}: ${h.firstName ?? h.name ?? h.email ?? h.memberCode ?? JSON.stringify(h).slice(0,60)}`).join("\n")}`;
+  // ทักทายสั้น — ตอบทันทีไม่เรียก LLM
+  const ql = q.toLowerCase().trim();
+  if (/^(สวัสดี|หวัดดี|hello|hi|hey)\b/.test(ql)) return `สวัสดีครับ 👋 — ถามได้เลย เช่น "คำนวณ 1234*56" / "ค้นหา M-000123" / วางข้อมูลแล้วบอก "วิเคราะห์"`;
+  return null;
 }
 
 function buildFallback(q:string, intent:string, mode:SearchMode, hasDataset:boolean, rows:number, toolResults:any[], skills:string[]): string {
