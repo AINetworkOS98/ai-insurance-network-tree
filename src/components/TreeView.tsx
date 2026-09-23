@@ -24,6 +24,51 @@ function NodeCard({node}:{node:Node}){
   );
 }
 
+// สายไฟเชื่อมต่อแบบ n8n — วิ่งเปลี่ยนสีไหลลงต่อเนื่อง ไม่มีจุดสิ้นสุด
+function TreeConnector({ count }: { count: number }){
+  const COL = 200;           // ความกว้างคอลัมน์ (ตรงกับ flex-1 ของลูก)
+  const W = COL * count;
+  const H = 92;
+  const centerX = W / 2;
+  const childXs = Array.from({ length: count }, (_, i) => COL/2 + i*COL);
+  const spineY = 30;
+  const dropEnd = 84;
+  const trunk = `M ${centerX} 0 L ${centerX} ${spineY}`;
+  const spine = `M ${childXs[0]} ${spineY} L ${childXs[count-1]} ${spineY}`;
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="overflow-visible" aria-hidden="true">
+      <defs>
+        <linearGradient id="ntWireGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#38bdf8"/>
+          <stop offset="50%" stopColor="#34d399"/>
+          <stop offset="100%" stopColor="#a78bfa"/>
+        </linearGradient>
+      </defs>
+      {/* ฐานเส้น (จาง) */}
+      <g stroke="#e2e8f0" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+        <path d={trunk}/>
+        <path d={spine}/>
+        {childXs.map((x)=> <path key={x} d={`M ${x} ${spineY} L ${x} ${dropEnd}`}/>)}
+      </g>
+      {/* แสงเรืองรอง */}
+      <g className="nt-flow-group" stroke="url(#ntWireGrad)" strokeWidth="6" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.18">
+        <path d={trunk}/>
+        <path d={spine}/>
+        {childXs.map((x)=> <path key={x} d={`M ${x} ${spineY} L ${x} ${dropEnd}`}/>)}
+      </g>
+      {/* สายไฟวิ่ง */}
+      <g className="nt-flow-group" stroke="url(#ntWireGrad)" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
+        <path className="nt-flow-line" d={trunk}/>
+        <path className="nt-flow-line" d={spine}/>
+        {childXs.map((x)=> <path key={x} className="nt-flow-line" d={`M ${x} ${spineY} L ${x} ${dropEnd}`}/>)}
+      </g>
+      {/* จุดพลังงานที่ปลายสาย (ไหลเข้าหา node) */}
+      {childXs.map((x)=> <circle key={x} cx={x} cy={dropEnd} r="4" fill="#22d3ee" className="nt-pulse-dot"/>)}
+    </svg>
+  );
+}
+
+
 export default function TreeView({ filter }: { filter?: { q?:string; status?:string; province?:string; district?:string; tambon?:string; zipCode?:string } }){
   const [zoom,setZoom]=useState(100);
   const [tree, setTree]=useState<Node|null>(null);
@@ -122,13 +167,21 @@ export default function TreeView({ filter }: { filter?: { q?:string; status?:str
         <span className="ml-auto text-xs text-slate-500">ลาก/ซูม • ค้นหา • Filter • Lazy Loading • List View บนมือถือ</span>
       </div>
       <div className="overflow-auto border rounded-2xl bg-white p-6" style={{zoom:`${zoom}%`}}>
-        <div className="flex flex-col items-center gap-4 min-w-[700px]">
+        <style>{`
+          @keyframes ntWireFlow { 0% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: -40; } }
+          @keyframes ntHueSpin { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
+          @keyframes ntPulse { 0%,100% { opacity: 0.25; r: 3; } 50% { opacity: 1; r: 5; } }
+          .nt-flow-line { stroke-dasharray: 10 10; animation: ntWireFlow 0.7s linear infinite; }
+          .nt-flow-group { animation: ntHueSpin 6s linear infinite; }
+          .nt-pulse-dot { animation: ntPulse 1.6s ease-in-out infinite; }
+        `}</style>
+        <div className="flex flex-col items-center gap-0 min-w-[700px]">
           <NodeCard node={tree} />
-          <div className="text-xs text-slate-400">┬─────┬─────┬─────┬─────┐</div>
+          <TreeConnector count={tree.children!.length} />
           <div className="flex gap-3">
             {tree.children!.map(c=> <NodeCard key={c.id} node={c} />)}
           </div>
-          <div className="text-[11px] text-slate-500 mt-2">คนที่ 6 จะลงใต้ {tree.children![0]?.memberId} (BFS ซ้าย→ขวา ชั้นตื้นสุดก่อน) • แสดงเฉพาะสมาชิกจริง</div>
+          <div className="text-[11px] text-slate-500 mt-3">คนที่ 6 จะลงใต้ {tree.children![0]?.memberId} (BFS ซ้าย→ขวา ชั้นตื้นสุดก่อน) • แสดงเฉพาะสมาชิกจริง</div>
           <div className="flex gap-2 text-[11px] mt-2">
             <span className="px-2 py-1 rounded-full bg-emerald-100 text-emerald-700">Active</span>
             <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-700">Pending</span>
