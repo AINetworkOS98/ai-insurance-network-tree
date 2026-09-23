@@ -1,31 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
-export const runtime = 'edge';
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+);
 
-// ใน-memory counter — สำหรับ demo
-// ใน production ควรใช้ Vercel KV เพื่อให้ count persist ระหว่าง deployment
-let requestCount = 0;
+async function getCount(): Promise<number> {
+  const { data, error } = await supabase
+    .from('visitor_counts')
+    .select('count')
+    .eq('id', 1)
+    .single();
+  if (error || !data) {
+    await supabase.from('visitor_counts').insert({ id: 1, count: 0 });
+    return 0;
+  }
+  return data.count;
+}
+
+async function incrementCount(): Promise<number> {
+  const { data, error } = await supabase
+    .from('visitor_counts')
+    .select('count')
+    .eq('id', 1)
+    .single();
+  if (error || !data) {
+    await supabase.from('visitor_counts').insert({ id: 1, count: 1 });
+    return 1;
+  }
+  const newCount = data.count + 1;
+  await supabase
+    .from('visitor_counts')
+    .update({ count: newCount })
+    .eq('id', 1);
+  return newCount;
+}
 
 export async function GET() {
-  return NextResponse.json({ count: requestCount, success: true });
+  const count = await getCount();
+  return NextResponse.json({ count, success: true });
 }
 
 export async function POST(request: NextRequest) {
   const seen = request.cookies.get('visitor_seen');
-  
+
   if (seen?.value === '1') {
-    return NextResponse.json({ 
-      count: requestCount, 
-      success: true, 
-      incremented: false 
+    const count = await getCount();
+    return NextResponse.json({
+      count,
+      success: true,
+      incremented: false
     });
   }
-  
-  requestCount++;
-  const response = NextResponse.json({ 
-    count: requestCount, 
-    success: true, 
-    incremented: true 
+
+  const newCount = await incrementCount();
+  const response = NextResponse.json({
+    count: newCount,
+    success: true,
+    incremented: true
   });
   response.cookies.set('visitor_seen', '1', {
     maxAge: 60 * 60 * 24,
