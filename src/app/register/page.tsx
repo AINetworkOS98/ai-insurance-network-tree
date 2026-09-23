@@ -10,7 +10,7 @@ function RegisterInner(){
   const [sponsor, setSponsor] = useState<any>(null);
   const [refError, setRefError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', password:'', confirm:'', addressLine:'', zipCode:'', lineId:'', facebookUrl:'', tiktokUrl:'' });
+  const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', password:'', confirm:'', addressLine:'', zipCode:'', lineId:'', facebookUrl:'', tiktokUrl:'', birthDate:'', occupation:'', consentPdpa:false, consentMarketing:false });
   const [msg, setMsg] = useState('');
   const [autoCodes, setAutoCodes] = useState<{memberCode?:string, referralCode?:string}|null>(null);
   // ที่อยู่ตอนสมัคร (เก็บชื่อจังหวัด/อำเภอ/ตำบล)
@@ -94,6 +94,7 @@ function RegisterInner(){
     if(form.password.length < 8){ setMsg('รหัสผ่านต้องมีอย่างน้อย 8 อักขระ'); return; }
     if(form.password !== form.confirm){ setMsg('ยืนยันรหัสผ่านไม่ตรงกัน'); return; }
     if(!form.email.trim() || !form.firstName.trim() || !form.lastName.trim()){ setMsg('กรอกชื่อ สกุล อีเมล ให้ครบ'); return; }
+    if(!form.consentPdpa){ setMsg('กรุณายอมรับนโยบายความเป็นส่วนตัว (PDPA) ก่อนสมัคร'); return; }
     setLoading(true); setMsg(''); setAutoCodes(null);
     const pname = provList.find((p:any)=>String(p.id)===addrP)?.name_th || undefined;
     const dname = distOpts.find((d:any)=>String(d.id)===addrD)?.name_th || undefined;
@@ -142,11 +143,21 @@ function RegisterInner(){
             <input placeholder="ยืนยันรหัสผ่าน *" type="password" value={form.confirm} onChange={e=> setForm({...form, confirm:e.target.value})} className="border rounded-xl px-3 py-2.5 text-sm" />
           </div>
 
-          {/* โซเชียล */}
+          {/* โซเชียล + วันเกิด + อาชีพ */}
           <div className="mt-3 grid md:grid-cols-3 gap-3">
             <input placeholder="LINE ID" value={form.lineId} onChange={e=> setForm({...form, lineId:e.target.value})} className="border rounded-xl px-3 py-2.5 text-sm" />
             <input placeholder="Facebook (ลิงก์)" value={form.facebookUrl} onChange={e=> setForm({...form, facebookUrl:e.target.value})} className="border rounded-xl px-3 py-2.5 text-sm" />
             <input placeholder="TikTok (ลิงก์/ID)" value={form.tiktokUrl} onChange={e=> setForm({...form, tiktokUrl:e.target.value})} className="border rounded-xl px-3 py-2.5 text-sm" />
+          </div>
+          <div className="mt-3 grid md:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-slate-500 block mb-1">วัน/เดือน/ปีเกิด</label>
+              <input type="date" value={form.birthDate} onChange={e=> setForm({...form, birthDate:e.target.value})} className="w-full border rounded-xl px-3 py-2.5 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500 block mb-1">อาชีพ</label>
+              <input placeholder="เช่น วิศวกร, ครู, นักธุรกิจ" value={form.occupation} onChange={e=> setForm({...form, occupation:e.target.value})} className="w-full border rounded-xl px-3 py-2.5 text-sm" />
+            </div>
           </div>
 
           {/* ที่อยู่ มาตรฐาน: บ้านเลขที่ + ตำบล/อำเภอ/จังหวัด + รหัสไปรษณีย์ */}
@@ -168,7 +179,25 @@ function RegisterInner(){
           </div>
           <p className="mt-2 text-[11px] text-slate-500">พิมพ์อักษรในช่องตำบล เขต/อำเภอ หรือจังหวัดเพื่อดูตัวเลือกทันที — เลือกตำบลแล้วระบบเติมเขต/อำเภอ จังหวัด และรหัสไปรษณีย์ให้อัตโนมัติ</p>
 
-          <label className="flex items-center gap-2 mt-3 text-xs"><input type="checkbox" defaultChecked /> ยอมรับเงื่อนไขการใช้งานและ PDPA (เก็บเวอร์ชันและเวลายินยอม)</label>
+          {/* PDPA + Consent */}
+          <div className="mt-4 p-3 rounded-xl border bg-slate-50">
+            <details className="group">
+              <summary className="cursor-pointer text-xs font-semibold text-slate-700 select-none">การคุ้มครองข้อมูลส่วนบุคคล (PDPA) ▾</summary>
+              <p className="mt-2 text-[11px] text-slate-600 leading-relaxed">ข้อมูลส่วนบุคคลที่ท่านให้ไว้จะถูกเก็บรวบรวม ใช้ และประมวลผลเท่าที่จำเป็นสำหรับการสมัครสมาชิก การให้บริการ การติดต่อ และการดำเนินการที่เกี่ยวข้องตามวัตถุประสงค์ที่แจ้งไว้ โดยข้อมูลจะได้รับการดูแลตามมาตรการรักษาความปลอดภัยที่เหมาะสม</p>
+              <div className="mt-2 space-x-4 text-[11px]">
+                <Link href="/privacy-policy" className="text-navy underline">อ่านนโยบายความเป็นส่วนตัว</Link>
+                <Link href="/privacy-details" className="text-navy underline">รายละเอียดการประมวลผลข้อมูล</Link>
+              </div>
+            </details>
+            <label className="flex items-start gap-2 mt-3 text-xs cursor-pointer">
+              <input type="checkbox" checked={form.consentPdpa} onChange={e=> setForm({...form, consentPdpa:e.target.checked})} className="mt-0.5" />
+              <span>ข้าพเจ้าได้อ่านและรับทราบนโยบายความเป็นส่วนตัว และยินยอมให้เก็บรวบรวม ใช้ และประมวลผลข้อมูลส่วนบุคคลตามรายละเอียดที่แจ้งไว้ <span className="text-red-500">*</span></span>
+            </label>
+            <label className="flex items-start gap-2 mt-2 text-xs cursor-pointer">
+              <input type="checkbox" checked={form.consentMarketing} onChange={e=> setForm({...form, consentMarketing:e.target.checked})} className="mt-0.5" />
+              <span>ข้าพเจ้ายินยอมให้ติดต่อเพื่อรับข่าวสาร โปรโมชั่น สิทธิประโยชน์ และข้อมูลเกี่ยวกับผลิตภัณฑ์หรือบริการ (ไม่บังคับ)</span>
+            </label>
+          </div>
 
           <button onClick={submit} disabled={loading} className="w-full mt-4 py-2.5 rounded-full bg-[#c8a84e] text-[#475569] font-semibold disabled:opacity-50">
             {loading ? 'กำลังสมัคร...' : 'สมัคร — สร้างบัญชี'}
