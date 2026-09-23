@@ -65,3 +65,20 @@ export async function isSystemAdmin(userId: string): Promise<{ ok: boolean; user
     return { ok:false, user };
   }catch{ return { ok:false }; }
 }
+
+// ── ผู้แนะนำราก (รหัสแรก) ───────────────────────────────────────
+// สมาชิกทุกคนที่ไม่มีรหัสแนะนำ (หรือรหัสไม่ถูกต้อง) จะผูกกับ admin หลักนี้เป็นผู้แนะนำโดยอัตโนมัติ
+export const ROOT_SPONSOR_EMAIL = 'akarapol.pro798@gmail.com';
+
+export async function getRootSponsor(){
+  try{
+    let user: any = await prisma.user.findUnique({ where:{ email: ROOT_SPONSOR_EMAIL } }).catch(()=>null);
+    if(!user) return null;
+    // ผูก super_admin + สร้างเลขรหัสสมาชิก/รหัสแนะนำถ้ายังไม่มี (เลขรหัสแรก)
+    await ensureSuperAdmin(user.id);
+    const { ensureMemberCodes } = await import('@/lib/referral');
+    await ensureMemberCodes(prisma, user.id);
+    user = await prisma.user.findUnique({ where:{ id: user.id } }).catch(()=>null);
+    return user;
+  }catch{ return null; }
+}

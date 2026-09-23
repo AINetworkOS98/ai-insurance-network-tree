@@ -48,6 +48,16 @@ export async function POST(req: NextRequest){
       // กันแนะนำตนเอง — อีเมลเดียวกัน (กรณีแก้โค้ดตนเองหลังสมัครจะกันใน sponsorship update)
     }
 
+    // ผู้แนะนำเริ่มต้น = Admin หลัก (รหัสแรก) — สมาชิกที่ไม่มีรหัสแนะนำ หรือรหัสไม่ถูกต้อง จะผูกกับ admin หลักอัตโนมัติ
+    if(!sponsorUser){
+      const { getRootSponsor } = await import('@/lib/admin');
+      const root = await getRootSponsor();
+      if(root && root.id){
+        sponsorUser = root;
+        if(!sponsorError) sponsorError = null;
+      }
+    }
+
     const pwdHash = await hashPassword(password);
 
     // สร้างรหัส auto แบบ unique retry 3 ครั้ง
