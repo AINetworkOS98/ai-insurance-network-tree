@@ -65,7 +65,7 @@ export function toBuddhistLabel(period: string){
 
 // ตารางตัดยอดสิ้นเดือนล่วงหน้า n เดือน: period + cutoff (Bangkok month-end) + ป้าย พ.ศ.
 export function monthEndSchedule(n: number = 12){
-  const out: Array<{ period:string; label:string; cutoffBangkok:string; cutoffAt:string }> = [];
+  const tmp: Array<{ period:string; label:string; cutoffBangkok:string; cutoffAt:string }> = [];
   const [cy,cm] = currentPeriod().split('-').map(Number);
   for(let i=0; i<n; i++){
     const d = new Date(Date.UTC(cy, cm-1+i, 1));
@@ -73,16 +73,17 @@ export function monthEndSchedule(n: number = 12){
     const m = d.getUTCMonth()+1;
     const period = `${y}-${String(m).padStart(2,'0')}`;
     const { endAt } = monthBounds(period);
-    // แสดงเป็นวันสิ้นเดือน: วันที่สุดท้ายของเดือนนั้น เวลา 24:00 น.
     const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
-    out.push({
+    tmp.push({
       period,
       label: toBuddhistLabel(period),
       cutoffBangkok: `${lastDay} ${TH_MONTHS[m-1]} ${y+543} 24:00 น. (เที่ยงคืนสิ้นเดือน)`,
       cutoffAt: endAt.toISOString(),
     });
   }
-  return out;
+  // เรียงใหม่ให้เดือนล่าสุดอยู่บนสุด (ลงมาตามลำดับ)
+  tmp.reverse();
+  return tmp;
 }
 
 // ปิดยอด: สร้าง snapshot ทุกคน — เรียกซ้ำได้ไม่ลงซ้ำ (idempotent)

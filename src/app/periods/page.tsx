@@ -93,14 +93,26 @@ export default function PeriodMaintenancePage(){
               </span>
             </div>
             <div className="mt-3">
-              <div className="text-xs font-semibold mb-1">ตารางตัดยอดสิ้นเดือนล่วงหน้า (พ.ศ.)</div>
-              <div className="grid md:grid-cols-2 gap-1 max-h-[180px] overflow-auto">
-                {schedule.map((s:any)=>(
-                  <div key={s.period} className="flex gap-2 text-[11px] p-1.5 rounded border bg-slate-50">
-                    <span className="font-bold">{s.label}</span>
-                    <span className="text-slate-500">{s.cutoffBangkok}</span>
-                  </div>
-                ))}
+              <div className="text-xs font-semibold mb-1">ตารางตัดยอดสิ้นเดือนล่วงหน้า (พ.ศ.) — ล่าสุดอยู่บนสุด</div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100">
+                      <th className="text-left px-2 py-1 font-semibold">เดือน (พ.ศ.)</th>
+                      <th className="text-left px-2 py-1 font-semibold">Period</th>
+                      <th className="text-left px-2 py-1 font-semibold">ตัดยอด (Bangkok)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {schedule.map((s:any)=>(
+                      <tr key={s.period} className="border-b">
+                        <td className="px-2 py-1.5 font-bold">{s.label}</td>
+                        <td className="px-2 py-1.5 font-mono text-slate-500">{s.period}</td>
+                        <td className="px-2 py-1.5 text-slate-600">{s.cutoffBangkok}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
