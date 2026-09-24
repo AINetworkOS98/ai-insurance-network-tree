@@ -4,7 +4,6 @@ import { prisma } from '@/lib/prisma';
 // - มี role super_admin / admin / สิทธิ system.manage, หรือ
 // - อีเมล Admin Akarapol (รองรับรูปเขียนตามที่แจ้ง + gmail มาตรฐาน กันล็อกตัวเอง)
 export const ADMIN_EMAILS = [
-  'akarapol.pro798@gmai.com',
   'akarapol.pro798@gmail.com',
   'akarapol.pro@gmail.com',
 ];

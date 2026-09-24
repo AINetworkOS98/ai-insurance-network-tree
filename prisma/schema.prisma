@@ -72,6 +72,17 @@ enum PayoutStatus {
   REVERSED
 }
 
+enum MessageStatus {
+  PENDING
+  REPLIED
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
 // ── Core Users & Auth ─────────────────────────────────
 model User {
   id                String   @id @default(uuid()) @db.Uuid
@@ -142,6 +153,8 @@ model User {
   treeNode          TreeNode?
   placementsAsChild TreePlacement[] @relation("PlacementChild")
   member            Member?
+  memberMessages    MemberMessage[]
+  messageReplies    MessageReply[]
 }
 
 model UserSession {
@@ -740,6 +753,49 @@ model ReportDeliveryLog {
   report      ScheduledReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
   sentAt      DateTime @default(now()) @db.Timestamptz
   status      String
+}
+
+// ── Member Messages (ข้อความ/คำถามจากสมาชิก → Admin ตอบ) ──
+model MemberMessage {
+  id            String   @id @default(uuid()) @db.Uuid
+  memberId      String   @db.Uuid
+  member        User     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  message       String   @db.Text
+  status        MessageStatus @default(PENDING)
+  createdAt     DateTime @default(now()) @db.Timestamptz
+  updatedAt     DateTime @updatedAt @db.Timestamptz
+  replies       MessageReply[]
+  notificationLogs NotificationLog[]
+  @@index([memberId])
+  @@index([status, createdAt])
+}
+
+model MessageReply {
+  id            String   @id @default(uuid()) @db.Uuid
+  messageId     String   @db.Uuid
+  message       MemberMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  repliedBy     String   @db.Uuid
+  replier       User     @relation(fields: [repliedBy], references: [id])
+  replyMessage  String   @db.Text
+  createdAt     DateTime @default(now()) @db.Timestamptz
+  @@index([messageId])
+}
+
+// Log การส่งแจ้งเตือน (email / LINE) — แยก error ไม่ให้กระทบธุรกรรมหลัก
+model NotificationLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  type          String   // member.question.new | member.question.replied | line.test
+  channel       String   // email | line
+  target        String   // email address หรือ LINE userId
+  messageId     String?  @db.Uuid
+  message       MemberMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  status        NotificationStatus @default(PENDING)
+  error         String?  @db.Text
+  payload       Json?
+  createdAt     DateTime @default(now()) @db.Timestamptz
+  sentAt        DateTime? @db.Timestamptz
+  @@index([type, status])
+  @@index([createdAt])
 }
 
 // ── Event Outbox (สเปคหมวด 12: ยอด + แจ้งเตือน atomic) ─

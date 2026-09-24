@@ -57,6 +57,7 @@ function AdminContent() {
   const [positionData, setPositionData] = useState<PositionData[]>([]);
   const [treeStructure, setTreeStructure] = useState<TreeNode[]>([]);
   const [totalActiveMembers, setTotalActiveMembers] = useState(0);
+  const [pendingMsgCount, setPendingMsgCount] = useState(0);
 
   const callApi = async (endpoint: string) => {
     const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api${endpoint}`);
@@ -106,6 +107,8 @@ function AdminContent() {
       fetchMembers();
       fetchIncomeSummary();
       fetchPositionData();
+      // badge จำนวนข้อความที่ยังไม่ได้ตอบ (best-effort)
+      fetch('/api/admin/messages', { credentials: 'include' }).then(r => r.json()).then(j => { if (j.ok) setPendingMsgCount(j.pending || 0); }).catch(() => {});
     }, []);
 
   if (loading) {
@@ -188,6 +191,21 @@ function AdminContent() {
             >
               งบบันทึกการแก้ไข
             </button>
+            <Link
+              href="/admin/messages"
+              className="px-4 py-2 rounded-full text-sm font-medium bg-white border border-blue-100 text-slate-600 hover:bg-[#f0f7ff] flex items-center gap-2"
+            >
+              💬 ตอบสมาชิก
+              {pendingMsgCount > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full bg-red-600 text-white text-[11px] font-semibold">{pendingMsgCount}</span>
+              )}
+            </Link>
+            <Link
+              href="/admin/reports"
+              className="px-4 py-2 rounded-full text-sm font-medium bg-white border border-blue-100 text-slate-600 hover:bg-[#f0f7ff]"
+            >
+              📊 รายงาน
+            </Link>
           </div>
 
           {/* Members Tab */}
