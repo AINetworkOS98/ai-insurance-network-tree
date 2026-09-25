@@ -81,8 +81,7 @@ export function monthEndSchedule(n: number = 12){
       cutoffAt: endAt.toISOString(),
     });
   }
-  // เรียงใหม่ให้เดือนล่าสุดอยู่บนสุด (ลงมาตามลำดับ)
-  tmp.reverse();
+  // เรียงจากเดือนปัจจุบันไปอนาคต (ปัจจุบันอยู่บนสุด)
   return tmp;
 }
 
