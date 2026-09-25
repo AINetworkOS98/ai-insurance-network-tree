@@ -83,6 +83,13 @@ enum NotificationStatus {
   FAILED
 }
 
+enum SupportStatus {
+  NEW
+  IN_PROGRESS
+  REPLIED
+  CLOSED
+}
+
 // ── Core Users & Auth ─────────────────────────────────
 model User {
   id                String   @id @default(uuid()) @db.Uuid
@@ -1326,4 +1333,38 @@ model AIMemory {
   updatedAt DateTime @updatedAt @db.Timestamptz
   @@unique([userId, key])
   @@index([userId])
+}
+
+// ── Support Ticket (ติดต่อ Admin แบบ Ticket System) ─────────────────────
+
+model SupportTicket {
+  id          String        @id @default(uuid()) @db.Uuid
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String        @db.Uuid
+  name        String
+  phone       String?
+  lineId      String?
+  subject     String
+  message     String        @db.Text
+  status      SupportStatus @default(NEW)
+  adminNote   String?       @db.Text
+  createdAt   DateTime      @default(now()) @db.Timestamptz
+  updatedAt   DateTime      @updatedAt @db.Timestamptz
+  closedAt    DateTime?     @db.Timestamptz
+  messages    SupportMessage[]
+
+  @@index([userId])
+  @@index([status, createdAt])
+}
+
+model SupportMessage {
+  id           String        @id @default(uuid()) @db.Uuid
+  ticket       SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId     String        @db.Uuid
+  senderType   String        // USER | ADMIN
+  senderId     String        @db.Uuid
+  message      String        @db.Text
+  createdAt    DateTime      @default(now()) @db.Timestamptz
+
+  @@index([ticketId])
 }

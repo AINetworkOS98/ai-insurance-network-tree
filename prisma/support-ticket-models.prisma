@@ -1,0 +1,39 @@
+// Support Ticket — ศูนย์บริการติดต่อ Admin แบบ Ticket System
+enum SupportStatus {
+  NEW            // 🔴 ใหม่ — ยังไม่มี Admin รับเรื่อง
+  IN_PROGRESS    // 🟡 กำลังดำเนินการ — Admin กำลังตรวจสอบ
+  REPLIED        // 🟢 ตอบแล้ว — มีการตอบกลับแล้ว
+  CLOSED         // ⚫ ปิดเคส — เรื่องเสร็จสิ้น
+}
+
+model SupportTicket {
+  id          String        @id @default(uuid()) @db.Uuid
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String        @db.Uuid
+  name        String        // ดึงจาก profile ผู้ส่ง
+  phone       String?       // เบอร์โทร (กรอกโดยผู้ใช้)
+  lineId      String?       // LINE ID (กรอกโดยผู้ใช้)
+  subject     String        // หัวข้อ
+  message     String        @db.Text // ข้อความ
+  status      SupportStatus @default(NEW)
+  adminNote   String?       @db.Text // หมายเหตุ admin
+  createdAt   DateTime      @default(now()) @db.Timestamptz
+  updatedAt   DateTime      @updatedAt @db.Timestamptz
+  closedAt    DateTime?     @db.Timestamptz
+  messages    SupportMessage[]
+
+  @@index([userId])
+  @@index([status, createdAt])
+}
+
+model SupportMessage {
+  id           String   @id @default(uuid()) @db.Uuid
+  ticket       SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId     String   @db.Uuid
+  senderType   String   // USER | ADMIN
+  senderId     String   @db.Uuid
+  message      String   @db.Text
+  createdAt    DateTime @default(now()) @db.Timestamptz
+
+  @@index([ticketId])
+}
