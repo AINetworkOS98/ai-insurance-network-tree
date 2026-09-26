@@ -7,15 +7,17 @@ function authed(req: NextRequest){
   try{ return verifyToken(token) as any; }catch{ return null; }
 }
 
-// GET /api/system/health — สถานะฐานหลัก/สำรอง/สำรองล่าสุด + สิทธิ admin
+// GET /api/system/health — สถานะฐานหลัก/สำรอง/สำรองล่าสุด (admin เท่านั้น)
 export async function GET(req: NextRequest){
   try{
     const payload = authed(req);
     if(!payload) return NextResponse.json({ ok:false, error:'กรุณาเข้าสู่ระบบ' }, { status:401 });
     const { systemHealth } = await import('@/lib/backup');
     const { isSystemAdmin } = await import('@/lib/admin');
-    const health = await systemHealth();
     const canRestore = (await isSystemAdmin(payload.sub).catch(()=> ({ ok:false }))).ok;
+    // สถานะฐานข้อมูล/สำรองเป็นข้อมูลผู้บริหารระบบ — สมาชิกทั่วไปเรียกตรงต้องถูกกัน
+    if(!canRestore) return NextResponse.json({ ok:false, error:'เฉพาะผู้บริหารระบบ / Admin Akarapol' }, { status:403 });
+    const health = await systemHealth();
     return NextResponse.json({ ok:true, ...health, canRestore });
   }catch(e:any){ return NextResponse.json({ ok:false, error:e?.message || 'error' }, { status:500 }); }
 }

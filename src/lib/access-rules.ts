@@ -11,7 +11,7 @@ export const ADMIN_ROLE_CODES = ['super_admin', 'admin'];
 
 // หน้าสงวนสิทธิ์: เข้าได้เฉพาะ Admin หรือสมาชิกอีเมล akarapol.pro798@gmail.com เท่านั้น
 // ต้องการกั้นหน้าเพิ่ม = เพิ่ม path ที่นี่บรรทัดเดียว (ครอบทั้ง path ตรงตัวและ path ย่อย)
-export const ADMIN_ONLY_PAGE_PREFIXES = ['/n8n', '/n8n_automation'];
+export const ADMIN_ONLY_PAGE_PREFIXES = ['/n8n', '/n8n_automation', '/admin/backup', '/admin/messages', '/admin/reports', '/admin/support'];
 
 export function normalizeEmail(email: unknown){
   return String(email ?? '').trim().toLowerCase();

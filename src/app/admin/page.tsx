@@ -3,6 +3,7 @@ import { useState, useEffect, Suspense } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import Link from 'next/link';
+import { isAdminEmail } from '@/lib/access-rules';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,6 +59,8 @@ function AdminContent() {
   const [treeStructure, setTreeStructure] = useState<TreeNode[]>([]);
   const [totalActiveMembers, setTotalActiveMembers] = useState(0);
   const [pendingMsgCount, setPendingMsgCount] = useState(0);
+  // เครื่องมือผู้บริหารระบบ (ตอบสมาชิก / Support / รายงาน) — แสดงเฉพาะ Admin หรืออีเมล akarapol.pro798@gmail.com
+  const [canAdminTools, setCanAdminTools] = useState(false);
 
   const callApi = async (endpoint: string) => {
     const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api${endpoint}`);
@@ -109,6 +112,8 @@ function AdminContent() {
       fetchPositionData();
       // badge จำนวนข้อความที่ยังไม่ได้ตอบ (best-effort)
       fetch('/api/admin/messages', { credentials: 'include' }).then(r => r.json()).then(j => { if (j.ok) setPendingMsgCount(j.pending || 0); }).catch(() => {});
+      // ใครเป็นผู้บริหารระบบ — คุมการแสดงเมนู ตอบสมาชิก/Support/รายงาน (ตัวกั้นจริงอยู่ที่ middleware)
+      fetch('/api/auth/me', { credentials: 'include' }).then(r => r.json()).then(j => { if (j.ok && j.authed && j.user) setCanAdminTools(isAdminEmail(j.user.email)); }).catch(() => {});
     }, []);
 
   if (loading) {
@@ -191,6 +196,7 @@ function AdminContent() {
             >
               งบบันทึกการแก้ไข
             </button>
+            {canAdminTools && (<>
             <Link
               href="/admin/messages"
               className="px-4 py-2 rounded-full text-sm font-medium bg-white border border-blue-100 text-slate-600 hover:bg-[#f0f7ff] flex items-center gap-2"
@@ -212,6 +218,7 @@ function AdminContent() {
             >
               📊 รายงาน
             </Link>
+            </>)}
           </div>
 
           {/* Members Tab */}
