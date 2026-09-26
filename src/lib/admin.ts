@@ -3,15 +3,10 @@ import { prisma } from '@/lib/prisma';
 // ผู้บริหารระบบเท่านั้นที่เปลี่ยนเกณฑ์/ตั้งค่าระบบได้:
 // - มี role super_admin / admin / สิทธิ system.manage, หรือ
 // - อีเมล Admin Akarapol (รองรับรูปเขียนตามที่แจ้ง + gmail มาตรฐาน กันล็อกตัวเอง)
-export const ADMIN_EMAILS = [
-  'akarapol.pro798@gmail.com',
-  'akarapol.pro@gmail.com',
-];
+// รายชื่ออีเมล/กติกาหน้าสงวนสิทธิ์ ย้ายไปอยู่ที่ lib/access-rules.ts (แหล่งเดียว ใช้ได้ทั้ง middleware และ client)
+import { ADMIN_EMAILS, isAdminEmail } from '@/lib/access-rules';
+export { ADMIN_EMAILS, isAdminEmail };
 
-export function isAdminEmail(email: unknown){
-  if(!email) return false;
-  return ADMIN_EMAILS.includes(String(email).trim().toLowerCase());
-}
 
 // ผูก super_admin ให้อีเมล admin อัตโนมัติ (สร้าง Role/Permission ที่ขาดให้ด้วย)
 export async function ensureSuperAdmin(userId: string){

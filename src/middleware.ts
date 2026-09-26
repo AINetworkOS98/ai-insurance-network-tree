@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyTokenEdge } from '@/lib/auth-edge';
+import { isAdminOnlyPage, canAccessAdminOnlyPage } from '@/lib/access-rules';
 
 // สเปคหมวด 2: ตรวจสิทธิใน API และฐานข้อมูลด้วย — ไม่ใช้การซ่อนเมนูเป็นวิธีป้องกันเพียงอย่างเดียว
 // สมาชิกทั่วไป (rankLevel 0) เห็นหน้าแรกเท่านั้น — เรียก API หลังบ้านโดยตรงต้องถูกบล็อก
@@ -76,6 +77,29 @@ export async function middleware(req: NextRequest) {
 
   const isApi = pathname.startsWith('/api/');
   const isPage = !isApi;
+
+  // --- หน้าสงวนสิทธิ์ (เช่น N8N) : เฉพาะ Admin หรือสมาชิกอีเมล akarapol.pro798@gmail.com ---
+  // ตรวจที่นี่เสมอ ไม่พึ่งการซ่อนเมนูอย่างเดียว (ตรงกับกติกาหมวด 2 ของระบบ)
+  if (isPage && isAdminOnlyPage(pathname)) {
+    const restrictedToken = getToken(req);
+    const restrictedPayload = restrictedToken ? verifyTokenEdge(restrictedToken) : null;
+    if (!restrictedPayload) {
+      const loginUrl = new URL('/login', req.url);
+      loginUrl.searchParams.set('next', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+    const rStatus = String(restrictedPayload.status || '');
+    if (['SUSPENDED', 'RESIGNED', 'INACTIVE'].includes(rStatus)) {
+      const loginUrl = new URL('/login', req.url);
+      loginUrl.searchParams.set('error', 'suspended');
+      return NextResponse.redirect(loginUrl);
+    }
+    if (!canAccessAdminOnlyPage({ email: restrictedPayload.email, roles: restrictedPayload.roles })) {
+      // ล็อกอินแล้วแต่ไม่มีสิทธิ์ — แสดงหน้าแจ้งสิทธิ์ (rewrite ไม่เปลี่ยน URL จึงไม่วน redirect)
+      return NextResponse.rewrite(new URL('/no-access', req.url));
+    }
+    return NextResponse.next();
+  }
 
   // --- API guard ---
   if(isApi){

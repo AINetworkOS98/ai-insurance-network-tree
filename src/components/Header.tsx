@@ -3,12 +3,15 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import LanguageMenu from '@/components/LanguageMenu';
 import { useT } from '@/i18n';
+import { isAdminEmail } from '@/lib/access-rules';
 export default function Header(){
   const { t } = useT();
   const [unread, setUnread] = useState<number|null>(null);
   const [user, setUser] = useState<{email:string, displayName?:string}|null>(null);
   const [n8nOpen, setN8nOpen] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  // เมนู N8N สงวนสิทธิ์: Admin หรือสมาชิกอีเมล akarapol.pro798@gmail.com เท่านั้น (กติกาเดียวกับ middleware)
+  const canUseN8n = isAdminEmail(user?.email);
   useEffect(()=>{ (async()=>{
     try{ const r=await fetch('/api/notifications'); const j=await r.json(); if(j.ok) setUnread(j.unread); }catch{}
     // ใช้ /api/auth/me เพื่อเช็ค auth status — cookie httpOnly อ่านได้ฝั่ง server
@@ -40,7 +43,8 @@ export default function Header(){
           <Link href={user ? "/verify" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_verify')}</Link>
           <Link href={user ? "/prospects" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_prospects')}</Link>
           <Link href={user ? "/income" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_income')}</Link>
-          {/* N8N Submenu */}
+          {/* N8N Submenu — เฉพาะ Admin หรือสมาชิกอีเมล akarapol.pro798@gmail.com */}
+          {canUseN8n && (
           <div className="relative">
             <button onClick={() => setN8nOpen(!n8nOpen)} className="flex items-center gap-1.5 text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">
               <span className="text-base">⚡</span>
@@ -79,8 +83,9 @@ export default function Header(){
                 </div>
               </div>
             )}
-          </div>
+          </div>)}
           <Link href={user ? "/notifications" : "/admin"} className="relative text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">🔔 {t('nav_notif')} {unread!=null && unread>0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-red-600 text-white text-[11px]">{unread}</span>}</Link>
+          <Link href={user ? "/contact" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_inquire')}</Link>
         </nav>
         <div className="flex items-center gap-2">
           <LanguageMenu/>
