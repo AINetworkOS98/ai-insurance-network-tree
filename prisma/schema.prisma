@@ -162,6 +162,7 @@ model User {
   member            Member?
   memberMessages    MemberMessage[]
   messageReplies    MessageReply[]
+  supportTickets    SupportTicket[]
 }
 
 model UserSession {
