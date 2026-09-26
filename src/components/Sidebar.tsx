@@ -7,7 +7,6 @@ import { useT } from '@/i18n';
 const items=[
   {href:"/", key:"nav_home", icon:"⌂"},
   {href: "/dashboard", key: "sb_dashboard", icon: "▦"},
-  {href: "/contact", key: "nav_contact", icon: "📨"},
   {href: "/prospects", key: "sb_members_prospects", icon: "◎"},
   {href: "/tree", key: "sb_tree", icon: "⁂"},
   {href:"/progress", key:"sb_progress", icon:"⬆"},
