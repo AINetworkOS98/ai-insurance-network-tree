@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import Link from 'next/link';
+import MemberActivityTable from '@/components/MemberActivityTable';
+import VisitorActivityTable from '@/components/VisitorActivityTable';
 
 interface Member {
   id: string;
@@ -99,6 +101,7 @@ export default function Dashboard() {
   }, []);
 
   const token = getToken();
+  const isLoggedIn = !!token;
 
   const activeMembers = members.filter((m) => m.status === 'active').length;
   const totalMembers = members.length;
@@ -293,6 +296,12 @@ export default function Dashboard() {
               </p>
             </div>
           </div>
+
+          {/* รายชื่อสมาชิกล่าสุด */}
+          <MemberActivityTable />
+
+          {/* กิจกรรม IP Tracking */}
+          <VisitorActivityTable />
 
           {/* ปุ่มนำทาง */}
           <div className="flex gap-3 text-sm">
