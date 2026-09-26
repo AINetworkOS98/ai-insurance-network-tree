@@ -36,6 +36,8 @@ export async function getCurrentUser(token: string) {
 }
 
 // สร้าง ticket ใหม่จากผู้ใช้ทั่วไป
+import { createSupportTicketEvent } from './supportEvents'
+
 export async function createTicket(data: {
   userId: string;
   name: string;
@@ -55,6 +57,7 @@ export async function createTicket(data: {
       status: 'NEW',
     },
   });
+  await createSupportTicketEvent(ticket)
   return ticket;
 }
 
@@ -69,6 +72,27 @@ export async function getMyTickets(userId: string) {
       createdAt: true, updatedAt: true, closedAt: true,
     },
   });
+}
+
+// ─── sender name resolution ───
+// schema เก็บ senderId เป็น UUID ล้วน (ไม่มี FK) → resolve ชื่อผู้ส่งด้วย query เดียว
+// แทนการเพิ่ม Prisma relation ที่ต้องรัน migration บน DB production
+export type SupportSender = { displayName: string | null; firstName: string | null; lastName: string | null } | null;
+
+async function attachSenders<T extends { senderId: string }>(messages: T[]): Promise<(T & { sender: SupportSender })[]> {
+  if (!messages.length) return [];
+  const ids = [...new Set(messages.map((m) => m.senderId).filter(Boolean))];
+  const users = ids.length
+    ? await prisma.user.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, displayName: true, firstName: true, lastName: true },
+      }).catch(() => [])
+    : [];
+  const byId = new Map(users.map((u) => [u.id, u]));
+  return messages.map((m) => ({
+    ...m,
+    sender: byId.get(m.senderId) ?? null,
+  }));
 }
 
 // ดู ticket สำหรับ admin (ทั้งหมด)
@@ -89,33 +113,24 @@ export async function getAdminTickets(filters?: {
       { id: { contains: q } },
     ];
   }
-  return prisma.supportTicket.findMany({
+  const tickets = await prisma.supportTicket.findMany({
     where,
     orderBy: { createdAt: 'desc' },
-    include: {
-      messages: {
-        orderBy: { createdAt: 'asc' },
-        select: { id: true, senderType: true, senderId: true, message: true, createdAt: true, _count: { select: {} },
-          sender: { select: { displayName: true, firstName: true, lastName: true } },
-        },
-      },
-    },
+    include: { messages: { orderBy: { createdAt: 'asc' } } },
   });
+  return Promise.all(
+    tickets.map(async (t) => ({ ...t, messages: await attachSenders(t.messages) })),
+  );
 }
 
 // ดู ticket รายละเอียด
 export async function getTicketDetail(ticketId: string) {
-  return prisma.supportTicket.findUnique({
+  const ticket = await prisma.supportTicket.findUnique({
     where: { id: ticketId },
-    include: {
-      messages: {
-        orderBy: { createdAt: 'asc' },
-        include: {
-          sender: { select: { displayName: true, firstName: true, lastName: true } },
-        },
-      },
-    },
+    include: { messages: { orderBy: { createdAt: 'asc' } } },
   });
+  if (!ticket) return null;
+  return { ...ticket, messages: await attachSenders(ticket.messages) };
 }
 
 // อัปเดต status + admin note
@@ -138,17 +153,16 @@ export async function addTicketMessage(data: {
   senderId: string;
   message: string;
 }) {
-  return prisma.supportMessage.create({
+  const created = await prisma.supportMessage.create({
     data: {
       ticketId: data.ticketId,
       senderType: data.senderType,
       senderId: data.senderId,
       message: data.message,
     },
-    include: {
-      sender: { select: { displayName: true, firstName: true, lastName: true } },
-    },
   });
+  const [withSender] = await attachSenders([created]);
+  return withSender ?? created;
 }
 
 // นับ ticket ตาม status สำหรับ admin dashboard

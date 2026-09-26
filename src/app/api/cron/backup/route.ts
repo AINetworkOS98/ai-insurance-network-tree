@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireCronAuth } from '@/lib/cronAuth';
 
 // Vercel Cron — สำรองข้อมูลสมาชิกทุกชั่วโมง + เติมช่องว่างอัตโนมัติเมื่อฐานกลับมา
 export const runtime = 'nodejs';
 export const maxDuration = 120;
 export async function GET(req: NextRequest){
-  const cronSecret = process.env.CRON_SECRET;
-  const auth = req.headers.get('authorization');
-  if(cronSecret && auth !== `Bearer ${cronSecret}` && !req.headers.get('x-vercel-cron')){
-    return NextResponse.json({ ok:false, error:'forbidden' }, { status:403 });
-  }
+  const denied = requireCronAuth(req);
+  if (denied) return denied;
   try{
     const { runBackup, restoreMissing, systemHealth } = await import('@/lib/backup');
     const before = await systemHealth();

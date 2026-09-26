@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 
@@ -190,6 +191,7 @@ export default function Income() {
                 <button className="px-3 py-1.5 rounded-full border bg-white">ดาวน์โหลด PDF</button>
                 <button className="px-3 py-1.5 rounded-full border bg-white">พิมพ์</button>
                 <button className="px-3 py-1.5 rounded-full bg-[#475569] text-white">ตรวจสอบเอกสาร (QR)</button>
+                <Link href="/contact" className="px-3 py-1.5 rounded-full bg-sky-500 text-white text-sm font-medium hover:bg-sky-600">💬 ติดต่อ Admin</Link>
               </div>
             </div>
           ) : (

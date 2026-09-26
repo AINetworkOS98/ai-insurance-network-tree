@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyToken } from '@/lib/auth';
 import {
-  getCurrentUser, createTicket, SUBJECT_OPTIONS,
+  getCurrentUser, createTicket, getMyTickets, SUBJECT_OPTIONS,
 } from '@/lib/support';
+import { createSupportTicketEvent } from '@/lib/supportEvents';
 
 // POST /api/support — สร้าง ticket ใหม่ (ผู้ใช้ทั่วไป)
 export async function POST(req: NextRequest) {
@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
         message,
       },
     });
+    await createSupportTicketEvent(ticket);
 
     return NextResponse.json({
       ok: true,
@@ -86,4 +87,4 @@ export async function GET(req: NextRequest) {
   }
 }
 
-const subjectOptions = SUBJECT_OPTIONS;
+const subjectOptions: readonly string[] = SUBJECT_OPTIONS;
