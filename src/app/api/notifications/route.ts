@@ -34,6 +34,10 @@ export async function POST(req: NextRequest){
       await prisma.notification.updateMany({ where:{ userId: uid, isRead:false }, data:{ isRead:true } as any });
       return NextResponse.json({ ok:true });
     }
+    if(action==='deleteOne' && notificationId){
+      await prisma.notification.delete({ where:{ id: notificationId, userId: uid } }).catch(()=>{});
+      return NextResponse.json({ ok:true });
+    }
     if(notificationId){
       await prisma.notification.update({ where:{ id: notificationId }, data:{ isRead:true } as any }).catch(()=>{});
       return NextResponse.json({ ok:true });

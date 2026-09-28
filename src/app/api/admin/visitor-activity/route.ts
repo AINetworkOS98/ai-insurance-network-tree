@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getDb } from '@/lib/firebase-admin';
+import { randomUUID } from 'node:crypto';
 
 // จับ IP จาก request headers (Vercel / Next.js)
 function getClientIP(req: NextRequest): string {
@@ -51,6 +52,7 @@ export async function GET(req: NextRequest) {
           create: {
             id: `session-${userId}`,
             userId,
+            tokenHash: randomUUID(),
             ip,
             userAgent,
             lastActiveAt: new Date(),
@@ -134,6 +136,7 @@ export async function POST(req: NextRequest) {
       create: {
         id: `session-${userId}`,
         userId,
+        tokenHash: randomUUID(),
         ip,
         userAgent,
         lastActiveAt: new Date(),

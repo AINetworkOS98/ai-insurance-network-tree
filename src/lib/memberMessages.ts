@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { sendLineMessage } from '@/lib/line';
 
 export const MEMBER_QUESTION_ADMIN_EMAIL = 'akarapol.pro798@gmail.com';
-
+export { sendEmail };
 function adminUrl(path: string) {
   return `${process.env.NEXT_PUBLIC_APP_URL || process.env.APP_BASE_URL || 'http://localhost:3000'}${path}`;
 }
@@ -118,6 +118,6 @@ export async function replyMemberMessage(opts: { messageId: string; repliedBy: s
   }
 }
 
-function escapeHtml(s: string) {
+export function escapeHtml(s: string) {
   return String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
 }

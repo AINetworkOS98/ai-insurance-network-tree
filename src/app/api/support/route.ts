@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { sendEmail, escapeHtml } from '@/lib/memberMessages';
 import {
   getCurrentUser, createTicket, getMyTickets, SUBJECT_OPTIONS,
 } from '@/lib/support';
 import { createSupportTicketEvent } from '@/lib/supportEvents';
+import { sendToGoogleSheet } from '@/lib/googleSheet';
 
 // POST /api/support — สร้าง ticket ใหม่ (ผู้ใช้ทั่วไป)
 export async function POST(req: NextRequest) {
@@ -55,6 +57,52 @@ export async function POST(req: NextRequest) {
       },
     });
     await createSupportTicketEvent(ticket);
+
+    // ── ส่งอีเมล + สร้างแจ้งเตือนในเมนูให้ Admin ──
+    const { sendEmail, escapeHtml } = await import('@/lib/memberMessages');
+    const adminEmailList = ['akarapol.pro798@gmail.com'];
+    const time = new Date(ticket.createdAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
+    const adminSubject = `📩 Support Ticket ใหม่: ${ticket.subject}`;
+    const adminHtml = `<div style="font-family:sans-serif;max-width:600px">
+      <h3 style="margin:0 0 12px">มีผู้ใช้ส่ง Support Ticket ใหม่</h3>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
+        <tr><td style="padding:4px 8px;font-weight:bold;background:#f8fafc;width:120px">ชื่อ</td><td style="padding:4px 8px">${escapeHtml(ticket.name)}</td></tr>
+        ${ticket.phone ? `<tr><td style="padding:4px 8px;font-weight:bold;background:#f8fafc">โทร</td><td style="padding:4px 8px">${escapeHtml(ticket.phone)}</td></tr>` : ''}
+        ${ticket.lineId ? `<tr><td style="padding:4px 8px;font-weight:bold;background:#f8fafc">LINE</td><td style="padding:4px 8px">${escapeHtml(ticket.lineId)}</td></tr>` : ''}
+        <tr><td style="padding:4px 8px;font-weight:bold;background:#f8fafc">หัวข้อ</td><td style="padding:4px 8px">${escapeHtml(ticket.subject)}</td></tr>
+        <tr><td style="padding:4px 8px;font-weight:bold;background:#f8fafc">ข้อความ</td><td style="padding:4px 8px">${escapeHtml(ticket.message)}</td></tr>
+        <tr><td style="padding:4px 8px;font-weight:bold;background:#f8fafc">เวลา</td><td style="padding:4px 8px">${time}</td></tr>
+      </table>
+      <a href="${process.env.NEXT_PUBLIC_APP_URL||'http://localhost:3000'}/admin/support" style="display:inline-block;padding:10px 16px;background:#0284c7;color:#fff;border-radius:8px;text-decoration:none">👉 เปิดดูรายละเอียด</a>
+    </div>`;
+
+    for (const adminEmail of adminEmailList) {
+      (async () => {
+        try {
+          const adminUser = await prisma.user.findUnique({ where: { email: adminEmail }, select: { id: true } }).catch(() => null);
+          if (adminUser) {
+            await prisma.notification.create({
+              data: {
+                userId: adminUser.id,
+                type: 'support.ticket.new',
+                title: adminSubject,
+                body: `จาก: ${escapeHtml(ticket.name)}\nหัวข้อ: ${ticket.subject}\nข้อความ: ${ticket.message.slice(0, 300)}`,
+                channel: 'in_app',
+                referenceId: ticket.id,
+              } as any,
+            });
+          }
+          await sendEmail({ to: adminEmail, subject: adminSubject, html: adminHtml });
+        } catch (e) {
+          console.error('Admin notify error:', e);
+        }
+      })();
+    }
+
+    // ── ส่งไป Google Sheet (fire-and-forget) ──
+    (async () => {
+      try { await sendToGoogleSheet({ type:'support', name:ticket.name, phone:ticket.phone||'', lineId:ticket.lineId||'', subject:ticket.subject, message:ticket.message, ticketId:ticket.id }); } catch {}
+    })();
 
     return NextResponse.json({
       ok: true,
