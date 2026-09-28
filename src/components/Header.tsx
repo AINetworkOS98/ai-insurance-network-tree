@@ -40,6 +40,7 @@ export default function Header(){
         <nav className="hidden md:flex gap-5 text-sm items-center">
           {/* ยังไม่เข้าระบบ — ทุกเมนูลิงก์ไป /admin */}
           <Link href={user ? "/" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_home')}</Link>
+          <Link href="/financial-freedom" className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors font-semibold">{t('nav_vision')}</Link>
           <Link href={user ? "/verify" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_verify')}</Link>
           <Link href={user ? "/prospects" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_prospects')}</Link>
           <Link href={user ? "/income" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_income')}</Link>
@@ -60,7 +61,7 @@ export default function Header(){
                     <span>{t('n8n_automation')}</span>
                     <span className="ml-auto text-[11px] text-slate-400">หน้า Automation</span>
                   </a>
-                  <a href="http://localhost:5678/" target="_blank" rel="noopener noreferrer"
+                  <a href="http://localhost:5679/" target="_blank" rel="noopener noreferrer"
                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-[#eff6ff] hover:text-sky-700 transition-colors">
                     <span className="text-base">🖥️</span>
                     <span>{t('n8n_editor')}</span>
@@ -78,14 +79,14 @@ export default function Header(){
                   <div className="my-1 border-t border-[#e2e8f0]"></div>
                   <div className="px-4 py-2 text-xs text-slate-400 bg-slate-50">
                     <span className="block">{t('n8n_status_running')}</span>
-                    <span className="block mt-0.5 text-green-600 font-medium">● localhost:5678</span>
+                    <span className="block mt-0.5 text-green-600 font-medium">● localhost:5679</span>
                   </div>
                 </div>
               </div>
             )}
           </div>)}
-          <Link href={user ? "/notifications" : "/admin"} className="relative text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">🔔 {t('nav_notif')} {unread!=null && unread>0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-red-600 text-white text-[11px]">{unread}</span>}</Link>
           <Link href={user ? "/contact" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_inquire')}</Link>
+          <Link href={user ? "/notifications" : "/admin"} className="relative text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">🔔 {t('nav_notif')} {unread!=null && unread>0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-red-600 text-white text-[11px]">{unread}</span>}</Link>
         </nav>
         <div className="flex items-center gap-2">
           <LanguageMenu/>

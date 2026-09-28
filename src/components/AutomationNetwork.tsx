@@ -108,7 +108,7 @@ function makeDemoInner(parentId: string, prefix: string, n: number, startIdx: nu
 }
 
 export default function AutomationNetwork({
-  mode, speed, showAutomation, onKpiUpdate, onSimulationProgress,
+  mode, speed, showAutomation, showArchitecture, onKpiUpdate, onSimulationDone, onSimulationProgress,
 }: AutomationNetworkProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [nodes, setNodes] = useState<AutoNode[]>(() => {
@@ -230,7 +230,7 @@ export default function AutomationNetwork({
     setFlowSteps(FLOW_STEPS.map(s => ({ ...s, status: 'pending' as const })));
     setActivityLog([]);
     kpiRef.current = { total: 1, active: 1, onboarding: 0, following: 0, automation: 0, connections: 0 };
-    onSimulationProgress(kpiRef.current.current);
+    onSimulationProgress(kpiRef.current);
 
     /* Step 1: Lead */
     const stepDelay = 600 / speed;

@@ -21,7 +21,6 @@ const STATUS_BG: Record<string, string> = {
   SUSPENDED: 'bg-rose-100 text-rose-700',
   INACTIVE: 'bg-slate-100 text-slate-600',
   RESIGNED: 'bg-slate-800 text-white',
-  PENDING: 'bg-amber-100 text-amber-700',
 };
 
 export default function MemberActivityTable() {

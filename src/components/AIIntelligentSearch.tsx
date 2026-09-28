@@ -422,16 +422,26 @@ function linkify(text: string){
   });
 }
 
-  const WorkingBar = (loading || streaming) ? (
-    <div className="flex items-center justify-center gap-2 text-sm text-sky-700 py-2.5 px-3 rounded-2xl border border-blue-100 bg-[#f0f7ff] shadow-sm">
-      <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse shrink-0" />
-      กำลังทำงาน
-      <span className="ml-1 w-1 h-1 rounded-full bg-sky-300 animate-bounce [animation-delay:0ms]" />
-      <span className="w-1 h-1 rounded-full bg-sky-300 animate-bounce [animation-delay:150ms]" />
-      <span className="w-1 h-1 rounded-full bg-sky-300 animate-bounce [animation-delay:300ms]" />
-      {streaming && <button onClick={()=> setAbortFlag(true)} className="ml-3 px-3 py-1 rounded-full border border-slate-200 bg-white text-xs text-slate-600 hover:bg-slate-50">หยุด</button>}
-    </div>
-  ) : null;
+  const workingStep = traceSteps.length>0 ? traceSteps[traceSteps.length-1] : null;
+    const WorkingBar = (loading || streaming) ? (
+      <div className="flex items-center gap-3 text-sm py-3 px-4 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 shadow-sm">
+        <span className="text-xl animate-flicker">🔥</span>
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold text-amber-800 text-xs">
+            {workingStep ? workingStep.label : 'กำลังประมวลผล'}
+          </div>
+          {workingStep?.detail && (
+            <div className="text-[11px] text-amber-600 truncate mt-0.5">{workingStep.detail}</div>
+          )}
+        </div>
+        <div className="flex gap-1 shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-bounce [animation-delay:0ms]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-bounce [animation-delay:150ms]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-bounce [animation-delay:300ms]" />
+        </div>
+        {streaming && <button onClick={()=> setAbortFlag(true)} className="ml-2 px-3 py-1 rounded-full border border-amber-200 bg-white text-xs text-amber-700 hover:bg-amber-50 shrink-0">หยุด</button>}
+      </div>
+    ) : null;
 
   const ChatHistory = (
     <>
@@ -512,40 +522,59 @@ function linkify(text: string){
     // มีแชตแล้ว — ช่องพิมพ์ลงล่างอัตโนมัติ ตรึงล่าง แชตกว้างเต็มจอ
         return (
           <div className="w-full flex flex-col h-full">
-            <div ref={scrollRef} className="flex-1 overflow-auto scrollbar-none px-4 md:px-6 py-2 space-y-4 min-h-0">
+            <div ref={scrollRef} className="flex-1 overflow-auto scrollbar-none px-4 md:px-6 py-2 space-y-4 min-h-0 pb-28">
               <div className="shrink-0 max-w-[760px] mx-auto w-full">{ModeSwitch}</div>
               {topContent && <div className="shrink-0 max-w-[760px] mx-auto w-full">{topContent}</div>}
               {WorkingBar ? (
-                <div className="shrink-0 sticky top-0 z-10 max-w-[760px] mx-auto w-full pb-2 bg-gradient-to-b from-[#fcfdff] to-transparent">
-                  {WorkingBar}
-                </div>
-              ) : null}
-              <div className="w-full pt-2">{ChatHistory}</div>
+                              <div className="shrink-0 sticky top-0 z-20 max-w-[760px] mx-auto w-full pb-2 bg-white">
+                                {WorkingBar}
+                              </div>
+                            ) : null}
+                          <div className="w-full pt-2">{ChatHistory}</div>
             </div>
-            <div className="shrink-0 sticky bottom-0 bg-gradient-to-t from-[#fcfdff] via-[#fcfdff] to-transparent pt-4 pb-2 px-4 md:px-6">
+            <div className="shrink-0 sticky bottom-20 bg-gradient-to-t from-white via-white/90 to-transparent pt-2 pb-2 px-4 md:px-6">
               <div className="max-w-[760px] mx-auto">{InputCard}</div>
             </div>
           </div>
         );
   }
 
-  // hero (เดิม — กลางจอ เต็มจอ)
-    return (
-      <div className="w-full flex flex-col min-h-[60vh]">
-        <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-6 py-8">
-          <div className="w-full max-w-[760px]">
-            {topContent && <div className="mb-4">{topContent}</div>}
-            {ModeSwitch}
-            <div className="mt-4">{InputCard}</div>
+  // hero — layout เดียวกับ chat: แชตเลื่อนอัตโนมัติ + ช่องพิมพ์ตรึงล่าง
+      if(msgs.length===0 && !pasteInfo && !loading && !streaming){
+        // เริ่มต้น — ช่องค้นหาอยู่กลางจอ
+        return (
+          <div className="w-full flex flex-col h-full">
+            <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-6 py-8">
+              <div className="w-full max-w-[760px]">
+                {topContent && <div className="mb-4">{topContent}</div>}
+                {ModeSwitch}
+                <div className="mt-4">{InputCard}</div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+      // มีแชตแล้ว — เลื่อนอัตโนมัติ + ช่องพิมพ์ตรึงล่าง
+      return (
+        <div className="w-full flex flex-col h-full">
+          <div ref={scrollRef} className="flex-1 overflow-auto scrollbar-none px-4 md:px-6 py-2 space-y-4 min-h-0 pb-28">
+            <div className="shrink-0 max-w-[760px] mx-auto w-full">{ModeSwitch}</div>
+            {topContent && <div className="shrink-0 max-w-[760px] mx-auto w-full">{topContent}</div>}
+            {WorkingBar ? (
+                          <div className="shrink-0 sticky top-0 z-10 max-w-[760px] mx-auto w-full pb-2 bg-gradient-to-b from-white to-transparent">
+                            {WorkingBar}
+                          </div>
+                        ) : null}
+                        {msgs.length>0 && (
+                          <div className="flex justify-end max-w-[760px] mx-auto w-full">
+                            <button onClick={clearContext} className="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs text-slate-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 shadow-sm">🗑 ล้างแชต</button>
+                          </div>
+                        )}
+                        <div className="w-full pt-2">{ChatHistory}</div>
+          </div>
+          <div className="shrink-0 sticky bottom-20 bg-gradient-to-t from-white via-white to-transparent pt-2 pb-2 px-4 md:px-6">
+            <div className="max-w-[760px] mx-auto">{InputCard}</div>
           </div>
         </div>
-        {(loading || streaming) && (
-          <div className="shrink-0 w-full max-w-[760px] mx-auto pb-8">
-            {WorkingBar}
-          </div>
-        )}
-        {msgs.length>0 && <div className="w-full max-w-[760px] mx-auto mt-4">{ChatHistory}</div>}
-        {msgs.length===0 && !pasteInfo && <div className="w-full max-w-[760px] mx-auto mt-6">{ChatHistory}</div>}
-      </div>
-    );
+      );
 }

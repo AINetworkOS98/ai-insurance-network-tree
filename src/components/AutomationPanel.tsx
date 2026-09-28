@@ -49,7 +49,7 @@ const ACTIVITIES = [
 
 export default function AutomationPanel({ mode, kpis }: AutomationPanelProps) {
   const logEndRef = useRef<HTMLDivElement>(null);
-  const [flowSteps, setFlowSteps] = useState(FLOW_STEPS.map(s => ({ ...s, status: 'pending' as const })));
+  const [flowSteps, setFlowSteps] = useState<{ label: string; icon: string; statusKey: 'pending'; status: 'pending' | 'active' | 'done' | 'processing' }[]>(FLOW_STEPS.map(s => ({ ...s, status: 'pending' as const })));
   const [activities, setActivities] = useState<{ time: string; text: string; status: string }[]>([]);
   const [simStep, setSimStep] = useState(0);
 
