@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
 import Link from 'next/link';
@@ -12,6 +12,8 @@ function RegisterInner(){
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', password:'', confirm:'', username:'', nickname:'', addressLine:'', zipCode:'', lineId:'', facebookUrl:'', tiktokUrl:'', birthDate:'', occupation:'', consentPdpa:false, consentMarketing:false });
   const [showPwd, setShowPwd] = useState(false);
+  const [showPdpa, setShowPdpa] = useState(false);
+  const verifySeq = useRef(0);
   const [copied, setCopied] = useState(false);
   const [msg, setMsg] = useState('');
   const [autoCodes, setAutoCodes] = useState<{memberCode?:string, referralCode?:string, displayName?:string, createdAt?:string}|null>(null);
@@ -83,14 +85,17 @@ function RegisterInner(){
   useEffect(()=>{ if(refFromUrl) verify(refFromUrl); }, [refFromUrl]);
 
   async function verify(code:string){
-    if(!code) { setSponsor(null); setRefError(''); return; }
-    try{
-      const res = await fetch(`/api/referral/verify?code=${encodeURIComponent(code)}`);
-      const data = await res.json();
-      if(data.ok && data.valid){ setSponsor(data.sponsor); setRefError(''); }
-      else { setSponsor(null); setRefError(data.error || 'รหัสไม่ถูกต้อง'); }
-    }catch{ setRefError('ตรวจสอบไม่สำเร็จ'); }
-  }
+      if(!code) { setSponsor(null); setRefError(''); return; }
+      // กันผลลัพธ์ที่มาช้ากว่าคำขอใหม่ (stale response)
+      const seq = ++verifySeq.current;
+      try{
+        const res = await fetch(`/api/referral/verify?code=${encodeURIComponent(code)}`);
+        const data = await res.json();
+        if(seq !== verifySeq.current) return;
+        if(data.ok && data.valid){ setSponsor(data.sponsor); setRefError(''); }
+        else { setSponsor(null); setRefError(data.error || 'รหัสไม่ถูกต้อง'); }
+      }catch{ if(seq === verifySeq.current) setRefError('ตรวจสอบไม่สำเร็จ'); }
+    }
 
   async function submit(){
     if(!form.firstName.trim() || !form.lastName.trim()){ setMsg('กรอกชื่อและนามสกุลให้ครบ'); return; }
@@ -169,8 +174,9 @@ function RegisterInner(){
                       );
                     })()}
 
-          {/* โซเชียล + วันเกิด + อาชีพ */}
-          <div className="mt-3 grid md:grid-cols-3 gap-3">
+          {/* 2) ข้อมูลส่วนตัวและช่องทางติดต่อ */}
+                    <div className="mt-5 text-xs font-semibold text-slate-700">2) ข้อมูลส่วนตัวและช่องทางติดต่อ</div>
+                    <div className="mt-2 grid md:grid-cols-3 gap-3">
             <input placeholder="LINE ID" value={form.lineId} onChange={e=> setForm({...form, lineId:e.target.value})} className="border rounded-xl px-3 py-2.5 text-sm" />
             <input placeholder="Facebook (ลิงก์)" value={form.facebookUrl} onChange={e=> setForm({...form, facebookUrl:e.target.value})} className="border rounded-xl px-3 py-2.5 text-sm" />
             <input placeholder="TikTok (ลิงก์/ID)" value={form.tiktokUrl} onChange={e=> setForm({...form, tiktokUrl:e.target.value})} className="border rounded-xl px-3 py-2.5 text-sm" />
@@ -186,8 +192,9 @@ function RegisterInner(){
             </div>
           </div>
 
-          {/* ที่อยู่ มาตรฐาน: บ้านเลขที่ + ตำบล/อำเภอ/จังหวัด + รหัสไปรษณีย์ */}
-          <div className="mt-3 grid md:grid-cols-6 gap-3">
+          {/* 3) ที่อยู่ตามทะเบียนบ้าน */}
+                    <div className="mt-5 text-xs font-semibold text-slate-700">3) ที่อยู่ติดต่อ</div>
+                    <div className="mt-2 grid md:grid-cols-6 gap-3">
             <input placeholder="ที่อยู่: บ้านเลขที่/ถนน" value={form.addressLine} onChange={e=> setForm({...form, addressLine:e.target.value})} className="border rounded-xl px-3 py-2.5 text-sm md:col-span-2" />
             <div className="relative">
               <input list="subdistrict-options" placeholder="ตำบล: พิมพ์ค้นหา" value={subdistrictQuery} disabled={addressLoading} onChange={e=>selectSubdistrict(e.target.value)} className="w-full border rounded-xl px-3 py-2.5 text-sm disabled:opacity-50" />
@@ -205,15 +212,18 @@ function RegisterInner(){
           </div>
           <p className="mt-2 text-[11px] text-slate-500">พิมพ์อักษรในช่องตำบล เขต/อำเภอ หรือจังหวัดเพื่อดูตัวเลือกทันที — เลือกตำบลแล้วระบบเติมเขต/อำเภอ จังหวัด และรหัสไปรษณีย์ให้อัตโนมัติ</p>
 
-          {/* PDPA + Consent */}
-          <div className="mt-4 p-3 rounded-xl border bg-slate-50">
-            <details className="group">
-              <summary className="cursor-pointer text-xs font-semibold text-slate-700 select-none">การคุ้มครองข้อมูลส่วนบุคคล (PDPA) ▾</summary>
+          {/* 4) การยินยอม (PDPA) */}
+                    <div className="mt-5 text-xs font-semibold text-slate-700">4) การคุ้มครองข้อมูลส่วนบุคคล (PDPA)</div>
+                    <div className="mt-2 p-3 rounded-xl border bg-slate-50">
+                      <details className="group">
+                        <summary className="cursor-pointer text-xs font-semibold text-slate-700 select-none">สรุปประกาศความเป็นส่วนตัว (เวอร์ชัน 1.0) ▾</summary>
               <p className="mt-2 text-[11px] text-slate-600 leading-relaxed">ข้อมูลส่วนบุคคลที่ท่านให้ไว้จะถูกเก็บรวบรวม ใช้ และประมวลผลเท่าที่จำเป็นสำหรับการสมัครสมาชิก การให้บริการ การติดต่อ และการดำเนินการที่เกี่ยวข้องตามวัตถุประสงค์ที่แจ้งไว้ โดยข้อมูลจะได้รับการดูแลตามมาตรการรักษาความปลอดภัยที่เหมาะสม</p>
               <div className="mt-2 space-x-4 text-[11px]">
-                <Link href="/privacy-policy" className="text-navy underline">อ่านนโยบายความเป็นส่วนตัว</Link>
-                <Link href="/privacy-details" className="text-navy underline">รายละเอียดการประมวลผลข้อมูล</Link>
-              </div>
+                              <Link href="/privacy-policy" className="text-navy underline">อ่านนโยบายความเป็นส่วนตัว</Link>
+                              <Link href="/privacy-details" className="text-navy underline">รายละเอียดการประมวลผลข้อมูล</Link>
+                              <button type="button" onClick={()=>setShowPdpa(true)} className="text-navy underline">เปิดอ่านฉบับเต็ม</button>
+                            </div>
+                            <p className="mt-2 text-[11px] text-slate-500">ระบบบันทึกการยินยอมพร้อมเวอร์ชัน (1.0) วันเวลา และที่อยู่ IP เพื่อให้คุณและผู้ดูแลระบบตรวจสอบย้อนหลังได้</p>
             </details>
             <label className="flex items-start gap-2 mt-3 text-xs cursor-pointer">
               <input type="checkbox" checked={form.consentPdpa} onChange={e=> setForm({...form, consentPdpa:e.target.checked})} className="mt-0.5" />
@@ -243,6 +253,33 @@ function RegisterInner(){
                         )}
                       </div>
                     )}
+
+          {showPdpa && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="ประกาศความเป็นส่วนตัว">
+              <div className="absolute inset-0 bg-black/40" onClick={()=>setShowPdpa(false)} />
+              <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <h2 className="text-base font-bold text-navy">ประกาศความเป็นส่วนตัว (PDPA) — เวอร์ชัน 1.0</h2>
+                  <button type="button" onClick={()=>setShowPdpa(false)} className="text-slate-400 hover:text-slate-700 text-xl leading-none" aria-label="ปิด">✕</button>
+                </div>
+                <div className="mt-3 space-y-3 text-xs text-slate-600 leading-relaxed">
+                  <p><span className="font-semibold text-slate-700">1. ข้อมูลที่เก็บรวบรวม</span> — ชื่อ นามสกุล ชื่อผู้ใช้ อีเมล เบอร์โทร วันเกิด อาชีพ ที่อยู่ ช่องทางโซเชียล และข้อมูลที่จำเป็นต่อการสมัครและการให้บริการ</p>
+                  <p><span className="font-semibold text-slate-700">2. วัตถุประสงค์</span> — เพื่อสร้างบัญชีสมาชิก ยืนยันตัวตน จัดตำแหน่งในผังเครือข่าย คำนวณผลงานและรายได้ แจ้งข่าวสารที่เกี่ยวข้อง และปฏิบัติตามกฎหมายที่ใช้บังคับ</p>
+                  <p><span className="font-semibold text-slate-700">3. ฐานทางกฎหมาย</span> — ความยินยอม (สำหรับการตลาด) และความจำเป็นเพื่อปฏิบัติตามสัญญา/กฎหมาย (สำหรับการเป็นสมาชิก)</p>
+                  <p><span className="font-semibold text-slate-700">4. การเปิดเผยข้อมูล</span> — ไม่เปิดเผยต่อบุคคลภายนอก เว้นแต่ผู้แนะนำในสายงานเท่าที่จำเป็น ผู้ให้บริการระบบที่ผูกข้อตกลงรักษาความลับ หรือเมื่อกฎหมายกำหนด</p>
+                  <p><span className="font-semibold text-slate-700">5. ระยะเวลาจัดเก็บ</span> — ตลอดระยะเวลาที่เป็นสมาชิก และตามระยะเวลาที่กฎหมายกำหนดหลังสิ้นสุดความเป็นสมาชิก</p>
+                  <p><span className="font-semibold text-slate-700">6. สิทธิของเจ้าของข้อมูล</span> — เข้าถึง ขอสำเนา แก้ไข ลบ ระงับการใช้ ถอนความยินยอม และร้องเรียน โดยติดต่อผู้ดูแลระบบเพื่อดำเนินการ</p>
+                  <p><span className="font-semibold text-slate-700">7. การบันทึกความยินยอม</span> — ระบบบันทึกเวอร์ชันประกาศ (1.0) วันเวลา และที่อยู่ IP ของการยินยอมไว้ในบันทึกความยินยอม ซึ่งตรวจสอบย้อนหลังได้</p>
+                  <p><span className="font-semibold text-slate-700">8. การถอนความยินยอม</span> — ถอนความยินยอมด้านการตลาดได้ตลอดเวลา โดยไม่กระทบความเป็นสมาชิกที่ได้ให้ความยินยอมตามสัญญาไว้แล้ว</p>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-3 text-[11px]">
+                  <Link href="/privacy-policy" className="text-navy underline">นโยบายความเป็นส่วนตัวฉบับเต็ม</Link>
+                  <Link href="/privacy-details" className="text-navy underline">รายละเอียดการประมวลผลข้อมูล</Link>
+                </div>
+                <button type="button" onClick={()=>setShowPdpa(false)} className="mt-4 w-full py-2.5 rounded-full bg-[#c8a84e] text-[#475569] font-semibold text-sm">รับทราบ</button>
+              </div>
+            </div>
+          )}
 
           <div className="mt-4 text-center text-xs">
             <Link href="/login" className="text-navy underline">มีบัญชีแล้ว — เข้าสู่ระบบ</Link>

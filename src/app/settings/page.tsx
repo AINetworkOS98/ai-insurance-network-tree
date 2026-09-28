@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 export default function SettingsPage(){
-  const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', province:'', district:'', subdistrict:'', addressLine:'', zipCode:'', lineId:'', facebookUrl:'', tiktokUrl:'', referralCode:'', memberCode:'' });
+  const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', username:'', nickname:'', occupation:'', province:'', district:'', subdistrict:'', addressLine:'', zipCode:'', lineId:'', facebookUrl:'', tiktokUrl:'', referralCode:'', memberCode:'' });
+  const [consents, setConsents] = useState<any[]>([]);
   const [msg, setMsg] = useState('');
   const [origEmail, setOrigEmail] = useState('');
   // cascade data same as /tree and register
@@ -35,9 +36,11 @@ export default function SettingsPage(){
       if(j.ok && j.user){
         const u=j.user;
         setOrigEmail(u.email||'');
+        setConsents(Array.isArray(j.consents) ? j.consents : []);
         setForm(f=>({...f,
           firstName:u.firstName||f.firstName, lastName:u.lastName||f.lastName,
           email:u.email||f.email, phone:u.phone||f.phone,
+          username:u.username||f.username, nickname:u.nickname||f.nickname, occupation:u.occupation||f.occupation,
           province:u.province||f.province, district:u.district||f.district, subdistrict:u.subdistrict||f.subdistrict,
           addressLine:u.addressLine||f.addressLine, zipCode:u.zipCode||f.zipCode,
           lineId:u.lineId||f.lineId, facebookUrl:u.facebookUrl||f.facebookUrl, tiktokUrl:u.tiktokUrl||f.tiktokUrl,
@@ -92,6 +95,14 @@ export default function SettingsPage(){
               <input value={form.lastName} onChange={e=> setForm({...form, lastName:e.target.value})} placeholder="นามสกุล *" className="w-full px-3 py-2 rounded-xl border text-sm" />
             </div>
             <input value={form.email} onChange={e=> setForm({...form, email:e.target.value})} placeholder="อีเมล *" className="w-full px-3 py-2 rounded-xl border text-sm" />
+            <div className="grid md:grid-cols-3 gap-3">
+              <div>
+                <input value={form.username} readOnly placeholder="ชื่อผู้ใช้ (username)" className="w-full px-3 py-2 rounded-xl border text-sm bg-slate-50" />
+                <div className="text-[11px] text-slate-400 mt-1">ใช้เข้าสู่ระบบได้เทียบเท่าอีเมล</div>
+              </div>
+              <input value={form.nickname} onChange={e=> setForm({...form, nickname:e.target.value})} placeholder="ชื่อเล่น" className="w-full px-3 py-2 rounded-xl border text-sm" />
+              <input value={form.occupation} onChange={e=> setForm({...form, occupation:e.target.value})} placeholder="อาชีพ" className="w-full px-3 py-2 rounded-xl border text-sm" />
+            </div>
             <input value={form.phone} onChange={e=> setForm({...form, phone:e.target.value})} placeholder="เบอร์โทร *" className="w-full px-3 py-2 rounded-xl border text-sm" />
             <div className="grid md:grid-cols-3 gap-3">
               <input value={form.lineId} onChange={e=> setForm({...form, lineId:e.target.value})} placeholder="LINE ID" className="w-full px-3 py-2 rounded-xl border text-sm" />
@@ -132,6 +143,45 @@ export default function SettingsPage(){
             <button onClick={save} className="px-6 py-2 rounded-full bg-navy text-white text-sm">บันทึก</button>
             {msg && <div className="p-2 rounded-xl bg-amber-50 border text-xs">{msg}</div>}
             <div className="text-[11px] text-slate-500">ตั้งค่าระบบ: ชื่อระบบดูได้ที่ /api/system-config (GET) — เปลี่ยนได้ที่ผู้มีสิทธิ system.manage</div>
+          </div>
+
+          {/* บันทึกความยินยอมของฉัน — ตรวจสอบย้อนหลังได้ (สิทธิของเจ้าของข้อมูลตาม PDPA) */}
+          <div className="card p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-navy">🔐 บันทึกความยินยอมของฉัน</h2>
+              <span className="text-[11px] text-slate-500">ทั้งหมด {consents.length} รายการ</span>
+            </div>
+            <p className="text-[11px] text-slate-500">ระบบเก็บเวอร์ชันประกาศ วันเวลา และที่มาของทุกครั้งที่คุณให้หรือปฏิเสธความยินยอม</p>
+            {consents.length === 0 ? (
+              <div className="text-xs text-slate-500 p-3 rounded-xl bg-slate-50 border">ยังไม่พบบันทึกความยินยอมสำหรับบัญชีนี้</div>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-slate-100">
+                <table className="w-full text-xs">
+                  <thead className="bg-[#f8fafc] text-slate-600">
+                    <tr>
+                      <th className="text-left px-3 py-2 font-semibold">ประเภท</th>
+                      <th className="text-left px-3 py-2 font-semibold">ผล</th>
+                      <th className="text-left px-3 py-2 font-semibold">เวอร์ชัน</th>
+                      <th className="text-left px-3 py-2 font-semibold">วันเวลา</th>
+                      <th className="text-left px-3 py-2 font-semibold">ที่มา</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {consents.map((c:any, i:number)=>(
+                      <tr key={i} className="border-t border-slate-100">
+                        <td className="px-3 py-2">{c.type === 'MARKETING' ? 'การตลาด' : c.type}</td>
+                        <td className="px-3 py-2">
+                          <span className={`px-2 py-0.5 rounded-full font-semibold ${c.granted ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{c.granted ? 'ยินยอม' : 'ไม่ยินยอม'}</span>
+                        </td>
+                        <td className="px-3 py-2 font-mono">{c.version}</td>
+                        <td className="px-3 py-2 text-slate-600">{(()=>{ try{ return new Date(c.consentedAt).toLocaleString('th-TH',{timeZone:'Asia/Bangkok',dateStyle:'medium',timeStyle:'short'}); }catch{ return c.consentedAt; } })()}</td>
+                        <td className="px-3 py-2 text-slate-500">{c.source || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </main>
       </div>

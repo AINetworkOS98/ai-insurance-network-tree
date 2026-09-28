@@ -218,6 +218,12 @@ function AdminContent() {
             >
               📊 รายงาน
             </Link>
+            <Link
+              href="/admin/consent"
+              className="px-4 py-2 rounded-full text-sm font-medium bg-white border border-blue-100 text-slate-600 hover:bg-[#f0f7ff]"
+            >
+              🔐 บันทึกความยินยอม (PDPA)
+            </Link>
             </>)}
           </div>
 

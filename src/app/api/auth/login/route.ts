@@ -63,15 +63,18 @@ export async function POST(req: NextRequest) {
     // Case 2: Email/password — ตรวจผ่าน Prisma (hash เอง ไม่ฝัง Secret ในหน้าเว็บ)
     if (email && password) {
       const normalized = String(email).trim().toLowerCase();
-      const user = await prisma.user.findUnique({ where:{ email: normalized } });
-      if(!user || !user.passwordHash){
-        return NextResponse.json({ ok:false, error:'อีเมลหรือรหัสผ่านไม่ถูกต้อง' }, { status:401 });
-      }
+            // รับได้ทั้งอีเมลและชื่อผู้ใช้ (username ถูกบังคับกรอกตอนสมัคร)
+            const user: any = await prisma.user.findFirst({
+              where:{ OR:[ { email: normalized }, { username: normalized } ] },
+            }).catch(()=>null);
+            if(!user || !user.passwordHash){
+              return NextResponse.json({ ok:false, error:'อีเมล/ชื่อผู้ใช้ หรือรหัสผ่านไม่ถูกต้อง' }, { status:401 });
+            }
       if(['SUSPENDED','RESIGNED','INACTIVE'].includes(String(user.status))){
         return NextResponse.json({ ok:false, error:'บัญชีถูกระงับสิทธิ กรุณาติดต่อผู้ดูแลระบบ' }, { status:403 });
       }
       const ok = await verifyPassword(String(password), user.passwordHash);
-      if(!ok) return NextResponse.json({ ok:false, error:'อีเมลหรือรหัสผ่านไม่ถูกต้อง' }, { status:401 });
+            if(!ok) return NextResponse.json({ ok:false, error:'อีเมล/ชื่อผู้ใช้ หรือรหัสผ่านไม่ถูกต้อง' }, { status:401 });
 
       const token = signToken({ sub: user.id, email: user.email, rankLevel: user.rankLevel ?? 0, status: String(user.status) });
       await prisma.userSession.create({ data:{ userId: user.id, tokenHash: token.slice(-32), expiresAt: new Date(Date.now()+7*24*60*60*1000) } }).catch(()=>null);

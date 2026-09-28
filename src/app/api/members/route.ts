@@ -103,7 +103,7 @@ export async function PUT(req: NextRequest){
     if(token){
       try{ const { verifyToken } = await import('@/lib/auth'); const p:any = verifyToken(token); if(p?.sub) userId = String(p.sub); }catch{}
     }
-    const allowed = ['firstName','lastName','phone','province','district','subdistrict','addressLine','zipCode','lineId','facebookUrl','tiktokUrl'];
+    const allowed = ['firstName','lastName','phone','nickname','occupation','province','district','subdistrict','addressLine','zipCode','lineId','facebookUrl','tiktokUrl'];
     const data:any = {};
     for(const k of allowed){ if(typeof body[k]==='string') data[k]= String(body[k]).trim() || null; }
     if(userId){
