@@ -99,9 +99,12 @@ model User {
   phoneVerified     Boolean  @default(false)
   passwordHash      String?
   prefix            String?
+  username          String?  @unique // ชื่อผู้ใช้สำหรับเข้าสู่ระบบ (ไม่ซ้ำ)
+  nickname          String?  // ชื่อเล่น (ไม่บังคับ)
   firstName         String
   lastName          String
   displayName       String?
+  occupation        String?  // อาชีพตอนสมัคร
   dob               DateTime? @db.Date
   province          String?
   district          String?
@@ -185,8 +188,12 @@ model ConsentRecord {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   type        String   // PDPA, TOS, MARKETING
   version     String
+  granted     Boolean  @default(true) // true=ยินยอม, false=ไม่ยินยอม (บันทึกไว้เพื่อตรวจสอบย้อนหลัง)
+  source      String   @default("legacy") // register | legacy | admin
   consentedAt DateTime @default(now()) @db.Timestamptz
+  createdAt   DateTime @default(now()) @db.Timestamptz
   ip          String?
+  @@index([userId, type])
 }
 
 // ── Member ────────────────────────────────────────────

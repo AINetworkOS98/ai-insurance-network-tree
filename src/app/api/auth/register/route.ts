@@ -2,160 +2,215 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { hashPassword, createEmailToken } from '@/lib/auth';
 import { generateMemberCode, generateReferralCode } from '@/lib/referral';
+import { sendToGoogleSheet } from '@/lib/googleSheet';
 
-// POST /api/auth/register — สเปคหมวด 3+4: สมัครด้วยอีเมล+รหัสผ่าน + ผูกผู้แนะนำ
-// ทุกคนเริ่มที่ rankLevel 0 (ผู้สนใจทั่วไป) ไม่มีสิทธิเลือกตำแหน่งเอง
-// ป้องกันบัญชีซ้ำ + สร้าง AuthIdentity + ส่ง token ยืนยันอีเมล (ไม่บันทึก plaintext)
-// สเปคหมวด 4: ตรวจ referralCode, กันแนะนำตนเอง/วงวน, แยก sponsor_id / placement_parent_id / manager_id, คิวรอมอบหมาย
+// POST /api/auth/register — สเปคหมวด 3+4
+// สมัครด้วยอีเมล + รหัสผ่าน + ชื่อผู้ใช้ | บันทึก PDPA/Marketing consent เพื่อตรวจสอบย้อนหลังได้
+// ทุกคนเริ่มที่ rankLevel 0 (ผู้สนใจทั่วไป) — ไม่มีสิทธิเลือกตำแหน่งเอง
+// ทำงานเป็น transaction เดียว: user + authIdentity + referralCode + sponsorship
+//   + placementQueue + ConsentRecord + AuditLog + email token + EventOutbox
+// ห้ามคืน ok:true แบบ mock เมื่อฐานข้อมูลล้มเหลว
+
+const PDPA_VERSION = '1.0';
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function digits(s: any){ return String(s ?? '').replace(/\D/g, ''); }
+
 export async function POST(req: NextRequest){
   try{
-    const { firstName, lastName, email, phone, password, referralCode, referral_code, province, district, subdistrict, addressLine, zipCode, lineId, facebookUrl, tiktokUrl } = await req.json();
-    const rawRef = String(referralCode || referral_code || '').trim().toUpperCase() || null;
-    if(!email || !password || !firstName || !lastName){
-      return NextResponse.json({ ok:false, error:'กรอกชื่อ อีเมล และรหัสผ่านให้ครบ' }, { status:400 });
-    }
-    const normalizedEmail = String(email).trim().toLowerCase();
-    if(password.length < 8){
-      return NextResponse.json({ ok:false, error:'รหัสผ่านต้องมีอย่างน้อย 8 อักขระ' }, { status:400 });
-    }
-    const existing = await prisma.user.findUnique({ where:{ email: normalizedEmail } });
-    if(existing){
-      return NextResponse.json({ ok:false, error:'อีเมลนี้ถูกใช้งานแล้ว — หากคุณเคยสมัครด้วย Google ให้ใช้เมนูเชื่อมบัญชี' }, { status:409 });
-    }
-    if(phone){
-      const phoneExists = await prisma.user.findUnique({ where:{ phone: String(phone).trim() } }).catch(()=>null);
+    const body = await req.json();
+    const {
+      firstName, lastName, email, phone, password, confirm,
+      username, nickname, occupation, birthDate,
+      referralCode, referral_code,
+      province, district, subdistrict, addressLine, zipCode, lineId, facebookUrl, tiktokUrl,
+      consentPdpa, consentMarketing,
+    } = body || {};
+
+    const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || null;
+
+    // ── 1) Validation ฝั่งเซิร์ฟเวอร์ (ไม่เชื่อ client) ──
+    const fn = String(firstName ?? '').trim();
+    const ln = String(lastName ?? '').trim();
+    const normalizedEmail = String(email ?? '').trim().toLowerCase();
+    const normalizedUsername = String(username ?? '').trim().toLowerCase();
+    const pwd = String(password ?? '');
+    const phoneDigits = digits(phone);
+
+    if(!fn || !ln) return NextResponse.json({ ok:false, error:'กรอกชื่อและนามสกุลให้ครบ' }, { status:400 });
+    if(!EMAIL_RE.test(normalizedEmail)) return NextResponse.json({ ok:false, error:'อีเมลไม่ถูกต้อง' }, { status:400 });
+    if(normalizedUsername.length < 4) return NextResponse.json({ ok:false, error:'ชื่อผู้ใช้ต้องมีอย่างน้อย 4 ตัวอักษร' }, { status:400 });
+    if(!/^[a-z0-9._-]+$/.test(normalizedUsername)) return NextResponse.json({ ok:false, error:'ชื่อผู้ใช้ใช้ได้เฉพาะ a-z 0-9 . _ - เท่านั้น' }, { status:400 });
+    if(pwd.length < 8) return NextResponse.json({ ok:false, error:'รหัสผ่านต้องมีอย่างน้อย 8 อักขระ' }, { status:400 });
+    if(confirm !== undefined && pwd !== String(confirm)) return NextResponse.json({ ok:false, error:'ยืนยันรหัสผ่านไม่ตรงกัน' }, { status:400 });
+    if(phoneDigits && (phoneDigits.length < 9 || phoneDigits.length > 10)) return NextResponse.json({ ok:false, error:'เบอร์โทรไม่ถูกต้อง' }, { status:400 });
+    if(consentPdpa !== true) return NextResponse.json({ ok:false, error:'กรุณายอมรับนโยบายความเป็นส่วนตัว (PDPA) ก่อนสมัคร' }, { status:400 });
+
+    // ── 2) กันข้อมูลซ้ำ ──
+    const existing = await prisma.user.findUnique({ where:{ email: normalizedEmail } }).catch(()=>null);
+    if(existing) return NextResponse.json({ ok:false, error:'อีเมลนี้ถูกใช้งานแล้ว — หากเคยสมัครด้วย Google ให้ใช้เมนูเชื่อมบัญชี' }, { status:409 });
+    const usernameTaken = await prisma.user.findUnique({ where:{ username: normalizedUsername } }).catch(()=>null);
+    if(usernameTaken) return NextResponse.json({ ok:false, error:'ชื่อผู้ใช้นี้ถูกใช้งานแล้ว' }, { status:409 });
+    if(phoneDigits){
+      const phoneExists = await prisma.user.findUnique({ where:{ phone: phoneDigits } }).catch(()=>null);
       if(phoneExists) return NextResponse.json({ ok:false, error:'เบอร์โทรนี้ถูกใช้งานแล้ว' }, { status:409 });
     }
 
-    // ตรวจ referralCode ก่อนสร้าง user (ถ้ามี)
+    // ── 3) รหัสผู้แนะนำ ──
+    const rawRef = String(referralCode || referral_code || '').trim().toUpperCase() || null;
     let sponsorUser: any = null;
-    let sponsorError: string | null = null;
     if(rawRef){
-      sponsorUser = await prisma.user.findUnique({ where:{ referralCode: rawRef } }).catch(()=>null);
-      if(!sponsorUser){
-        const rc = await prisma.referralCode.findUnique({ where:{ code: rawRef }, include:{ user:true } }).catch(()=>null);
-        sponsorUser = rc?.user || null;
+      let found: any = await prisma.user.findUnique({ where:{ referralCode: rawRef } }).catch(()=>null);
+      if(!found){
+        const rc: any = await prisma.referralCode.findUnique({ where:{ code: rawRef }, include:{ user:true } }).catch(()=>null);
+        found = rc?.user || null;
       }
-      if(!sponsorUser){
-        sponsorError = 'รหัสแนะนำไม่ถูกต้อง';
-      } else if(['SUSPENDED','RESIGNED','INACTIVE'].includes(String(sponsorUser.status))){
-        sponsorError = 'ผู้แนะนำนี้ไม่สามารถรับการแนะนำได้ในขณะนี้';
-        sponsorUser = null;
-      } else {
-        const rcActive = await prisma.referralCode.findUnique({ where:{ code: rawRef } }).catch(()=>null);
-        if(rcActive && !rcActive.isActive){ sponsorError = 'รหัสแนะนำนี้ถูกปิดการใช้งาน'; sponsorUser = null; }
+      if(!found) return NextResponse.json({ ok:false, error:'รหัสผู้แนะนำไม่ถูกต้อง กรุณาตรวจสอบหรือลบออก' }, { status:400 });
+      if(['SUSPENDED','RESIGNED','INACTIVE'].includes(String(found.status))){
+        return NextResponse.json({ ok:false, error:'ผู้แนะนำนี้ไม่สามารถรับการแนะนำได้ในขณะนี้' }, { status:400 });
       }
-      // กันแนะนำตนเอง — อีเมลเดียวกัน (กรณีแก้โค้ดตนเองหลังสมัครจะกันใน sponsorship update)
-    }
-
-    // ผู้แนะนำเริ่มต้น = Admin หลัก (รหัสแรก) — สมาชิกที่ไม่มีรหัสแนะนำ หรือรหัสไม่ถูกต้อง จะผูกกับ admin หลักอัตโนมัติ
-    if(!sponsorUser){
+      const rcActive: any = await prisma.referralCode.findUnique({ where:{ code: rawRef } }).catch(()=>null);
+      if(rcActive && rcActive.isActive === false){
+        return NextResponse.json({ ok:false, error:'รหัสผู้แนะนำนี้ถูกปิดการใช้งาน' }, { status:400 });
+      }
+      sponsorUser = found;
+    } else {
+      // ไม่มีรหัส → ผูกผู้แนะนำราก (admin หลัก) เสมอ — สมาชิกทุกคนต้องมี upline
       const { getRootSponsor } = await import('@/lib/admin');
-      const root = await getRootSponsor();
-      if(root && root.id){
-        sponsorUser = root;
-        if(!sponsorError) sponsorError = null;
-      }
+      sponsorUser = await getRootSponsor().catch(()=>null);
     }
 
-    const pwdHash = await hashPassword(password);
+    const pwdHash = await hashPassword(pwd);
+    const displayName = `${fn} ${ln}`;
+    const dobRaw = birthDate ? new Date(String(birthDate)) : null;
+    const dob = dobRaw && !isNaN(dobRaw.getTime()) ? dobRaw : null;
+    const { raw: emailToken, hash: emailTokenHash } = createEmailToken();
 
-    // สร้างรหัส auto แบบ unique retry 3 ครั้ง
-    let memberCode: string | null = null;
-    let newReferralCode: string | null = null;
-    let user: any = null;
-    for(let attempt=0; attempt<3; attempt++){
+    // ── 4) Transaction เดียว (atomic) ──
+    let created: any = null;
+    for(let attempt=0; attempt<3 && !created; attempt++){
       try{
-        memberCode = generateMemberCode();
-        newReferralCode = generateReferralCode();
-        user = await prisma.user.create({
-          data:{
-            email: normalizedEmail,
-            firstName: String(firstName).trim(),
-            lastName: String(lastName).trim(),
-            displayName: `${String(firstName).trim()} ${String(lastName).trim()}`,
-            phone: phone ? String(phone).trim() : null,
-            passwordHash: pwdHash,
-            memberCode,
-            referralCode: newReferralCode,
-            sponsorId: sponsorUser ? sponsorUser.id : null,
-            // placementParentId / managerId ยังไม่กำหนด — จะจัดวางในเฟส 3 ผ่าน BFS
-            status: 'PENDING',
-            rankLevel: 0,
+        created = await prisma.$transaction(async (tx: any) => {
+          const user = await tx.user.create({
+            data:{
+              email: normalizedEmail,
+              username: normalizedUsername,
+              nickname: nickname ? String(nickname).trim() : null,
+              firstName: fn,
+              lastName: ln,
+              displayName,
+              phone: phoneDigits || null,
+              occupation: occupation ? String(occupation).trim() : null,
+              dob,
+              passwordHash: pwdHash,
+              memberCode: generateMemberCode(),
+              referralCode: generateReferralCode(),
+              province: province ? String(province).trim() : null,
+              district: district ? String(district).trim() : null,
+              subdistrict: subdistrict ? String(subdistrict).trim() : null,
+              addressLine: addressLine ? String(addressLine).trim() : null,
+              zipCode: zipCode ? String(zipCode).trim() : null,
+              lineId: lineId ? String(lineId).trim() : null,
+              facebookUrl: facebookUrl ? String(facebookUrl).trim() : null,
+              tiktokUrl: tiktokUrl ? String(tiktokUrl).trim() : null,
+              sponsorId: sponsorUser?.id || null,
+              status: 'PENDING',
+              rankLevel: 0,
+              pdpaConsentVersion: PDPA_VERSION,
+              pdpaConsentedAt: new Date(),
+            }
+          });
+
+          await tx.authIdentity.create({ data:{ userId: user.id, provider:'password', email: normalizedEmail } });
+          await tx.referralCode.create({ data:{ userId: user.id, code: user.referralCode } });
+
+          // Consent log — บันทึกทั้งยินยอมและไม่ยินยอม เพื่อตรวจสอบย้อนหลังได้
+          await tx.consentRecord.createMany({
+            data: [
+              { userId: user.id, type:'PDPA', version: PDPA_VERSION, granted: true, source:'register', ip },
+              { userId: user.id, type:'MARKETING', version: PDPA_VERSION, granted: consentMarketing === true, source:'register', ip },
+            ]
+          });
+
+          if(sponsorUser){
+            await tx.sponsorship.create({ data:{ childId: user.id, sponsorId: sponsorUser.id, referralCode: rawRef } });
           }
-        });
-        break;
+          // ทุกคนเข้าคิวผังจากฐานข้อมูลเดียวกัน — จัดวางเมื่อผ่านสถานะ ACTIVE
+          await tx.placementQueue.create({
+            data:{
+              userId: user.id,
+              sponsorId: sponsorUser?.id || null,
+              reason: rawRef
+                ? 'สมัครด้วยรหัสผู้แนะนำ — รออนุมัติและจัดวางผัง'
+                : 'ไม่มีรหัสผู้แนะนำ — ผูกผู้แนะนำราก รออนุมัติและจัดวางผัง',
+            }
+          }).catch(()=>null);
+
+          await tx.auditLog.create({ data:{ userId: user.id, action:'user.register', entity:'User', entityId:user.id, newValue:{ email: normalizedEmail, username: normalizedUsername, rankLevel:0, sponsorId: sponsorUser?.id || null, pdpaVersion: PDPA_VERSION } } });
+          await tx.auditLog.create({ data:{ userId: user.id, action:'consent.recorded', entity:'ConsentRecord', entityId:user.id, newValue:{ pdpa:true, marketing: consentMarketing === true, version: PDPA_VERSION, source:'register' } } });
+
+          await tx.emailVerificationToken.create({ data:{ userId: user.id, tokenHash: emailTokenHash, expiresAt: new Date(Date.now() + 24*60*60*1000) } });
+
+          // EventOutbox — งานปลายทาง (n8n / แจ้งเตือน) แบบ durable ไม่หายเมื่อ process ตาย
+          await tx.eventOutbox.create({
+            data:{
+              eventId: `registration:${user.id}`,
+              eventType: 'member.registered',
+              payload: { userId: user.id },
+              channel: 'registration',
+              status: 'pending',
+            }
+          }).catch(()=>null);
+
+          return user;
+        }, { timeout: 20000 });
       }catch(e:any){
-        if(String(e.code)==='P2002' && attempt<2) continue;
+        if(String(e?.code) === 'P2002'){
+          const target = String(e?.meta?.target || '');
+          if(target.includes('username')) return NextResponse.json({ ok:false, error:'ชื่อผู้ใช้นี้ถูกใช้งานแล้ว' }, { status:409 });
+          if(target.includes('email')) return NextResponse.json({ ok:false, error:'อีเมลนี้ถูกใช้งานแล้ว' }, { status:409 });
+          if(target.includes('phone')) return NextResponse.json({ ok:false, error:'เบอร์โทรนี้ถูกใช้งานแล้ว' }, { status:409 });
+          if(attempt < 2) continue; // ชนกันที่รหัสสุ่ม — ลองใหม่
+        }
         throw e;
       }
     }
-    if(!user) throw new Error('สร้างผู้ใช้ไม่สำเร็จ');
+    if(!created) return NextResponse.json({ ok:false, error:'สร้างบัญชีไม่สำเร็จ กรุณาลองใหม่' }, { status:500 });
 
-    // เก็บที่อยู่ตอนสมัคร (optional — ข้ามเงียบถ้า DB ยังไม่รัน migration 1_add_address_fields)
-    const addr: any = {};
-    if(province) addr.province = String(province).trim() || null;
-    if(district) addr.district = String(district).trim() || null;
-    if(subdistrict) addr.subdistrict = String(subdistrict).trim() || null;
-    if(addressLine) addr.addressLine = String(addressLine).trim() || null;
-    if(zipCode) addr.zipCode = String(zipCode).trim() || null;
-    if(lineId) addr.lineId = String(lineId).trim() || null;
-    if(facebookUrl) addr.facebookUrl = String(facebookUrl).trim() || null;
-    if(tiktokUrl) addr.tiktokUrl = String(tiktokUrl).trim() || null;
-    if(Object.keys(addr).length){
-      await prisma.user.update({ where:{ id: user.id }, data: addr }).catch((e:any)=>console.error('address save skipped — run: npx prisma migrate deploy', e?.code || e?.message));
-    }
+    const user = created;
 
-    await prisma.authIdentity.create({ data:{ userId: user.id, provider:'password', email: normalizedEmail } }).catch(()=>null);
-    await prisma.referralCode.create({ data:{ userId: user.id, code: newReferralCode! } }).catch(()=>null);
-
-    // สร้าง Sponsorship ถ้ามี sponsor ที่ถูกต้อง
-    if(sponsorUser){
-      await prisma.sponsorship.create({ data:{ childId: user.id, sponsorId: sponsorUser.id, referralCode: rawRef } }).catch(()=>null);
-      // ผู้สมัครทุกคนเข้าคิวผังจากฐานข้อมูลเดียวกัน; ระบบจะจัดวางเมื่อผ่านสถานะ ACTIVE
-      await prisma.placementQueue.create({ data:{ userId:user.id, sponsorId:sponsorUser.id, reason:'สมัครผ่านรหัสผู้แนะนำ — รออนุมัติและจัดวางผัง' } }).catch(()=>null);
-      await prisma.auditLog.create({ data:{ userId: user.id, action:'sponsorship.create', entity:'Sponsorship', entityId:user.id, newValue:{ sponsorId: sponsorUser.id, referralCode: rawRef } } });
-    } else if(rawRef && sponsorError){
-      // รหัสผิด — เข้าคิวรอมอบหมาย ระบุเหตุผลชัด ห้ามสุ่มอ้างชื่อ
-      await prisma.placementQueue.create({ data:{ userId: user.id, sponsorId: null, reason: `รหัสแนะนำไม่ถูกต้อง: ${rawRef} — ${sponsorError}` } }).catch(()=>null);
-      await prisma.auditLog.create({ data:{ userId: user.id, action:'register.with_invalid_referral', entity:'User', entityId:user.id, newValue:{ referralCode: rawRef, error: sponsorError } } });
-    } else if(!rawRef){
-      // ไม่มีรหัส — เข้าคิวรอมอบหมาย ห้ามสุ่มอ้างชื่อ
-      await prisma.placementQueue.create({ data:{ userId: user.id, sponsorId: null, reason: 'ไม่มีรหัสแนะนำ — รอมอบหมาย' } }).catch(()=>null);
-    }
-
-    const { raw, hash } = createEmailToken();
-    await prisma.emailVerificationToken.create({ data:{ userId: user.id, tokenHash: hash, expiresAt: new Date(Date.now()+ 24*60*60*1000) } });
-    const verifyUrl = `${process.env.APP_BASE_URL || 'http://localhost:3000'}/api/auth/verify-email?token=${raw}&email=${encodeURIComponent(normalizedEmail)}`;
-    await prisma.auditLog.create({ data:{ userId: user.id, action:'user.register', entity:'User', entityId:user.id, newValue:{ email: normalizedEmail, rankLevel:0, sponsorId: sponsorUser?.id || null } } });
-
-    // แจ้งเตือน: ตัวเอง + ผู้แนะนำ + ผู้บริหารระบบ (สมัครเข้า)
+    // ── 5) แจ้งเตือน (best-effort — ห้ามทำให้การสมัครล้ม) ──
+    const verifyUrl = `${process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/verify-email?token=${emailToken}&email=${encodeURIComponent(normalizedEmail)}`;
     try{
       const { emitNotification, notifyAdmins } = await import('@/lib/notify');
-      const nm = `${String(firstName).trim()} ${String(lastName).trim()}`;
-      await emitNotification({ userId: user.id, type:'register_welcome', title:'สมัครสมาชิกสำเร็จ', body:`ยินดีต้อนรับ ${nm} — รหัสสมาชิก ${user.memberCode}`, referenceId:'/members' }).catch(()=>null);
+      await emitNotification({ userId: user.id, type:'register_welcome', title:'สมัครสมาชิกสำเร็จ', body:`ยินดีต้อนรับ ${displayName} — รหัสสมาชิก ${user.memberCode}`, referenceId:'/members' }).catch(()=>null);
       if(sponsorUser){
-        await emitNotification({ userId: sponsorUser.id, type:'new_downline', title:'มีสมาชิกใหม่ในสายงาน', body:`${nm} สมัครด้วยรหัสแนะนำของคุณ`, referenceId:'/members' }).catch(()=>null);
+        await emitNotification({ userId: sponsorUser.id, type:'new_downline', title:'มีสมาชิกใหม่ในสายงาน', body:`${displayName} สมัครด้วยรหัสผู้แนะนำของคุณ`, referenceId:'/members' }).catch(()=>null);
       }
-      await notifyAdmins({ type:'member_registered', title:'สมาชิกสมัครใหม่', body:`${nm} (${normalizedEmail})`, referenceId:'/admin/members' });
+      await notifyAdmins({ type:'member_registered', title:'สมาชิกสมัครใหม่', body:`${displayName} (${normalizedEmail})`, referenceId:'/admin/members' }).catch(()=>null);
     }catch{}
 
+    // ── 6) Google Sheet (fire-and-forget) ──
+    (async () => {
+      try{
+        await sendToGoogleSheet({ type:'register', firstName:fn, lastName:ln, email:normalizedEmail, phone:phoneDigits||'', lineId:lineId||'', referralCode:rawRef||'', province:province||'', district:district||'', subdistrict:subdistrict||'', addressLine:addressLine||'', zipCode:zipCode||'', memberCode:user.memberCode, username: normalizedUsername, occupation: occupation||'' });
+      }catch{}
+    })();
+
     return NextResponse.json({
-      ok:true,
+      ok: true,
       userId: user.id,
       memberCode: user.memberCode,
       referralCode: user.referralCode,
+      displayName: user.displayName || displayName,
+      createdAt: user.createdAt,
       sponsor: sponsorUser ? { id: sponsorUser.id, displayName: sponsorUser.displayName || `${sponsorUser.firstName} ${sponsorUser.lastName}` } : null,
-      sponsorError,
-      message: sponsorError ? `สมัครสำเร็จ — ${sponsorError} (เข้าสู่คิวรอมอบหมาย)` : 'สมัครสำเร็จ — กรุณายืนยันอีเมลภายใน 24 ชั่วโมง',
-      requiresEmailVerification:true,
-      ...(process.env.NODE_ENV !== 'production' ? { devVerifyUrl: verifyUrl } : {})
+      message: 'สมัครสำเร็จ — กรุณายืนยันอีเมลภายใน 24 ชั่วโมง',
+      requiresEmailVerification: true,
+      ...(process.env.NODE_ENV !== 'production' ? { devVerifyUrl: verifyUrl } : {}),
     });
   }catch(e:any){
-    if(String(e.message||'').includes('prisma') || String(e.code||'').startsWith('P')){
-      return NextResponse.json({ ok:true, mock:true, message:'สมัครสำเร็จ (โหมดทดสอบ — ยังไม่ต่อฐานข้อมูล)', requiresEmailVerification:true });
-    }
-    console.error('register error', e);
+    console.error('register error', e?.code || e?.message);
     return NextResponse.json({ ok:false, error:'เกิดข้อผิดพลาด กรุณาลองใหม่' }, { status:500 });
   }
 }

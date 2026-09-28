@@ -10,9 +10,11 @@ function RegisterInner(){
   const [sponsor, setSponsor] = useState<any>(null);
   const [refError, setRefError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', password:'', confirm:'', addressLine:'', zipCode:'', lineId:'', facebookUrl:'', tiktokUrl:'', birthDate:'', occupation:'', consentPdpa:false, consentMarketing:false });
+  const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', password:'', confirm:'', username:'', nickname:'', addressLine:'', zipCode:'', lineId:'', facebookUrl:'', tiktokUrl:'', birthDate:'', occupation:'', consentPdpa:false, consentMarketing:false });
+  const [showPwd, setShowPwd] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [msg, setMsg] = useState('');
-  const [autoCodes, setAutoCodes] = useState<{memberCode?:string, referralCode?:string}|null>(null);
+  const [autoCodes, setAutoCodes] = useState<{memberCode?:string, referralCode?:string, displayName?:string, createdAt?:string}|null>(null);
   // ที่อยู่ตอนสมัคร (เก็บชื่อจังหวัด/อำเภอ/ตำบล)
   const [provList, setProvList] = useState<any[]>([]);
   const [distList, setDistList] = useState<any[]>([]);
@@ -91,11 +93,15 @@ function RegisterInner(){
   }
 
   async function submit(){
-    if(form.password.length < 8){ setMsg('รหัสผ่านต้องมีอย่างน้อย 8 อักขระ'); return; }
-    if(form.password !== form.confirm){ setMsg('ยืนยันรหัสผ่านไม่ตรงกัน'); return; }
-    if(!form.email.trim() || !form.firstName.trim() || !form.lastName.trim()){ setMsg('กรอกชื่อ สกุล อีเมล ให้ครบ'); return; }
-    if(!form.consentPdpa){ setMsg('กรุณายอมรับนโยบายความเป็นส่วนตัว (PDPA) ก่อนสมัคร'); return; }
-    setLoading(true); setMsg(''); setAutoCodes(null);
+    if(!form.firstName.trim() || !form.lastName.trim()){ setMsg('กรอกชื่อและนามสกุลให้ครบ'); return; }
+        if(!form.username.trim() || form.username.trim().length < 4){ setMsg('ชื่อผู้ใช้ต้องมีอย่างน้อย 4 ตัวอักษร'); return; }
+        if(!/^[a-zA-Z0-9._-]+$/.test(form.username.trim())){ setMsg('ชื่อผู้ใช้ใช้ได้เฉพาะ a-z 0-9 . _ - เท่านั้น'); return; }
+        if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())){ setMsg('อีเมลไม่ถูกต้อง'); return; }
+        if(form.password.length < 8){ setMsg('รหัสผ่านต้องมีอย่างน้อย 8 อักขระ'); return; }
+        if(form.password !== form.confirm){ setMsg('ยืนยันรหัสผ่านไม่ตรงกัน'); return; }
+        if(!form.consentPdpa){ setMsg('กรุณายอมรับนโยบายความเป็นส่วนตัว (PDPA) ก่อนสมัคร'); return; }
+        if(loading) return;
+        setLoading(true); setMsg(''); setAutoCodes(null);
     const pname = provList.find((p:any)=>String(p.id)===addrP)?.name_th || undefined;
     const dname = distOpts.find((d:any)=>String(d.id)===addrD)?.name_th || undefined;
     const sname = (subOpts.find((s:any)=>String(s.id)===addrS)?.name_th) || undefined;
@@ -106,9 +112,10 @@ function RegisterInner(){
       });
       const data = await res.json();
       if(data.ok){
-        setMsg(data.sponsorError ? `สมัครสำเร็จ — ${data.sponsorError}` : 'สมัครสำเร็จ — กรุณายืนยันอีเมลภายใน 24 ชั่วโมง');
-        if(data.memberCode || data.referralCode) setAutoCodes({ memberCode: data.memberCode, referralCode: data.referralCode });
-      } else setMsg(data.error || 'สมัครไม่สำเร็จ');
+              setMsg('สมัครสำเร็จ — กรุณายืนยันอีเมลภายใน 24 ชั่วโมง');
+              if(data.memberCode || data.referralCode) setAutoCodes({ memberCode:data.memberCode, referralCode:data.referralCode, displayName:data.displayName, createdAt:data.createdAt });
+              setForm(f=>({...f, password:'', confirm:''}));
+            } else setMsg(data.error || 'สมัครไม่สำเร็จ');
     }catch{ setMsg('เกิดข้อผิดพลาด'); }
     setLoading(false);
   }
@@ -125,7 +132,7 @@ function RegisterInner(){
           <div className="mt-4 p-3 rounded-xl border bg-amber-50">
             <div className="text-xs font-semibold">รหัสผู้แนะนำ (ถ้ามี)</div>
             <div className="flex gap-2 mt-1">
-              <input value={ref} onChange={e=> setRef(e.target.value.toUpperCase())} onBlur={()=> verify(ref.trim().toUpperCase())} placeholder="เช่น R-ABC123" className="flex-1 border rounded-xl px-3 py-2 text-sm" />
+              <input value={ref} onChange={e=> setRef(e.target.value.toUpperCase())} onBlur={()=> verify(ref.trim().toUpperCase())} readOnly={!!refFromUrl} title={refFromUrl ? 'รหัสผู้แนะนำถูกล็อกจากลิงก์ที่ได้รับ' : ''} placeholder="เช่น R-ABC123" className={`flex-1 border rounded-xl px-3 py-2 text-sm ${refFromUrl ? 'bg-slate-100 text-slate-500' : ''}`} />
               <button onClick={()=> verify(ref.trim().toUpperCase())} className="px-4 py-2 rounded-xl bg-navy text-white text-xs">ตรวจสอบ</button>
             </div>
             {sponsor && <div className="text-xs text-emerald-700 mt-2">✓ ผู้แนะนำ: {sponsor.displayName} ({sponsor.memberCode})</div>}
@@ -133,15 +140,34 @@ function RegisterInner(){
             {!sponsor && !refError && !ref && <div className="text-[11px] text-slate-500 mt-2">หากไม่มีรหัส จะเข้าสู่คิวรอมอบหมายที่ระบุชัด — ห้ามสุ่มอ้างชื่อบุคคล</div>}
           </div>
 
-          {/* มาตรฐาน: ชื่อ สกุล อีเมล เบอร์โทร */}
-          <div className="mt-4 grid md:grid-cols-2 gap-3">
-            <input placeholder="ชื่อ *" value={form.firstName} onChange={e=> setForm({...form, firstName:e.target.value})} className="border rounded-xl px-3 py-2.5 text-sm" />
-            <input placeholder="นามสกุล *" value={form.lastName} onChange={e=> setForm({...form, lastName:e.target.value})} className="border rounded-xl px-3 py-2.5 text-sm" />
-            <input placeholder="อีเมล *" value={form.email} onChange={e=> setForm({...form, email:e.target.value})} className="border rounded-xl px-3 py-2.5 text-sm" />
-            <input placeholder="เบอร์โทร *" value={form.phone} onChange={e=> setForm({...form, phone:e.target.value})} className="border rounded-xl px-3 py-2.5 text-sm" />
-            <input placeholder="รหัสผ่าน (≥8 อักขระ) *" type="password" value={form.password} onChange={e=> setForm({...form, password:e.target.value})} className="border rounded-xl px-3 py-2.5 text-sm" />
-            <input placeholder="ยืนยันรหัสผ่าน *" type="password" value={form.confirm} onChange={e=> setForm({...form, confirm:e.target.value})} className="border rounded-xl px-3 py-2.5 text-sm" />
-          </div>
+          {/* 1) ข้อมูลบัญชี: ชื่อผู้ใช้ ชื่อ-สกุล ชื่อเล่น */}
+                    <div className="mt-4 text-xs font-semibold text-slate-700">1) ข้อมูลบัญชีเข้าสู่ระบบ</div>
+                    <div className="mt-2 grid md:grid-cols-2 gap-3">
+                      <input placeholder="ชื่อผู้ใช้ (username) *" value={form.username} onChange={e=> setForm({...form, username:e.target.value.toLowerCase()})} autoComplete="username" className="border rounded-xl px-3 py-2.5 text-sm" />
+                      <input placeholder="ชื่อเล่น (ไม่บังคับ)" value={form.nickname} onChange={e=> setForm({...form, nickname:e.target.value})} className="border rounded-xl px-3 py-2.5 text-sm" />
+                      <input placeholder="ชื่อ *" value={form.firstName} onChange={e=> setForm({...form, firstName:e.target.value})} className="border rounded-xl px-3 py-2.5 text-sm" />
+                      <input placeholder="นามสกุล *" value={form.lastName} onChange={e=> setForm({...form, lastName:e.target.value})} className="border rounded-xl px-3 py-2.5 text-sm" />
+                      <input placeholder="อีเมล *" type="email" value={form.email} onChange={e=> setForm({...form, email:e.target.value})} autoComplete="email" className="border rounded-xl px-3 py-2.5 text-sm" />
+                      <input placeholder="เบอร์โทร *" type="tel" value={form.phone} onChange={e=> setForm({...form, phone:e.target.value})} autoComplete="tel" className="border rounded-xl px-3 py-2.5 text-sm" />
+                      <div className="relative">
+                        <input placeholder="รหัสผ่าน (≥8 อักขระ) *" type={showPwd ? 'text' : 'password'} value={form.password} onChange={e=> setForm({...form, password:e.target.value})} autoComplete="new-password" className="w-full border rounded-xl px-3 py-2.5 pr-14 text-sm" />
+                        <button type="button" onClick={()=>setShowPwd(v=>!v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-slate-500 px-2 py-1">{showPwd ? 'ซ่อน' : 'แสดง'}</button>
+                      </div>
+                      <input placeholder="ยืนยันรหัสผ่าน *" type={showPwd ? 'text' : 'password'} value={form.confirm} onChange={e=> setForm({...form, confirm:e.target.value})} autoComplete="new-password" className="border rounded-xl px-3 py-2.5 text-sm" />
+                    </div>
+                    {/* ระดับความปลอดภัยรหัสผ่าน */}
+                    {form.password.length > 0 && (()=>{
+                      const score = (/[a-z]/.test(form.password)?1:0)+(/[A-Z]/.test(form.password)?1:0)+(/\d/.test(form.password)?1:0)+(/[^A-Za-z0-9]/.test(form.password)?1:0)+(form.password.length>=8?1:0);
+                      const label = form.password.length<8 ? 'สั้นเกินไป (ต้อง ≥8)' : score<=2 ? 'อ่อน' : score<=3 ? 'ปานกลาง' : score<=4 ? 'ดี' : 'แข็งแรง';
+                      const color = form.password.length<8 ? 'bg-red-400' : score<=2 ? 'bg-orange-400' : score<=3 ? 'bg-amber-400' : score<=4 ? 'bg-emerald-400' : 'bg-emerald-600';
+                      const width = form.password.length<8 ? '25%' : score<=2 ? '40%' : score<=3 ? '60%' : score<=4 ? '80%' : '100%';
+                      return (
+                        <div className="mt-2 flex items-center gap-2">
+                          <div className="flex-1 h-1.5 rounded-full bg-slate-200 overflow-hidden"><div className={`h-full ${color}`} style={{width}}/></div>
+                          <span className="text-[11px] text-slate-500 w-28 text-right">รหัสผ่าน: {label}</span>
+                        </div>
+                      );
+                    })()}
 
           {/* โซเชียล + วันเกิด + อาชีพ */}
           <div className="mt-3 grid md:grid-cols-3 gap-3">
@@ -204,12 +230,19 @@ function RegisterInner(){
           </button>
           {msg && <div className="mt-3 text-xs text-center p-2 rounded-xl bg-slate-50 border">{msg}</div>}
           {autoCodes && (
-            <div className="mt-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs space-y-1">
-              <div className="font-bold text-emerald-800">ระบบออกรหัสอัตโนมัติแล้ว</div>
-              {autoCodes.memberCode && <div>รหัสสมาชิก: <span className="font-mono font-bold">{autoCodes.memberCode}</span></div>}
-              {autoCodes.referralCode && <div>รหัสแนะนำของคุณ: <span className="font-mono font-bold">{autoCodes.referralCode}</span> — แชร์ให้ผู้อื่นสมัครต่อได้</div>}
-            </div>
-          )}
+                      <div className="mt-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs space-y-1">
+                        <div className="font-bold text-emerald-800">ระบบออกรหัสอัตโนมัติแล้ว</div>
+                        {autoCodes.displayName && <div>ชื่อสมาชิก: <span className="font-semibold">{autoCodes.displayName}</span></div>}
+                        {autoCodes.memberCode && <div>รหัสสมาชิก: <span className="font-mono font-bold">{autoCodes.memberCode}</span></div>}
+                        {autoCodes.referralCode && <div>รหัสผู้แนะนำของคุณ: <span className="font-mono font-bold">{autoCodes.referralCode}</span> — แชร์ให้ผู้อื่นสมัครต่อได้</div>}
+                        {autoCodes.createdAt && <div className="text-slate-500">สมัครเมื่อ: {new Date(autoCodes.createdAt).toLocaleString('th-TH')}</div>}
+                        {autoCodes.referralCode && (
+                          <div className="pt-1">
+                            <button type="button" onClick={()=>{ const link = `${typeof window!=='undefined' ? window.location.origin : ''}/register?ref=${autoCodes.referralCode}`; navigator.clipboard?.writeText(link); setCopied(true); setTimeout(()=>setCopied(false), 2000); }} className="px-3 py-1.5 rounded-full bg-white border text-[11px]">{copied ? 'คัดลอกแล้ว ✓' : 'คัดลอกลิงก์เชิญเพื่อน'}</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
           <div className="mt-4 text-center text-xs">
             <Link href="/login" className="text-navy underline">มีบัญชีแล้ว — เข้าสู่ระบบ</Link>
