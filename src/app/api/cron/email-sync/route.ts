@@ -29,7 +29,8 @@ async function providerStatus(){
   const { activeProvider, smtpConfigured, fromAddress } = await import('@/lib/mailer');
   const provider = activeProvider();
   const from = fromAddress();
-  const domain = from.split('@')[1] || '';
+  const emailPart = (from.match(/<([^>]+)>/)?.[1] || from).trim();
+  const domain = emailPart.includes('@') ? emailPart.split('@')[1] : '';
   const info: any = { provider, from: from || null, fromDomain: domain || null, smtpConfigured: smtpConfigured() };
 
   if(provider === 'smtp'){
