@@ -122,7 +122,7 @@ export default function Dashboard() {
         <Header />
         <div className="flex w-full">
           <Sidebar />
-          <main className="flex-1 p-6 space-y-6">
+          <main className="flex-1 p-6 pb-10 space-y-6">
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-bold text-navy">ภาพรวม</h1>
               <span className="badge-demo animate-pulse">กำลังโหลด...</span>
@@ -147,7 +147,7 @@ export default function Dashboard() {
       <Header />
       <div className="flex w-full">
         <Sidebar />
-        <main className="flex-1 p-6 space-y-6">
+        <main className="flex-1 p-6 pb-10 space-y-6">
           {/* Header + status */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

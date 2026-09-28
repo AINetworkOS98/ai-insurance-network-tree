@@ -1,6 +1,7 @@
 'use client';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import RadialNetworkTree from '@/components/RadialNetworkTree';
 
 // หลักเกณฑ์การสร้าง 1 แตก 5 อัตโนมัติ — รายละเอียดการเข้าระบบสมาชิก
 export default function OneBreakFiveRulesPage(){
@@ -31,6 +32,20 @@ export default function OneBreakFiveRulesPage(){
           <div>
             <h1 className="text-xl font-bold text-navy">หลักเกณฑ์การสร้าง 1 แตก 5 อัตโนมัติ</h1>
             <p className="text-xs text-slate-500 mt-1">รายละเอียดการเข้าระบบสมาชิก — ระบบทำงานอัตโนมัติทั้งหมดตามหลักเกณฑ์นี้</p>
+          </div>
+
+          {/* ตัวอย่างผัง 1 แตก 5 — แตกออก 5 ทิศ (วางบนสุดตามที่กำหนด) */}
+          <div className="card p-5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-semibold text-sm">ตัวอย่างผัง 1 แตก 5 — แตกออก 5 ทิศ</h3>
+              <span className="px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 text-[10px] font-semibold">ตัวอย่างสาธิต</span>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              ศูนย์กลาง 1 ตำแหน่ง → แตกออก 5 ทิศ → แต่ละกิ่งขยายต่ออีก 5 ไปเรื่อย ๆ ไม่สิ้นสุด • แสงไฟที่วิ่งคือการไหลของตำแหน่งใหม่เข้าผัง
+            </p>
+            <div className="mt-4">
+              <RadialNetworkTree demoOnly />
+            </div>
           </div>
 
           {/* ขั้นตอนการเข้า */}

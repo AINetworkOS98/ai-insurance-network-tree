@@ -7,14 +7,14 @@ export default function N8nPage() {
     {
       name: 'Webhook — Vercel Sync',
       path: '/webhook/vercel-sync',
-      url: 'http://localhost:5678/webhook/vercel-sync',
+      url: 'http://localhost:5679/webhook/vercel-sync',
       desc: 'รับข้อมูลจาก Vercel app เมื่อมีเหตุการณ์เกิดขึ้น',
       active: true,
     },
     {
       name: 'Webhook — Vercel Webhook',
       path: '/webhook/vercel-webhook',
-      url: 'http://localhost:5678/webhook/vercel-webhook',
+      url: 'http://localhost:5679/webhook/vercel-webhook',
       desc: 'เว็บฮุคสำหรับการเชื่อมต่อเพิ่มเติม',
       active: true,
     },
@@ -70,7 +70,7 @@ export default function N8nPage() {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div className="bg-slate-50 rounded-lg p-3">
               <div className="text-slate-500 text-xs mb-1">URL</div>
-              <div className="font-mono text-sky-700 font-medium">http://localhost:5678/</div>
+              <div className="font-mono text-sky-700 font-medium">http://localhost:5679/</div>
             </div>
             <div className="bg-slate-50 rounded-lg p-3">
               <div className="text-slate-500 text-xs mb-1">เวอร์ชัน</div>
@@ -78,7 +78,7 @@ export default function N8nPage() {
             </div>
           </div>
           <div className="mt-4">
-            <a href="http://localhost:5678/" target="_blank" rel="noopener noreferrer"
+            <a href="http://localhost:5679/" target="_blank" rel="noopener noreferrer"
                className="inline-flex items-center gap-2 bg-sky-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-sky-600 transition-colors">
               เปิด N8n Editor
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>

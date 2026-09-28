@@ -3,9 +3,11 @@ import { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import TreeView from '@/components/TreeView';
+import RadialNetworkTree from '@/components/RadialNetworkTree';
 
 export default function TreePage(){
   const [activeTab, setActiveTab] = useState<'real'|'simulate'>('real');
+  const [viewMode, setViewMode] = useState<'radial'|'classic'>('radial');
   const [preview, setPreview] = useState<any>(null);
   const [runs, setRuns] = useState<any[]>([]);
   const [simulate, setSimulate] = useState<any>(null);
@@ -200,8 +202,15 @@ export default function TreePage(){
                   <button className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 text-xs hover:bg-slate-50">ย้อนขึ้นชั้นบน</button>
                 </div>
                 <div className="text-[11px] text-slate-500 mt-2">ค้นหา • กรองสาขา • ซูม/ย่อ/ขยาย • ย้อนขึ้นชั้นบน • โหลดทีละสาขา</div>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <button onClick={()=>setViewMode('radial')} className={`px-4 py-2 rounded-xl text-xs font-semibold border ${viewMode==='radial' ? 'bg-[#eff6ff] border-[#dbeafe] text-sky-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>ผัง 5 ทิศ (ศูนย์กลาง)</button>
+                  <button onClick={()=>setViewMode('classic')} className={`px-4 py-2 rounded-xl text-xs font-semibold border ${viewMode==='classic' ? 'bg-[#eff6ff] border-[#dbeafe] text-sky-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>ผังแนวนอน 1:5</button>
+                  <span className="text-[11px] text-slate-400 self-center">มุมมอง {viewMode==='radial' ? 'รากกลางจอ แตก 5 ทิศ แสงวิ่งแบบ n8n' : 'รากบน ลูก 5 เรียงซ้าย→ขวา'}</span>
+                </div>
               </div>
-              <TreeView filter={{q:fq,status:fStatus,province:fProv,district:fDist,tambon:fSub,zipCode:fZip}} />
+              {viewMode==='radial'
+                ? <RadialNetworkTree filter={{q:fq,status:fStatus,province:fProv,district:fDist,tambon:fSub,zipCode:fZip}} />
+                : <TreeView filter={{q:fq,status:fStatus,province:fProv,district:fDist,tambon:fSub,zipCode:fZip}} />}
 
               {preview && (
                 <div className="card p-4">

@@ -9,6 +9,7 @@ export default function ContactPage() {
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [form, setForm] = useState({
     phone: '',
+    email: '',
     lineId: '',
     subject: '',
     message: '',
@@ -37,6 +38,7 @@ export default function ContactPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone: form.phone || undefined,
+          email: form.email || undefined,
           lineId: form.lineId || undefined,
           subject: form.subject,
           message: form.message.trim(),
@@ -45,7 +47,7 @@ export default function ContactPage() {
       const j = await res.json();
       if (j.ok) {
         setResult({ ok: true, text: '✅ ส่งข้อความเรียบร้อยแล้ว Admin จะติดต่อกลับผ่านช่องทางที่คุณแจ้งไว้' });
-        setForm({ phone: '', lineId: '', subject: '', message: '' });
+        setForm({ phone: '', email: '', lineId: '', subject: '', message: '' });
       } else {
         setResult({ ok: false, text: '❌ ' + (j.error || 'ส่งไม่สำเร็จ') });
       }
@@ -94,6 +96,19 @@ export default function ContactPage() {
                     className="w-full px-4 py-2.5 rounded-xl border border-[#dbeafe] bg-white text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-300"
                   />
                   <p className="text-xs text-slate-400 mt-1">ไม่บังคับ</p>
+                </div>
+
+                {/* อีเมล */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">อีเมล</label>
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={e => handleChange('email', e.target.value)}
+                    placeholder="เช่น example@xxx.com"
+                    className="w-full px-4 py-2.5 rounded-xl border border-[#dbeafe] bg-white text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-300"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">ใช้ตอบกลับจาก AI อัตโนมัติ</p>
                 </div>
 
                 {/* LINE ID */}

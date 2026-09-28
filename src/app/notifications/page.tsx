@@ -19,6 +19,7 @@ export default function NotificationsPage(){
   useEffect(()=>{ load(); },[filterUnread]);
   async function markAll(){ await fetch('/api/notifications', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'readAll' })}); load(); setMsg('อ่านทั้งหมดแล้ว'); }
   async function markOne(id:string){ await fetch('/api/notifications', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ notificationId: id })}); load(); }
+  async function deleteOne(id:string){ if(!confirm('ล่าแจ้งเตือนนี้จริงหรือไม่?')) return; await fetch('/api/notifications', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ notificationId:id, action:'deleteOne' })}); load(); setMsg('ล่าแล้ว'); }
 
   return (
     <div>
@@ -47,6 +48,7 @@ export default function NotificationsPage(){
                     <div className="text-[11px] text-slate-400 mt-1">{new Date(n.createdAt).toLocaleString('th-TH')}</div>
                   </div>
                   {n.referenceId && <a href={n.referenceId.startsWith('/')? n.referenceId : `/${n.referenceId}`} className="px-3 py-1 rounded-full border bg-white text-[11px] self-center">เปิดรายการ</a>}
+                  <button onClick={(e)=>{ e.stopPropagation(); deleteOne(n.id); }} className="px-2 py-1 rounded text-[10px] text-red-600 hover:bg-red-50 border border-red-200 self-center">ลบ</button>
                 </div>
               ))}
               {!list.length && <div className="text-xs text-slate-500 p-3 rounded-xl bg-slate-50 border">ไม่มีแจ้งเตือน</div>}

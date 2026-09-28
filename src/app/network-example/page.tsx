@@ -163,193 +163,246 @@ function RadialTree({
       >
         <defs>
           <filter id="nodeShadow" x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#475569" floodOpacity="0.15" />
-          </filter>
-          <filter id="nodeGlow" x="-100%" y="-100%" width="300%" height="300%">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-          <marker id="arrowHead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-            <path d="M 0 0 L 10 5 L 0 10 z" fill="#93c5fd" />
-          </marker>
-          <style>{`
-            @keyframes flowParticle {
-              0% { transform: translate(0,0); opacity: 0; }
-              10% { opacity: 1; }
-              90% { opacity: 1; }
-              100% { transform: translate(var(--dx), var(--dy)); opacity: 0; }
-            }
-            .particle {
-              animation: flowParticle var(--duration) linear infinite;
-              animation-delay: var(--delay);
-              transform-box: fill-box;
-              transform-origin: center;
-            }
-          `}</style>
+                      <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#475569" floodOpacity="0.15" />
+                    </filter>
+                    <filter id="nodeGlow" x="-100%" y="-100%" width="300%" height="300%">
+                      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
+                      <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
+                    <filter id="edgeGlow" x="-50%" y="-50%" width="200%" height="200%">
+                      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
+                      <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
+                    <marker id="arrowHead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                      <path d="M 0 0 L 10 5 L 0 10 z" fill="#93c5fd" />
+                    </marker>
+                    {/* Person icon — ทรงกลมรูปคน */}
+                    <g id="personHead">
+                      <circle cx="0" cy="-3" r="3.5" />
+                    </g>
+                    <g id="personBody">
+                      <path d="M -6,1 C -6,8 -2,11 0,11 C 2,11 6,8 6,1 Z" />
+                    </g>
+                    <style>{`
+                      @keyframes flowParticle {
+                        0% { transform: translate(0,0); opacity: 0; }
+                        10% { opacity: 1; }
+                        90% { opacity: 1; }
+                        100% { transform: translate(var(--dx), var(--dy)); opacity: 0; }
+                      }
+                      .particle {
+                        animation: flowParticle var(--duration) linear infinite;
+                        animation-delay: var(--delay);
+                        transform-box: fill-box;
+                        transform-origin: center;
+                      }
+                      @keyframes flowDash {
+                        0% { stroke-dashoffset: 24; }
+                        100% { stroke-dashoffset: 0; }
+                      }
+                      @keyframes edgePulse {
+                        0%, 100% { opacity: 0.4; }
+                        50% { opacity: 0.9; }
+                      }
+                      .edge-flow {
+                        animation: flowDash 1.2s linear infinite;
+                      }
+                      .edge-pulse {
+                        animation: edgePulse 2s ease-in-out infinite;
+                      }
+                    `}</style>
         </defs>
 
         <g transform={`translate(${T.offX},${T.offY}) scale(${T.scale})`}>
           {/* เส้นเชื่อม + flow particles n8n-style */}
-          {members.map(m => {
-            const p = nodePos.get(m.id);
-            if (!p) return null;
-            return m.children.map((c, ci) => {
-              const cp = nodePos.get(c.id);
-              if (!cp) return null;
-              const dx = cp.x - p.x;
-              const dy = cp.y - p.y;
-              const isNew = disclosed && /* ระบุเส้นใหม่ */ false;
-              const lineColor = isNew ? '#fcd34d' : (m.children.length < 5 ? '#93c5fd' : '#60a5fa');
-              const lineWidth = isNew ? 2.5 : 1.5;
-              const dash = isNew ? 'none' : (m.children.length < 5 ? '4 3' : 'none');
-              const lineOpacity = isNew ? 1 : (m.children.length < 5 ? 0.4 : 0.7);
-              const glow = isNew ? '#fcd34d' : 'none';
+                    {members.map(m => {
+                      const p = nodePos.get(m.id);
+                      if (!p) return null;
+                      return m.children.map((c, ci) => {
+                        const cp = nodePos.get(c.id);
+                        if (!cp) return null;
+                        const dx = cp.x - p.x;
+                        const dy = cp.y - p.y;
+                        const len = Math.sqrt(dx * dx + dy * dy);
+                        const isNew = disclosed && lastPlacedConn && lastPlacedConn.parentId === m.id && lastPlacedConn.childId === c.id;
+                        const lineColor = isNew ? '#fcd34d' : '#60a5fa';
+                        const lineWidth = isNew ? 3 : 1.8;
 
-              return (
-                <g key={`e-${m.id}-${c.id}`}>
-                  {/* เส้นหลัก */}
-                  <line
-                    x1={p.x} y1={p.y}
-                    x2={cp.x} y2={cp.y}
-                    stroke={lineColor}
-                    strokeWidth={lineWidth}
-                    strokeDasharray={dash}
-                    markerEnd={m.children.length < 5 ? 'url(#arrowHead)' : 'none'}
-                    opacity={lineOpacity}
-                    className="transition-all duration-300"
-                  />
-                  {/* เส้น glow (เฉพาะเส้นใหม่ — highlight นานกว่าเดิม) */}
-                  {isNew && (
-                    <line
-                      x1={p.x} y1={p.y}
-                      x2={cp.x} y2={cp.y}
-                      stroke={glow}
-                      strokeWidth={8}
-                      opacity={0.35}
-                      filter="url(#nodeGlow)"
-                      className="transition-all duration-300"
-                    />
-                  )}
-                  {/* Flow particles — {particleCount} อนุภาค วิ่งจากพ่อไปลูก ไหลตลอดเวลา */}
-                  {showParticles && (
-                    <>
-                      {Array.from({ length: particleCount }, (_, i) => {
-                        const particleStyle = {
-                          '--dx': `${dx}px`,
-                          '--dy': `${dy}px`,
-                          '--duration': `${Math.max(800, particleSpeed * (1 + i * 0.35))}ms`,
-                          '--delay': `${(i * (particleSpeed * 0.25))}ms`,
-                          filter: i === 0 ? 'url(#nodeShadow)' : undefined,
-                        } as any;
                         return (
-                          <circle
-                            key={i}
-                            cx={p.x} cy={p.y}
-                            r={1.6 - i * 0.25}
-                            fill={particleColor}
-                            opacity={(0.9) - i * 0.12}
-                            className="particle"
-                            style={particleStyle}
-                          />
+                          <g key={`e-${m.id}-${c.id}`}>
+                            {/* เส้น glow n8n-style */}
+                            <line
+                              x1={p.x} y1={p.y}
+                              x2={cp.x} y2={cp.y}
+                              stroke={lineColor}
+                              strokeWidth={lineWidth + 4}
+                              opacity={0.15}
+                              filter="url(#edgeGlow)"
+                            />
+                            {/* เส้นหลัก */}
+                            <line
+                              x1={p.x} y1={p.y}
+                              x2={cp.x} y2={cp.y}
+                              stroke={lineColor}
+                              strokeWidth={lineWidth}
+                              markerEnd="url(#arrowHead)"
+                              opacity={isNew ? 1 : 0.55}
+                              className={isNew ? 'edge-pulse' : ''}
+                            />
+                            {/* n8n-style flowing dash */}
+                            <line
+                              x1={p.x} y1={p.y}
+                              x2={cp.x} y2={cp.y}
+                              stroke={isNew ? '#fbbf24' : '#38bdf8'}
+                              strokeWidth={lineWidth}
+                              strokeDasharray="8 16"
+                              opacity={isNew ? 0.9 : 0.35}
+                              className="edge-flow"
+                            />
+                            {/* เส้น glow highlight (เฉพาะเส้นใหม่) */}
+                            {isNew && (
+                              <line
+                                x1={p.x} y1={p.y}
+                                x2={cp.x} y2={cp.y}
+                                stroke="#fcd34d"
+                                strokeWidth={10}
+                                opacity={0.3}
+                                filter="url(#nodeGlow)"
+                              />
+                            )}
+                            {/* Flow particles */}
+                            {showParticles && (
+                              <>
+                                {Array.from({ length: particleCount }, (_, i) => {
+                                  const particleStyle = {
+                                    '--dx': `${dx}px`,
+                                    '--dy': `${dy}px`,
+                                    '--duration': `${Math.max(800, particleSpeed * (1 + i * 0.35))}ms`,
+                                    '--delay': `${(i * (particleSpeed * 0.25))}ms`,
+                                    filter: i === 0 ? 'url(#nodeShadow)' : undefined,
+                                  } as any;
+                                  const colors = ['#38bdf8', '#818cf8', '#a78bfa', '#f472b6', '#22d3ee'];
+                                  const pc = isNew ? '#fbbf24' : colors[i % colors.length];
+                                  return (
+                                    <circle
+                                      key={i}
+                                      cx={p.x} cy={p.y}
+                                      r={2.5 - i * 0.3}
+                                      fill={pc}
+                                      opacity={0.95 - i * 0.1}
+                                      className="particle"
+                                      style={particleStyle}
+                                    />
+                                  );
+                                })}
+                              </>
+                            )}
+                          </g>
                         );
-                      })}
-                    </>
-                  )}
-                </g>
-              );
-            });
-          })}
+                      });
+                    })}
 
           {/* โหนด */}
-          {members.map(m => {
-            const p = nodePos.get(m.id);
-            if (!p) return null;
-            const isSelected = m.id === selectedId;
-            const isVacant = m.status === 'VACANT';
-            // ซ่อนโหนดที่ยังไม่ถูกเปิดเผยถ้ากำลังรันจำลอง
-            if (!disclosed && m.level > 0) return null;
-            const r = m.level === 0 ? 28 : m.children.length === 0 ? 14 : 18;
+                    {members.map(m => {
+                      const p = nodePos.get(m.id);
+                      if (!p) return null;
+                      const isSelected = m.id === selectedId;
+                      const isVacant = m.status === 'VACANT';
+                      if (!disclosed && m.level > 0) return null;
+                      const r = m.level === 0 ? 28 : m.children.length === 0 ? 14 : 18;
+                      const statusColor = statusDot(m.status);
 
-            return (
-              <g
-                key={m.id}
-                onClick={() => setSelected(isSelected ? null : m.id)}
-                className="cursor-pointer"
-                style={{
-                  transform: `translate(${p.x}px,${p.y}px)`,
-                  transition: 'transform 0.2s ease',
-                }}
-              >
-                {/* วงกลมพื้นหลัง */}
-                <circle
-                  r={r + (isSelected ? 8 : 0)}
-                  fill={isSelected ? 'rgba(71,85,105,0.08)' : 'transparent'}
-                  className="transition-all duration-200"
-                />
+                      return (
+                        <g
+                          key={m.id}
+                          onClick={() => setSelected(isSelected ? null : m.id)}
+                          className="cursor-pointer"
+                          style={{
+                            transform: `translate(${p.x}px,${p.y}px)`,
+                            transition: 'transform 0.2s ease',
+                          }}
+                        >
+                          {/* วงกลมพื้นหลังตอนเลือก */}
+                          <circle
+                            r={r + (isSelected ? 10 : 0)}
+                            fill={isSelected ? 'rgba(71,85,105,0.06)' : 'transparent'}
+                            className="transition-all duration-200"
+                          />
 
-                {/* วงกลมโหนด */}
-                <circle
-                  r={r}
-                  fill={isVacant ? '#f1f5f9' : '#ffffff'}
-                  stroke={isVacant ? '#cbd5e1' : isSelected ? '#475569' : statusDot(m.status)}
-                  strokeWidth={isSelected ? 3.5 : isVacant ? 2 : 2.5}
-                  filter="url(#nodeShadow)"
-                  className="transition-all duration-200 hover:scale-105"
-                  style={{ transformOrigin: 'center' }}
-                />
+                          {/* โหนดรูปคน */}
+                          <g filter="url(#nodeShadow)">
+                            {/* วงกลมพื้นหลัง */}
+                            <circle
+                              r={r}
+                              fill={isVacant ? '#f1f5f9' : '#ffffff'}
+                              stroke={isVacant ? '#cbd5e1' : isSelected ? '#475569' : statusColor}
+                              strokeWidth={isSelected ? 3.5 : isVacant ? 2 : 2.5}
+                              className="transition-all duration-200 hover:scale-105"
+                              style={{ transformOrigin: 'center' }}
+                            />
+                            {/* รูปคนภายใน */}
+                            {!isVacant && m.status !== 'REMOVED' && (
+                              <g transform={`scale(${r / 12})`} fill={statusColor} opacity={0.8}>
+                                <use href="#personHead" />
+                                <use href="#personBody" />
+                              </g>
+                            )}
+                            {/* สถานะพิเศษ */}
+                            {m.status === 'REMOVED' && (
+                              <text textAnchor="middle" dominantBaseline="central"
+                                fontSize={r * 0.7} fill="#ef4444" fontWeight="bold">✕</text>
+                            )}
+                            {m.status === 'PROMOTED' && (
+                              <text textAnchor="middle" dominantBaseline="central"
+                                fontSize={r * 0.6} fill="#3b82f6" fontWeight="bold">★</text>
+                            )}
+                            {isVacant && (
+                              <text textAnchor="middle" dominantBaseline="central"
+                                fontSize={r * 0.8} fill="#94a3b8" fontWeight="bold">+</text>
+                            )}
+                          </g>
 
-                {/* ไอคอนพิเศษ */}
-                {m.status === 'REMOVED' && (
-                  <text textAnchor="middle" dominantBaseline="central"
-                    fontSize={r * 0.7} fill="#ef4444" fontWeight="bold">✕</text>
-                )}
-                {m.status === 'PROMOTED' && (
-                  <text textAnchor="middle" dominantBaseline="central"
-                    fontSize={r * 0.6} fill="#3b82f6" fontWeight="bold">★</text>
-                )}
-                {isVacant && (
-                  <text textAnchor="middle" dominantBaseline="central"
-                    fontSize={r * 0.8} fill="#94a3b8" fontWeight="bold">+</text>
-                )}
+                          {/* ป้ายระดับ (root) */}
+                          {m.level === 0 && (
+                            <text textAnchor="middle" dominantBaseline="hanging"
+                              y={r + 6} fontSize={9} fill="#475569" fontWeight="700">
+                              ROOT
+                            </text>
+                          )}
 
-                {/* Initials (เฉพาะไม่ใช่ VACANT/REMOVED) */}
-                {!isVacant && m.status !== 'REMOVED' && (
-                  <text textAnchor="middle" dominantBaseline="central"
-                    fontSize={r * (m.level === 0 ? 0.55 : 0.5)}
-                    fill="#475569" fontWeight="700">
-                    {m.name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()}
-                  </text>
-                )}
+                          {/* ชื่อย่อใต้โหนด */}
+                          {!isVacant && m.status !== 'REMOVED' && m.level > 0 && (
+                            <text textAnchor="middle" dominantBaseline="hanging"
+                              y={r + 5} fontSize={6.5} fill="#64748b" fontWeight="500">
+                              {m.name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('')}
+                            </text>
+                          )}
 
-                {/* ป้ายระดับ (root เท่านั้น) */}
-                {m.level === 0 && (
-                  <text textAnchor="middle" dominantBaseline="hanging"
-                    y={r + 8} fontSize={10} fill="#475569" fontWeight="600">
-                    ROOT
-                  </text>
-                )}
+                          {/* หมายเลข slot */}
+                          {m.level > 0 && m.status !== 'VACANT' && (
+                            <text textAnchor="middle" dominantBaseline="hanging"
+                              y={r + (m.status !== 'REMOVED' ? 14 : 8)} fontSize={6} fill="#94a3b8" fontWeight="500">
+                              S{m.slot}
+                            </text>
+                          )}
 
-                {/* หมายเลข slot */}
-                {m.level > 0 && m.status !== 'VACANT' && (
-                  <text textAnchor="middle" dominantBaseline="hanging"
-                    y={r + 4} fontSize={7} fill="#94a3b8" fontWeight="500">
-                    S{m.slot}
-                  </text>
-                )}
-
-                {/* ว่าง/เต็ม ในวงกลมเล็ก */}
-                {m.level > 0 && (
-                  <text textAnchor="middle" dominantBaseline="hanging"
-                    y={-r - 6} fontSize={7} fill="#94a3b8" fontWeight="500">
-                    {m.children.length}/5
-                  </text>
-                )}
-              </g>
-            );
-          })}
+                          {/* ว่าง/เต็ม */}
+                          {m.level > 0 && (
+                            <text textAnchor="middle" dominantBaseline="hanging"
+                              y={-r - 5} fontSize={6.5} fill="#94a3b8" fontWeight="500">
+                              {m.children.length}/5
+                            </text>
+                          )}
+                        </g>
+                      );
+                    })}
         </g>
       </svg>
 

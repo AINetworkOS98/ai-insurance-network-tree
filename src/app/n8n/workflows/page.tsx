@@ -9,14 +9,14 @@ export default function N8nWorkflowsPage() {
     {
       id: 'vercel-sync',
       name: 'Webhook — Vercel Sync',
-      url: 'http://localhost:5678/webhook/vercel-sync',
+      url: 'http://localhost:5679/webhook/vercel-sync',
       desc: 'รับข้อมูลเมื่อมีเหตุการณ์จาก Vercel app',
       methods: ['POST'],
     },
     {
       id: 'vercel-webhook',
       name: 'Webhook — Vercel Webhook',
-      url: 'http://localhost:5678/webhook/vercel-webhook',
+      url: 'http://localhost:5679/webhook/vercel-webhook',
       desc: 'เว็บฮุคสำหรับการเชื่อมต่อเพิ่มเติม',
       methods: ['POST'],
     },
@@ -96,7 +96,7 @@ export default function N8nWorkflowsPage() {
             <p>1. เปิดไฟล์ <code className="bg-slate-200 px-1 rounded">.env</code> ในโปรเจกต์</p>
             <p>2. เพิ่มค่าดังนี้:</p>
             <pre className="bg-slate-800 text-green-400 p-3 rounded-lg text-xs overflow-x-auto" style={{whiteSpace: 'pre'}}>
-N8N_WEBHOOK_URL=http://localhost:5678/webhook/vercel-sync
+N8N_WEBHOOK_URL=http://localhost:5679/webhook/vercel-sync
 N8N_SECRET=your-secret-here
             </pre>
             <p>3. เรียก webhook จาก API:</p>
