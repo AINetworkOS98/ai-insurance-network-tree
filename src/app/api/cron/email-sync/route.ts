@@ -24,6 +24,24 @@ async function hasMarketingConsent(prisma: any, userId?: string | null){
   }catch{ return false; }
 }
 
+// วินิจฉัยผู้ส่งอีเมล — บอกตรง ๆ ว่าส่งถึงสมาชิกจริงได้หรือยัง (Resend โหมดทดสอบส่งได้เฉพาะอีเมลเจ้าของบัญชี)
+async function providerStatus(){
+  const from = process.env.EMAIL_FROM_ADDRESS || '';
+  const domain = from.split('@')[1] || '';
+  const key = process.env.EMAIL_API_KEY || '';
+  const info: any = { fromDomain: domain || null, configured: !!(key && from), resendTestSender: domain === 'resend.dev', verifiedDomains: null };
+  if(!key) { info.hint = 'ยังไม่ได้ตั้ง EMAIL_API_KEY'; return info; }
+  try{
+    const r = await fetch('https://api.resend.com/domains', { headers:{ Authorization: `Bearer ${key}` } });
+    if(r.ok){
+      const d: any = await r.json();
+      info.verifiedDomains = (d?.data || []).map((x: any)=> ({ name: x.name, status: x.status }));
+    }
+  }catch{ /* วินิจฉัยล้มเหลวไม่ควรทำให้ worker ล้ม */ }
+  if(info.resendTestSender) info.hint = 'ผู้ส่งยังเป็น Resend โหมดทดสอบ — ส่งได้เฉพาะอีเมลเจ้าของบัญชี Resend; ต้อง verify โดเมนที่ resend.com/domains แล้วตั้ง EMAIL_FROM_ADDRESS เป็นอีเมลบนโดเมนนั้น';
+  return info;
+}
+
 async function run(req: NextRequest){
   const denied = requireCronAuth(req);
   if(denied) return denied;
@@ -89,7 +107,7 @@ async function run(req: NextRequest){
       r.ok ? sent++ : failed++;
     }
 
-    return NextResponse.json({ ok:true, sent, failed, suppressed, picked: queued.length, lastError, at });
+    return NextResponse.json({ ok:true, sent, failed, suppressed, picked: queued.length, lastError, provider: await providerStatus(), at });
   }catch(e:any){
     return NextResponse.json({ ok:false, sent, failed, suppressed, error: e?.message || 'unknown', at }, { status:500 });
   }
