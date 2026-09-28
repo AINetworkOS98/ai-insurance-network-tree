@@ -30,11 +30,14 @@ Next.js 15 App Router + TypeScript + Tailwind + Prisma + PostgreSQL (Supabase) +
 ## Email
 `src/lib/email.ts` — Event ID + Idempotency Key + Template Version + Queue + Retry/Backoff + DLQ + Suppression List
 
-### ข้อบังคับ: ต้อง verify โดเมนที่ Resend ก่อนส่งถึงสมาชิกจริง
+### ผู้ส่งอีเมล 2 ทาง — เลือกอัตโนมัติ (`src/lib/mailer.ts`)
+1. **SMTP** (ถ้าตั้ง `SMTP_HOST`+`SMTP_USER`+`SMTP_PASS`) — ส่งถึงผู้รับใดก็ได้ **ไม่ต้องมีโดเมนของตัวเอง** (Gmail ใช้ App Password)
+2. **Resend** (`EMAIL_API_KEY`+`EMAIL_FROM_ADDRESS`) — ต้อง verify โดเมนก่อนจึงส่งถึงคนอื่นได้
+
 `src/app/api/cron/email-sync/route.ts` เป็น worker ส่งอีเมลจากคิว `EmailMessage` (status=QUEUED, retry ไม่เกิน 3 ครั้ง)
-- ถ้า `EMAIL_FROM_ADDRESS` ยังเป็นผู้ส่งทดสอบของ Resend จะส่งได้ **เฉพาะอีเมลเจ้าของบัญชี Resend** เท่านั้น
-- อีเมลถึงสมาชิกคนอื่นจะถูกปฏิเสธ และบันทึกเหตุผลไว้ที่ `EmailFailure` / `EmailDeliveryLog` (ดูได้จาก `lastError` ในผลลัพธ์ของ worker)
-- วิธีแก้: verify โดเมนที่ https://resend.com/domains แล้วตั้ง `EMAIL_FROM_ADDRESS` เป็นอีเมลบนโดเมนนั้น
+- ถ้าใช้ Resend และ `EMAIL_FROM_ADDRESS` ยังเป็นผู้ส่งทดสอบ (`onboarding@resend.dev`) จะส่งได้ **เฉพาะอีเมลเจ้าของบัญชี Resend** เท่านั้น
+- อีเมลถึงสมาชิกคนอื่นจะถูกปฏิเสธ และบันทึกเหตุผลไว้ที่ `EmailFailure` / `EmailDeliveryLog` (ดูได้จาก `lastError` และ `provider.hint` ในผลลัพธ์ของ worker)
+- วิธีแก้: ตั้ง SMTP (เร็วสุด) หรือ verify โดเมนที่ https://resend.com/domains แล้วตั้ง `EMAIL_FROM_ADDRESS` เป็นอีเมลบนโดเมนนั้น
 - อีเมลการตลาดจะถูกระงับอัตโนมัติถ้าสมาชิกยังไม่ให้ความยินยอม MARKETING หรืออยู่ใน suppression list
 
 ## Automation (n8n)

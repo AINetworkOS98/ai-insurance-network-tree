@@ -24,13 +24,28 @@ async function hasMarketingConsent(prisma: any, userId?: string | null){
   }catch{ return false; }
 }
 
-// วินิจฉัยผู้ส่งอีเมล — บอกตรง ๆ ว่าส่งถึงสมาชิกจริงได้หรือยัง (Resend โหมดทดสอบส่งได้เฉพาะอีเมลเจ้าของบัญชี)
+// วินิจฉัยผู้ส่งอีเมล — บอกตรง ๆ ว่าส่งถึงสมาชิกจริงได้หรือยัง
 async function providerStatus(){
-  const from = process.env.EMAIL_FROM_ADDRESS || '';
+  const { activeProvider, smtpConfigured, fromAddress } = await import('@/lib/mailer');
+  const provider = activeProvider();
+  const from = fromAddress();
   const domain = from.split('@')[1] || '';
+  const info: any = { provider, from: from || null, fromDomain: domain || null, smtpConfigured: smtpConfigured() };
+
+  if(provider === 'smtp'){
+    info.hint = 'ส่งผ่าน SMTP — ส่งถึงผู้รับใดก็ได้ ไม่ต้อง verify โดเมน';
+
+    return info;
+  }
+  if(provider === 'none'){
+    info.hint = 'ยังไม่ได้ตั้งผู้ส่งเลย — ตั้ง SMTP_HOST/SMTP_USER/SMTP_PASS หรือ EMAIL_API_KEY/EMAIL_FROM_ADDRESS';
+    return info;
+  }
+
+  // Resend: ต้อง verify โดเมนก่อนจึงส่งถึงคนอื่นได้
   const key = process.env.EMAIL_API_KEY || '';
-  const info: any = { fromDomain: domain || null, configured: !!(key && from), resendTestSender: domain === 'resend.dev', verifiedDomains: null };
-  if(!key) { info.hint = 'ยังไม่ได้ตั้ง EMAIL_API_KEY'; return info; }
+  info.resendTestSender = domain === 'resend.dev';
+  info.verifiedDomains = null;
   try{
     const r = await fetch('https://api.resend.com/domains', { headers:{ Authorization: `Bearer ${key}` } });
     if(r.ok){
@@ -38,7 +53,7 @@ async function providerStatus(){
       info.verifiedDomains = (d?.data || []).map((x: any)=> ({ name: x.name, status: x.status }));
     }
   }catch{ /* วินิจฉัยล้มเหลวไม่ควรทำให้ worker ล้ม */ }
-  if(info.resendTestSender) info.hint = 'ผู้ส่งยังเป็น Resend โหมดทดสอบ — ส่งได้เฉพาะอีเมลเจ้าของบัญชี Resend; ต้อง verify โดเมนที่ resend.com/domains แล้วตั้ง EMAIL_FROM_ADDRESS เป็นอีเมลบนโดเมนนั้น';
+  if(info.resendTestSender) info.hint = 'ผู้ส่งยังเป็น Resend โหมดทดสอบ — ส่งได้เฉพาะอีเมลเจ้าของบัญชี Resend; ต้อง verify โดเมนที่ resend.com/domains แล้วตั้ง EMAIL_FROM_ADDRESS เป็นอีเมลบนโดเมนนั้น (หรือตั้ง SMTP_HOST/SMTP_USER/SMTP_PASS เพื่อใช้ SMTP แทน)';
   return info;
 }
 
@@ -52,7 +67,7 @@ async function run(req: NextRequest){
 
   try{
     const { prisma } = await import('@/lib/prisma');
-    const { sendEmail } = await import('@/lib/memberMessages');
+    const { sendMail } = await import('@/lib/mailer');
 
     const queued: any[] = await (prisma as any).emailMessage.findMany({
       where:{ OR:[ { status:'QUEUED' }, { status:'FAILED', attempts:{ lt: 3 } } ] },
@@ -89,7 +104,7 @@ async function run(req: NextRequest){
         continue;
       }
 
-      const r = await sendEmail({ to: msg.toEmail, subject: msg.subject, html: msg.bodyHtml });
+      const r = await sendMail({ to: msg.toEmail, subject: msg.subject, html: msg.bodyHtml });
       const now = new Date();
       await (prisma as any).emailMessage.update({
         where:{ id: msg.id },
@@ -98,7 +113,7 @@ async function run(req: NextRequest){
           : { status:'FAILED', error: String(r.error || 'send failed').slice(0, 900) },
       }).catch(()=>null);
       await (prisma as any).emailDeliveryLog.create({
-        data:{ messageId: msg.id, status: r.ok ? 'SENT' : 'FAILED', providerResponse: r.ok ? 'resend:accepted' : String(r.error||'').slice(0,500) },
+        data:{ messageId: msg.id, status: r.ok ? 'SENT' : 'FAILED', providerResponse: r.ok ? `${r.provider}:accepted` : String(r.error||'').slice(0,500) },
       }).catch(()=>null);
       if(!r.ok){
         lastError = String(r.error || 'send failed').slice(0, 300);
