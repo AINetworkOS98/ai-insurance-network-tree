@@ -43,9 +43,9 @@ async function run(req: NextRequest){
     }).catch(()=>[]);
 
     for(const msg of queued){
-      // กันส่งซ้ำ: จองสิทธิ์ด้วยการเปลี่ยนสถานะก่อน (ถ้าอีก worker แย่งไปแล้วจะไม่อยู่ใน QUEUED)
+      // กันส่งซ้ำ: จองสิทธิ์ด้วยการเปลี่ยนสถานะก่อน (ต้องตรงกับเงื่อนไขที่ select มา ไม่งั้นแถวที่ retry จะถูกข้าม)
       const claimed: any = await (prisma as any).emailMessage.updateMany({
-        where:{ id: msg.id, status: 'QUEUED' },
+        where:{ id: msg.id, status: msg.status },
         data:{ status: 'PROCESSING', attempts: { increment: 1 } },
       }).catch(()=> ({ count: 0 }));
       if(!claimed?.count) continue;
