@@ -32,6 +32,7 @@ export default function AdminConsentPage() {
   const [type, setType] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [testInfo, setTestInfo] = useState<string>('');
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
@@ -148,6 +149,45 @@ export default function AdminConsentPage() {
               </table>
             </div>
           )}
+
+          {/* เครื่องมือผู้ดูแลระบบ — ลบบัญชีทดสอบ (จำกัดโดเมน @ai-insurance-test.local เท่านั้น) */}
+          <div className="mt-6 rounded-xl border border-slate-100 bg-[#f8fafc] p-4">
+            <div className="text-sm font-semibold text-slate-700">🧹 เครื่องมือ: บัญชีทดสอบ</div>
+            <p className="text-[11px] text-slate-500 mt-1">
+              ลบบัญชีที่สร้างเพื่อทดสอบระบบเท่านั้น (อีเมลลงท้าย @ai-insurance-test.local) — ลบสมาชิกจริงไม่ได้โดยการออกแบบ
+            </p>
+            <div className="flex flex-wrap gap-2 mt-3">
+              <button
+                onClick={async () => {
+                  setTestInfo('กำลังตรวจ...');
+                  try {
+                    const r = await fetch('/api/admin/test-accounts', { cache:'no-store' });
+                    const j = await r.json();
+                    setTestInfo(j.ok ? `พบบัญชีทดสอบ ${j.count} บัญชี` : (j.error || 'ตรวจไม่สำเร็จ'));
+                  } catch { setTestInfo('ตรวจไม่สำเร็จ'); }
+                }}
+                className="px-4 py-2 rounded-full bg-white border border-slate-200 text-xs font-semibold text-slate-700"
+              >
+                ตรวจรายการ
+              </button>
+              <button
+                onClick={async () => {
+                  if (!confirm('ยืนยันลบบัญชีทดสอบทั้งหมด (@ai-insurance-test.local)?')) return;
+                  setTestInfo('กำลังลบ...');
+                  try {
+                    const r = await fetch('/api/admin/test-accounts', { method:'DELETE' });
+                    const j = await r.json();
+                    setTestInfo(j.ok ? `ลบแล้ว ${j.deleted} บัญชี` : (j.error || 'ลบไม่สำเร็จ'));
+                    if (j.ok) load();
+                  } catch { setTestInfo('ลบไม่สำเร็จ'); }
+                }}
+                className="px-4 py-2 rounded-full bg-red-50 border border-red-200 text-xs font-semibold text-red-700"
+              >
+                ลบบัญชีทดสอบ
+              </button>
+            </div>
+            {testInfo && <div className="mt-2 text-[11px] text-slate-600">{testInfo}</div>}
+          </div>
         </main>
       </div>
     </div>
