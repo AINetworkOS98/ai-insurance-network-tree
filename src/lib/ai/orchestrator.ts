@@ -101,8 +101,8 @@ export async function orchestrate(params: {
       const contextInfo = params.datasetRaw
         ? `Context Dataset: type=${params.datasetType} rows=${params.datasetRows}\nPreview (chunked):\n${chunkData(params.datasetRaw, 2500)[0]?.slice(0,2500)}`
         : 'ไม่มี dataset แนบมา';
-      const userContent = `คำถาม/คำสั่ง: ${params.query || '(ให้วิเคราะห์ข้อมูลที่วาง)'}\nIntent: ${intent}\nMode: ${params.mode}\nTools ที่เลือก: ${tools.join(', ')}\n${contextInfo}\n\nตอบเป็นภาษาไทย กระชับ มีประโยชน์ ถ้ามีข้อมูลตัวเลขให้สรุปเป็นข้อๆ`;
-      const answer = await provider.chat([{ role: 'user', content: userContent }], { temperature: params.mode === 'DEEP' ? 0.35 : 0.4, maxTokens: params.mode === 'DEEP' ? 1600 : 1000 });
+      const userContent = `ถาม: ${params.query || '(ให้วิเคราะห์ข้อมูลที่วาง)'}\n${contextInfo}\nตอบไทย กระชับ มีประโยชน์`;
+            const answer = await provider.chat([{ role: 'user', content: userContent }], { temperature: 0.4, maxTokens: params.mode === 'DEEP' ? 400 : 200 });
       return { intent, tools, via: 'hermes', answer };
     } catch (e: any) {
       // fallback แบบไม่เปิดเผย error ของ provider

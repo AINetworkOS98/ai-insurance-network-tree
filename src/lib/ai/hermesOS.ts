@@ -78,34 +78,40 @@ export async function hermesExecute(params:{
   }
 
   // ⚡ Fast-path: ถ้า tool ตอบได้ชัด (คำนวณ/ค้นหา/ผัง/ใบเสร็จ) → ตอบตรงทันที ไม่เรียก LLM (ลด 3-5s)
-  if (!params.hasDataset) {
-    const direct = tryDirectAnswer(params.query, intent, toolResults, skills);
-    if (direct) {
-      params.onStep?.({ step:"llm", label:"ตอบทันที", detail:"ไม่ต้องเรียก AI — ได้ผลจากเครื่องมือโดยตรง", status:"done" });
-      return { intent, via:"fallback", trace, answer: direct };
+    if (!params.hasDataset) {
+      const direct = tryDirectAnswer(params.query, intent, toolResults, skills);
+      if (direct) {
+        params.onStep?.({ step:"llm", label:"ตอบทันที", detail:"ไม่ต้องเรียก AI — ได้ผลจากเครื่องมือโดยตรง", status:"done" });
+        return { intent, via:"fallback", trace, answer: direct };
+      }
     }
-  }
 
-  // ⚡ Cache คำตอบ LLM — คำถามซ้ำตอบทันที
-  const cacheKey = `${params.mode}|${intent}|${(params.query||"").slice(0,120)}`;
-  const cached = llmCache.get(cacheKey);
-  if (cached) {
-    params.onStep?.({ step:"llm", label:"ตอบจากแคช", detail:"คำถามซ้ำ — ตอบทันที", status:"done" });
-    return { intent, via:"hermes", trace, answer: cached };
-  }
+    // �⚡ ข้าม tools สำหรับคำถามทั่วไป ไม่มี dataset — tools ทั้งหมดเป็น in-memory mock ไม่เพิ่มมูลค่า
+    const needsTools = params.hasDataset || ['CALCULATE','ANALYZE','SEARCH_MEMBER','SEARCH_TEAM','SEARCH_NETWORK','SEARCH_PERFORMANCE','SEARCH_RECEIPT','IMPORT_DATA','VALIDATE_DATA'].includes(intent);
 
-  const provider = getHermesProvider();
-  if (provider.isConfigured()) {
-    try {
-      params.onStep?.({ step:"llm", label:"สังเคราะห์คำตอบ", detail: "ระบบค้นหาด้วย AI อัจฉริยะ", status:"start" });
-      const contextInfo = params.datasetRaw
-        ? `Context Dataset: type=${params.datasetType} rows=${params.rows}\nPreview:\n${chunkData(params.datasetRaw, 2500)[0]?.slice(0,2500)}`
-        : "ไม่มี dataset แนบมา";
-      const toolInfo = toolResults.length ? `Tool Results (verified):\n${toolResults.map(r=> `- ${r.tool} (${r.ok?"ok":"fail"}, ${r.elapsedMs}ms): ${JSON.stringify(r.data).slice(0,800)}`).join("\n")}` : "ไม่มีผลจาก tools";
-      const skillInfo = skills.length ? `Matched Skills: ${skills.join(", ")}` : "ไม่มี skill ที่ตรง";
-      const memoryInfo = memoryCtx ? `User Memory:\n${memoryCtx}` : "";
-      const userContent = `คำถาม/คำสั่ง: ${params.query || "(ให้วิเคราะห์ข้อมูลที่วาง)"}\nIntent: ${intent}\nMode: ${params.mode}\n${skillInfo}\nTools: ${tools.join(", ")}\n${memoryInfo}\n${contextInfo}\n${toolInfo}\n\nกฎ: ตอบเป็นภาษาไทย กระชับ มีประโยชน์ ถ้ามีผลจาก tools ให้อ้างอิงโดยตรง ห้ามสร้างข้อมูลที่ไม่มีใน tool results ถ้าข้อมูลไม่พอให้บอกว่าต้องการอะไรเพิ่ม แยก Skills/Memory/Tools ออกจากคำตอบหลัก`;
-      const answer = await provider.chat([{ role:"user", content: userContent }], { temperature: params.mode==="DEEP"?0.32:0.4, maxTokens: params.mode==="DEEP"?1600:1100 });
+    // �⚡ Cache คำตอบ LLM — คำถามซ้ำตอบทันที
+    const cacheKey = `${params.mode}|${intent}|${(params.query||"").slice(0,120)}`;
+    const cached = llmCache.get(cacheKey);
+    if (cached) {
+      params.onStep?.({ step:"llm", label:"ตอบจากแคช", detail:"คำถามซ้ำ — ตอบทันที", status:"done" });
+      return { intent, via:"hermes", trace, answer: cached };
+    }
+
+    const provider = getHermesProvider();
+    if (provider.isConfigured()) {
+      try {
+        params.onStep?.({ step:"llm", label:"กำลังคิด", detail: "DeepSeek", status:"start" });
+        let userContent: string;
+        if (params.hasDataset) {
+          const ctx = chunkData(params.datasetRaw!, 2500)[0]?.slice(0,2500) || '';
+          userContent = `ถาม: ${params.query || "วิเคราะห์ข้อมูล"}\nข้อมูล: ${ctx}\nตอบไทย กระชับ มีประโยชน์`;
+        } else if (needsTools && toolResults.length) {
+          const tr = toolResults.map(r=> `${r.tool}: ${JSON.stringify(r.data).slice(0,300)}`).join("\n");
+          userContent = `ถาม: ${params.query}\nผลลัพธ์: ${tr}\nตอบไทย กระชับ อ้างอิงผลลัพธ์`;
+        } else {
+          userContent = `ถาม: ${params.query}\nตอบไทย กระชับ`;
+        }
+        const answer = await provider.chat([{ role:"user", content: userContent }], { temperature: 0.4, maxTokens: params.mode==="DEEP"?400:200 });
       llmCache.set(cacheKey, answer);
       if (llmCache.size > 200){ const k = llmCache.keys().next().value; if(k) llmCache.delete(k); }
       params.onStep?.({ step:"llm", label:"สังเคราะห์คำตอบ", detail:"เสร็จ", status:"done" });
