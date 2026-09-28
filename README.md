@@ -30,5 +30,18 @@ Next.js 15 App Router + TypeScript + Tailwind + Prisma + PostgreSQL (Supabase) +
 ## Email
 `src/lib/email.ts` — Event ID + Idempotency Key + Template Version + Queue + Retry/Backoff + DLQ + Suppression List
 
+### ข้อบังคับ: ต้อง verify โดเมนที่ Resend ก่อนส่งถึงสมาชิกจริง
+`src/app/api/cron/email-sync/route.ts` เป็น worker ส่งอีเมลจากคิว `EmailMessage` (status=QUEUED, retry ไม่เกิน 3 ครั้ง)
+- ถ้า `EMAIL_FROM_ADDRESS` ยังเป็นผู้ส่งทดสอบของ Resend จะส่งได้ **เฉพาะอีเมลเจ้าของบัญชี Resend** เท่านั้น
+- อีเมลถึงสมาชิกคนอื่นจะถูกปฏิเสธ และบันทึกเหตุผลไว้ที่ `EmailFailure` / `EmailDeliveryLog` (ดูได้จาก `lastError` ในผลลัพธ์ของ worker)
+- วิธีแก้: verify โดเมนที่ https://resend.com/domains แล้วตั้ง `EMAIL_FROM_ADDRESS` เป็นอีเมลบนโดเมนนั้น
+- อีเมลการตลาดจะถูกระงับอัตโนมัติถ้าสมาชิกยังไม่ให้ความยินยอม MARKETING หรืออยู่ใน suppression list
+
+## Automation (n8n)
+`Registration Sync` → `Email Sync` ถูกเรียกทุก 1 นาทีด้วย `Authorization: Bearer $CRON_SECRET` (outbound เท่านั้น ไม่ต้องเปิด public tunnel)
+- `POST /api/cron/registration-sync` — ประมวลผลคิว `EventOutbox` (channel=registration) แบบ idempotent
+- `POST /api/cron/email-sync` — ส่งอีเมลที่ค้างในคิว
+- ต้องเปิดเครื่องและให้ n8n รันอยู่ (ไม่ใช่บริการ 24/7)
+
 ## API
-`POST /api/auth/register` `POST /api/auth/verify-otp` `POST /api/members/approve` `POST /api/tree/place-member` `GET /api/tree/available-slots` `GET /api/income/summary` `GET /api/admin/audit-logs`
+`POST /api/auth/register` `POST /api/consent` `POST /api/auth/verify-otp` `POST /api/members/approve` `POST /api/tree/place-member` `GET /api/tree/available-slots` `GET /api/income/summary` `GET /api/admin/audit-logs` `GET /api/admin/consent`

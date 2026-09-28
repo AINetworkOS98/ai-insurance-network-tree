@@ -44,11 +44,14 @@ export async function emitNotification(opts:{
       // ไม่ส่งใบเสร็จ/ข้อมูลลูกค้าเต็มลงอีเมล — ส่งลิงก์ไปดูหลังล็อกอินเท่านั้น
       await prisma.emailMessage.create({
         data:{
-          eventId, idempotencyKey: eventId, toEmail: user.email, toUserId: opts.userId,
+          // ไม่ใส่ eventId: คอลัมน์นี้เป็น @db.Uuid แต่ eventId ของเราคือ sha256 hex 32 ตัว
+          // (ใส่ไปแล้ว Postgres ปฏิเสธ แล้ว .catch() กลืน error ทำให้อีเมลไม่เคยเข้าคิวเลย)
+          // ใช้ idempotencyKey (String @unique) เป็นตัวกันส่งซ้ำแทน
+          idempotencyKey: eventId, toEmail: user.email, toUserId: opts.userId,
           subject: opts.title, bodyHtml:`<p>${opts.body||''}</p><p><a href="${process.env.NEXT_PUBLIC_APP_URL||''}/notifications">ดูรายละเอียดหลังเข้าสู่ระบบ</a></p>`,
           status:'QUEUED' as any
         } as any
-      }).catch(()=>{});
+      }).catch((e:any)=> console.error('email queue failed', opts.userId, e?.message));
     }
   }
   return { ok:true, eventId };

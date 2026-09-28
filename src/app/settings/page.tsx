@@ -152,6 +152,32 @@ export default function SettingsPage(){
               <span className="text-[11px] text-slate-500">ทั้งหมด {consents.length} รายการ</span>
             </div>
             <p className="text-[11px] text-slate-500">ระบบเก็บเวอร์ชันประกาศ วันเวลา และที่มาของทุกครั้งที่คุณให้หรือปฏิเสธความยินยอม</p>
+            {(()=>{
+              const latestMarketing = consents.find((c:any)=> c.type === 'MARKETING');
+              const granted = !!latestMarketing?.granted;
+              return (
+                <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-100 bg-[#f8fafc] p-3">
+                  <div className="flex-1 min-w-[200px]">
+                    <div className="text-xs font-semibold text-slate-700">ความยินยอมรับข่าวสารการตลาด</div>
+                    <div className="text-[11px] text-slate-500">
+                      สถานะปัจจุบัน: <span className={granted ? 'text-emerald-700 font-semibold' : 'text-amber-700 font-semibold'}>{granted ? 'ยินยอม' : 'ไม่ยินยอม'}</span> — ถอน/ให้ใหม่ได้ตลอดเวลา โดยไม่กระทบสถานะสมาชิก
+                    </div>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      const want = !granted;
+                      const r = await fetch('/api/consent', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type:'MARKETING', granted: want }) });
+                      const j = await r.json();
+                      if (j.ok) { setMsg(j.message || 'บันทึกแล้ว'); if (Array.isArray(j.consents)) setConsents(j.consents); }
+                      else setMsg(j.error || 'บันทึกไม่สำเร็จ');
+                    }}
+                    className={`px-4 py-2 rounded-full text-xs font-semibold ${granted ? 'bg-amber-50 border border-amber-200 text-amber-700' : 'bg-emerald-50 border border-emerald-200 text-emerald-700'}`}
+                  >
+                    {granted ? 'ถอนความยินยอมการตลาด' : 'ยินยอมรับข่าวสาร'}
+                  </button>
+                </div>
+              );
+            })()}
             {consents.length === 0 ? (
               <div className="text-xs text-slate-500 p-3 rounded-xl bg-slate-50 border">ยังไม่พบบันทึกความยินยอมสำหรับบัญชีนี้</div>
             ) : (

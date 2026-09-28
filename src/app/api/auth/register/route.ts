@@ -85,6 +85,7 @@ export async function POST(req: NextRequest){
     const dobRaw = birthDate ? new Date(String(birthDate)) : null;
     const dob = dobRaw && !isNaN(dobRaw.getTime()) ? dobRaw : null;
     const { raw: emailToken, hash: emailTokenHash } = createEmailToken();
+    const verifyUrl = `${process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/verify-email?token=${emailToken}&email=${encodeURIComponent(normalizedEmail)}`;
 
     // ── 4) Transaction เดียว (atomic) ──
     let created: any = null;
@@ -151,6 +152,25 @@ export async function POST(req: NextRequest){
 
           await tx.emailVerificationToken.create({ data:{ userId: user.id, tokenHash: emailTokenHash, expiresAt: new Date(Date.now() + 24*60*60*1000) } });
 
+          // คิวอีเมลยืนยันจริง — worker /api/cron/email-sync เป็นผู้ส่งผ่าน Resend
+          // (เดิมสร้าง token แต่ไม่มีใครส่งอีเมล ทำให้สัญญา "ยืนยันอีเมล 24 ชม." เป็นโมฆะ)
+          await tx.emailMessage.create({
+            data:{
+              // ไม่ใส่ eventId — คอลัมน์เป็น @db.Uuid แต่คีย์ของเราเป็นสตริง (ใช้ idempotencyKey กันซ้ำ)
+              idempotencyKey: `emailverify:${user.id}`,
+              toEmail: normalizedEmail,
+              toUserId: user.id,
+              subject: 'ยืนยันอีเมลของคุณ — AI Insurance Network Tree',
+              bodyHtml:
+                `<p>สวัสดีคุณ ${displayName}</p>` +
+                `<p>ขอบคุณที่สมัครสมาชิกกับเรา รหัสสมาชิกของคุณคือ <b>${user.memberCode}</b></p>` +
+                `<p>กรุณายืนยันอีเมลภายใน 24 ชั่วโมง เพื่อเปิดใช้งานบัญชีอย่างสมบูรณ์</p>` +
+                `<p><a href="${verifyUrl}">ยืนยันอีเมลของฉัน</a></p>` +
+                `<p>หากคุณไม่ได้สมัครสมาชิก กรุณาเพิกเฉยต่ออีเมลฉบับนี้</p>`,
+              status: 'QUEUED',
+            }
+          }).catch(()=>null);
+
           // EventOutbox — งานปลายทาง (n8n / แจ้งเตือน) แบบ durable ไม่หายเมื่อ process ตาย
           await tx.eventOutbox.create({
             data:{
@@ -180,7 +200,6 @@ export async function POST(req: NextRequest){
     const user = created;
 
     // ── 5) แจ้งเตือน (best-effort — ห้ามทำให้การสมัครล้ม) ──
-    const verifyUrl = `${process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/verify-email?token=${emailToken}&email=${encodeURIComponent(normalizedEmail)}`;
     try{
       const { emitNotification, notifyAdmins } = await import('@/lib/notify');
       await emitNotification({ userId: user.id, type:'register_welcome', title:'สมัครสมาชิกสำเร็จ', body:`ยินดีต้อนรับ ${displayName} — รหัสสมาชิก ${user.memberCode}`, referenceId:'/members' }).catch(()=>null);

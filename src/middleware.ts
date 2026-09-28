@@ -26,6 +26,7 @@ const PUBLIC_API = [
   '/api/cron/hermes-sync',
   '/api/cron/backup',
   '/api/cron/registration-sync',
+  '/api/cron/email-sync',
   '/api/read-file',
   '/api/fetch-url',
   '/api/search',
