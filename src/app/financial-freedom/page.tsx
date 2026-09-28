@@ -1,0 +1,118 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import Header from '@/components/Header';
+import Sidebar from '@/components/Sidebar';
+
+export default function FinancialFreedom() {
+  return (
+    <div className="flex flex-col h-screen bg-white overflow-hidden">
+      <Header />
+      <div className="flex flex-1 min-h-0">
+        <Sidebar />
+        <div className="flex-1 overflow-y-auto p-6 md:p-10">
+          {/* Hero Section */}
+          <div className="max-w-4xl mx-auto mb-12">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#475569]/10 text-[#475569] text-sm font-semibold mb-4 border border-[#475569]/20">
+                <span>🌟</span> วิสัยทัศน์หลัก
+              </div>
+              <h1 className="text-3xl md:text-5xl font-bold text-slate-900 leading-tight">
+                ก้าวสู่อิสรภาพทางการเงิน
+              </h1>
+              <p className="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">
+                จากการสร้างทีม → สู่ระบบที่ทำงานต่อเนื่อง — เมื่อเครือข่ายเติบโต การทำงานไม่ควรเพิ่มขึ้นตามจำนวนสมาชิกแบบตรง ๆ
+              </p>
+            </div>
+
+            {/* ขั้นตอนที่ 1 */}
+            <div className="bg-gradient-to-br from-slate-50 to-white rounded-2xl border border-slate-200 p-6 md:p-8 mb-8 shadow-sm">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg font-bold">1</div>
+                <h2 className="text-xl font-bold text-slate-800">เริ่มต้นด้วยตัวเอง</h2>
+              </div>
+              <p className="text-slate-600 leading-relaxed mb-4">
+                อิสรภาพทางการเงินไม่ใช่จุดหมายปลายทาง — มันคือกระบวนการที่เริ่มต้นจากความรับผิดชอบทางการเงินของตัวเองก่อน
+                ทำความเข้าใจกระแสเงินสด มีเงินเก็บฉุกเฉิน และลดหนี้ที่ไม่จำเป็นออกให้ได้
+              </p>
+              <ul className="list-disc list-inside text-slate-600 space-y-2 text-sm">
+                <li>ตั้งเป้าหมายทางการเงินที่วัดผลได้</li>
+                <li>จัดทำงบประมาณรายรับ-รายจ่าย</li>
+                <li>สร้างเงินเก็บฉุกเฉินอย่างน้อย 3-6 เดือน</li>
+                <li>ชำระหนี้ดอกเบี้ยสูงก่อน</li>
+              </ul>
+            </div>
+
+            {/* ขั้นตอนที่ 2 */}
+            <div className="bg-gradient-to-br from-slate-50 to-white rounded-2xl border border-slate-200 p-6 md:p-8 mb-8 shadow-sm">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg font-bold">2</div>
+                <h2 className="text-xl font-bold text-slate-800">สร้างรายได้เสริม</h2>
+              </div>
+              <p className="text-slate-600 leading-relaxed mb-4">
+                เมื่อพื้นฐานมั่นคงแล้ว ขั้นตอนต่อไปคือการสร้างช่องทางรายได้เสริมที่ไม่ขึ้นอยู่กับเงินเดือนเพียงอย่างเดียว
+                ไม่ว่าจะเป็นงานฟรีแลนซ์ ธุรกิจออนไลน์ การลงทุน หรือการสร้างเครือข่ายธุรกิจ
+              </p>
+              <ul className="list-disc list-inside text-slate-600 space-y-2 text-sm">
+                <li>สำรวจทักษะที่สามารถสร้างรายได้เสริม</li>
+                <li>เริ่มจากช่องทางที่เข้าใจและทำได้จริง</li>
+                <li>นำรายได้เสริมไปออมและลงทุนต่อ</li>
+              </ul>
+            </div>
+
+            {/* ขั้นตอนที่ 3 */}
+            <div className="bg-gradient-to-br from-slate-50 to-white rounded-2xl border border-slate-200 p-6 md:p-8 mb-8 shadow-sm">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg font-bold">3</div>
+                <h2 className="text-xl font-bold text-slate-800">สร้างเครือข่ายที่แข็งแกร่ง</h2>
+              </div>
+              <p className="text-slate-600 leading-relaxed mb-4">
+                อิสรภาพทางการเงินมักเกิดจากความสามารถในการสร้างระบบ — ไม่ว่าจะเป็นทีมงาน ธุรกิจที่ขยายตัว หรือเครือข่ายคนที่มีเป้าหมายเดียวกัน
+                การสร้างทีมที่น่าเชื่อถือช่วยให้เราขยายรายได้โดยไม่ต้องทำงานทุกอย่างด้วยตัวเอง
+              </p>
+              <ul className="list-disc list-inside text-slate-600 space-y-2 text-sm">
+                <li>หาคนที่มีวิสัยทัศน์และค่านิยมเดียวกัน</li>
+                <li>มอบหมายงานอย่างเหมาะสมและไว้วางใจ</li>
+                <li>พัฒนาระบบการทำงานให้ชัดเจนและต่อเนื่อง</li>
+              </ul>
+            </div>
+
+            {/* ขั้นตอนที่ 4 */}
+            <div className="bg-gradient-to-br from-slate-50 to-white rounded-2xl border border-slate-200 p-6 md:p-8 mb-8 shadow-sm">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg font-bold">4</div>
+                <h2 className="text-xl font-bold text-slate-800">ลงทุนเพื่ออนาคต</h2>
+              </div>
+              <p className="text-slate-600 leading-relaxed mb-4">
+                เมื่อรายได้เพิ่มขึ้น การลงทุนคือกุญแจสำคัญที่ทำให้เงินทำงานให้เราแทน การลงทุนที่เข้าใจความเสี่ยงและกระจาย Portfolios
+                จะช่วยสร้าง passive income ที่นำไปสู่อิสรภาพทางการเงินอย่างแท้จริง
+              </p>
+              <ul className="list-disc list-inside text-slate-600 space-y-2 text-sm">
+                <li>เรียนรู้การลงทุนก่อนลงมือทำจริง</li>
+                <li>กระจายความเสี่ยงด้วยการลงทุนหลายช่องทาง</li>
+                <li>นำผลกำไรไปลงทุนต่อแบบ compound</li>
+              </ul>
+            </div>
+
+            {/* ข้อความสุดท้าย */}
+            <div className="text-center mt-10 p-6 bg-[#475569]/5 rounded-2xl border border-[#475569]/10">
+              <p className="text-slate-700 text-lg italic">
+                "อิสรภาพทางการเงินไม่ใช่แค่การมีเงินมากมาย — แต่คือการมีทางเลือกที่จะใช้เวลาของคุณอย่างที่คุณต้องการ"
+              </p>
+            </div>
+
+            {/* ปุ่มกลับหน้าแรก */}
+            <div className="text-center mt-8">
+              <a
+                href="/"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-[#475569] text-white rounded-full text-sm font-semibold hover:bg-slate-800 transition shadow-sm"
+              >
+                ← กลับสู่หน้าแรก
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
