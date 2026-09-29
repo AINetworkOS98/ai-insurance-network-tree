@@ -1,38 +1,21 @@
 'use client';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
+import { useState, useEffect, useMemo } from 'react';
 import { useT } from '@/i18n';
 import { isAdminEmail, isAdminRole } from '@/lib/access-rules';
-
-const items=[
-  {href:"/", key:"nav_home", icon:"⌂"},
-  {href:"/financial-freedom", key:"sb_financial_freedom", icon:"🌟"},
-  {href:"/dashboard", key: "sb_dashboard", icon: "▦"},
-  {href: "/prospects", key: "sb_members_prospects", icon: "◎"},
-  {href: "/tree", key: "sb_tree", icon: "⁂"},
-  {href:"/progress", key:"sb_progress", icon:"⬆"},
-  {href:"/career", key:"sb_career", icon:"▲"},
-  {href:"/periods", key:"sb_periods", icon:"◷"},
-  {href:"/criteria", key:"sb_criteria", icon:"✓"},
-  {href:"/commissions", key:"sb_commissions", icon:"฿"},
-  {href:"/reports", key:"sb_reports", icon:"▤"},
-];
-const extra=[
-  {href:"/members", key:"sb_my_members", icon:"◉"},
-  {href:"/documents", key:"sb_documents", icon:"📄"},
-  {href:"/settings", key:"sb_settings", icon:"⚙"},
-];
+import { visibleNav, visibleNavCount, NETWORK_GROUP_LABEL, NETWORK_GROUP_KEY, type NavEntry } from '@/lib/navCatalog';
+import { rankName } from '@/lib/rankCatalog';
 
 export default function Sidebar(){
   const { t } = useT();
   const path=usePathname();
-  const router=useRouter();
   const [collapsed,setCollapsed]=useState(false);
   const [mobileOpen,setMobileOpen]=useState(false);
   const [networkOpen,setNetworkOpen]=useState(true);
   const [authed,setAuthed]=useState<boolean|null>(null);
-  // ผู้ดูแลระบบเท่านั้นที่เห็นลิงก์ n8n (สร้าง Workflow) — เช็กจากอีเมล/บทบาทที่ /api/auth/me คืนมา
+  // ระดับตำแหน่ง + สิทธิ์ผู้ดูแลของ "คนที่ล็อกอินอยู่" — ตัวกำหนดว่าเมนูไหนแสดง (กติกาอยู่ที่ lib/navCatalog.ts)
+  const [rank,setRank]=useState(0);
   const [isAdmin,setIsAdmin]=useState(false);
   // หน้าที่มีช่องค้นหา AI (มี data-ai-search) — ปุ่มเมนูลอยจะทับแถวปุ่ม "+"/"↑" ของช่องค้นหา
   // จึงไม่แสดงปุ่มลอยบนหน้านั้น ใช้เมนูด้านบน (Header) แทน
@@ -47,11 +30,17 @@ export default function Sidebar(){
             const j = await r.json();
             const u = j?.user || {};
             setIsAdmin(isAdminEmail(u.email) || isAdminRole(u.roles ?? j?.roles));
+            setRank(typeof u.rankLevel === 'number' ? u.rankLevel : 0);
           }catch{}
         }
       })
       .catch(()=>setAuthed(false));
   },[]);
+
+  // เมนูที่ผู้ใช้คนนี้เห็น (เรียงตามระดับ: หน้าแรก → Admin → ตัวแทน → หน่วย → ศูนย์ → ภาค)
+  const navCtx = useMemo(()=>({ rank, isAdmin, authed: authed !== false }), [rank, isAdmin, authed]);
+  const groups = useMemo(()=> visibleNav(navCtx), [navCtx]);
+  const navCount = useMemo(()=> visibleNavCount(navCtx), [navCtx]);
 
   useEffect(()=>{
     const check=()=>setHasAiSearch(!!document.querySelector('[data-ai-search]'));
@@ -92,104 +81,81 @@ export default function Sidebar(){
   },[]);
   useEffect(()=>{ localStorage.setItem('sidebar-collapsed', collapsed?'1':'0'); },[collapsed]);
 
+  // ป้ายเมนู: ใช้คำแปลถ้ามีคีย์ (ถ้าไม่มีคำแปล i18n จะคืนคีย์เดิม → กลับมาใช้ป้ายไทย)
+  const label=(e:{key?:string; label:string})=>{
+    if(!e.key) return e.label;
+    const v = t(e.key);
+    return (!v || v===e.key) ? e.label : v;
+  };
+
+  const Row=({e, big=false, small=false}:{e:NavEntry; big?:boolean; small?:boolean})=>{
+    const active = path===e.href;
+    const cls = `flex items-center gap-3 rounded-xl transition-colors ${big?'px-3 py-2.5 text-sm':'px-3 py-2 text-xs'} ${small?'ml-5':''} ${collapsed?'justify-center px-2 ml-0':''} ${active?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`;
+    const inner = (<>
+      <span className={`${small?'w-4':'w-5'} text-center shrink-0`}>{e.icon}</span>
+      {!collapsed && <span className="truncate">{label(e)}</span>}
+      {!collapsed && e.external && <span className="shrink-0 text-[10px] text-slate-400">↗</span>}
+      {!collapsed && active && !e.external && <span className="ml-auto text-[10px]">●</span>}
+    </>);
+    if(e.external){
+      return <a href={e.href} target="_blank" rel="noopener noreferrer" title={collapsed?label(e):undefined} className={cls}>{inner}</a>;
+    }
+    return <Link href={e.href} onClick={()=>setMobileOpen(false)} title={collapsed?label(e):undefined} className={cls}>{inner}</Link>;
+  };
+
   const Nav = (
     <div className={`p-3 space-y-1 ${collapsed?'px-2':''}`}>
       {/* ถ้ายังไม่ล็อกอิน — ไม่แสดงเมนูอะไรเลย */}
       {authed===false ? null : (
         <>
-          {!collapsed && <div className="text-[10px] tracking-widest text-slate-400 px-3 pb-1 pt-2" >{t('menu_main')}</div>}
-          {items.map(it=>{
-            const active = path===it.href;
-            return (
-              <Link key={it.href} href={it.href} onClick={()=>setMobileOpen(false)} title={collapsed?t(it.key):undefined}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${collapsed?'justify-center px-2':''} ${active?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`}>
-                <span className="w-5 text-center shrink-0">{it.icon}</span>
-                {!collapsed && <span className="truncate">{t(it.key)}</span>}
-              </Link>
-            )
-          })}
-          {/* สร้างเครือข่าย - ซัพเมนู */}
-          <div className={`${collapsed?'px-1':''} mt-1`}>
-            <button
-              onClick={()=> collapsed ? setCollapsed(false) : setNetworkOpen(v=>!v)}
-              title={collapsed?t('sb_network'):undefined}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${collapsed?'justify-center px-2':''} ${(path?.startsWith('/network')||path?.startsWith('/tree')) ?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`}>
-              <span className="w-5 text-center shrink-0">🌐</span>
-              {!collapsed && <span className="flex-1 text-left truncate" >{t('sb_network')}</span>}
-              {!collapsed && <span className={`text-xs transition-transform duration-200 ${networkOpen?'rotate-90':''}`}>›</span>}
-            </button>
-            {!collapsed && networkOpen && (
-              <div className="ml-5 mt-1 space-y-1">
-                <Link href="/network-example" onClick={()=>setMobileOpen(false)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-colors ${path==='/network-example'?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`}>
-                  <span>👥</span><span>{t('sb_network_example')}</span>
-                  {path==='/network-example' && <span className="ml-auto text-[10px]">●</span>}
-                </Link>
-                <Link href="/referral" onClick={()=>setMobileOpen(false)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-colors ${path==='/referral'?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`}>
-                  <span>✉</span><span>{t('sb_invite')}</span>
-                  {path==='/referral' && <span className="ml-auto text-[10px]">●</span>}
-                </Link>
-                <Link href="/network/promotions" onClick={()=>setMobileOpen(false)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-colors ${path==='/network/promotions'?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`}>
-                  <span>🎖</span><span>{t('sb_promotions')}</span>
-                  {path==='/network/promotions' && <span className="ml-auto text-[10px]">●</span>}
-                </Link>
-                <Link href="/network/1x5-rules" onClick={()=>setMobileOpen(false)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-colors ${path==='/network/1x5-rules'?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`}>
-                  <span>📋</span><span>{t('sb_1x5_rules')}</span>
-                  {path==='/network/1x5-rules' && <span className="ml-auto text-[10px]">●</span>}
-                </Link>
-              </div>
-            )}
-            {collapsed && (
-              <div className="mt-1 flex flex-col items-center gap-1">
-                <Link href="/network-example" title={t('sb_network_example')} className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-colors ${path==='/network-example'?'bg-[#eff6ff] text-sky-700':'hover:bg-[#FFFBF5] text-slate-600'}`}>👥</Link>
-                <Link href="/referral" title={t('sb_invite')} className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-colors ${path==='/referral'?'bg-[#eff6ff] text-sky-700':'hover:bg-[#FFFBF5] text-slate-600'}`}>✉</Link>
-                <Link href="/network/promotions" title={t('sb_promotions')} className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-colors ${path==='/network/promotions'?'bg-[#eff6ff] text-sky-700':'hover:bg-[#FFFBF5] text-slate-600'}`}>🎖</Link>
-                <Link href="/network/1x5-rules" title={t('sb_1x5_rules')} className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-colors ${path==='/network/1x5-rules'?'bg-[#eff6ff] text-sky-700':'hover:bg-[#FFFBF5] text-slate-600'}`}>📋</Link>
-              </div>
-            )}
-          </div>
-          {extra.map(it=>{
-            const active = path===it.href;
-            return (
-              <Link key={it.href} href={it.href} onClick={()=>setMobileOpen(false)} title={collapsed?t(it.key):undefined}
-                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-colors ${collapsed?'justify-center px-2':''} ${active?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`}>
-                <span className="w-5 text-center shrink-0">{it.icon}</span>
-                {!collapsed && <span className="truncate">{t(it.key)}</span>}
-              </Link>
-            )
-          })}
-          {/* n8n (ผู้ดูแลระบบเท่านั้น) — ลิงก์ตรงไปหน้า "สร้าง Workflow" ใน n8n */}
-          {isAdmin && (
-            <div className="mt-1 space-y-1">
-              {!collapsed && <div className="text-[10px] tracking-widest text-slate-400 px-3 pb-1 pt-3">ระบบอัตโนมัติ</div>}
-              <a
-                href="http://localhost:5679/"
-                target="_blank"
-                rel="noopener noreferrer"
-                title={collapsed?'เปิด n8n เพื่อสร้าง Workflow':undefined}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors hover:bg-[#FFFBF5] text-slate-600 ${collapsed?'justify-center px-2':''}`}
-              >
-                <span className="w-5 text-center shrink-0">⚡</span>
-                {!collapsed && <span className="flex-1 text-left truncate">n8n · สร้าง Workflow</span>}
-                {!collapsed && <span className="shrink-0 text-[10px] text-slate-400">↗</span>}
-              </a>
-              <Link
-                href="/n8n"
-                onClick={()=>setMobileOpen(false)}
-                title={collapsed?'หน้า N8N ในระบบ':undefined}
-                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-colors ${collapsed?'justify-center px-2':''} ${path==='/n8n'?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`}
-              >
-                <span className="w-5 text-center shrink-0">🔗</span>
-                {!collapsed && <span className="truncate">หน้า N8N ในระบบ</span>}
-              </Link>
+          {groups.map(g=>(
+            <div key={g.section.id} className={g.section.id==='home'?'':"mt-1"}>
+              {!collapsed && g.section.id!=='home' && (
+                <div className="text-[10px] tracking-widest text-slate-400 px-3 pb-1 pt-2 flex items-center gap-1">
+                  <span>{label(g.section)}</span>
+                  {g.section.minRank>0 && <span className="text-[9px] text-slate-300">ระดับ {g.section.minRank}+</span>}
+                </div>
+              )}
+              {g.items.map(e=> <Row key={e.section+e.href} e={e} big={g.section.id!=='center'} />)}
+
+              {/* กลุ่มย่อย "สร้างเครือข่าย" */}
+              {g.network.length>0 && (
+                <div className={`${collapsed?'px-1':''} mt-1`}>
+                  <button
+                    onClick={()=> collapsed ? setCollapsed(false) : setNetworkOpen(v=>!v)}
+                    title={collapsed?label({key:NETWORK_GROUP_KEY,label:NETWORK_GROUP_LABEL}):undefined}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${collapsed?'justify-center px-2':''} ${(path?.startsWith('/network')||path==='/referral') ?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`}>
+                    <span className="w-5 text-center shrink-0">🌐</span>
+                    {!collapsed && <span className="flex-1 text-left truncate">{label({key:NETWORK_GROUP_KEY,label:NETWORK_GROUP_LABEL})}</span>}
+                    {!collapsed && <span className={`text-xs transition-transform duration-200 ${networkOpen?'rotate-90':''}`}>›</span>}
+                  </button>
+                  {!collapsed && networkOpen && (
+                    <div className="mt-1 space-y-1">
+                      {g.network.map(e=> <Row key={e.href} e={e} small />)}
+                    </div>
+                  )}
+                  {collapsed && (
+                    <div className="mt-1 flex flex-col items-center gap-1">
+                      {g.network.map(e=> <Row key={e.href} e={e} small />)}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-          )}
+          ))}
         </>
       )}
-      {!collapsed && authed!==false && <div className="pt-4 text-[11px] text-slate-400 px-3 mt-4">กด <kbd className="px-1.5 py-0.5 bg-slate-100 border rounded text-[10px]">Ctrl</kbd>+<kbd className="px-1.5 py-0.5 bg-slate-100 border rounded text-[10px]">B</kbd> หรือ <kbd className="px-1.5 py-0.5 bg-slate-100 border rounded text-[10px]">[</kbd> เพื่อหด/ขยาย</div>}
+      {!collapsed && authed!==false && (
+        <div className="pt-4 mt-4 px-3 text-[11px] text-slate-400">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-500">
+              {isAdmin ? 'ผู้ดูแลระบบ' : `ระดับ: ${rankName(rank as 0|1|2|3|4)}`}
+            </span>
+            <span className="text-[10px] text-slate-400">เห็น {navCount} เมนู</span>
+          </div>
+          <div className="pt-2">กด <kbd className="px-1.5 py-0.5 bg-slate-100 border rounded text-[10px]">Ctrl</kbd>+<kbd className="px-1.5 py-0.5 bg-slate-100 border rounded text-[10px]">B</kbd> หรือ <kbd className="px-1.5 py-0.5 bg-slate-100 border rounded text-[10px]">[</kbd> เพื่อหด/ขยาย</div>
+        </div>
+      )}
     </div>
   );
 
