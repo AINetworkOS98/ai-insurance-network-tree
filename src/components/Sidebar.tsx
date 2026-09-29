@@ -31,9 +31,26 @@ export default function Sidebar(){
   const [mobileOpen,setMobileOpen]=useState(false);
   const [networkOpen,setNetworkOpen]=useState(true);
   const [authed,setAuthed]=useState<boolean|null>(null);
+  // หน้าที่มีช่องค้นหา AI (มี data-ai-search) — ปุ่มเมนูลอยจะทับแถวปุ่ม "+"/"↑" ของช่องค้นหา
+  // จึงไม่แสดงปุ่มลอยบนหน้านั้น ใช้เมนูด้านบน (Header) แทน
+  const [hasAiSearch,setHasAiSearch]=useState(false);
 
   useEffect(()=>{
     fetch('/api/auth/me', { credentials: 'include', cache:'no-store' }).then(r=>setAuthed(r.ok)).catch(()=>setAuthed(false));
+  },[]);
+
+  useEffect(()=>{
+    const check=()=>setHasAiSearch(!!document.querySelector('[data-ai-search]'));
+    check();
+    const id=setTimeout(check,400);
+    return ()=>clearTimeout(id);
+  },[path]);
+
+  // ให้เมนูด้านบน (Header) เปิดลิ้นชักเมนูด้านข้างนี้ได้ — event 'hermes:open-sidebar'
+  useEffect(()=>{
+    const open=()=>setMobileOpen(true);
+    window.addEventListener('hermes:open-sidebar', open);
+    return ()=>window.removeEventListener('hermes:open-sidebar', open);
   },[]);
 
   // คีย์บอร์ด: Ctrl+B / [ / \ เพื่อ หด/ขยาย
@@ -142,8 +159,8 @@ export default function Sidebar(){
 
   return (
     <>
-      {/* Mobile toggle — ยกให้พ้นแถบผู้เยี่ยมชม (fixed bottom-0 สูง ~37px) */}
-      <button onClick={()=>setMobileOpen(v=>!v)} aria-label="เปิดเมนูด้านขวา" className="lg:hidden fixed bottom-14 right-4 z-[60] w-12 h-12 rounded-full bg-[#475569] text-white shadow-lg flex items-center justify-center text-xl">☰</button>
+      {/* Mobile toggle — ซ่อนเมื่อหน้ามีช่องค้นหา AI (ปุ่มลอยจะทับแถวปุ่ม "+"/"↑") และยกให้พ้นแถบผู้เยี่ยมชม (fixed bottom-0 สูง ~37px) */}
+      {!hasAiSearch && <button onClick={()=>setMobileOpen(v=>!v)} aria-label="เปิดเมนูด้านข้าง" className="lg:hidden fixed bottom-14 right-4 z-[60] w-12 h-12 rounded-full bg-[#475569] text-white shadow-lg flex items-center justify-center text-xl">☰</button>}
       {mobileOpen && <div onClick={()=>setMobileOpen(false)} className="lg:hidden fixed inset-0 bg-black/40 z-[55]"/>}
       {/* Desktop collapse toggle - ลอยขอบ */}
       <button

@@ -131,6 +131,15 @@ export default function Header(){
       {mobileNav && (
         <nav className="md:hidden border-t border-[#e2e8f0] bg-white max-h-[70vh] overflow-y-auto px-3 py-2">
           <div className="grid grid-cols-1 gap-1">
+            {user && (
+              <button
+                type="button"
+                onClick={()=>{ setMobileNav(false); window.dispatchEvent(new Event('hermes:open-sidebar')); }}
+                className="text-left px-3 py-2.5 rounded-xl text-sm font-semibold text-sky-700 bg-[#eff6ff] hover:bg-[#dbeafe] flex items-center gap-2"
+              >
+                <span>☰</span> เมนูทั้งหมด (ด้านข้าง)
+              </button>
+            )}
             <Link href={user ? '/' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_home')}</Link>
             <Link href="/financial-freedom" onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_vision')}</Link>
             <Link href={user ? '/verify' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_verify')}</Link>

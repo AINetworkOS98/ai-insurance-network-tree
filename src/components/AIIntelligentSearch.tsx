@@ -508,7 +508,7 @@ function linkify(text: string){
     if (isCentered) {
       // เริ่มต้น — ช่องค้นหาอยู่กลางจอ พิมพ์แล้วจะลงล่างอัตโนมัติเมื่อมีข้อความ
       return (
-        <div className="w-full flex flex-col h-full">
+        <div data-ai-search className="w-full flex flex-col h-full">
           <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-6 py-8">
             <div className="w-full max-w-[760px]">
               {topContent && <div className="mb-4">{topContent}</div>}
@@ -521,7 +521,7 @@ function linkify(text: string){
     }
     // มีแชตแล้ว — ช่องพิมพ์ลงล่างอัตโนมัติ ตรึงล่าง แชตกว้างเต็มจอ
         return (
-          <div className="w-full flex flex-col h-full">
+          <div data-ai-search className="w-full flex flex-col h-full">
             <div ref={scrollRef} className="flex-1 overflow-auto scrollbar-none px-4 md:px-6 py-2 space-y-4 min-h-0 pb-28">
               <div className="shrink-0 max-w-[760px] mx-auto w-full">{ModeSwitch}</div>
               {topContent && <div className="shrink-0 max-w-[760px] mx-auto w-full">{topContent}</div>}
@@ -543,7 +543,7 @@ function linkify(text: string){
       if(msgs.length===0 && !pasteInfo && !loading && !streaming){
         // เริ่มต้น — ช่องค้นหาอยู่กลางจอ
         return (
-          <div className="w-full flex flex-col h-full">
+          <div data-ai-search className="w-full flex flex-col h-full">
             <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-6 py-8">
               <div className="w-full max-w-[760px]">
                 {topContent && <div className="mb-4">{topContent}</div>}
@@ -556,7 +556,7 @@ function linkify(text: string){
       }
       // มีแชตแล้ว — เลื่อนอัตโนมัติ + ช่องพิมพ์ตรึงล่าง
       return (
-        <div className="w-full flex flex-col h-full">
+        <div data-ai-search className="w-full flex flex-col h-full">
           <div ref={scrollRef} className="flex-1 overflow-auto scrollbar-none px-4 md:px-6 py-2 space-y-4 min-h-0 pb-28">
             <div className="shrink-0 max-w-[760px] mx-auto w-full">{ModeSwitch}</div>
             {topContent && <div className="shrink-0 max-w-[760px] mx-auto w-full">{topContent}</div>}
