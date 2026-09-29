@@ -366,7 +366,8 @@ export function CurrentYearCard({
 /* ────────────────────────────── YearTimeline ────────────────────────────── */
 export default function YearTimeline({
   pastYears = 3,
-  futureYears = 3,
+  // ไล่ปีต่อเนื่องขึ้นไปแบบไม่มีปลาย — เผื่อล่วงหน้า 50 ปี (ระบบเลื่อนปีเองทุกปีโดยไม่ต้องแก้โค้ด)
+  futureYears = 50,
   title = 'Timeline เวลา — นาฬิกาของธุรกิจ',
 }: {
   pastYears?: number;
@@ -456,17 +457,16 @@ export default function YearTimeline({
     );
   }
 
-  // อนาคต: ปีใกล้สุด (เช่น 2570) อยู่บนสุด แล้วไล่ลงมา 2571, 2572
-  const futureList = years.filter((y) => y > currentYear).sort((a, b) => a - b);
-  // อดีต: ปีใกล้ปัจจุบันสุดอยู่บนสุด แล้วไล่ลงมา
-  const pastList = years.filter((y) => y < currentYear).sort((a, b) => b - a);
+  // เรียงปีจากน้อยไปมาก (อดีต → ปัจจุบัน → อนาคต) เป็นเส้นเดียวต่อเนื่องจาก 2566 ขึ้นไป ไม่มีปลาย
+  // หมายเหตุ: ห้ามใช้ useMemo ตรงนี้ — อยู่หลัง early return (skeleton) ของ component จะผิดกฎ hooks
+  const yearsAsc = [...years].sort((a, b) => a - b);
 
-  const renderNode = (year: number, index: number, group: 'future' | 'past') => {
+  const renderNode = (year: number, index: number) => {
     const st = statsOf(year);
     const isCurrent = st.status === 'current';
     const thaiYear = st.thaiYear;
-    // สลับซ้าย/ขวา — อนาคตเริ่มซ้าย, อดีตเริ่มขวา เพื่อไม่ให้เอียงข้างเดียว
-    const side: 'left' | 'right' = index % 2 === 0 ? (group === 'future' ? 'left' : 'right') : (group === 'future' ? 'right' : 'left');
+    // สลับซ้าย/ขวารอบเส้นกลางตามลำดับปี เพื่อให้อ่านไล่ลงมาได้ต่อเนื่อง
+    const side: 'left' | 'right' = index % 2 === 0 ? 'left' : 'right';
     const startLabel = thaiDateLabel(bangkokParts(new Date(st.startMs)));
     const endLabel = thaiDateLabel(bangkokParts(new Date(st.endMs - 1)));
     return (
@@ -564,33 +564,34 @@ export default function YearTimeline({
           </div>
 
           <div className="space-y-3">
-            {/* อนาคต — ไกลสุดอยู่บนสุด */}
-            {futureList.map((y, i) => renderNode(y, i, 'future'))}
-
-            {/* ปีปัจจุบัน — node ใหญ่สุด มีวงแหวน animation + การ์ดเต็มความกว้าง */}
-            <div className="relative flex flex-col md:flex-row md:items-start">
-              <div
-                ref={currentRef}
-                className="absolute left-[13px] top-3 z-10 -translate-x-1/2 md:left-1/2 md:top-6"
-                aria-hidden="true"
-              >
-                <div className="relative flex items-center justify-center">
-                  <span className="yl-ring absolute h-6 w-6 rounded-full border border-sky-300/40" />
-                  <span className="yl-ring-2 absolute h-6 w-6 rounded-full border border-sky-300/40" />
-                  <span
-                    className={`yl-glow block h-6 w-6 rounded-full border-2 border-sky-200 bg-sky-400 transition-all ${
-                      flash ? 'ring-4 ring-sky-300/60' : ''
-                    }`}
-                  />
+            {/* ไล่ปีจากบนลงล่าง: 2566 → 2567 → 2568 → 2569 → 2570 → … ต่อเนื่องไม่มีปลาย
+                ปีปัจจุบันอยู่ตรงตำแหน่งของตัวเองในลำดับ พร้อม node ใหญ่สุด + วงแหวน animation */}
+            {yearsAsc.map((y, i) =>
+              y === currentYear ? (
+                <div key={y} className="relative flex flex-col md:flex-row md:items-start">
+                  <div
+                    ref={currentRef}
+                    className="absolute left-[13px] top-3 z-10 -translate-x-1/2 md:left-1/2 md:top-6"
+                    aria-hidden="true"
+                  >
+                    <div className="relative flex items-center justify-center">
+                      <span className="yl-ring absolute h-6 w-6 rounded-full border border-sky-300/40" />
+                      <span className="yl-ring-2 absolute h-6 w-6 rounded-full border border-sky-300/40" />
+                      <span
+                        className={`yl-glow block h-6 w-6 rounded-full border-2 border-sky-200 bg-sky-400 transition-all ${
+                          flash ? 'ring-4 ring-sky-300/60' : ''
+                        }`}
+                      />
+                    </div>
+                  </div>
+                  <div ref={cardRef} className="ml-9 min-w-0 flex-1 md:ml-0 md:w-full">
+                    <CurrentYearCard parts={parts} stats={currentStats} thaiYear={currentStats.thaiYear} />
+                  </div>
                 </div>
-              </div>
-              <div ref={cardRef} className="ml-9 min-w-0 flex-1 md:ml-0 md:w-full">
-                <CurrentYearCard parts={parts} stats={currentStats} thaiYear={currentStats.thaiYear} />
-              </div>
-            </div>
-
-            {/* อดีต */}
-            {pastList.map((y, i) => renderNode(y, i, 'past'))}
+              ) : (
+                renderNode(y, i)
+              ),
+            )}
           </div>
         </div>
 
