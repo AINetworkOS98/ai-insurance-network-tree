@@ -142,9 +142,9 @@ export default function Sidebar(){
 
   return (
     <>
-      {/* Mobile toggle */}
-      <button onClick={()=>setMobileOpen(v=>!v)} className="lg:hidden fixed bottom-4 right-4 z-50 w-12 h-12 rounded-full bg-[#475569] text-white shadow-lg flex items-center justify-center text-xl">☰</button>
-      {mobileOpen && <div onClick={()=>setMobileOpen(false)} className="lg:hidden fixed inset-0 bg-black/40 z-40"/>}
+      {/* Mobile toggle — ยกให้พ้นแถบผู้เยี่ยมชม (fixed bottom-0 สูง ~37px) */}
+      <button onClick={()=>setMobileOpen(v=>!v)} aria-label="เปิดเมนูด้านขวา" className="lg:hidden fixed bottom-14 right-4 z-[60] w-12 h-12 rounded-full bg-[#475569] text-white shadow-lg flex items-center justify-center text-xl">☰</button>
+      {mobileOpen && <div onClick={()=>setMobileOpen(false)} className="lg:hidden fixed inset-0 bg-black/40 z-[55]"/>}
       {/* Desktop collapse toggle - ลอยขอบ */}
       <button
         onClick={()=>setCollapsed(v=>!v)}
@@ -156,7 +156,7 @@ export default function Sidebar(){
       </button>
 
       <aside className={`${collapsed?'w-[56px]':'w-[260px]'} shrink-0 bg-white flex flex-col
-        ${mobileOpen ? 'fixed inset-y-0 left-0 z-50 overflow-auto w-[260px]' : 'hidden lg:flex'}
+        ${mobileOpen ? 'fixed inset-y-0 left-0 z-[60] overflow-auto w-[260px]' : 'hidden lg:flex'}
         transition-all duration-200`}>
         <div className="flex-1 overflow-auto">
           {Nav}

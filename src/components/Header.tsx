@@ -10,6 +10,7 @@ export default function Header(){
   const [user, setUser] = useState<{email:string, displayName?:string}|null>(null);
   const [n8nOpen, setN8nOpen] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [mobileNav, setMobileNav] = useState(false);
   // เมนู N8N สงวนสิทธิ์: Admin หรือสมาชิกอีเมล akarapol.pro798@gmail.com เท่านั้น (กติกาเดียวกับ middleware)
   const canUseN8n = isAdminEmail(user?.email);
   useEffect(()=>{ (async()=>{
@@ -29,12 +30,22 @@ export default function Header(){
   }
   return (
     <header className="bg-white sticky top-0 z-40 border-b border-[#f3e8d3] text-[#475569]">
-      <div className="w-full px-4 py-3 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3">
-          <img src="/logo.png" alt="AI Insurance Network Tree" className="h-9 w-auto bg-white rounded-xl px-1 py-1 object-contain border border-[#f3e8d3]" />
-          <div>
-            <div className="font-bold leading-none text-sm text-[#475569]">AI Insurance Network Tree</div>
-            <div className="text-[11px] text-[#57534e]">{t('tagline')}</div>
+      <div className="w-full px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between gap-2">
+        {/* ปุ่มเมนูมือถือ — จอเล็กกว่า md เท่านั้น */}
+        <button
+          type="button"
+          onClick={()=> setMobileNav(v=>!v)}
+          aria-label={mobileNav ? 'ปิดเมนู' : 'เปิดเมนู'}
+          aria-expanded={mobileNav}
+          className="md:hidden shrink-0 w-9 h-9 rounded-xl border border-[#dbeafe] bg-white text-[#475569] flex items-center justify-center text-lg leading-none"
+        >
+          {mobileNav ? '✕' : '☰'}
+        </button>
+        <Link href="/" onClick={()=> setMobileNav(false)} className="flex items-center gap-3 min-w-0">
+          <img src="/logo.png" alt="AI Insurance Network Tree" className="h-9 w-auto shrink-0 bg-white rounded-xl px-1 py-1 object-contain border border-[#f3e8d3]" />
+          <div className="hidden sm:block min-w-0">
+            <div className="font-bold leading-none text-sm text-[#475569] truncate">AI Insurance Network Tree</div>
+            <div className="text-[11px] text-[#57534e] truncate">{t('tagline')}</div>
           </div>
         </Link>
         <nav className="hidden md:flex gap-5 text-sm items-center">
@@ -88,7 +99,7 @@ export default function Header(){
           <Link href={user ? "/contact" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_inquire')}</Link>
           <Link href={user ? "/notifications" : "/admin"} className="relative text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">🔔 {t('nav_notif')} {unread!=null && unread>0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-red-600 text-white text-[11px]">{unread}</span>}</Link>
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <LanguageMenu/>
           {user ? (
             <div className="relative">
@@ -106,12 +117,58 @@ export default function Header(){
             </div>
           ) : (
             <>
-              <Link href="/login" className="px-4 py-2 rounded-full border border-blue-200 bg-white text-sky-700 text-sm font-semibold">{t('login')}</Link>
-              <Link href="/register" className="px-4 py-2 rounded-full bg-[#c8a84e] text-[#475569] text-sm font-semibold">{t('register_interest')}</Link>
+              <Link href="/login" className="px-3 sm:px-4 py-2 rounded-full border border-blue-200 bg-white text-sky-700 text-xs sm:text-sm font-semibold whitespace-nowrap">{t('login')}</Link>
+              <Link href="/register" className="px-3 sm:px-4 py-2 rounded-full bg-[#c8a84e] text-[#475569] text-xs sm:text-sm font-semibold whitespace-nowrap">
+                <span className="hidden sm:inline">{t('register_interest')}</span>
+                <span className="sm:hidden">สมัคร</span>
+              </Link>
             </>
           )}
         </div>
       </div>
+
+      {/* เมนูด้านบนสำหรับมือถือ — จอเล็กกว่า md */}
+      {mobileNav && (
+        <nav className="md:hidden border-t border-[#e2e8f0] bg-white max-h-[70vh] overflow-y-auto px-3 py-2">
+          <div className="grid grid-cols-1 gap-1">
+            <Link href={user ? '/' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_home')}</Link>
+            <Link href="/financial-freedom" onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_vision')}</Link>
+            <Link href={user ? '/verify' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_verify')}</Link>
+            <Link href={user ? '/prospects' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_prospects')}</Link>
+            <Link href={user ? '/income' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_income')}</Link>
+            <Link href={user ? '/contact' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_inquire')}</Link>
+            <Link href={user ? '/notifications' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6] flex items-center gap-2">
+              <span>🔔 {t('nav_notif')}</span>
+              {unread!=null && unread>0 && <span className="px-1.5 py-0.5 rounded-full bg-red-600 text-white text-[11px]">{unread}</span>}
+            </Link>
+
+            {canUseN8n && (
+              <div className="mt-1 pt-2 border-t border-[#e2e8f0]">
+                <div className="px-3 pb-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{t('nav_n8n')}</div>
+                <a href="/n8n_automation" onClick={()=> setMobileNav(false)} className="block px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">🤖 {t('n8n_automation')}</a>
+                <a href="/n8n" onClick={()=> setMobileNav(false)} className="block px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">🔗 {t('n8n_webhooks')}</a>
+                <a href="/n8n/workflows" onClick={()=> setMobileNav(false)} className="block px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">⚙️ {t('n8n_workflows')}</a>
+                <a href="http://localhost:5679/" target="_blank" rel="noopener noreferrer" className="block px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">🖥️ {t('n8n_editor')}</a>
+              </div>
+            )}
+
+            <div className="mt-1 pt-2 border-t border-[#e2e8f0]">
+              {user ? (
+                <>
+                  <div className="px-3 py-1 text-[11px] text-slate-400 truncate">{user.email}</div>
+                  <Link href="/settings" onClick={()=> setMobileNav(false)} className="block px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">{t('settings')}</Link>
+                  <button onClick={()=>{ setMobileNav(false); logout(); }} className="w-full text-left px-3 py-2.5 rounded-xl text-sm text-red-600 hover:bg-red-50">{t('logout')}</button>
+                </>
+              ) : (
+                <div className="flex gap-2 px-1 py-1">
+                  <Link href="/login" onClick={()=> setMobileNav(false)} className="flex-1 text-center px-4 py-2.5 rounded-full border border-blue-200 bg-white text-sky-700 text-sm font-semibold">{t('login')}</Link>
+                  <Link href="/register" onClick={()=> setMobileNav(false)} className="flex-1 text-center px-4 py-2.5 rounded-full bg-[#c8a84e] text-[#475569] text-sm font-semibold">{t('register_interest')}</Link>
+                </div>
+              )}
+            </div>
+          </div>
+        </nav>
+      )}
     </header>
   );
 }
