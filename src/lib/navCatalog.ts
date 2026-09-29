@@ -69,7 +69,7 @@ export const NAV_ENTRIES: NavEntry[] = [
 
   // ── ตัวแทน (rank 1 ขึ้นไป) ───────────────────────────────────────────────
   { href: '/dashboard', section: 'agent', label: 'ภาพรวม', key: 'sb_dashboard', icon: '▦', minRank: 1 },
-  { href: '/prospects', section: 'agent', label: 'สมาชิกและผู้สนใจ', key: 'sb_members_prospects', icon: '◎', minRank: 1 },
+  { href: '/prospects', section: 'agent', label: 'สมาชิกทั่วไป', key: 'nav_prospects', icon: '◎', minRank: 1 },
   // ย้ายจากเมนูด้านบน (Header) มาฝั่งซ้ายตามคำสั่ง — ค้นหา/ตรวจสอบสมาชิก (ใช้ /api/members)
   { href: '/verify', section: 'agent', label: 'ตรวจสอบสมาชิก', key: 'nav_verify', icon: '🔍', minRank: 1 },
   { href: '/members', section: 'agent', label: 'สมาชิกของฉัน', key: 'sb_my_members', icon: '◉', minRank: 1 },

@@ -52,7 +52,7 @@ export default function RecruitPage(){
               </form>
               <div className="mt-3 flex gap-2 text-xs flex-wrap">
                 <a href="/verify" className="px-3 py-1.5 rounded-full border bg-white">ตรวจสมาชิก →</a>
-                <a href="/prospects" className="px-3 py-1.5 rounded-full border bg-white">ดูผู้สนใจ →</a>
+                <a href="/prospects" className="px-3 py-1.5 rounded-full border bg-white">ดูสมาชิกทั่วไป →</a>
                 <a href={`${OS}/?tab=members_mgmt`} target="_blank" rel="noreferrer" className="px-3 py-1.5 rounded-full border bg-white">จัดการใน OS →</a>
               </div>
             </div>

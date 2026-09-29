@@ -103,7 +103,7 @@ export default function MembersPage(){
           </div>
 
           <div className="flex gap-2 text-sm">
-            <Link href="/prospects" className="px-4 py-2 rounded-full border bg-white">ผู้สนใจ</Link>
+            <Link href="/prospects" className="px-4 py-2 rounded-full border bg-white">สมาชิกทั่วไป</Link>
             <Link href="/appointments" className="px-4 py-2 rounded-full border bg-white">นัดหมาย</Link>
             <Link href="/income" className="px-4 py-2 rounded-full border bg-white">รายได้</Link>
           </div>

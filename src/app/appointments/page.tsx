@@ -201,7 +201,7 @@ export default function AppointmentsPage(){
             <div className="card p-4">
               <div className="text-sm font-semibold">ทิป</div>
               <div className="text-xs text-slate-600 mt-2 leading-relaxed">นัดหมายเชื่อมกับ Prospect — ใส่ Prospect ID เพื่อโยงใยใน CRM ได้เลย ถ้ายังไม่มี Prospect ก็สร้างนัดหมายเปล่าได้ แล้วค่อยผูกภายหลัง</div>
-              <a href="/prospects" className="inline-block mt-2 text-xs text-sky-700 underline">ไปหน้า ผู้สนใจ →</a>
+              <a href="/prospects" className="inline-block mt-2 text-xs text-sky-700 underline">ไปหน้า สมาชิกทั่วไป →</a>
             </div>
           </div>
         </main>
