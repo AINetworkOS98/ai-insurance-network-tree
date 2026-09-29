@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import CareerNetworkTree from '@/components/CareerNetworkTree';
 
 // เมนูขึ้นตำแหน่ง — เห็นได้เฉพาะระดับตัวแทนขึ้นไป
 // เกณฑ์: โครงสร้างรายได้ ไทยประกันชีวิต (update 15 Jan 64), เลื่อนตามผัง 1 แตก 5
@@ -49,6 +50,9 @@ export default function CareerPage(){
     return (
       <div><Header/><div className="flex w-full"><Sidebar/>
         <main className="flex-1 p-6 max-w-none w-full min-w-0">
+          <div className="mx-auto mb-4 w-full max-w-[440px] overflow-hidden rounded-3xl border border-[#0e2a55] bg-[#04091a] shadow-[0_18px_60px_-24px_rgba(56,189,248,0.55)]">
+            <CareerNetworkTree />
+          </div>
           <h1 className="text-xl font-bold text-navy">ขึ้นตำแหน่ง</h1>
           <div className="card p-5 mt-4 text-sm">เมนูนี้สำหรับระดับตัวแทนขึ้นไป — สมัครเป็นตัวแทนก่อนเพื่อดูเส้นทางความก้าวหน้า</div>
         </main>
@@ -62,6 +66,10 @@ export default function CareerPage(){
       <div className="flex w-full">
         <Sidebar/>
         <main className="flex-1 p-6 space-y-4 w-full min-w-0">
+          {/* ภาพเส้นทางอาชีพ 4 ระดับ (SVG เคลื่อนไหว) — วางบนสุดของหน้า */}
+          <div className="mx-auto w-full max-w-[440px] overflow-hidden rounded-3xl border border-[#0e2a55] bg-[#04091a] shadow-[0_18px_60px_-24px_rgba(56,189,248,0.55)]">
+            <CareerNetworkTree />
+          </div>
           <div>
             <h1 className="text-xl font-bold text-navy">ขึ้นตำแหน่ง</h1>
             <p className="text-xs text-slate-500 mt-1">เกณฑ์โครงสร้างรายได้ ไทยประกันชีวิต (15 Jan 64) — เลื่อนตามผัง 1 แตก 5 • ปัจจุบัน: <span className="font-bold">{progress?.currentRankNameTh || '-'}</span></p>
