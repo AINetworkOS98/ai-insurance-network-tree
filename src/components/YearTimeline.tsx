@@ -382,14 +382,19 @@ export default function YearTimeline({
   const didInitialScroll = useRef(false);
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /** เลื่อน "ในกรอบ timeline" ให้การ์ดปีปัจจุบันอยู่กลาง (ไม่แตะการเลื่อนของหน้าเว็บ) */
+  /** เลื่อน "ในกรอบ timeline" ให้การ์ดปีปัจจุบันอยู่กลาง (ไม่แตะการเลื่อนของหน้าเว็บ)
+   *  ถ้ากรอบเลื่อนเองไม่ได้ (จอมือถือ — กรอบไหลตามเนื้อหา) ให้เลื่อนหน้าเว็บทั้งหน้าแทน */
   const centerOnCurrent = useCallback((behavior: ScrollBehavior = 'auto') => {
     const sc = scrollerRef.current;
     const el = cardRef.current ?? currentRef.current;
     if (!sc || !el) return;
+    const maxTop = Math.max(0, sc.scrollHeight - sc.clientHeight);
+    if (maxTop < 4) {
+      el.scrollIntoView({ behavior, block: 'center' });
+      return;
+    }
     const scRect = sc.getBoundingClientRect();
     const elRect = el.getBoundingClientRect();
-    const maxTop = Math.max(0, sc.scrollHeight - sc.clientHeight);
     const target = sc.scrollTop + (elRect.top - scRect.top) + elRect.height / 2 - sc.clientHeight / 2;
     sc.scrollTo({ top: Math.min(Math.max(0, target), maxTop), behavior });
   }, []);
@@ -416,11 +421,15 @@ export default function YearTimeline({
 
   const currentStats = currentYear ? statsOf(currentYear) : null;
 
-  // เลื่อนไปปีปัจจุบันครั้งแรกที่พร้อม (ไม่ให้ผู้ใช้ต้องหาเอง)
+  // เลื่อนไปปีปัจจุบันครั้งแรกที่พร้อม — เฉพาะเมื่อกรอบเลื่อนเองได้ (จอใหญ่)
+  // จอมือถือ: ไม่เลื่อนอัตโนมัติ ปล่อยให้ผู้ใช้เริ่มอ่านจากด้านบนของ Timeline แล้วเลื่อนหน้าเว็บเองได้ตามปกติ
   useEffect(() => {
     if (!currentYear || didInitialScroll.current) return;
     didInitialScroll.current = true;
-    const raf = requestAnimationFrame(() => centerOnCurrent('auto'));
+    const raf = requestAnimationFrame(() => {
+      const sc = scrollerRef.current;
+      if (sc && sc.scrollHeight - sc.clientHeight > 4) centerOnCurrent('auto');
+    });
     return () => cancelAnimationFrame(raf);
   }, [currentYear, centerOnCurrent]);
 
@@ -546,7 +555,7 @@ export default function YearTimeline({
         {/* ตัว timeline */}
         <div
           ref={scrollerRef}
-          className="relative max-h-[720px] overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-none px-3 py-5 sm:px-5"
+          className="relative overflow-visible md:max-h-[720px] md:overflow-y-auto md:overflow-x-hidden md:overscroll-contain scrollbar-none px-3 py-5 sm:px-5"
         >
           {/* เส้นกลาง + ไฟวิ่ง (สื่อว่าเวลาเดินอยู่ตลอด) */}
           <div className="pointer-events-none absolute bottom-4 left-[13px] top-4 w-px bg-gradient-to-b from-indigo-300/10 via-sky-300/40 to-slate-400/10 md:left-1/2" />
