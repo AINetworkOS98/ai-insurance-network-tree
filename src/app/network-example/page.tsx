@@ -1,761 +1,559 @@
 'use client';
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import Link from 'next/link';
 
-/* ---------- Helpers ---------- */
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+/* ─────────────────────────────────────────────────────────────
+   หน้าตัวอย่างเครือข่าย 1 แตก 5 (สาธิต)
+   - ศูนย์กลาง = รูปผู้ใช้ที่ล็อกอินอยู่ (อักษรย่อถ้าไม่มีรูป)
+   - ปุ่ม "เพิ่มสมาชิกอัตโนมัติ" → เติมสมาชิกไล่จากชั้นในออกชั้นนอกต่อเนื่อง
+     พร้อมแสดงผลลัพธ์และรายได้ (ประมาณการตัวอย่าง) เหมือน n8n ที่ทำงานอยู่ตลอด
+   - กดที่วงกลมใดก็ได้ = ขยายชั้นถัดไปของกิ่งนั้น (เป็นชั้น ๆ วงกว้างออกไป)
+   - มีแสงวิ่งบนเส้นเชื่อมตลอดเวลา
 
-/* ---------- Types ---------- */
-type Status = 'ACTIVE' | 'PASS' | 'WARNING' | 'FAIL' | 'SUSPENDED' | 'REMOVED' | 'PROMOTED' | 'VACANT';
-type Member = {
-  id: string; memberId: string; name: string; level: number;
-  parentId: string | null; slot: number; kpi: number; status: Status;
-  children: Member[]; avatarUrl?: string;
+   หน้าสาธารณะ: ข้อมูลสมมติทั้งหมด — ไม่ดึงข้อมูลสมาชิกจริง
+   ตัวเลขความจุ = จำนวนช่องในผัง ไม่ใช่จำนวนสมาชิก/ผลงาน/รายได้จริง
+   ───────────────────────────────────────────────────────────── */
+
+const FANOUT = 5;
+const BRANCH_COLORS = ['#38bdf8', '#34d399', '#a78bfa', '#fbbf24', '#f472b6'];
+
+/** อัตราค่าจัดงานตัวอย่าง (บาท/คน/เดือน) — สมมติฐานสาธิต ไม่ใช่ตัวเลขรับประกัน */
+const LEVEL_INCOME = [0, 2000, 500, 150];
+
+const NAMES = [
+  'สมชาย', 'สมหญิง', 'วิชัย', 'นารี', 'ประเสริฐ', 'อนันต์', 'กมล', 'สุรีย์', 'พงษ์', 'ดารา',
+  'เล็ก', 'ใหญ่', 'จอย', 'บอย', 'มิ้น', 'ต้น', 'น้ำ', 'ฟ้า', 'เบส', 'มายด์',
+  'กิ๊ก', 'เอ๋', 'โอ๋', 'เปิ้ล', 'นิด', 'หน่อย', 'เอก', 'บี', 'ซี', 'ดี',
+];
+const SURNAMES = ['ใจดี', 'รักงาน', 'มั่นคง', 'สุขสันต์', 'ก้าวหน้า', 'ตั้งใจ', 'เมตตา', 'อดทน'];
+
+type Node = {
+  id: string;
+  level: number;
+  branch: number;
+  slot: number;
+  angle: number;
+  x: number;
+  y: number;
+  parent: Node | null;
+  children: Node[];
 };
 
-/* ---------- Demo generators ---------- */
-const NAMES = [
-  'สมชาย','สมหญิง','วิชัย','นารี','ประเสริฐ','อนันต์','กมล','สุรีย์','พงษ์','ดา',
-  'เล็ก','ใหญ่','จอย','บอย','มิ้น','ต้น','น้ำ','ฟ้า','เบส','มายด์','กิ๊ก','เอ๋','โอ๋','เปิ้ล',
-  'นิด','หน่อย','เอก','บี','ซี','ดี','เอฟ','จี','เอช','ไอ','เจ','แอล','เอ็ม','เอ็น','โอเมก้า','ไพรเมิร์ฟ'
-];
-function randName(i: number) { return NAMES[i % NAMES.length] + (i >= NAMES.length ? ` ${Math.floor(i / NAMES.length) + 1}` : ''); }
-const STATUS_POOL: Status[] = ['PASS', 'PASS', 'PASS', 'WARNING', 'FAIL', 'ACTIVE'];
-function makeMembers(levels: number): Member[] {
-  let counter = 1;
-  const all: Member[] = [];
-  const root: Member = {
-    id: '1', memberId: 'MEM000001', name: 'ROOT · ประธาน', level: 0,
-    parentId: null, slot: 0, kpi: 96, status: 'ACTIVE', children: [],
-  };
-  all.push(root);
-  const q: Member[] = [root];
-  for (let lv = 1; lv <= levels; lv++) {
-    const next: Member[] = [];
-    for (const p of q) {
-      for (let s = 1; s <= 5; s++) {
-        if (all.length >= 600) break;
-        counter++;
-        const mid = `MEM${String(counter).padStart(6, '0')}`;
-        const kpi = 45 + Math.floor(Math.random() * 55);
-        let st: Status = STATUS_POOL[Math.floor(Math.random() * STATUS_POOL.length)];
-        if (kpi >= 80) st = 'PASS';
-        else if (kpi >= 60) st = 'WARNING';
-        else st = 'FAIL';
-        if (Math.random() < 0.04) st = 'REMOVED';
-        if (Math.random() < 0.03) st = 'PROMOTED';
-        const m: Member = {
-          id: String(counter), memberId: mid, name: randName(counter),
-          level: lv, parentId: p.id, slot: s, kpi, status: st, children: [],
-        };
-        p.children.push(m);
-        all.push(m);
-        next.push(m);
-      }
-    }
-    q.splice(0, q.length, ...next);
-    if (q.length === 0) break;
-  }
-  return all;
+type Assignment = { name: string; memberId: string; avatarUrl?: string; isViewer?: boolean };
+
+function radiusOf(level: number) {
+  // รัศมีต้องโตเร็วกว่าเชิงเส้น ไม่งั้นชั้นลึกจะทับกันจนอ่านไม่ออก
+  return level === 0 ? 0 : 118 * Math.pow(level, 1.32);
 }
 
-/* ---------- Status colors ---------- */
-function statusBg(s: Status): string {
-  switch (s) {
-    case 'PASS': return 'bg-emerald-50 border-emerald-200 text-emerald-700';
-    case 'ACTIVE': return 'bg-emerald-50 border-emerald-200 text-emerald-700';
-    case 'PROMOTED': return 'bg-sky-50 border-sky-200 text-sky-700';
-    case 'WARNING': return 'bg-amber-50 border-amber-200 text-amber-700';
-    case 'FAIL': return 'bg-orange-50 border-orange-200 text-orange-700';
-    case 'SUSPENDED': return 'bg-slate-100 border-slate-200 text-slate-600';
-    case 'REMOVED': return 'bg-red-50 border-red-200 text-red-600';
-    default: return 'bg-white border-slate-200 text-slate-600';
-  }
-}
-function statusDot(s: Status): string {
-  switch (s) {
-    case 'PASS': case 'ACTIVE': return 'bg-emerald-500';
-    case 'PROMOTED': return 'bg-sky-500';
-    case 'WARNING': return 'bg-amber-400';
-    case 'FAIL': return 'bg-orange-400';
-    case 'REMOVED': return 'bg-red-500';
-    default: return 'bg-slate-400';
-  }
-}
-
-/* ---------- Radial tree renderer ---------- */
-function RadialTree({
-  members,
-  selectedId,
-  setSelected,
-  levels,
-  disclosed,
-  lastPlacedConn,
-  particleSpeed,
-  particleCount,
-  particleColor,
-  showParticles,
-  highlightDuration,
-}: {
-  members: Member[];
-  selectedId: string | null;
-  setSelected: (id: string | null) => void;
-  levels: number;
-  disclosed: boolean;
-  lastPlacedConn: { parentId: string; childId: string } | null;
-  particleSpeed: number;
-  particleCount: number;
-  particleColor: string;
-  showParticles: boolean;
-  highlightDuration: number;
-}) {
-  const root = members[0];
-  if (!root) return <div className="text-sm text-slate-500 py-8 text-center">กำลังโหลด...</div>;
-
-  /* จัดวางแบบ radial: root กลางสุด, ลูกแต่ละชั้นกระจายรอบ */
-  const nodePos = useMemo(() => {
-    const pos = new Map<string, { x: number; y: number; level: number; angle: number }>();
-    const CX = 0, CY = 0;
-    pos.set(root.id, { x: CX, y: CY, level: 0, angle: 0 });
-
-    function walk(node: Member, px: number, py: number, parentAngle: number) {
-      const n = node.children.length || 1;
-      const span = (Math.PI * 2) / n;
-      const radius = 56 + node.level * 72; // ระยะห่างจากแม่เพิ่มขึ้นตามชั้น
-      node.children.forEach((c, i) => {
-        const angle = parentAngle + i * span - (Math.PI * 2) / 2 + span / 2;
-        const x = px + radius * Math.cos(angle);
-        const y = py + radius * Math.sin(angle);
-        pos.set(c.id, { x, y, level: c.level, angle });
-        walk(c, x, y, angle);
-      });
-    }
-    walk(root, CX, CY, 0);
-    return pos;
-  }, [members, root]);
-
-  const SCALE = 1.4;
-  const transform = useMemo(() => {
-    const xs = [...nodePos.values()].map(p => p.x);
-    const ys = [...nodePos.values()].map(p => p.y);
-    const minX = Math.min(...xs), maxX = Math.max(...xs);
-    const minY = Math.min(...ys), maxY = Math.max(...ys);
-    const rangeX = maxX - minX || 1;
-    const rangeY = maxY - minY || 1;
-    const scale = Math.min(SCALE / (rangeX / 100), SCALE / (rangeY / 100), 2.2);
-    const offX = - (minX + maxX) / 2 * scale;
-    const offY = - (minY + maxY) / 2 * scale;
-    return { scale, offX, offY };
-  }, [nodePos]);
-
-  const T = transform;
-
-  return (
-    <div className="relative w-full h-[calc(100vh-56px)] overflow-hidden bg-gradient-to-br from-[#f0f7ff] via-[#f8fafc] to-[#fcfdff] flex items-center justify-center">
-      <svg
-        viewBox="-500 -400 1000 800"
-        className="w-full h-full p-4"
-        style={{ background: 'transparent' }}
-      >
-        <defs>
-          <filter id="nodeShadow" x="-50%" y="-50%" width="200%" height="200%">
-                      <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#475569" floodOpacity="0.15" />
-                    </filter>
-                    <filter id="nodeGlow" x="-100%" y="-100%" width="300%" height="300%">
-                      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
-                      <feMerge>
-                        <feMergeNode in="blur" />
-                        <feMergeNode in="SourceGraphic" />
-                      </feMerge>
-                    </filter>
-                    <filter id="edgeGlow" x="-50%" y="-50%" width="200%" height="200%">
-                      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
-                      <feMerge>
-                        <feMergeNode in="blur" />
-                        <feMergeNode in="blur" />
-                        <feMergeNode in="SourceGraphic" />
-                      </feMerge>
-                    </filter>
-                    <marker id="arrowHead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                      <path d="M 0 0 L 10 5 L 0 10 z" fill="#93c5fd" />
-                    </marker>
-                    {/* Person icon — ทรงกลมรูปคน */}
-                    <g id="personHead">
-                      <circle cx="0" cy="-3" r="3.5" />
-                    </g>
-                    <g id="personBody">
-                      <path d="M -6,1 C -6,8 -2,11 0,11 C 2,11 6,8 6,1 Z" />
-                    </g>
-                    <style>{`
-                      @keyframes flowParticle {
-                        0% { transform: translate(0,0); opacity: 0; }
-                        10% { opacity: 1; }
-                        90% { opacity: 1; }
-                        100% { transform: translate(var(--dx), var(--dy)); opacity: 0; }
-                      }
-                      .particle {
-                        animation: flowParticle var(--duration) linear infinite;
-                        animation-delay: var(--delay);
-                        transform-box: fill-box;
-                        transform-origin: center;
-                      }
-                      @keyframes flowDash {
-                        0% { stroke-dashoffset: 24; }
-                        100% { stroke-dashoffset: 0; }
-                      }
-                      @keyframes edgePulse {
-                        0%, 100% { opacity: 0.4; }
-                        50% { opacity: 0.9; }
-                      }
-                      .edge-flow {
-                        animation: flowDash 1.2s linear infinite;
-                      }
-                      .edge-pulse {
-                        animation: edgePulse 2s ease-in-out infinite;
-                      }
-                    `}</style>
-        </defs>
-
-        <g transform={`translate(${T.offX},${T.offY}) scale(${T.scale})`}>
-          {/* เส้นเชื่อม + flow particles n8n-style */}
-                    {members.map(m => {
-                      const p = nodePos.get(m.id);
-                      if (!p) return null;
-                      return m.children.map((c, ci) => {
-                        const cp = nodePos.get(c.id);
-                        if (!cp) return null;
-                        const dx = cp.x - p.x;
-                        const dy = cp.y - p.y;
-                        const len = Math.sqrt(dx * dx + dy * dy);
-                        const isNew = disclosed && lastPlacedConn && lastPlacedConn.parentId === m.id && lastPlacedConn.childId === c.id;
-                        const lineColor = isNew ? '#fcd34d' : '#60a5fa';
-                        const lineWidth = isNew ? 3 : 1.8;
-
-                        return (
-                          <g key={`e-${m.id}-${c.id}`}>
-                            {/* เส้น glow n8n-style */}
-                            <line
-                              x1={p.x} y1={p.y}
-                              x2={cp.x} y2={cp.y}
-                              stroke={lineColor}
-                              strokeWidth={lineWidth + 4}
-                              opacity={0.15}
-                              filter="url(#edgeGlow)"
-                            />
-                            {/* เส้นหลัก */}
-                            <line
-                              x1={p.x} y1={p.y}
-                              x2={cp.x} y2={cp.y}
-                              stroke={lineColor}
-                              strokeWidth={lineWidth}
-                              markerEnd="url(#arrowHead)"
-                              opacity={isNew ? 1 : 0.55}
-                              className={isNew ? 'edge-pulse' : ''}
-                            />
-                            {/* n8n-style flowing dash */}
-                            <line
-                              x1={p.x} y1={p.y}
-                              x2={cp.x} y2={cp.y}
-                              stroke={isNew ? '#fbbf24' : '#38bdf8'}
-                              strokeWidth={lineWidth}
-                              strokeDasharray="8 16"
-                              opacity={isNew ? 0.9 : 0.35}
-                              className="edge-flow"
-                            />
-                            {/* เส้น glow highlight (เฉพาะเส้นใหม่) */}
-                            {isNew && (
-                              <line
-                                x1={p.x} y1={p.y}
-                                x2={cp.x} y2={cp.y}
-                                stroke="#fcd34d"
-                                strokeWidth={10}
-                                opacity={0.3}
-                                filter="url(#nodeGlow)"
-                              />
-                            )}
-                            {/* Flow particles */}
-                            {showParticles && (
-                              <>
-                                {Array.from({ length: particleCount }, (_, i) => {
-                                  const particleStyle = {
-                                    '--dx': `${dx}px`,
-                                    '--dy': `${dy}px`,
-                                    '--duration': `${Math.max(800, particleSpeed * (1 + i * 0.35))}ms`,
-                                    '--delay': `${(i * (particleSpeed * 0.25))}ms`,
-                                    filter: i === 0 ? 'url(#nodeShadow)' : undefined,
-                                  } as any;
-                                  const colors = ['#38bdf8', '#818cf8', '#a78bfa', '#f472b6', '#22d3ee'];
-                                  const pc = isNew ? '#fbbf24' : colors[i % colors.length];
-                                  return (
-                                    <circle
-                                      key={i}
-                                      cx={p.x} cy={p.y}
-                                      r={2.5 - i * 0.3}
-                                      fill={pc}
-                                      opacity={0.95 - i * 0.1}
-                                      className="particle"
-                                      style={particleStyle}
-                                    />
-                                  );
-                                })}
-                              </>
-                            )}
-                          </g>
-                        );
-                      });
-                    })}
-
-          {/* โหนด */}
-                    {members.map(m => {
-                      const p = nodePos.get(m.id);
-                      if (!p) return null;
-                      const isSelected = m.id === selectedId;
-                      const isVacant = m.status === 'VACANT';
-                      if (!disclosed && m.level > 0) return null;
-                      const r = m.level === 0 ? 28 : m.children.length === 0 ? 14 : 18;
-                      const statusColor = statusDot(m.status);
-
-                      return (
-                        <g
-                          key={m.id}
-                          onClick={() => setSelected(isSelected ? null : m.id)}
-                          className="cursor-pointer"
-                          style={{
-                            transform: `translate(${p.x}px,${p.y}px)`,
-                            transition: 'transform 0.2s ease',
-                          }}
-                        >
-                          {/* วงกลมพื้นหลังตอนเลือก */}
-                          <circle
-                            r={r + (isSelected ? 10 : 0)}
-                            fill={isSelected ? 'rgba(71,85,105,0.06)' : 'transparent'}
-                            className="transition-all duration-200"
-                          />
-
-                          {/* โหนดรูปคน */}
-                          <g filter="url(#nodeShadow)">
-                            {/* วงกลมพื้นหลัง */}
-                            <circle
-                              r={r}
-                              fill={isVacant ? '#f1f5f9' : '#ffffff'}
-                              stroke={isVacant ? '#cbd5e1' : isSelected ? '#475569' : statusColor}
-                              strokeWidth={isSelected ? 3.5 : isVacant ? 2 : 2.5}
-                              className="transition-all duration-200 hover:scale-105"
-                              style={{ transformOrigin: 'center' }}
-                            />
-                            {/* รูปคนภายใน */}
-                            {!isVacant && m.status !== 'REMOVED' && (
-                              <g transform={`scale(${r / 12})`} fill={statusColor} opacity={0.8}>
-                                <use href="#personHead" />
-                                <use href="#personBody" />
-                              </g>
-                            )}
-                            {/* สถานะพิเศษ */}
-                            {m.status === 'REMOVED' && (
-                              <text textAnchor="middle" dominantBaseline="central"
-                                fontSize={r * 0.7} fill="#ef4444" fontWeight="bold">✕</text>
-                            )}
-                            {m.status === 'PROMOTED' && (
-                              <text textAnchor="middle" dominantBaseline="central"
-                                fontSize={r * 0.6} fill="#3b82f6" fontWeight="bold">★</text>
-                            )}
-                            {isVacant && (
-                              <text textAnchor="middle" dominantBaseline="central"
-                                fontSize={r * 0.8} fill="#94a3b8" fontWeight="bold">+</text>
-                            )}
-                          </g>
-
-                          {/* ป้ายระดับ (root) */}
-                          {m.level === 0 && (
-                            <text textAnchor="middle" dominantBaseline="hanging"
-                              y={r + 6} fontSize={9} fill="#475569" fontWeight="700">
-                              ROOT
-                            </text>
-                          )}
-
-                          {/* ชื่อย่อใต้โหนด */}
-                          {!isVacant && m.status !== 'REMOVED' && m.level > 0 && (
-                            <text textAnchor="middle" dominantBaseline="hanging"
-                              y={r + 5} fontSize={6.5} fill="#64748b" fontWeight="500">
-                              {m.name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('')}
-                            </text>
-                          )}
-
-                          {/* หมายเลข slot */}
-                          {m.level > 0 && m.status !== 'VACANT' && (
-                            <text textAnchor="middle" dominantBaseline="hanging"
-                              y={r + (m.status !== 'REMOVED' ? 14 : 8)} fontSize={6} fill="#94a3b8" fontWeight="500">
-                              S{m.slot}
-                            </text>
-                          )}
-
-                          {/* ว่าง/เต็ม */}
-                          {m.level > 0 && (
-                            <text textAnchor="middle" dominantBaseline="hanging"
-                              y={-r - 5} fontSize={6.5} fill="#94a3b8" fontWeight="500">
-                              {m.children.length}/5
-                            </text>
-                          )}
-                        </g>
-                      );
-                    })}
-        </g>
-      </svg>
-
-      {/* ปุ่ม_zoom รูปスピード */}
-      <div className="absolute bottom-4 right-4 flex gap-2 z-10">
-        <button onClick={() => { const s = nodePos; const vals = [...s.values()]; const xs = vals.map(v => v.x); const ys = vals.map(v => v.y); const minX = Math.min(...xs), maxX = Math.max(...xs); const minY = Math.min(...ys), maxY = Math.max(...ys); }} className="w-9 h-9 rounded-full bg-white/80 backdrop-blur border border-slate-200 shadow flex items-center justify-center text-lg font-bold text-slate-600 hover:bg-white hover:shadow-xl transition">
-          ＋
-        </button>
-        <button className="w-9 h-9 rounded-full bg-white/80 backdrop-blur border border-slate-200 shadow flex items-center justify-center text-lg font-bold text-slate-600 hover:bg-white hover:shadow-xl transition">
-          −
-        </button>
-        <button onClick={() => setSelected(null)} className="px-3 py-1.5 rounded-full bg-white/80 backdrop-blur border border-slate-200 shadow text-xs text-slate-600 hover:bg-white hover:shadow-xl transition">
-          รีเซ็ต
-        </button>
-      </div>
-
-      {/* ตำนานสี */}
-      <div className="absolute top-3 left-3 z-10 flex flex-wrap gap-1.5 text-[10px]">
-        <span className="px-2 py-1 rounded-full bg-emerald-50 border border-emerald-200">● PASS/ACTIVE</span>
-        <span className="px-2 py-1 rounded-full bg-sky-50 border border-sky-200">● PROMOTED</span>
-        <span className="px-2 py-1 rounded-full bg-amber-50 border border-amber-200">● WARNING</span>
-        <span className="px-2 py-1 rounded-full bg-orange-50 border border-orange-200">● FAIL</span>
-        <span className="px-2 py-1 rounded-full bg-red-50 border border-red-200">● REMOVED</span>
-        <span className="px-2 py-1 rounded-full bg-slate-50 border border-dashed">◌ VACANT</span>
-      </div>
-
-      {/* ปุ่มดูผลงาน */}
-      <div className="absolute top-3 right-3 z-10">
-        <Link href="/income" className="px-4 py-2 rounded-full bg-[#475569] text-white text-xs font-semibold shadow-lg hover:bg-slate-800 hover:shadow-xl transition flex items-center gap-1.5">
-          <span>📊</span> ดูผลงาน
-        </Link>
-      </div>
-
-      {/* ชั้นนำหน้า */}
-      <div className="absolute bottom-4 left-4 z-10 text-[10px] text-slate-400 bg-white/70 backdrop-blur px-2.5 py-1 rounded-lg">
-        ชั้น 0 · 1 · 2 · 3 · 4 · ... ขยายไม่จำกัด
-      </div>
-    </div>
-  );
-}
-
-/* ---------- หน้าหลัก ---------- */
-export default function NetworkExamplePage() {
-  const [levels, setLevels] = useState(4);
-  const [selected, setSelected] = useState<string | null>('1');
-  const [showCommission, setShowCommission] = useState(false);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [running, setRunning] = useState(false);
-  const [runMsg, setRunMsg] = useState('');
-  const [disclosed, setDisclosed] = useState(false);
-  const [runSpeed, setRunSpeed] = useState(300);
-  const [particleSpeed, setParticleSpeed] = useState(1000);
-  const [particleCount, setParticleCount] = useState(5);
-  const [particleColor, setParticleColor] = useState('#ffffff');
-  const [showParticles, setShowParticles] = useState(true);
-  const [highlightDuration, setHighlightDuration] = useState(4000);
-  const [lastPlacedConn, setLastPlacedConn] = useState<{ parentId: string; childId: string } | null>(null);
-
-  // สร้าง members เมื่อ levels เปลี่ยน
-  useEffect(() => {
-    setMembers(makeMembers(levels));
-    setSelected('1');
-    setDisclosed(false);
-    setRunning(false);
-    setRunMsg('');
-  }, [levels]);
-
-  // เรียกดูรายการสมาชิก (ใช้โดยปุ่มดูผลงาน)
-  const navigateToIncome = useCallback(() => {
-    setShowCommission(true);
-    setTimeout(() => {
-      window.location.href = '/income';
-    }, 200);
-  }, []);
-
-  // รันจำลองการวางตำแหน่ง 1→5→25→125...
-  const runSimulation = useCallback(async () => {
-    if (running) return;
-    setRunning(true);
-    setDisclosed(false);
-    setRunMsg('เริ่มสร้างผัง 1 แตก 5...');
-
-    const all = members;
-    const root = all[0];
-    if (!root) { setRunning(false); return; }
-
-    // เริ่มจาก root ก่อน
-    setDisclosed(true);
-    setRunMsg(`🔧 วาง ROOT — ${root.memberId} (${root.name})`);
-
-    // BFS queue: ทำทีละระดับ
-    const queue: Member[] = [root];
-    let placed = 0;
-
-    while (queue.length > 0 && running) {
-      const parent = queue.shift()!;
-      const children = parent.children;
-      for (let i = 0; i < children.length; i++) {
-        if (!running) break;
-        const child = children[i];
-        placed++;
-        // ติดตามเส้นที่วางล่าสุด (สำหรับ highlight สีทอง)
-        setLastPlacedConn({ parentId: parent.id, childId: child.id });
-        // เปิดเผยโหนดทีละช่อง
-        setDisclosed(true);
-        if (parent.level === 0) {
-          setRunMsg(`🌱 ระดับ 1 · Slot ${child.slot}/5 — วาง ${child.name} (${child.memberId})`);
-        } else {
-          setRunMsg(`🔹 ระดับ ${parent.level + 1} · Slot ${child.slot}/5 ของ ${parent.name} — วาง ${child.name} (${child.memberId})`);
-        }
-        await sleep(runSpeed);
-        queue.push(child);
-      }
-    }
-
-    if (running) {
-      setRunMsg(`✅ เสร็จสิ้น — วางทั้งหมด ${placed} รายการ (ระดับ ${levels})`);
-      setRunning(false);
-    }
-    // ล้างเส้นที่วางล่าสุดหลังจาก 1.5 วินาที
-    setTimeout(() => setLastPlacedConn(null), 1500);
-  }, [members, levels, running, runSpeed]);
-
-  const cancelSimulation = useCallback(() => {
-    setRunning(false);
-    setRunMsg('หยุดการรัน');
-  }, []);
-
-  // ตรวจโครงสร้าง 1:5 — ตรวจสอบ over-capacity, slot ซ้ำ, สมาชิกซ้ำ
-  const [structResult, setStructResult] = useState<any>(null);
-  const checkStructure = useCallback(() => {
-    const placements: any[] = [];
-    const nodes: any[] = [];
-    // สร้าง placement จาก members
-    members.forEach(m => {
-      nodes.push({ id: m.id, userId: m.memberId, name: m.name, level: m.level, status: m.status });
-      m.children.forEach((c, slot) => {
-        placements.push({ parentId: m.id, childId: c.id, slot: slot + 1, parentName: m.name, childName: c.name });
-      });
-    });
-
-    // 1) นับ parent -> slots หา over-capacity (>5)
-    const byParent = new Map<string, number[]>();
-    const invalidSlot: any[] = [];
-    for (const p of placements) {
-      if (!byParent.has(p.parentId)) byParent.set(p.parentId, []);
-      byParent.get(p.parentId)!.push(p.slot);
-      if (typeof p.slot !== 'number' || p.slot < 1 || p.slot > 5) invalidSlot.push(p);
-    }
-    const overCapacity = [...byParent.entries()].filter(([, slots]) => slots.length > 5).map(([parentId, slots]) => ({
-      parentId, count: slots.length, slots, parentName: nodes.find(n => n.id === parentId)?.name
-    }));
-    // 2) slot ซ้ำ
-    const duplicateSlots = [...byParent.entries()].filter(([, slots]) => new Set(slots).size !== slots.length);
-    // 3) สมาชิกซ้ำหลายตำแหน่ง
-    const childCounts = new Map<string, number>();
-    for (const p of placements) childCounts.set(p.childId, (childCounts.get(p.childId) || 0) + 1);
-    const duplicateChild = [...childCounts.entries()].filter(([, c]) => c > 1);
-
-    const ok = overCapacity.length === 0 && duplicateSlots.length === 0 && duplicateChild.length === 0 && invalidSlot.length === 0;
-    const summary = ok
-      ? `โครงสร้างปกติ — placements ${placements.length} รายการ, nodes ${nodes.length} รายการ, ไม่เกิน 5 ช่อง/parent`
-      : `พบปัญหา — เกิน 5 ช่อง ${overCapacity.length} • slot ซ้ำ ${duplicateSlots.length} • สมาชิกซ้ำ ${duplicateChild.length} • slot นอกช่วง ${invalidSlot.length}`;
-
-    setStructResult({
-      ok, summary,
-      totalPlacements: placements.length,
-      totalNodes: nodes.length,
-      overCapacity,
-      duplicateSlots: duplicateSlots.map(([k, v]) => ({ parentId: k, slots: v, parentName: nodes.find(n => n.id === k)?.name })),
-      duplicateChild,
-      invalidSlot: invalidSlot.length,
-      cycles: 0,
-      crossOrg: 0,
-    });
-    setRunMsg(summary);
-  }, [members]);
-
-  const stats = useMemo(() => {
-    const all = members;
-    const c = (s: Status) => all.filter(x => x.status === s).length;
-    return {
-      total: all.length,
-      active: c('ACTIVE') + c('PASS'),
-      pass: c('PASS'),
-      warning: c('WARNING'),
-      fail: c('FAIL'),
-      removed: c('REMOVED'),
-      promoted: c('PROMOTED'),
-      vacant: all.reduce((acc, m) => acc + (5 - m.children.length), 0),
-      levels: Math.max(...all.map(x => x.level)),
+/** สร้างโครง 5-ary tree + แบ่งมุมแบบ wedge (แต่ละกิ่งได้เสี้ยวของตัวเอง ไม่ทับกัน) */
+function buildSkeleton(maxDepth: number) {
+  const make = (
+    level: number, branch: number, a0: number, a1: number,
+    parent: Node | null, slot: number, id: string,
+  ): Node => {
+    const node: Node = {
+      id, level, branch, slot, angle: (a0 + a1) / 2,
+      x: 0, y: 0, parent, children: [],
     };
-  }, [members]);
+    if (level < maxDepth) {
+      const w = (a1 - a0) / FANOUT;
+      for (let i = 0; i < FANOUT; i++) {
+        node.children.push(
+          make(level + 1, level === 0 ? i : branch, a0 + i * w, a0 + (i + 1) * w, node, i + 1, `${id}.${i + 1}`),
+        );
+      }
+    }
+    return node;
+  };
+  const a0 = -Math.PI / 2 - Math.PI / FANOUT;   // ให้กิ่งแรกชี้ขึ้น
+  const root = make(0, 0, a0, a0 + Math.PI * 2, null, 0, 'root');
+  const ordered: Node[] = [];
+  const q: Node[] = [root];
+  while (q.length) { const n = q.shift()!; ordered.push(n); for (const c of n.children) q.push(c); }
+  return { root, ordered };
+}
 
-  const selectedMember = useMemo(() => {
-    if (!selected) return members[0];
-    return members.find(m => m.id === selected) || members[0];
-  }, [selected, members]);
+const THB = (n: number) => n.toLocaleString('th-TH', { maximumFractionDigits: 0 });
+
+export default function NetworkExamplePage() {
+  const [depth, setDepth] = useState(3);
+  const [zoom, setZoom] = useState(1);
+  const [flowOn, setFlowOn] = useState(true);
+  const [speed, setSpeed] = useState(700);            // ms ต่อ 1 คน (700 = ปกติ)
+  const [running, setRunning] = useState(false);
+  const [viewer, setViewer] = useState<Assignment | null>(null);
+  const [assigned, setAssigned] = useState<Record<string, Assignment>>({});
+  const [lastAdded, setLastAdded] = useState<string | null>(null);
+  const [log, setLog] = useState<string[]>([]);
+  const seq = useRef(0);
+
+  const { root, ordered } = useMemo(() => buildSkeleton(depth), [depth]);
+
+  const layout = useMemo(() => {
+    const maxR = radiusOf(depth);
+    const pad = 92;
+    const size = (maxR + pad) * 2;
+    const center = maxR + pad;
+    for (const n of ordered) {
+      const r = radiusOf(n.level);
+      n.x = center + Math.cos(n.angle) * r;
+      n.y = center + Math.sin(n.angle) * r;
+    }
+    const edges: { from: Node; to: Node; key: string }[] = [];
+    for (const n of ordered) for (const c of n.children) edges.push({ from: n, to: c, key: c.id });
+    return { size, center, edges };
+  }, [ordered, depth]);
+
+  const capacity = ordered.length;
+  const filledNodes = ordered.filter((n) => assigned[n.id]);
+  const filled = filledNodes.length;
+
+  const income = useMemo(() => {
+    const byLevel: number[] = [];
+    let total = 0;
+    for (const n of filledNodes) {
+      if (n.level === 0) continue;
+      const rate = LEVEL_INCOME[Math.min(n.level, LEVEL_INCOME.length - 1)] || 0;
+      byLevel[n.level] = (byLevel[n.level] || 0) + rate;
+      total += rate;
+    }
+    return { total, byLevel };
+  }, [filledNodes]);
+
+  /* ── ผู้ใช้ที่ล็อกอิน (ศูนย์กลางใช้รูปจริง) ── */
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      let a: Assignment | null = null;
+      try {
+        const r = await fetch('/api/auth/me', { credentials: 'include', cache: 'no-store' });
+        const j = await r.json();
+        if (j?.ok && j?.user) {
+          const u = j.user;
+          a = {
+            name: u.displayName || [u.firstName, u.lastName].filter(Boolean).join(' ') || u.nickname || 'คุณ',
+            memberId: u.memberCode || u.referralCode || 'ME',
+            avatarUrl: u.avatarUrl || undefined,
+            isViewer: true,
+          };
+        }
+      } catch { /* ไม่ได้ล็อกอิน → ใช้ตัวอย่าง */ }
+      if (cancelled) return;
+      if (!a) a = { name: 'คุณ (ตัวอย่าง)', memberId: 'DEMO-000000', isViewer: true };
+      setViewer(a);
+      setAssigned({ [root.id]: a });
+    })();
+    return () => { cancelled = true; };
+  }, [root]);
+
+  /* ── เปลี่ยนชั้น → รีเซ็ต (คงศูนย์กลางไว้) ── */
+  useEffect(() => {
+    setRunning(false);
+    setLastAdded(null);
+    setLog([]);
+    seq.current = 0;
+    setAssigned((prev) => {
+      const v = prev[root.id] || viewer;
+      return v ? { [root.id]: v } : {};
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [depth]);
+
+  const newAssignment = useCallback((): Assignment => {
+    seq.current += 1;
+    const i = seq.current;
+    return {
+      name: `${NAMES[i % NAMES.length]} ${SURNAMES[i % SURNAMES.length]}`,
+      memberId: `M-${String(200000 + i * 7).padStart(6, '0')}`,
+    };
+  }, []);
+
+  /** เติมสมาชิกถัดไปตามลำดับชั้น (BFS) — ชั้นตื้นสุดก่อน ซ้าย→ขวา */
+  const addNext = useCallback((): string | null => {
+    let target: Node | null = null;
+    for (const n of ordered) {
+      if (assigned[n.id]) continue;
+      if (!n.parent || assigned[n.parent.id]) { target = n; break; }
+    }
+    if (!target) return null;
+    const t = target;
+    const a = newAssignment();
+    setAssigned((prev) => ({ ...prev, [t.id]: a }));
+    setLastAdded(t.id);
+    setLog((prev) => [`+ ${a.name} → ชั้น ${t.level} ทิศ ${t.branch + 1} ช่อง ${t.slot}`, ...prev].slice(0, 6));
+    return t.id;
+  }, [ordered, assigned, newAssignment]);
+
+  /** กดที่วงกลม = เติมตำแหน่งนั้น / ขยายชั้นถัดไปของกิ่งนั้น */
+  const expandNode = useCallback((n: Node) => {
+    if (!assigned[n.id]) {
+      const a = newAssignment();
+      setAssigned((prev) => ({ ...prev, [n.id]: a }));
+      setLastAdded(n.id);
+      setLog((prev) => [`+ ${a.name} → ชั้น ${n.level} ทิศ ${n.branch + 1}`, ...prev].slice(0, 6));
+      return;
+    }
+    const kids = n.children.filter((c) => !assigned[c.id]);
+    if (!kids.length) return;
+    setAssigned((prev) => {
+      const next = { ...prev };
+      for (const c of kids) next[c.id] = newAssignment();
+      return next;
+    });
+    setLastAdded(kids[0].id);
+    setLog((prev) => [`↳ ขยาย${n.level === 0 ? 'จากศูนย์กลาง' : `ชั้น ${n.level}`} ออก ${kids.length} ตำแหน่ง`, ...prev].slice(0, 6));
+  }, [assigned, newAssignment]);
+
+  /* ── ทำงานอัตโนมัติต่อเนื่อง (เหมือน n8n ที่รันอยู่ตลอด) ── */
+  useEffect(() => {
+    if (!running) return;
+    if (filled >= capacity) { setRunning(false); return; }
+    const t = setTimeout(() => { addNext(); }, speed);
+    return () => clearTimeout(t);
+  }, [running, filled, capacity, speed, addNext]);
+
+  useEffect(() => {
+    if (!lastAdded) return;
+    const t = setTimeout(() => setLastAdded(null), 1400);
+    return () => clearTimeout(t);
+  }, [lastAdded]);
+
+  const reset = () => {
+    setRunning(false);
+    seq.current = 0;
+    setLog([]);
+    setLastAdded(null);
+    setAssigned(viewer ? { [root.id]: viewer } : {});
+  };
+
+  const initials = (s: string) =>
+    (s || '')
+      .replace(/[^\u0E00-\u0E7F A-Za-z]/g, ' ')
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((w) => w[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+  const safeId = (id: string) => id.replace(/\./g, '-');
+  const nodeR = (level: number) => (level === 0 ? 34 : level === 1 ? 21 : level === 2 ? 13 : 8);
+
+  const reachLevel = filledNodes.reduce((mx, n) => Math.max(mx, n.level), 0);
+  const isFull = capacity > 1 && filled >= capacity;
 
   return (
     <div>
       <Header />
       <div className="flex w-full">
         <Sidebar />
-        <main className="flex-1 p-0">
-          {/* Header แถมบน */}
-          <div className="absolute top-0 left-0 right-0 z-20 flex flex-wrap items-center gap-3 px-4 py-2 bg-white/80 backdrop-blur border-b border-slate-200">
-            <h1 className="text-lg font-bold text-[#475569]">ตัวอย่างเครือข่าย — 1 แตก 5</h1>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#f0f7ff] border border-[#dbeafe] text-[#2563eb]">🌐 สร้างเครือข่าย</span>
-            <div className="ml-auto flex items-center gap-2">
-              {/* ควบคุมชั้น */}
-              <div className="flex items-center gap-2">
-                <select value={levels} onChange={e => setLevels(Number(e.target.value))}
-                  className="border rounded-lg px-2.5 py-1.5 text-xs bg-white font-medium">
-                  <option value={2}>2 ชั้น · 31 คน</option>
-                  <option value={3}>3 ชั้น · 156 คน</option>
-                  <option value={4}>4 ชั้น · 781 คน</option>
-                  <option value={5}>5 ชั้น · 3,906 คน</option>
-                  <option value={6}>6 ชั้น · 19,531 คน</option>
-                </select>
-              </div>
-              {/* ตัวเร็วในการรัน */}
-              <div className="flex items-center gap-1 ml-2">
-                <span className="text-[10px] text-slate-500">ความเร็ว:</span>
-                <button onClick={() => setRunSpeed(100)} className={`px-2 py-1 rounded text-[10px] ${runSpeed===100?'bg-emerald-100 text-emerald-700':'bg-slate-50 text-slate-600 border'}`}>เร็ว</button>
-                <button onClick={() => setRunSpeed(300)} className={`px-2 py-1 rounded text-[10px] ${runSpeed===300?'bg-amber-100 text-amber-700':'bg-slate-50 text-slate-600 border'}`}>ปกติ</button>
-                <button onClick={() => setRunSpeed(700)} className={`px-2 py-1 rounded text-[10px] ${runSpeed===700?'bg-blue-100 text-blue-700':'bg-slate-50 text-slate-600 border'}`}>ช้า</button>
-              </div>
-              {/* ปุ่มรัน / หยุด / ทดลองโครงสร้าง */}
-              <div className="flex items-center gap-1.5 ml-2">
-                {running ? (
-                  <button onClick={cancelSimulation}
-                    className="px-3 py-1.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold border border-red-200 hover:bg-red-200 shadow flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-red-500 inline-block"/> หยุด
-                  </button>
-                ) : (
-                  <button onClick={runSimulation}
-                    className="px-3 py-1.5 rounded-full bg-[#475569] text-white text-xs font-semibold hover:bg-slate-800 shadow flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-white inline-block animate-pulse"/>
-                    รันจำลอง
-                  </button>
-                )}
-                <button onClick={checkStructure}
-                  className="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50 shadow flex items-center gap-1.5">
-                  <span className="text-sm">✅</span> ทดลองโครงสร้าง
-                </button>
-              </div>
-            </div>
-              <span className="text-[10px] text-slate-500">
-                Lv.{stats.levels} · {stats.total} คน · {stats.vacant} ว่าง
-              </span>
-            </div>
-          </main>
+        <main className="flex-1 p-5 space-y-4 min-w-0">
 
-          {/* Tree canvas เต็มจอ */}
-          <RadialTree
-            members={members}
-            selectedId={selected}
-            setSelected={setSelected}
-            levels={levels}
-            disclosed={disclosed}
-            lastPlacedConn={lastPlacedConn}
-            particleSpeed={particleSpeed}
-            particleCount={particleCount}
-            particleColor={particleColor}
-            showParticles={showParticles}
-            highlightDuration={highlightDuration}
-          />
-
-          {/* ผลตรวจโครงสร้าง */}
-          {structResult && (
-            <div className="absolute top-14 left-4 z-15 max-w-md card p-3 bg-white/95 backdrop-blur border shadow-lg rounded-2xl">
-              <div className="text-xs font-semibold text-navy mb-1">ผลตรวจโครงสร้าง 1:5</div>
-              <div className="text-[11px] text-slate-600 space-y-1">
-                <div className="flex justify-between"><span>Over-capacity</span><span className="font-mono">{structResult.overCapacity?.length ?? 0} รายการ</span></div>
-                <div className="flex justify-between"><span>Slot ซ้ำ</span><span className="font-mono">{structResult.duplicateSlots?.length ?? 0}</span></div>
-                <div className="flex justify-between"><span>สมาชิกซ้ำ</span><span className="font-mono">{structResult.duplicateChild?.length ?? 0}</span></div>
-                <div className="flex justify-between"><span>Slot นอกช่วง</span><span className="font-mono">{structResult.invalidSlot ?? 0}</span></div>
-              </div>
-              {structResult.ok ? (
-                <div className="mt-2 text-[11px] text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full">✓ {structResult.summary}</div>
-              ) : (
-                <div className="mt-2 text-[11px] text-rose-700 bg-rose-50 px-2 py-1 rounded-full">⚠ {structResult.summary}</div>
-              )}
-              {structResult.overCapacity?.length > 0 && (
-                <div className="mt-2 text-[10px] text-slate-600 space-y-1 max-h-[120px] overflow-auto">
-                  {structResult.overCapacity.map((oc: any) => (
-                    <div key={oc.parentId} className="flex justify-between">
-                      <span>{oc.parentName} — {oc.count} ช่อง (เกิน 5)</span>
-                      <span className="font-mono">{oc.slots.join(', ')}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+          {/* ── หัวเรื่อง + สถานะสด ── */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div>
+              <h1 className="text-xl font-bold text-navy">ตัวอย่างเครือข่าย — 1 แตก 5</h1>
+              <p className="text-xs text-slate-500 mt-0.5">
+                ดูการขยายเครือข่ายเป็นชั้น ๆ จากรูปของคุณเอง — กดปุ่มแล้วระบบเติมสมาชิกและคิดรายได้ให้ดูต่อเนื่อง
+              </p>
             </div>
-          )}
-
-          {/* Panel ข้อมูลสมาชิกที่เลือก (ลอยขวา) */}
-          {selectedMember && (
-            <div className="absolute right-4 top-20 z-20 w-72 card p-4 bg-white/95 backdrop-blur border shadow-xl rounded-2xl">
-              <div className="text-xs font-semibold text-slate-500 mb-2">รายละเอียด</div>
-              {/* Avatar วงกลม */}
-              <div className="flex flex-col items-center mb-3">
-                <div className="w-14 h-14 rounded-full bg-white border-2 border-[#dbeafe] shadow flex items-center justify-center overflow-hidden" style={{ borderRadius: '50%' }}>
-                  {selectedMember.status === 'REMOVED' ? (
-                    <span className="text-xl">✕</span>
-                  ) : selectedMember.status === 'PROMOTED' ? (
-                    <span className="text-xl">★</span>
-                  ) : (
-                    <span className="text-xl font-bold text-[#475569]">
-                      {selectedMember.name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()}
-                    </span>
-                  )}
-                </div>
-                <div className="mt-2 font-bold text-sm">{selectedMember.name}</div>
-                <div className="font-mono text-xs px-2 py-0.5 rounded-full bg-white border inline-block mt-1">
-                  {selectedMember.memberId}
-                </div>
-              </div>
-              <div className={`inline-flex px-2.5 py-1 rounded-full border text-xs font-semibold mb-3 ${statusBg(selectedMember.status)}`}>
-                {selectedMember.status} · KPI {selectedMember.kpi}/100
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs mb-3">
-                <div className="p-2 rounded-xl bg-white border"><div className="text-slate-400">Level</div><div className="font-bold">{selectedMember.level}</div></div>
-                <div className="p-2 rounded-xl bg-white border"><div className="text-slate-400">Slot</div><div className="font-bold">{selectedMember.slot || '-'}</div></div>
-                <div className="p-2 rounded-xl bg-white border"><div className="text-slate-400">ทีมตรง</div><div className="font-bold">{selectedMember.children.length}/5</div></div>
-                <div className="p-2 rounded-xl bg-white border"><div className="text-slate-400">Parent</div><div className="font-mono text-[10px]">{selectedMember.parentId ? selectedMember.parentId.slice(0, 8) : '-'}</div></div>
-              </div>
-              <div className="text-[11px] text-slate-500 space-y-1 mb-3">
-                <div>• Sponsor / Placement แยกกัน</div>
-                <div>• Transaction + Lock Slot</div>
-                <div>• ป้องกัน Cycle + Audit Log</div>
-              </div>
-              {/* ปุ่มดูผลงานจากตรงนี้ด้วย */}
-              <button
-                onClick={() => setShowCommission(true)}
-                className="w-full px-3 py-2 rounded-xl bg-[#475569] text-white text-xs font-semibold hover:bg-slate-800 shadow"
-              >
-                📊 ดูผลงานของสมาชิกนี้
-              </button>
-              {showCommission && (
-                <div className="mt-2 p-2 rounded-xl bg-sky-50 border border-sky-200 text-[10px] text-sky-700">
-                  เปิดหน้า รายได้/ผลงาน ในอีก 2 วินาที...
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ฟุตเตอร์ */}
-          <div className="absolute bottom-0 left-0 right-0 z-10 text-center text-[10px] text-slate-400 bg-gradient-to-t from-white/60 to-transparent py-2">
-            Demo • ข้อมูลจำลอง • ใช้ข้อมูลจริงเมื่อเชื่อม API • กฎ 1 แตก 5 • KPI 80/60
+            <span className={`ml-auto flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border ${running ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
+              <span className={`w-2 h-2 rounded-full ${running ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+              {running ? 'กำลังทำงานอัตโนมัติ' : 'หยุดอยู่'}
+            </span>
           </div>
-        </div>
+
+          {/* ── แถบควบคุม ── */}
+          <div className="card p-3 flex flex-wrap items-center gap-2 text-xs">
+            {running ? (
+              <button onClick={() => setRunning(false)}
+                className="px-4 py-2 rounded-full bg-rose-600 text-white font-semibold shadow-sm hover:bg-rose-700 flex items-center gap-2">
+                ⏸ หยุด
+              </button>
+            ) : (
+              <button onClick={() => setRunning(true)} disabled={isFull}
+                className="px-4 py-2 rounded-full bg-navy text-white font-semibold shadow-sm hover:opacity-90 disabled:opacity-40 flex items-center gap-2">
+                ▶ เพิ่มสมาชิกอัตโนมัติ
+              </button>
+            )}
+            <button onClick={() => addNext()} disabled={isFull}
+              className="px-3 py-2 rounded-full bg-white border border-slate-200 font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40">
+              ⏭ เพิ่มทีละคน
+            </button>
+            <button onClick={reset}
+              className="px-3 py-2 rounded-full bg-white border border-slate-200 font-semibold text-slate-600 hover:bg-slate-50">
+              ↺ เริ่มใหม่
+            </button>
+
+            <span className="text-slate-300">|</span>
+
+            <span className="text-slate-500">ความเร็ว</span>
+            {([['เร็ว', 260], ['ปกติ', 700], ['ช้า', 1400]] as [string, number][]).map(([label, ms]) => (
+              <button key={label} onClick={() => setSpeed(ms)}
+                className={`px-3 py-1.5 rounded-lg border font-semibold ${speed === ms ? 'bg-sky-50 border-sky-200 text-sky-700' : 'bg-white text-slate-600'}`}>
+                {label}
+              </button>
+            ))}
+
+            <span className="text-slate-300">|</span>
+
+            <span className="text-slate-500">ชั้นการขยาย</span>
+            {[2, 3, 4].map((d) => (
+              <button key={d} onClick={() => setDepth(d)}
+                className={`px-3 py-1.5 rounded-lg border font-semibold ${depth === d ? 'bg-[#eff6ff] border-[#dbeafe] text-sky-700' : 'bg-white text-slate-600'}`}>
+                {d} ชั้น
+              </button>
+            ))}
+
+            <button onClick={() => setFlowOn((v) => !v)}
+              className={`px-3 py-1.5 rounded-lg border font-semibold ${flowOn ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white text-slate-500'}`}>
+              แสงวิ่ง {flowOn ? 'เปิด' : 'ปิด'}
+            </button>
+
+            <div className="ml-auto flex items-center gap-2">
+              <button onClick={() => setZoom((z) => Math.max(0.4, +(z - 0.15).toFixed(2)))} className="w-8 h-8 rounded-lg border bg-white font-bold text-slate-600">−</button>
+              <span className="tabular-nums w-12 text-center">{Math.round(zoom * 100)}%</span>
+              <button onClick={() => setZoom((z) => Math.min(2.2, +(z + 0.15).toFixed(2)))} className="w-8 h-8 rounded-lg border bg-white font-bold text-slate-600">＋</button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-4 items-start">
+
+            {/* ── ผังวงกลม ── */}
+            <div className="overflow-auto border border-slate-800 rounded-2xl bg-[#0b1020] p-4">
+              <style>{`
+                @keyframes nxFlow { to { stroke-dashoffset: -80; } }
+                @keyframes nxBreathe { 0%,100% { opacity:.30; } 50% { opacity:1; } }
+                @keyframes nxPop { 0% { opacity:0; } 60% { opacity:1; } 100% { opacity:1; } }
+                .nx-flow { stroke-dasharray: 7 17; animation: nxFlow 1.1s linear infinite; }
+                .nx-ring { animation: nxBreathe 2.6s ease-in-out infinite; }
+                .nx-pop { animation: nxPop .6s ease-out; }
+                .nx-label { paint-order: stroke; stroke: #0b1020; stroke-width: 3px; stroke-linejoin: round; }
+              `}</style>
+
+              {/* ต้องระบุขนาด CSS ชัดเจน ไม่งั้น svg จะย่อเหลือ 300x150 แล้วมองไม่เห็น */}
+              <div style={{ width: '100%', maxWidth: layout.size * zoom, aspectRatio: '1 / 1', margin: '0 auto' }}>
+                <svg viewBox={`0 0 ${layout.size} ${layout.size}`} width="100%" height="100%"
+                     role="img" aria-label="ผังเครือข่าย 1 แตก 5">
+                  <defs>
+                    <radialGradient id="nxBG" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" stopColor="#121b38" />
+                      <stop offset="100%" stopColor="#070b16" />
+                    </radialGradient>
+                    {BRANCH_COLORS.map((c, i) => (
+                      <linearGradient key={i} id={`nxG${i}`} x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor={c} stopOpacity="0.95" />
+                        <stop offset="100%" stopColor={c} stopOpacity="0.32" />
+                      </linearGradient>
+                    ))}
+                  </defs>
+
+                  <rect x="0" y="0" width={layout.size} height={layout.size} fill="url(#nxBG)" />
+
+                  {/* วงแหวนแต่ละชั้น */}
+                  {Array.from({ length: depth }, (_, i) => (
+                    <circle key={i} cx={layout.center} cy={layout.center} r={radiusOf(i + 1)}
+                      fill="none" stroke="#1e293b" strokeWidth="1" strokeDasharray="3 9" />
+                  ))}
+
+                  {/* เส้นเชื่อม + แสงวิ่ง */}
+                  <g fill="none">
+                    {layout.edges.map((e) => {
+                      const col = BRANCH_COLORS[e.to.branch % FANOUT];
+                      const d = `M ${e.from.x} ${e.from.y} L ${e.to.x} ${e.to.y}`;
+                      const live = !!assigned[e.to.id];
+                      return (
+                        <g key={e.key}>
+                          <path d={d} stroke={col} strokeOpacity={live ? 0.22 : 0.07} strokeWidth={Math.max(1.2, 5 - e.to.level)} />
+                          {live && <path d={d} stroke={`url(#nxG${e.to.branch % FANOUT})`} strokeWidth="1.5" />}
+                          {flowOn && live && (
+                            <path d={d} className="nx-flow" stroke="#e2f4ff" strokeWidth="1.6"
+                                  strokeLinecap="round" strokeOpacity="0.85" />
+                          )}
+                          {flowOn && live && e.to.level <= 2 && (
+                            <circle r={e.to.level === 1 ? 3.6 : 2.6} fill={col}>
+                              <animateMotion dur={`${2 + (e.to.branch % FANOUT) * 0.3}s`} repeatCount="indefinite"
+                                begin={`${(e.to.slot % FANOUT) * 0.35}s`} path={d} />
+                            </circle>
+                          )}
+                        </g>
+                      );
+                    })}
+                  </g>
+
+                  {/* โหนด */}
+                  {ordered.map((n) => {
+                    const a = assigned[n.id];
+                    const r = nodeR(n.level);
+                    const col = a ? BRANCH_COLORS[n.branch % FANOUT] : '#475569';
+                    const isNew = lastAdded === n.id;
+                    return (
+                      <g key={n.id} onClick={() => expandNode(n)} style={{ cursor: 'pointer' }}
+                         className={isNew ? 'nx-pop' : ''}>
+                        <title>
+                          {a ? `${a.name} — ${a.memberId} (ชั้น ${n.level})` : `ตำแหน่งว่าง ชั้น ${n.level} — กดเพื่อเพิ่มสมาชิก`}
+                        </title>
+
+                        {/* พื้นที่กดแบบโปร่งใส — โหนดชั้นลึกวงเล็กมาก ต้องมีไว้ให้กดง่าย */}
+                        <circle cx={n.x} cy={n.y} r={r + 9} fill="transparent" />
+
+                        {/* รูปผู้ใช้ที่ล็อกอิน = ศูนย์กลาง (ทรงกลม) */}
+                        {n.level === 0 && a?.avatarUrl && (
+                          <>
+                            <clipPath id={`nxClip-${safeId(n.id)}`}><circle cx={n.x} cy={n.y} r={r - 2} /></clipPath>
+                            <image href={a.avatarUrl} x={n.x - r} y={n.y - r} width={r * 2} height={r * 2}
+                                   clipPath={`url(#nxClip-${safeId(n.id)})`} preserveAspectRatio="xMidYMid slice" />
+                          </>
+                        )}
+
+                        {a && <circle cx={n.x} cy={n.y} r={r + 7} fill="none" stroke={col} strokeWidth="1.4" className="nx-ring" />}
+
+                        <circle cx={n.x} cy={n.y} r={r}
+                          fill={a ? `${col}22` : '#0f172a'}
+                          stroke={isNew ? '#fde68a' : col}
+                          strokeWidth={a ? (n.level === 0 ? 3 : 2) : 1}
+                          strokeDasharray={a ? undefined : '3 3'} />
+
+                        {a && !(n.level === 0 && a.avatarUrl) && n.level <= 2 && (
+                          <text x={n.x} y={n.y + (n.level === 0 ? 6 : n.level === 1 ? 4.5 : 3.5)} textAnchor="middle"
+                                fontSize={n.level === 0 ? 19 : n.level === 1 ? 13 : 10} fontWeight={700} fill="#e2e8f0">
+                            {initials(a.name)}
+                          </text>
+                        )}
+                        {!a && n.level <= 2 && (
+                          <text x={n.x} y={n.y + (n.level === 0 ? 6 : 4)} textAnchor="middle"
+                                fontSize={n.level === 0 ? 18 : 11} fill="#64748b" fontWeight={700}>＋</text>
+                        )}
+
+                        {a && n.level <= 1 && (
+                          <text x={n.x} y={n.y + r + 15} textAnchor="middle" fontSize="11" fontWeight={600}
+                                fill="#cbd5e1" className="nx-label">
+                            {n.level === 0 ? a.name.slice(0, 18) : a.name.split(' ')[0]}
+                          </text>
+                        )}
+                        {a && n.level >= 1 && n.children.length > 0 && (
+                          <text x={n.x} y={n.y - r - 5} textAnchor="middle" fontSize="9" fill="#94a3b8">
+                            {n.children.filter((c) => assigned[c.id]).length}/{FANOUT}
+                          </text>
+                        )}
+                      </g>
+                    );
+                  })}
+
+                  <text x={layout.center} y={layout.center - 54} textAnchor="middle" fontSize="12" fontWeight={700} fill="#93c5fd">
+                    คุณคือศูนย์กลาง
+                  </text>
+                  <text x={layout.center} y={layout.center + 64} textAnchor="middle" fontSize="10" fill="#64748b">
+                    แตก 5 ทิศ · กดวงกลมเพื่อขยายชั้นถัดไป
+                  </text>
+                </svg>
+              </div>
+            </div>
+
+            {/* ── แผงผลลัพธ์ + รายได้ ── */}
+            <div className="space-y-3">
+              <div className="card p-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-sm">ผลลัพธ์การขยาย</h3>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold">ตัวอย่างสาธิต</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
+                  <div className="p-2.5 rounded-xl bg-slate-50 border">
+                    <div className="text-slate-400">สมาชิกในผัง</div>
+                    <div className="text-lg font-bold tabular-nums">
+                      {filled}<span className="text-xs font-normal text-slate-400"> / {capacity}</span>
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-slate-50 border">
+                    <div className="text-slate-400">ขยายถึงชั้น</div>
+                    <div className="text-lg font-bold tabular-nums">{reachLevel}</div>
+                  </div>
+                </div>
+                {isFull && (
+                  <div className="mt-2 text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                    ผังเต็มที่ {depth} ชั้นแล้ว — เลือก &ldquo;4 ชั้น&rdquo; เพื่อขยายต่อ
+                  </div>
+                )}
+                <div className="mt-3">
+                  <div className="text-[11px] text-slate-500 mb-1">บันทึกล่าสุด</div>
+                  {log.length ? (
+                    <ul className="space-y-1">
+                      {log.map((l, i) => (
+                        <li key={i} className={`text-[11px] px-2 py-1 rounded-lg border ${i === 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-50 text-slate-600'}`}>
+                          {l}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : <div className="text-[11px] text-slate-400">ยังไม่มีการเพิ่มสมาชิก</div>}
+                </div>
+              </div>
+
+              <div className="card p-4">
+                <h3 className="font-semibold text-sm">รายได้จากเครือข่าย <span className="text-[11px] font-normal text-slate-400">(ประมาณการตัวอย่าง)</span></h3>
+                <div className="mt-2 text-3xl font-bold text-emerald-600 tabular-nums">
+                  ฿{THB(income.total)}
+                  <span className="text-xs font-normal text-slate-400 ml-1">/เดือน</span>
+                </div>
+                <div className="mt-3 space-y-1 text-[11px]">
+                  {LEVEL_INCOME.slice(1).map((rate, i) => {
+                    const lv = i + 1;
+                    const cnt = filledNodes.filter((n) => n.level === lv).length;
+                    return (
+                      <div key={lv} className="flex items-center justify-between px-2 py-1 rounded-lg bg-slate-50 border">
+                        <span className="text-slate-600">ชั้น {lv} · {cnt} คน × ฿{THB(rate)}</span>
+                        <span className="font-semibold tabular-nums">฿{THB(income.byLevel[lv] || 0)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-3 text-[10px] text-slate-500 leading-relaxed">
+                  สมมติฐานสาธิต: ชั้น 1 = ฿2,000/คน (ค่าแยกหน่วยตามเกณฑ์ขึ้นตำแหน่ง) • ชั้น 2 = ฿500 • ชั้น 3 = ฿150
+                  — เป็น <b>ตัวอย่างเพื่อดูแนวโน้ม ไม่ใช่รายได้จริง</b> รายได้จริงคำนวณจากผลงานที่ยืนยันแล้วเท่านั้น
+                </div>
+                <Link href="/income" className="mt-3 block text-center px-3 py-2 rounded-xl bg-navy text-white text-xs font-semibold">
+                  ดูรายได้จริงของฉัน
+                </Link>
+              </div>
+
+              <div className="card p-4">
+                <h3 className="font-semibold text-sm">เกณฑ์ขึ้นตำแหน่ง (อ้างอิง)</h3>
+                <ul className="mt-2 space-y-1.5 text-[11px] text-slate-600">
+                  <li className="px-2 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200">
+                    <b>ชั้น 1 · ผู้บริหารหน่วย</b> — บำเหน็จ 20,000 • ค่าจัดงานหน่วย 25–40% + ค่าแยกหน่วย 2,000/หน่วย
+                  </li>
+                  <li className="px-2 py-1.5 rounded-lg bg-slate-50 border">
+                    <b>ชั้น 2 · ผู้บริหารศูนย์</b> — บำเหน็จ 75,000 • แยกหน่วย 2 หน่วย
+                  </li>
+                  <li className="px-2 py-1.5 rounded-lg bg-slate-50 border">
+                    <b>ชั้น 3 · ผู้บริหารภาค</b> — บำเหน็จ 1,200,000 • แยกศูนย์ 4 ศูนย์
+                  </li>
+                </ul>
+                <Link href="/career" className="mt-2 block text-[11px] text-sky-700 font-semibold">ดูบันไดตำแหน่งทั้งหมด →</Link>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-[11px]">
+            {BRANCH_COLORS.map((c, i) => (
+              <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-xl border bg-white">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ background: c }} />
+                <span className="text-slate-600">ทิศที่ {i + 1}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900">
+            <b>ข้อควรทราบ:</b> หน้านี้เป็น <b>ตัวอย่างสาธิต</b> ใช้ข้อมูลสมมติทั้งหมด (ไม่ดึงข้อมูลสมาชิกจริง)
+            • ตำแหน่งว่าง (เส้นประ) ไม่นับเป็นสมาชิก/ผลงาน/รายได้ • ตัวเลข {FANOUT}<sup>{depth}</sup> = {capacity} คือ <b>ความจุของผัง</b> ไม่ใช่จำนวนสมาชิกหรือรายได้จริง
+            • ลำดับการเติมใช้ชั้นตื้นสุดก่อน ซ้าย→ขวา ตรงกับระบบจัดวางจริง
+          </div>
+          <div className="text-[11px] text-slate-400">
+            รูปและชื่อที่ศูนย์กลางคือบัญชีที่คุณล็อกอินอยู่ • สมาชิกที่เพิ่มเข้ามาเป็นข้อมูลตัวอย่างสำหรับดูการขยายเครือข่าย
+          </div>
+        </main>
       </div>
+    </div>
   );
 }

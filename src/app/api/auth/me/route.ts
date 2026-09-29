@@ -14,7 +14,7 @@ export async function GET(req: NextRequest){
   try{
     profile = await prisma.user.findUnique({
       where:{ id: String((payload as any).sub) },
-      select:{ id:true, email:true, username:true, nickname:true, firstName:true, lastName:true, displayName:true, phone:true, occupation:true, province:true, district:true, subdistrict:true, addressLine:true, zipCode:true, lineId:true, facebookUrl:true, tiktokUrl:true, branch:true, memberCode:true, referralCode:true, status:true, rankLevel:true, pdpaConsentVersion:true, pdpaConsentedAt:true },
+      select:{ id:true, email:true, username:true, nickname:true, firstName:true, lastName:true, displayName:true, phone:true, occupation:true, province:true, district:true, subdistrict:true, addressLine:true, zipCode:true, lineId:true, facebookUrl:true, tiktokUrl:true, branch:true, memberCode:true, referralCode:true, status:true, rankLevel:true, pdpaConsentVersion:true, pdpaConsentedAt:true, avatarUrl:true },
     });
     // รหัสสมาชิก/รหัสแนะนำรันอัตโนมัติ — ถ้ายังว่าง (บัญชี OAuth เก่า) เติมให้ทันที
     if(profile && (!profile.memberCode || !profile.referralCode)){
