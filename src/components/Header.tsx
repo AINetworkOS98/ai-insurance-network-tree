@@ -49,12 +49,11 @@ export default function Header(){
           </div>
         </Link>
         <nav className="hidden md:flex gap-5 text-sm items-center">
-          {/* ยังไม่เข้าระบบ — ทุกเมนูลิงก์ไป /admin */}
+          {/* เมนูด้านบน: เฉพาะหน้าเนื้อหาสาธารณะ + เครื่องมือที่ทุกคนใช้
+              ("ตรวจสอบสมาชิก" /verify และ "รายได้" /income ย้ายไปเมนูด้านซ้ายแล้ว — ดู lib/navCatalog.ts) */}
           <Link href={user ? "/" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_home')}</Link>
           <Link href="/financial-freedom" className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors font-semibold">{t('nav_vision')}</Link>
-          <Link href={user ? "/verify" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_verify')}</Link>
           <Link href={user ? "/prospects" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_prospects')}</Link>
-          <Link href={user ? "/income" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_income')}</Link>
           {/* N8N Submenu — เฉพาะ Admin หรือสมาชิกอีเมล akarapol.pro798@gmail.com */}
           {canUseN8n && (
           <div className="relative">
@@ -142,9 +141,8 @@ export default function Header(){
             )}
             <Link href={user ? '/' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_home')}</Link>
             <Link href="/financial-freedom" onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_vision')}</Link>
-            <Link href={user ? '/verify' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_verify')}</Link>
+            {/* "ตรวจสอบสมาชิก" (/verify) และ "รายได้" (/income) อยู่ในเมนูด้านข้างแล้ว (กดปุ่ม "เมนูทั้งหมด" ได้) */}
             <Link href={user ? '/prospects' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_prospects')}</Link>
-            <Link href={user ? '/income' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_income')}</Link>
             <Link href={user ? '/contact' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_inquire')}</Link>
             <Link href={user ? '/notifications' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6] flex items-center gap-2">
               <span>🔔 {t('nav_notif')}</span>
