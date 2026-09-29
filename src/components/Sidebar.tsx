@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useT } from '@/i18n';
+import { isAdminEmail, isAdminRole } from '@/lib/access-rules';
 
 const items=[
   {href:"/", key:"nav_home", icon:"⌂"},
@@ -31,12 +32,25 @@ export default function Sidebar(){
   const [mobileOpen,setMobileOpen]=useState(false);
   const [networkOpen,setNetworkOpen]=useState(true);
   const [authed,setAuthed]=useState<boolean|null>(null);
+  // ผู้ดูแลระบบเท่านั้นที่เห็นลิงก์ n8n (สร้าง Workflow) — เช็กจากอีเมล/บทบาทที่ /api/auth/me คืนมา
+  const [isAdmin,setIsAdmin]=useState(false);
   // หน้าที่มีช่องค้นหา AI (มี data-ai-search) — ปุ่มเมนูลอยจะทับแถวปุ่ม "+"/"↑" ของช่องค้นหา
   // จึงไม่แสดงปุ่มลอยบนหน้านั้น ใช้เมนูด้านบน (Header) แทน
   const [hasAiSearch,setHasAiSearch]=useState(false);
 
   useEffect(()=>{
-    fetch('/api/auth/me', { credentials: 'include', cache:'no-store' }).then(r=>setAuthed(r.ok)).catch(()=>setAuthed(false));
+    fetch('/api/auth/me', { credentials: 'include', cache:'no-store' })
+      .then(async r=>{
+        setAuthed(r.ok);
+        if(r.ok){
+          try{
+            const j = await r.json();
+            const u = j?.user || {};
+            setIsAdmin(isAdminEmail(u.email) || isAdminRole(u.roles ?? j?.roles));
+          }catch{}
+        }
+      })
+      .catch(()=>setAuthed(false));
   },[]);
 
   useEffect(()=>{
@@ -147,6 +161,32 @@ export default function Sidebar(){
               </Link>
             )
           })}
+          {/* n8n (ผู้ดูแลระบบเท่านั้น) — ลิงก์ตรงไปหน้า "สร้าง Workflow" ใน n8n */}
+          {isAdmin && (
+            <div className="mt-1 space-y-1">
+              {!collapsed && <div className="text-[10px] tracking-widest text-slate-400 px-3 pb-1 pt-3">ระบบอัตโนมัติ</div>}
+              <a
+                href="http://localhost:5679/"
+                target="_blank"
+                rel="noopener noreferrer"
+                title={collapsed?'เปิด n8n เพื่อสร้าง Workflow':undefined}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors hover:bg-[#FFFBF5] text-slate-600 ${collapsed?'justify-center px-2':''}`}
+              >
+                <span className="w-5 text-center shrink-0">⚡</span>
+                {!collapsed && <span className="flex-1 text-left truncate">n8n · สร้าง Workflow</span>}
+                {!collapsed && <span className="shrink-0 text-[10px] text-slate-400">↗</span>}
+              </a>
+              <Link
+                href="/n8n"
+                onClick={()=>setMobileOpen(false)}
+                title={collapsed?'หน้า N8N ในระบบ':undefined}
+                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-colors ${collapsed?'justify-center px-2':''} ${path==='/n8n'?'bg-[#eff6ff] text-sky-700 font-semibold':'hover:bg-[#FFFBF5] text-slate-600'}`}
+              >
+                <span className="w-5 text-center shrink-0">🔗</span>
+                {!collapsed && <span className="truncate">หน้า N8N ในระบบ</span>}
+              </Link>
+            </div>
+          )}
         </>
       )}
       {!collapsed && authed!==false && <div className="pt-4 text-[11px] text-slate-400 px-3 mt-4">กด <kbd className="px-1.5 py-0.5 bg-slate-100 border rounded text-[10px]">Ctrl</kbd>+<kbd className="px-1.5 py-0.5 bg-slate-100 border rounded text-[10px]">B</kbd> หรือ <kbd className="px-1.5 py-0.5 bg-slate-100 border rounded text-[10px]">[</kbd> เพื่อหด/ขยาย</div>}
