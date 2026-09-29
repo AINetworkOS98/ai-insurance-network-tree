@@ -16,7 +16,7 @@ export default function ProgressPage(){
       <Header/>
       <div className="flex w-full">
         <Sidebar/>
-        <main className="flex-1 p-6 space-y-4">
+        <main className="min-w-0 flex-1 p-6 space-y-4">
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold text-[#475569]">ความก้าวหน้า ⬆</h1>
             <span className="badge-demo">เส้นทางตำแหน่ง</span>
