@@ -447,8 +447,10 @@ export default function YearTimeline({
     );
   }
 
-  const futureList = years.filter((y) => y > currentYear);
-  const pastList = years.filter((y) => y < currentYear);
+  // อนาคต: ปีใกล้สุด (เช่น 2570) อยู่บนสุด แล้วไล่ลงมา 2571, 2572
+  const futureList = years.filter((y) => y > currentYear).sort((a, b) => a - b);
+  // อดีต: ปีใกล้ปัจจุบันสุดอยู่บนสุด แล้วไล่ลงมา
+  const pastList = years.filter((y) => y < currentYear).sort((a, b) => b - a);
 
   const renderNode = (year: number, index: number, group: 'future' | 'past') => {
     const st = statsOf(year);
