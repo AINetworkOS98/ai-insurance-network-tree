@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useState, type ReactNode } from 'react';
+import NetworkEnergyMini from '@/components/NetworkEnergyMini';
 
 type TagKind = 'doc' | 'est' | 'need';
 
@@ -189,14 +190,14 @@ const TONE: Record<string, { dot: string; ring: string }> = {
   indigo: { dot: 'bg-indigo-400', ring: 'from-indigo-400/20 to-transparent border-indigo-300/30' },
   gold: { dot: 'bg-amber-400', ring: 'from-amber-400/20 to-transparent border-amber-300/30' },
   emerald: { dot: 'bg-emerald-400', ring: 'from-emerald-400/20 to-transparent border-emerald-300/30' },
-  need: { dot: 'bg-slate-400', ring: 'from-white/10 to-transparent border-white/20' },
+  need: { dot: 'bg-slate-400', ring: 'from-white/10 to-transparent bm-bd3' },
 };
 
 function Tag({ kind }: { kind: TagKind }) {
   const map: Record<TagKind, { t: string; c: string }> = {
-    doc: { t: 'ข้อมูลจากเอกสาร', c: 'border-sky-300/40 bg-sky-400/15 text-sky-100' },
-    est: { t: 'ประมาณการ', c: 'border-amber-300/40 bg-amber-400/15 text-amber-100' },
-    need: { t: 'รอข้อมูลจากคุณ', c: 'border-white/20 bg-white/10 text-slate-300' },
+    doc: { t: 'ข้อมูลจากเอกสาร', c: 'border-sky-300/40 bg-sky-400/15 bm-accent1' },
+    est: { t: 'ประมาณการ', c: 'border-amber-300/40 bg-amber-400/15 bm-accent2' },
+    need: { t: 'รอข้อมูลจากคุณ', c: 'bm-bd3 bm-soft bm-t2' },
   };
   const m = map[kind];
   return <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold tracking-wide ${m.c}`}>{m.t}</span>;
@@ -206,17 +207,17 @@ function Panel({ id, n, title, sub, icon, children, delay = 0 }: { id: string; n
   return (
     <section
       id={id}
-      className="bm-in scroll-mt-32 rounded-3xl border border-white/10 bg-white/[0.035] p-5 shadow-[0_18px_50px_-30px_rgba(56,189,248,0.5)] backdrop-blur-sm transition-colors hover:border-sky-300/25 hover:bg-white/[0.055] sm:p-6"
+      className="bm-in scroll-mt-32 rounded-3xl border bm-bd bm-panel p-5 shadow-[0_18px_50px_-30px_rgba(56,189,248,0.5)] backdrop-blur-sm transition-colors bm-panel-hover sm:p-6"
       style={{ animationDelay: `${delay}ms` }}
     >
       <div className="flex items-start gap-3">
         <span className="bm-badge flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-xs font-black text-[#04122a]">{n}</span>
         <div className="min-w-0">
-          <h2 className="text-[15px] font-bold text-white">
+          <h2 className="text-[15px] font-bold bm-t1">
             {icon && <span className="mr-1.5 text-sm opacity-80">{icon}</span>}
             {title}
           </h2>
-          {sub && <p className="mt-1 text-[11px] leading-relaxed text-slate-400">{sub}</p>}
+          {sub && <p className="mt-1 text-[11px] leading-relaxed bm-t3">{sub}</p>}
         </div>
       </div>
       <div className="mt-4">{children}</div>
@@ -232,8 +233,8 @@ function Flow({ items, tone = 'sky' }: { items: { n: string; d: string }[]; tone
         <li key={it.n}>
           <div className={`flex items-center gap-3 rounded-2xl border bg-gradient-to-r px-3 py-2.5 ${t.ring}`}>
             <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-[#04122a] ${t.dot}`}>{i + 1}</span>
-            <span className="min-w-0 text-xs font-semibold text-white">{it.n}</span>
-            <span className="ml-auto hidden text-[10px] text-slate-400 sm:block">{it.d}</span>
+            <span className="min-w-0 text-xs font-semibold bm-t1">{it.n}</span>
+            <span className="ml-auto hidden text-[10px] bm-t3 sm:block">{it.d}</span>
           </div>
           {i < items.length - 1 && (
             <div className="ml-6 flex h-3 items-center" aria-hidden="true">
@@ -248,6 +249,53 @@ function Flow({ items, tone = 'sky' }: { items: { n: string; d: string }[]; tone
 
 export default function BusinessModelBoard() {
   const [active, setActive] = useState<string>('bm');
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [sound, setSound] = useState(false);
+
+  // อ่านค่าที่ผู้ใช้เลือกไว้หลัง mount เท่านั้น (ถ้าอ่านตอน render จะ hydration ไม่ตรงกัน)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('bm-theme');
+      if (saved === 'light' || saved === 'dark') setTheme(saved);
+      if (localStorage.getItem('bm-sound') === '1') setSound(true);
+    } catch {}
+  }, []);
+
+  const applyTheme = (t: 'dark' | 'light') => {
+    setTheme(t);
+    try { localStorage.setItem('bm-theme', t); } catch {}
+  };
+
+  /** เสียงชิมสั้น ๆ สังเคราะห์ด้วย WebAudio — ไม่มีไฟล์เสียงภายนอก และเล่นเมื่อผู้ใช้กดเท่านั้น */
+  const playChime = () => {
+    try {
+      const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const ac = new Ctx();
+      const now = ac.currentTime;
+      [523.25, 659.25, 783.99].forEach((f, i) => {
+        const o = ac.createOscillator();
+        const g = ac.createGain();
+        o.type = 'sine';
+        o.frequency.value = f;
+        const t0 = now + i * 0.12;
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.09, t0 + 0.04);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.85);
+        o.connect(g);
+        g.connect(ac.destination);
+        o.start(t0);
+        o.stop(t0 + 0.9);
+      });
+      window.setTimeout(() => { void ac.close(); }, 2200);
+    } catch {}
+  };
+
+  const toggleSound = () => {
+    const next = !sound;
+    setSound(next);
+    try { localStorage.setItem('bm-sound', next ? '1' : '0'); } catch {}
+    if (next) playChime();   // ที่นี่เป็น user gesture จึงเล่นได้จริง
+  };
 
   useEffect(() => {
     const els = SECTIONS.map((s) => document.getElementById(s.id)).filter((e): e is HTMLElement => !!e);
@@ -264,29 +312,39 @@ export default function BusinessModelBoard() {
   }, []);
 
   return (
-    <div className="bm-board min-w-0 rounded-[28px] p-3 sm:p-5">
+    <div className={`bm-board bm-${theme} min-w-0 rounded-[28px] p-3 sm:p-5`}>
       <style>{BM_STYLES}</style>
 
       {/* ── HERO ── */}
-      <div className="bm-hero bm-in relative overflow-hidden rounded-3xl border border-white/10 p-5 sm:p-7">
-        <div className="relative">
+      <div className="bm-hero bm-in relative overflow-hidden rounded-3xl border bm-bd p-5 sm:p-7">
+        <div className="bm-net-bg" aria-hidden="true" />
+        <div className="relative grid gap-5 lg:grid-cols-[minmax(0,1fr)_236px] lg:items-center">
+          <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-amber-300/40 bg-amber-400/15 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-100">Business Model</span>
-            <span className="rounded-full border border-sky-300/40 bg-sky-400/15 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-sky-100">2 Engines</span>
+            <span className="rounded-full border border-amber-300/40 bg-amber-400/15 px-3 py-1 text-[10px] font-bold uppercase tracking-widest bm-accent2">Business Model</span>
+            <span className="rounded-full border border-sky-300/40 bg-sky-400/15 px-3 py-1 text-[10px] font-bold uppercase tracking-widest bm-accent1">2 Engines</span>
+            <div className="ml-auto flex items-center gap-1.5">
+              <button type="button" onClick={() => applyTheme(theme === 'dark' ? 'light' : 'dark')} className="bm-ctl" aria-label="สลับโหมดสว่าง/มืด">
+                {theme === 'dark' ? '☀ โหมดสว่าง' : '🌙 โหมดมืด'}
+              </button>
+              <button type="button" onClick={toggleSound} className="bm-ctl" aria-pressed={sound} aria-label="เปิด/ปิดเสียงประกอบ">
+                {sound ? '🔊 เสียงเปิด' : '🔇 เสียงปิด'}
+              </button>
+            </div>
           </div>
-          <h2 className="mt-3 text-xl font-black leading-tight text-white sm:text-2xl">
+          <h2 className="mt-3 text-xl font-black leading-tight bm-t1 sm:text-2xl">
             โมเดลธุรกิจตัวแทนประกันชีวิต <span className="bm-gold">รายได้ 2 ทาง</span>
           </h2>
-          <p className="mt-2 max-w-3xl text-xs leading-relaxed text-slate-300">
+          <p className="mt-2 max-w-3xl text-xs leading-relaxed bm-t2">
             เปลี่ยนจาก “ขายคนเดียว” → ระบบที่ทำซ้ำได้ · ขายส่วนตัว → สร้างรายได้ → สร้างทีม → สร้างผู้บริหาร → สร้างองค์กร
           </p>
 
           <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {HERO_STATS.map((s, i) => (
-              <div key={s.l} className="bm-stat bm-in rounded-2xl border border-white/10 bg-white/[0.05] px-3 py-2.5" style={{ animationDelay: `${80 + i * 60}ms` }}>
-                <div className="text-lg font-black text-white">{s.v}</div>
-                <div className="text-[11px] font-semibold text-sky-100">{s.l}</div>
-                <div className="mt-0.5 text-[10px] leading-snug text-slate-400">{s.s}</div>
+              <div key={s.l} className="bm-stat bm-in rounded-2xl border bm-bd bm-chip px-3 py-2.5" style={{ animationDelay: `${80 + i * 60}ms` }}>
+                <div className="text-lg font-black bm-t1">{s.v}</div>
+                <div className="text-[11px] font-semibold bm-accent1">{s.l}</div>
+                <div className="mt-0.5 text-[10px] leading-snug bm-t3">{s.s}</div>
               </div>
             ))}
           </div>
@@ -295,7 +353,16 @@ export default function BusinessModelBoard() {
             <Tag kind="doc" />
             <Tag kind="est" />
             <Tag kind="need" />
-            <span className="text-[10px] text-slate-400">— ทุกตัวเลขไม่ใช่การรับประกันรายได้ · ตัวเลขที่คำนวณขึ้นจะถูกระบุว่า “ประมาณการ” เสมอ</span>
+            <span className="text-[10px] bm-t3">— ทุกตัวเลขไม่ใช่การรับประกันรายได้ · ตัวเลขที่คำนวณขึ้นจะถูกระบุว่า “ประมาณการ” เสมอ</span>
+          </div>
+          </div>
+
+          {/* ภาพ Network Tree 4 ระดับ (ขนาดเล็ก ประดับ hero) */}
+          <div className="mx-auto w-full max-w-[220px] lg:max-w-none">
+            <div className="bm-net-card rounded-3xl border bm-bd p-3">
+              <NetworkEnergyMini className="h-[150px] w-full" />
+              <div className="mt-1 text-center text-[10px] bm-t3">ตัวแทน → ผู้บริหารหน่วย → ศูนย์ → ภาค</div>
+            </div>
           </div>
         </div>
       </div>
@@ -310,7 +377,7 @@ export default function BusinessModelBoard() {
               className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition-all ${
                 active === s.id
                   ? 'border-transparent bg-gradient-to-r from-sky-400 to-amber-300 text-[#04122a] shadow-[0_6px_18px_-6px_rgba(56,189,248,0.8)]'
-                  : 'border-white/15 bg-white/5 text-slate-300 hover:border-sky-300/40 hover:text-white'
+                  : 'bm-bd2 bm-soft2 bm-t2 bm-chip-hover'
               }`}
             >
               <span className="mr-1 opacity-70">{s.icon}</span>
@@ -327,46 +394,46 @@ export default function BusinessModelBoard() {
             <div className="rounded-2xl border border-sky-300/30 bg-gradient-to-br from-sky-400/20 to-transparent p-4">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-base">💼</span>
-                <span className="text-xs font-bold text-white">ENGINE A — การขาย</span>
-                <span className="rounded-full border border-sky-300/40 bg-sky-400/15 px-2 py-0.5 text-[10px] font-bold text-sky-100">Active Income</span>
+                <span className="text-xs font-bold bm-t1">ENGINE A — การขาย</span>
+                <span className="rounded-full border border-sky-300/40 bg-sky-400/15 px-2 py-0.5 text-[10px] font-bold bm-accent1">Active Income</span>
               </div>
-              <p className="mt-2 text-[11px] leading-relaxed text-slate-300">รายได้จากการลงมือขายเอง ควบคุมได้ด้วยจำนวนกิจกรรมของตัวเอง</p>
+              <p className="mt-2 text-[11px] leading-relaxed bm-t2">รายได้จากการลงมือขายเอง ควบคุมได้ด้วยจำนวนกิจกรรมของตัวเอง</p>
             </div>
             <div className="rounded-2xl border border-amber-300/30 bg-gradient-to-br from-amber-400/20 to-transparent p-4">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-base">🌱</span>
-                <span className="text-xs font-bold text-white">ENGINE B — การสร้างทีม</span>
-                <span className="rounded-full border border-amber-300/40 bg-amber-400/15 px-2 py-0.5 text-[10px] font-bold text-amber-100">Passive Income</span>
+                <span className="text-xs font-bold bm-t1">ENGINE B — การสร้างทีม</span>
+                <span className="rounded-full border border-amber-300/40 bg-amber-400/15 px-2 py-0.5 text-[10px] font-bold bm-accent2">Passive Income</span>
               </div>
-              <p className="mt-2 text-[11px] leading-relaxed text-slate-300">รายได้จากการสร้างและดูแลทีม โตได้เมื่อทีมโต — ต้องใช้เวลาสะสม</p>
+              <p className="mt-2 text-[11px] leading-relaxed bm-t2">รายได้จากการสร้างและดูแลทีม โตได้เมื่อทีมโต — ต้องใช้เวลาสะสม</p>
             </div>
           </div>
 
-          <div className="mt-4 text-[11px] font-bold uppercase tracking-wider text-slate-400">หน้าที่ของตัวแทน (4 ข้อ)</div>
+          <div className="mt-4 text-[11px] font-bold uppercase tracking-wider bm-t3">หน้าที่ของตัวแทน (4 ข้อ)</div>
           <div className="mt-2 grid gap-2 sm:grid-cols-4">
             {[['ขายประกันชีวิต', '💙'], ['ดูแลลูกค้า', '🤝'], ['สร้างทีม', '🌱'], ['ดูแลและบริหารทีมงาน', '🧭']].map(([d, ic]) => (
-              <div key={d} className="bm-tile flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
+              <div key={d} className="bm-tile flex items-center gap-2 rounded-2xl border bm-bd bm-tile px-3 py-2.5">
                 <span className="text-base">{ic}</span>
-                <span className="text-[11px] font-semibold text-slate-200">{d}</span>
+                <span className="text-[11px] font-semibold bm-t2b">{d}</span>
               </div>
             ))}
           </div>
 
-          <div className="mt-4 text-[11px] font-bold uppercase tracking-wider text-slate-400">Career Path + เงื่อนไขตามเอกสาร</div>
+          <div className="mt-4 text-[11px] font-bold uppercase tracking-wider bm-t3">Career Path + เงื่อนไขตามเอกสาร</div>
           <div className="mt-2 space-y-2">
             {CAREER.map((c, i) => (
-              <div key={c.rank} className="bm-tile relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 pl-5">
+              <div key={c.rank} className="bm-tile relative overflow-hidden rounded-2xl border bm-bd bm-tile p-3.5 pl-5">
                 <span className={`absolute left-0 top-0 h-full w-1 ${c.tone === 'gold' ? 'bg-gradient-to-b from-amber-300 to-amber-500' : c.tone === 'need' ? 'bg-slate-500' : 'bg-gradient-to-b from-sky-300 to-sky-500'}`} />
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-[10px] font-black text-white">{i + 1}</span>
-                  <span className="text-sm font-bold text-white">{c.rank}</span>
-                  <span className="rounded-full border border-white/15 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">{c.engine}</span>
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bm-soft text-[10px] font-black bm-t1">{i + 1}</span>
+                  <span className="text-sm font-bold bm-t1">{c.rank}</span>
+                  <span className="rounded-full border bm-bd2 bm-soft2 px-2 py-0.5 text-[10px] bm-t2">{c.engine}</span>
                   {c.doc.startsWith('เอกสารชุดนี้ไม่ระบุ') ? <Tag kind="need" /> : <Tag kind="doc" />}
                 </div>
-                <div className="mt-1.5 text-[11px] text-slate-300">เงื่อนไข: <span className="text-slate-100">{c.doc}</span></div>
-                <div className="text-[11px] text-slate-400">บทบาท: {c.duty}</div>
+                <div className="mt-1.5 text-[11px] bm-t2">เงื่อนไข: <span className="bm-t1b">{c.doc}</span></div>
+                <div className="text-[11px] bm-t3">บทบาท: {c.duty}</div>
                 {c.warn && (
-                  <div className="mt-2 flex gap-2 rounded-xl border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-[11px] text-amber-100">
+                  <div className="mt-2 flex gap-2 rounded-xl border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-[11px] bm-accent2">
                     <span>⚠</span><span>{c.warn}</span>
                   </div>
                 )}
@@ -385,19 +452,19 @@ export default function BusinessModelBoard() {
               <div key={col.t} className={`rounded-2xl border bg-gradient-to-br p-4 ${TONE[col.tone].ring}`}>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-base">{col.ic}</span>
-                  <span className="text-xs font-black text-white">{col.t}</span>
+                  <span className="text-xs font-black bm-t1">{col.t}</span>
                   <span className="ml-auto"><Tag kind="est" /></span>
                 </div>
                 <div className="mt-3 space-y-1.5">
                   {col.rows.map((r) => (
-                    <div key={r.k} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-xl bg-black/20 px-3 py-2">
-                      <span className="text-[11px] font-semibold text-white">{r.k}</span>
-                      <span className="text-[10px] text-slate-400">{r.note}</span>
-                      <span className="ml-auto font-mono text-[10px] text-slate-500">— รอข้อมูล</span>
+                    <div key={r.k} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-xl bm-inset px-3 py-2">
+                      <span className="text-[11px] font-semibold bm-t1">{r.k}</span>
+                      <span className="text-[10px] bm-t3">{r.note}</span>
+                      <span className="ml-auto font-mono text-[10px] bm-t4">— รอข้อมูล</span>
                     </div>
                   ))}
                 </div>
-                <p className="mt-3 text-[10px] leading-relaxed text-slate-400">{col.f}</p>
+                <p className="mt-3 text-[10px] leading-relaxed bm-t3">{col.f}</p>
               </div>
             ))}
           </div>
@@ -420,13 +487,13 @@ export default function BusinessModelBoard() {
               <div key={g.group} className={`bm-tile rounded-2xl border bg-gradient-to-br p-4 ${TONE[g.tone].ring}`}>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-base">{g.icon}</span>
-                  <span className="text-xs font-black text-white">{g.group}</span>
-                  <span className="text-[10px] text-slate-400">{g.th}</span>
-                  <span className="ml-auto rounded-full border border-white/15 bg-white/5 px-2 py-0.5 text-[10px] text-slate-300">{g.items.length} ตัวชี้วัด</span>
+                  <span className="text-xs font-black bm-t1">{g.group}</span>
+                  <span className="text-[10px] bm-t3">{g.th}</span>
+                  <span className="ml-auto rounded-full border bm-bd2 bm-soft2 px-2 py-0.5 text-[10px] bm-t2">{g.items.length} ตัวชี้วัด</span>
                 </div>
                 <ul className="mt-2.5 space-y-1.5">
                   {g.items.map((it) => (
-                    <li key={it} className="flex items-center gap-2 text-[11px] text-slate-200">
+                    <li key={it} className="flex items-center gap-2 text-[11px] bm-t2b">
                       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${TONE[g.tone].dot}`} />
                       {it}
                     </li>
@@ -441,32 +508,32 @@ export default function BusinessModelBoard() {
         <Panel id="roadmap" n={6} title="ROADMAP 24 เดือน" sub="5 ช่วงการเติบโต — ปรับตามเงื่อนไขจริงในเอกสารและข้อมูลของคุณ" icon="⌁" delay={420}>
           <ol className="space-y-2">
             {ROADMAP.map((r) => (
-              <li key={r.range} className="bm-tile rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+              <li key={r.range} className="bm-tile rounded-2xl border bm-bd bm-tile p-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-base text-slate-400">{r.icon}</span>
-                  <span className="text-xs font-black text-white">{r.range}</span>
+                  <span className="text-base bm-t3">{r.icon}</span>
+                  <span className="text-xs font-black bm-t1">{r.range}</span>
                   <span className="rounded-full bg-gradient-to-r from-sky-400 to-amber-300 px-2.5 py-0.5 text-[10px] font-bold text-[#04122a]">{r.goal}</span>
                   {r.cond && <Tag kind="doc" />}
                 </div>
-                <div className="mt-1.5 text-[11px] leading-relaxed text-slate-300">{r.detail}</div>
+                <div className="mt-1.5 text-[11px] leading-relaxed bm-t2">{r.detail}</div>
               </li>
             ))}
           </ol>
-          <p className="mt-3 text-[10px] text-slate-500">※ เป้าตัวเลขของแต่ละช่วงจะใส่ได้เมื่อมีข้อมูลจริงจากหมวด “ข้อมูลที่ต้องยืนยัน” ด้านล่าง</p>
+          <p className="mt-3 text-[10px] bm-t4">※ เป้าตัวเลขของแต่ละช่วงจะใส่ได้เมื่อมีข้อมูลจริงจากหมวด “ข้อมูลที่ต้องยืนยัน” ด้านล่าง</p>
         </Panel>
 
         {/* 7. AUTOMATION */}
         <Panel id="auto" n={7} title="AI + AUTOMATION — ระบบที่ต้องมี" sub="5 กลุ่มงานที่เอา AI/ระบบมาช่วยลดงานซ้ำ" icon="⚡" delay={480}>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {AUTOMATION.map((a) => (
-              <div key={a.g} className="bm-tile rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+              <div key={a.g} className="bm-tile rounded-2xl border bm-bd bm-tile p-4">
                 <div className="flex items-center gap-2">
                   <span className="text-base">{a.icon}</span>
-                  <span className="text-xs font-black text-white">{a.g}</span>
+                  <span className="text-xs font-black bm-t1">{a.g}</span>
                 </div>
                 <ul className="mt-2.5 space-y-1.5">
                   {a.items.map((it) => (
-                    <li key={it} className="flex items-start gap-2 text-[11px] text-slate-300">
+                    <li key={it} className="flex items-start gap-2 text-[11px] bm-t2">
                       <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400/80" />
                       {it}
                     </li>
@@ -475,18 +542,18 @@ export default function BusinessModelBoard() {
               </div>
             ))}
           </div>
-          <p className="mt-3 text-[10px] text-slate-500">※ ระบบนี้มีงานอัตโนมัติบางส่วนอยู่แล้ว เช่น ระบบสมาชิก/ผู้สนใจ และตัวเชื่อม n8n — ส่วนที่จะเพิ่มต้องยืนยันก่อน ไม่ได้เปิดใช้งานอัตโนมัติ</p>
+          <p className="mt-3 text-[10px] bm-t4">※ ระบบนี้มีงานอัตโนมัติบางส่วนอยู่แล้ว เช่น ระบบสมาชิก/ผู้สนใจ และตัวเชื่อม n8n — ส่วนที่จะเพิ่มต้องยืนยันก่อน ไม่ได้เปิดใช้งานอัตโนมัติ</p>
         </Panel>
 
         {/* 8. DASHBOARD */}
         <Panel id="dash" n={8} title="DASHBOARD ผู้บริหาร — ตัวเลขที่ต้องเห็น" sub="11 ตัวชี้วัดหลัก + กติกาสถานะ 3 ระดับ" icon="▦" delay={540}>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {DASH.map((d) => (
-              <div key={d.k} className="bm-tile flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3.5">
-                <span className="bm-gauge flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-slate-400">—</span>
+              <div key={d.k} className="bm-tile flex items-center gap-3 rounded-2xl border bm-bd bm-tile p-3.5">
+                <span className="bm-gauge flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[9px] font-bold bm-t3">—</span>
                 <div className="min-w-0">
-                  <div className="text-[11px] font-semibold text-white">{d.k}</div>
-                  <div className="text-[10px] text-slate-400">{d.tag}</div>
+                  <div className="text-[11px] font-semibold bm-t1">{d.k}</div>
+                  <div className="text-[10px] bm-t3">{d.tag}</div>
                 </div>
               </div>
             ))}
@@ -494,29 +561,29 @@ export default function BusinessModelBoard() {
           <div className="mt-3 grid gap-2 sm:grid-cols-3">
             {STATUS_RULE.map((s) => (
               <div key={s.label} className={`rounded-2xl border bg-gradient-to-br p-3.5 ${s.cls}`}>
-                <div className="text-xs font-bold text-white">{s.icon} {s.label}</div>
-                <div className="mt-1 text-[11px] leading-relaxed text-slate-200">{s.desc}</div>
+                <div className="text-xs font-bold bm-t1">{s.icon} {s.label}</div>
+                <div className="mt-1 text-[11px] leading-relaxed bm-t2b">{s.desc}</div>
               </div>
             ))}
           </div>
-          <p className="mt-3 text-[10px] text-slate-500">※ เกณฑ์ 🔴/🟡/🟢 ต้องตั้งจากเป้าจริงของคุณ (KPI หมวด 5) — จึงยังไม่กำหนดตัวเลขเกณฑ์ให้เอง</p>
+          <p className="mt-3 text-[10px] bm-t4">※ เกณฑ์ 🔴/🟡/🟢 ต้องตั้งจากเป้าจริงของคุณ (KPI หมวด 5) — จึงยังไม่กำหนดตัวเลขเกณฑ์ให้เอง</p>
         </Panel>
 
         {/* 9. ACTION PLAN */}
         <Panel id="action" n={9} title="แผนปฏิบัติการ 90 วัน" sub="เป้าหมาย → KPI → กิจกรรม → จำนวนที่ต้องทำ → ผลลัพธ์ → สิ่งที่ต้องปรับ" icon="▶" delay={600}>
           <div className="grid gap-3 lg:grid-cols-3">
             {ACTION_90.map((m, i) => (
-              <div key={m.month} className="bm-tile flex flex-col rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+              <div key={m.month} className="bm-tile flex flex-col rounded-2xl border bm-bd bm-tile p-4">
                 <div className="flex items-center gap-2">
                   <span className="bm-badge flex h-7 w-7 items-center justify-center rounded-xl text-[11px] font-black text-[#04122a]">{i + 1}</span>
-                  <span className="text-xs font-black text-white">{m.month}</span>
+                  <span className="text-xs font-black bm-t1">{m.month}</span>
                 </div>
-                <div className="mt-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-[11px] font-semibold text-sky-100">“{m.theme}”</div>
+                <div className="mt-2 rounded-xl border bm-bd bm-inset px-3 py-2 text-[11px] font-semibold bm-accent1">“{m.theme}”</div>
                 <div className="mt-2.5 space-y-1.5">
                   {m.rows.map((r) => (
-                    <div key={r.k} className="rounded-xl bg-black/15 px-3 py-2">
-                      <div className="text-[10px] font-bold uppercase tracking-wide text-amber-200/80">{r.k}</div>
-                      <div className="mt-0.5 text-[11px] leading-relaxed text-slate-300">{r.v}</div>
+                    <div key={r.k} className="rounded-xl bm-inset2 px-3 py-2">
+                      <div className="text-[10px] font-bold uppercase tracking-wide bm-accent2b">{r.k}</div>
+                      <div className="mt-0.5 text-[11px] leading-relaxed bm-t2">{r.v}</div>
                     </div>
                   ))}
                 </div>
@@ -529,10 +596,10 @@ export default function BusinessModelBoard() {
         <Panel id="daily" n={10} title="ตารางทำงานรายวัน (ตัวอย่าง 08:00–20:00)" sub="ปรับตามเวลาที่คุณมีจริง — ตารางนี้เป็นโครงตั้งต้น" icon="◷" delay={660}>
           <ol className="space-y-1.5">
             {DAILY.map((d) => (
-              <li key={d.t} className="bm-tile flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5">
+              <li key={d.t} className="bm-tile flex items-center gap-3 rounded-2xl border bm-bd bm-tile px-3.5 py-2.5">
                 <span className="text-base">{d.icon}</span>
-                <span className="w-[92px] shrink-0 font-mono text-[11px] text-sky-200">{d.t}</span>
-                <span className="text-[11px] text-slate-200">{d.a}</span>
+                <span className="w-[92px] shrink-0 font-mono text-[11px] bm-accent1b">{d.t}</span>
+                <span className="text-[11px] bm-t2b">{d.a}</span>
               </li>
             ))}
           </ol>
@@ -542,19 +609,19 @@ export default function BusinessModelBoard() {
         <Panel id="ask" n={11} title="ข้อมูลที่ต้องยืนยันก่อนคำนวณ" sub="ยังไม่ใส่ตัวเลขใด ๆ — ตอบครบเมื่อไร จะสร้าง Business Model เฉพาะบุคคลให้" icon="?" delay={720}>
           <ol className="grid gap-2 sm:grid-cols-2">
             {ASK.map((q, i) => (
-              <li key={q} className="bm-tile flex items-start gap-3 rounded-2xl border border-dashed border-sky-300/30 bg-sky-400/[0.07] px-3.5 py-3">
+              <li key={q} className="bm-tile flex items-start gap-3 rounded-2xl border border-dashed border-sky-300/30 bm-accentbg px-3.5 py-3">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-amber-300 text-[10px] font-black text-[#04122a]">{i + 1}</span>
-                <span className="text-[11px] leading-relaxed text-slate-200">{q}</span>
+                <span className="text-[11px] leading-relaxed bm-t2b">{q}</span>
               </li>
             ))}
           </ol>
-          <div className="mt-3 rounded-2xl border border-amber-300/30 bg-amber-400/10 px-3.5 py-2.5 text-[11px] leading-relaxed text-amber-100">
+          <div className="mt-3 rounded-2xl border border-amber-300/30 bg-amber-400/10 px-3.5 py-2.5 text-[11px] leading-relaxed bm-accent2">
             ⚠ เอกสารชุดนี้มีจุดที่ไม่ตรงกัน — ผู้บริหารศูนย์ยังไม่มีเงื่อนไข, ผู้บริหารภาคเอกสารระบุ 5 ศูนย์ แต่หน้า /career ระบุ 4 ศูนย์ และการ์ดด้านบนของหน้านี้ใช้เกณฑ์คนละชุด — ต้องยืนยันก่อนใช้คำนวณ
           </div>
         </Panel>
       </div>
 
-      <div className="mt-3 text-center text-[10px] text-slate-500">
+      <div className="mt-3 text-center text-[10px] bm-t4">
         อ้างอิงเอกสาร “สร้างโมเดลธุรกิจ” · ตัวเลขทั้งหมดเป็นการประมาณการเพื่อวางแผน ไม่ใช่การรับประกันรายได้
       </div>
     </div>
@@ -562,16 +629,90 @@ export default function BusinessModelBoard() {
 }
 
 const BM_STYLES = `
-.bm-board { background: linear-gradient(165deg,#040d20 0%,#071a38 42%,#04102a 100%); box-shadow: 0 30px 90px -50px rgba(56,189,248,.55), inset 0 1px 0 rgba(255,255,255,.05); }
-.bm-hero { background: radial-gradient(120% 120% at 12% 0%, rgba(56,189,248,.22) 0%, rgba(4,13,32,0) 55%), radial-gradient(100% 100% at 92% 8%, rgba(251,191,36,.18) 0%, rgba(4,13,32,0) 60%); }
-.bm-gold { background: linear-gradient(90deg,#7dd3fc 0%,#fde68a 60%,#fbbf24 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.bm-dark {
+  --bm-board-bg: linear-gradient(165deg,#040d20 0%,#071a38 42%,#04102a 100%);
+  --bm-shadow: 0 30px 90px -50px rgba(56,189,248,.55), inset 0 1px 0 rgba(255,255,255,.05);
+  --bm-hero-bg: radial-gradient(120% 120% at 12% 0%, rgba(56,189,248,.22) 0%, rgba(4,13,32,0) 55%), radial-gradient(100% 100% at 92% 8%, rgba(251,191,36,.18) 0%, rgba(4,13,32,0) 60%);
+  --bm-nav-bg: linear-gradient(180deg, rgba(4,13,32,.93) 0%, rgba(4,13,32,.80) 70%, rgba(4,13,32,0) 100%);
+  --bm-panel: rgba(255,255,255,.035); --bm-panel-hover: rgba(255,255,255,.075);
+  --bm-tile: rgba(255,255,255,.04); --bm-chip: rgba(255,255,255,.05);
+  --bm-soft: rgba(255,255,255,.10); --bm-soft2: rgba(255,255,255,.05);
+  --bm-bd: rgba(255,255,255,.10); --bm-bd2: rgba(255,255,255,.15); --bm-bd3: rgba(255,255,255,.20);
+  --bm-t1: #ffffff; --bm-t1b: #f1f5f9; --bm-t2: #cbd5e1; --bm-t2b: #e2e8f0; --bm-t3: #94a3b8; --bm-t4: #64748b;
+  --bm-accent1: #e0f2fe; --bm-accent1b: #bae6fd; --bm-accent2: #fef3c7; --bm-accent2b: rgba(253,230,138,.8);
+  --bm-inset: rgba(0,0,0,.20); --bm-inset2: rgba(0,0,0,.15); --bm-accentbg: rgba(56,189,248,.07);
+  --bm-tone-need-bg: linear-gradient(135deg, rgba(255,255,255,.08), transparent);
+  --bm-gauge: conic-gradient(from 200deg, rgba(125,211,252,.35) 0 12%, rgba(255,255,255,.06) 12% 100%);
+  --bm-gold-grad: linear-gradient(90deg,#7dd3fc 0%,#fde68a 60%,#fbbf24 100%);
+  --bm-ctl-bg: rgba(255,255,255,.06); --bm-ctl-bd: rgba(255,255,255,.15);
+  --bm-grid-line: rgba(125,211,252,.07);
+}
+.bm-light {
+  --bm-board-bg: linear-gradient(165deg,#f8fbfe 0%,#eaf2fb 45%,#f7fbff 100%);
+  --bm-shadow: 0 24px 60px -42px rgba(15,23,42,.35), inset 0 1px 0 rgba(255,255,255,.9);
+  --bm-hero-bg: radial-gradient(120% 120% at 12% 0%, rgba(56,189,248,.16) 0%, rgba(255,255,255,0) 55%), radial-gradient(100% 100% at 92% 8%, rgba(251,191,36,.16) 0%, rgba(255,255,255,0) 60%);
+  --bm-nav-bg: linear-gradient(180deg, rgba(248,251,254,.97) 0%, rgba(248,251,254,.86) 70%, rgba(248,251,254,0) 100%);
+  --bm-panel: rgba(255,255,255,.90); --bm-panel-hover: #ffffff;
+  --bm-tile: rgba(255,255,255,.95); --bm-chip: #ffffff;
+  --bm-soft: rgba(15,23,42,.06); --bm-soft2: rgba(15,23,42,.05);
+  --bm-bd: rgba(15,23,42,.10); --bm-bd2: rgba(15,23,42,.14); --bm-bd3: rgba(15,23,42,.18);
+  --bm-t1: #0b1b33; --bm-t1b: #10233f; --bm-t2: #3b4a60; --bm-t2b: #1e293b; --bm-t3: #5b6b82; --bm-t4: #7a879b;
+  --bm-accent1: #0369a1; --bm-accent1b: #075985; --bm-accent2: #92400e; --bm-accent2b: rgba(146,64,14,.85);
+  --bm-inset: rgba(15,23,42,.045); --bm-inset2: rgba(15,23,42,.035); --bm-accentbg: rgba(14,165,233,.10);
+  --bm-tone-need-bg: linear-gradient(135deg, rgba(15,23,42,.05), transparent);
+  --bm-gauge: conic-gradient(from 200deg, rgba(2,132,199,.30) 0 12%, rgba(15,23,42,.06) 12% 100%);
+  --bm-gold-grad: linear-gradient(90deg,#0369a1 0%,#b45309 55%,#d97706 100%);
+  --bm-ctl-bg: rgba(255,255,255,.95); --bm-ctl-bd: rgba(15,23,42,.14);
+  --bm-grid-line: rgba(2,132,199,.08);
+}
+.bm-board { background: var(--bm-board-bg); box-shadow: var(--bm-shadow); }
+.bm-hero { background: var(--bm-hero-bg); }
+.bm-net-bg {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image: linear-gradient(var(--bm-grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--bm-grid-line) 1px, transparent 1px);
+  background-size: 26px 26px;
+  -webkit-mask-image: radial-gradient(120% 100% at 88% 0%, #000 0%, transparent 72%);
+  mask-image: radial-gradient(120% 100% at 88% 0%, #000 0%, transparent 72%);
+}
+.bm-net-card { background: var(--bm-inset); }
+.bm-gold { background: var(--bm-gold-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .bm-badge { background: linear-gradient(135deg,#7dd3fc 0%,#38bdf8 45%,#fbbf24 100%); }
-.bm-nav { background: linear-gradient(180deg,rgba(4,13,32,.92) 0%,rgba(4,13,32,.78) 70%,rgba(4,13,32,0) 100%); backdrop-filter: blur(10px); }
-.bm-tile { transition: transform .18s ease, border-color .18s ease, background-color .18s ease, box-shadow .18s ease; }
+.bm-panel { background-color: var(--bm-panel); }
+.bm-panel-hover:hover { background-color: var(--bm-panel-hover); border-color: rgba(125,211,252,.35); }
+.bm-tile { background-color: var(--bm-tile); transition: transform .18s ease, border-color .18s ease, background-color .18s ease, box-shadow .18s ease; }
 .bm-tile:hover { transform: translateY(-2px); border-color: rgba(125,211,252,.35); box-shadow: 0 14px 34px -22px rgba(56,189,248,.85); }
 .bm-stat { transition: transform .18s ease; }
 .bm-stat:hover { transform: translateY(-3px) scale(1.01); }
-.bm-gauge { background: conic-gradient(from 200deg, rgba(125,211,252,.35) 0 12%, rgba(255,255,255,.06) 12% 100%); }
+.bm-tile:focus-visible { outline: 2px solid rgba(125,211,252,.8); outline-offset: 2px; }
+.bm-chip { background-color: var(--bm-chip); }
+.bm-soft { background-color: var(--bm-soft); }
+.bm-soft2 { background-color: var(--bm-soft2); }
+.bm-inset { background-color: var(--bm-inset); }
+.bm-inset2 { background-color: var(--bm-inset2); }
+.bm-accentbg { background-color: var(--bm-accentbg); }
+.bm-tone-need { background-image: var(--bm-tone-need-bg); border-color: var(--bm-bd3); }
+.bm-gauge { background: var(--bm-gauge); }
+.bm-bd { border-color: var(--bm-bd); }
+.bm-bd2 { border-color: var(--bm-bd2); }
+.bm-bd3 { border-color: var(--bm-bd3); }
+.bm-t1 { color: var(--bm-t1); }
+.bm-t1b { color: var(--bm-t1b); }
+.bm-t2 { color: var(--bm-t2); }
+.bm-t2b { color: var(--bm-t2b); }
+.bm-t3 { color: var(--bm-t3); }
+.bm-t4 { color: var(--bm-t4); }
+.bm-accent1 { color: var(--bm-accent1); }
+.bm-accent1b { color: var(--bm-accent1b); }
+.bm-accent2 { color: var(--bm-accent2); }
+.bm-accent2b { color: var(--bm-accent2b); }
+.bm-ctl {
+  border-radius: 9999px; border: 1px solid var(--bm-ctl-bd); background-color: var(--bm-ctl-bg);
+  color: var(--bm-t2b); font-size: 10px; font-weight: 700; line-height: 1.6; padding: 4px 10px;
+  transition: transform .18s ease, border-color .18s ease, color .18s ease;
+}
+.bm-ctl:hover { transform: translateY(-1px); border-color: rgba(125,211,252,.5); color: var(--bm-t1); }
+.bm-nav { background: var(--bm-nav-bg); backdrop-filter: blur(10px); }
+.bm-chip-hover:hover { border-color: rgba(125,211,252,.45); color: var(--bm-t1); }
 .bm-drop { box-shadow: 0 0 8px 1px rgba(125,211,252,.5); animation: bm-drop 2.4s ease-in-out infinite; }
 @keyframes bm-drop { 0%,100% { opacity:.25; transform: scaleY(.6); } 50% { opacity:1; transform: scaleY(1); } }
 .bm-in { animation: bm-rise .55s cubic-bezier(.22,.8,.28,1) both; }
@@ -580,6 +721,6 @@ html { scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .bm-in, .bm-drop { animation: none; }
-  .bm-tile:hover, .bm-stat:hover { transform: none; }
+  .bm-tile:hover, .bm-stat:hover, .bm-ctl:hover { transform: none; }
 }
 `;
