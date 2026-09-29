@@ -1,50 +1,35 @@
-'use client';
-import Header from '@/components/Header';
-import Sidebar from '@/components/Sidebar';
-import BusinessModelBoard from '@/components/BusinessModelBoard';
-export default function ProgressPage(){
-  const steps=[
-    { name:'ตัวแทน', need:'สมัคร + อบรมพื้นฐาน', have: true },
-    { name:'ผู้บริหารหน่วย', need:'ทีม Active 15 คน + ผลงาน ฿500k', have: false, progress: 80 },
-    { name:'ผู้บริหารศูนย์', need:'ทีม 50 คน + ผลงาน ฿2M', have: false, progress: 30 },
-    { name:'ผู้บริหารภาค', need:'ทีม 150 คน', have: false, progress: 10 },
-    { name:'ผู้จัดการฝ่าย', need:'ทีม 400 คน', have: false, progress: 5 },
-    { name:'ผู้อำนวยการ', need:'ทีม 800 คน', have: false, progress: 2 },
-  ];
-  return (
-    <div>
-      <Header/>
-      <div className="flex w-full">
-        <Sidebar/>
-        <main className="min-w-0 flex-1 p-6 space-y-4">
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-[#475569]">ความก้าวหน้า ⬆</h1>
-            <span className="badge-demo">เส้นทางตำแหน่ง</span>
-          </div>
-          <div className="card p-5">
-            <div className="text-sm font-semibold text-[#475569]">Progress ไปตำแหน่งถัดไป</div>
-            <div className="mt-4 space-y-3">
-              {steps.map((s,i)=>(
-                <div key={s.name} className={`p-4 rounded-xl border flex items-center gap-4 ${s.have?'bg-emerald-50 border-emerald-200':'bg-white'}`}>
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${s.have?'bg-emerald-600 text-white':'bg-[#475569] text-white'}`}>{i+1}</div>
-                  <div className="flex-1">
-                    <div className="font-semibold text-sm">{s.name} {s.have && <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-emerald-600 text-white">ผ่านแล้ว</span>}</div>
-                    <div className="text-xs text-slate-500">{s.need}</div>
-                    {!s.have && s.progress!==undefined && (
-                      <div className="mt-2 h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-2 bg-[#c8a84e] rounded-full" style={{width:`${s.progress}%`}}/></div>
-                    )}
-                  </div>
-                  <div className="text-xs text-slate-500">{s.have ? '✓' : `${s.progress||0}%`}</div>
-                </div>
-              ))}
-            </div>
-            <p className="text-[11px] text-slate-500 mt-3">เงื่อนไขปรับได้โดย Admin • ต้องผ่านผู้มีอำนาจอนุมัติ • แสดงสิ่งที่ยังขาดชัดเจน</p>
-          </div>
+import { cookies } from 'next/headers';
+import { verifyToken, type AuthPayload } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { isAdminEmail, isAdminRole } from '@/lib/access-rules';
+import { canViewProgress } from '@/lib/progressAccess';
+import ProgressView from './ProgressView';
+import ProgressLocked from './ProgressLocked';
 
-          {/* ── ต่อลงมา: โมเดลธุรกิจตัวแทนประกันชีวิต (รายได้ 2 ทาง) ── */}
-          <BusinessModelBoard />
-        </main>
-      </div>
-    </div>
-  );
+// หน้านี้ต้องอ่าน cookie + DB ทุกครั้ง (ห้าม cache — ไม่งั้นสิทธิ์ค้างเก่า)
+export const dynamic = 'force-dynamic';
+
+/**
+ * /progress — โมเดลธุรกิจ + ตัวเลขระดับบริหาร
+ * กั้นสิทธิ์ที่ฝั่งเซิร์ฟเวอร์: เฉพาะ "หัวหน้าหน่วย" (level ≥ 2) ขึ้นไป หรือ Admin
+ * - อ่าน rank สดจาก DB (token อาจเก่าหลังผู้ดูแลปรับตำแหน่ง) แล้วค่อยใช้ค่าใน token เป็น fallback
+ * - ผู้ที่ไม่ผ่าน จะไม่ได้รับเนื้อหาหน้านี้เลย (ไม่ใช่แค่ซ่อนด้วย CSS/JS)
+ */
+export default async function ProgressPage() {
+  const jar = await cookies();
+  const token = jar.get('token')?.value || jar.get('auth_token')?.value || '';
+  const payload = token ? (verifyToken(token) as AuthPayload | null) : null;
+
+  const userId = payload?.sub;
+  let rankLevel = typeof payload?.rankLevel === 'number' ? payload.rankLevel : 0;
+
+  if (userId) {
+    const me = await prisma.user.findUnique({ where: { id: userId }, select: { rankLevel: true } }).catch(() => null);
+    if (me && typeof me.rankLevel === 'number') rankLevel = me.rankLevel;
+  }
+
+  const isAdmin = isAdminEmail(payload?.email) || isAdminRole(payload?.roles);
+
+  if (canViewProgress(rankLevel, isAdmin)) return <ProgressView />;
+  return <ProgressLocked rankLevel={rankLevel < 0 ? 0 : rankLevel} />;
 }
