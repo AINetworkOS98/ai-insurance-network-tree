@@ -1,6 +1,7 @@
 'use client';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import BusinessModelBoard from '@/components/BusinessModelBoard';
 export default function ProgressPage(){
   const steps=[
     { name:'ตัวแทน', need:'สมัคร + อบรมพื้นฐาน', have: true },
@@ -39,6 +40,9 @@ export default function ProgressPage(){
             </div>
             <p className="text-[11px] text-slate-500 mt-3">เงื่อนไขปรับได้โดย Admin • ต้องผ่านผู้มีอำนาจอนุมัติ • แสดงสิ่งที่ยังขาดชัดเจน</p>
           </div>
+
+          {/* ── ต่อลงมา: โมเดลธุรกิจตัวแทนประกันชีวิต (รายได้ 2 ทาง) ── */}
+          <BusinessModelBoard />
         </main>
       </div>
     </div>
