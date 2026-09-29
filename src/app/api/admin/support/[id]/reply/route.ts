@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
-import { addTicketMessage } from '@/lib/support';
+import { addTicketMessage, isAdminOrDb } from '@/lib/support';
 import { createSupportTicketEvent } from '@/lib/supportEvents';
 
 // POST /api/admin/support/[id]/reply — ตอบกลับ ticket (admin)
@@ -16,7 +16,7 @@ export async function POST(
 
     const payload = verifyToken(token);
     if (!payload) return NextResponse.json({ ok: false, error: 'โทเค็นไม่ถูกต้อง' }, { status: 401 });
-    if (!payload.roles?.includes('admin') && !payload.roles?.includes('super_admin'))
+    if (!(await isAdminOrDb(payload)))
       return NextResponse.json({ ok: false, error: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
 
     const { id: ticketId } = await params;

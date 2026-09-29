@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 import {
-  isAdmin, getAdminTickets, getTicketDetail,
+  isAdmin, isAdminOrDb, getAdminTickets, getTicketDetail,
   updateTicketStatus, getSupportStats,
 } from '@/lib/support';
 
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
     let payload: any;
     try { payload = verifyToken(token); } catch { return NextResponse.json({ ok: false, error: 'โทเค็นไม่ถูกต้อง' }, { status: 401 }); }
-    if (!isAdmin(payload)) return NextResponse.json({ ok: false, error: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
+    if (!(await isAdminOrDb(payload))) return NextResponse.json({ ok: false, error: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status') as any || 'ALL';
@@ -51,7 +51,7 @@ export async function GET_ById(req: NextRequest, { params }: { params: Promise<{
 
     let payload: any;
     try { payload = verifyToken(token); } catch { return NextResponse.json({ ok: false, error: 'โทเค็นไม่ถูกต้อง' }, { status: 401 }); }
-    if (!isAdmin(payload)) return NextResponse.json({ ok: false, error: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
+    if (!(await isAdminOrDb(payload))) return NextResponse.json({ ok: false, error: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
 
     const { id } = await params;
     const ticket = await getTicketDetail(id);
@@ -95,7 +95,7 @@ export async function PATCH_ById(req: NextRequest, { params }: { params: Promise
 
     let payload: any;
     try { payload = verifyToken(token); } catch { return NextResponse.json({ ok: false, error: 'โทเค็นไม่ถูกต้อง' }, { status: 401 }); }
-    if (!isAdmin(payload)) return NextResponse.json({ ok: false, error: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
+    if (!(await isAdminOrDb(payload))) return NextResponse.json({ ok: false, error: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
 
     const { id } = await params;
     const body = await req.json().catch(() => ({} as any));

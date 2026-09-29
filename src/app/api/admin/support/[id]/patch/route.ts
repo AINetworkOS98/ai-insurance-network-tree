@@ -11,8 +11,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const payload = verifyToken(token)
     if (!payload) return NextResponse.json({ ok: false, error: 'เซสชันไม่ถูกต้อง' }, { status: 401 })
 
+    // สิทธิ์: roles ในโทเคน หรือเจ้าของระบบ (อีเมล Admin/role ใน DB) — โทเคนจาก login ไม่มี roles
+    const { isAdminOrDb } = await import('@/lib/support')
     const userPerms = payload.roles || []
-    if (!hasPermission(userPerms, 'member.message.reply')) {
+    if (!hasPermission(userPerms, 'member.message.reply') && !(await isAdminOrDb(payload))) {
       return NextResponse.json({ ok: false, error: 'ไม่มีสิทธิ์' }, { status: 403 })
     }
 

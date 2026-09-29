@@ -40,6 +40,30 @@ export async function ensureSuperAdmin(userId: string){
   }catch{}
 }
 
+// ── ตรวจสิทธิ์ผู้ดูแลจาก payload ของ token (ใช้ร่วมกันทุก API ฝั่งผู้ดูแล) ──────────────
+// ลำดับการตรวจ (แหล่งความจริง = DB/อีเมล ไม่ใช่ค่าที่ค้างในโทเคน):
+//   1) roles ในโทเคน (ถ้ามี — ทางเร็ว)
+//   2) อีเมลอยู่ในรายการ Admin (กติกาเดียวกับ middleware + หน้าเว็บ)
+//   3) ยังไม่ผ่าน → ถาม DB ผ่าน isSystemAdmin (role super_admin/admin หรือสิทธิ system.manage)
+// เหตุที่ต้องมีข้อ 2-3: login ไม่ได้ใส่ roles ลงโทเคน → การเช็คจากโทเคนอย่างเดียวทำให้
+// เจ้าของระบบโดน 403 ทุกครั้ง (บั๊กที่หน้า /admin ขึ้น "กรุณาเข้าสู่ระบบ")
+export const ADMIN_PANEL_ROLES = ['admin', 'super_admin', 'auditor'];
+
+export function hasAdminRoleInPayload(payload: any): boolean {
+  const roles = payload?.roles?.length ? payload.roles : (payload?.role ? [payload.role] : []);
+  return (roles as any[]).map((r) => String(r ?? '').toLowerCase()).some((r) => ADMIN_PANEL_ROLES.includes(r));
+}
+
+export async function isAdminFromPayload(payload: any): Promise<boolean> {
+  if (hasAdminRoleInPayload(payload)) return true;
+  if (isAdminEmail(payload?.email)) return true;
+  if (payload?.sub) {
+    const r = await isSystemAdmin(String(payload.sub));
+    if (r.ok) return true;
+  }
+  return false;
+}
+
 export async function isSystemAdmin(userId: string): Promise<{ ok: boolean; user?: any }>{
   try{
     const user: any = await prisma.user.findUnique({

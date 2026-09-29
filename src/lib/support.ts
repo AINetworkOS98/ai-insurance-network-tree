@@ -19,6 +19,16 @@ export function isAdmin(payload: any): boolean {
   return roles.includes('admin') || roles.includes('super_admin');
 }
 
+// เพิ่ม fallback: อีเมล Admin (กติกากลาง) / role ใน DB — เพราะ login ไม่ได้ใส่ roles ลงโทเคน
+// ทำให้เช็คจากโทเคนอย่างเดียวจะโดน 403 แม้เป็นเจ้าของระบบ
+export async function isAdminOrDb(payload: any): Promise<boolean> {
+  if (isAdmin(payload)) return true;
+  try {
+    const { isAdminFromPayload } = await import('@/lib/admin');
+    return await isAdminFromPayload(payload);
+  } catch { return false; }
+}
+
 // ดึงข้อมูล user ปัจจุบันสำหรับสร้าง ticket
 export async function getCurrentUser(token: string) {
   const payload = verifyToken(token);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebase-admin';
 import { verifyToken } from '@/lib/auth';
+import { isAdminFromPayload } from '@/lib/admin';
 
 interface FirestoreMember {
   id: string;
@@ -31,8 +32,8 @@ export async function GET(req: NextRequest) {
     }
     
     // Check admin: แยก rank กับ permission (สเปคหมวด 2)
-    const roles = (decoded as any).roles || ((decoded as any).role ? [(decoded as any).role] : []);
-    const isAdmin = roles.includes('admin') || roles.includes('super_admin') || roles.includes('auditor');
+    // กติกากลาง: roles ในโทเคน → อีเมล Admin → role ใน DB (โทเคนไม่มี roles จึงต้องมี fallback)
+    const isAdmin = await isAdminFromPayload(decoded);
     if (!isAdmin) {
       return NextResponse.json({ ok: false, error: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
     }

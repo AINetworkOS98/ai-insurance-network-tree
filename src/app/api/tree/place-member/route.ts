@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
+import { isAdminFromPayload } from '@/lib/admin';
 
 // POST /api/tree/place-member — BFS 5-wide พร้อม transaction + idempotencyKey + row lock
 export async function POST(req: NextRequest){
@@ -9,8 +10,7 @@ export async function POST(req: NextRequest){
     const payload = token ? verifyToken(token) : null;
     // ต้องมี tree.manage
     if(payload){
-      const roles = (payload as any).roles || ((payload as any).role ? [(payload as any).role] : []);
-      const isAdmin = roles.includes('admin') || roles.includes('super_admin');
+      const isAdmin = await isAdminFromPayload(payload);
       if(!isAdmin){
         // ตรวจ DB permission
         const actorRoles = await prisma.userRole.findMany({ where:{ userId:(payload as any).sub }, include:{ role:{ include:{ permissions:true } } } }).catch(()=>[]);

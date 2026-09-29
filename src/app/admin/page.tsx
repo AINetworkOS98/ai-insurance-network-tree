@@ -61,29 +61,42 @@ function AdminContent() {
   const [pendingMsgCount, setPendingMsgCount] = useState(0);
   // เครื่องมือผู้บริหารระบบ (ตอบสมาชิก / Support / รายงาน) — แสดงเฉพาะ Admin หรืออีเมล akarapol.pro798@gmail.com
   const [canAdminTools, setCanAdminTools] = useState(false);
+  // แยกสาเหตุที่โหลดไม่ได้: 'auth' = ยังไม่ล็อกอิน (ให้ไปหน้าเข้าสู่ระบบ) / 'perm' = ล็อกอินแล้วแต่ไม่มีสิทธิ์ (ไม่ต้องล็อกอินใหม่)
+  const [errorHint, setErrorHint] = useState<'auth'|'perm'|null>(null);
 
   const callApi = async (endpoint: string) => {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api${endpoint}`);
-    return await res.json();
+    // credentials:'include' — ส่งคุกกี้เซสชันเสมอ (กันกรณี NEXT_PUBLIC_BASE_URL ชี้คนละโดเมน)
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api${endpoint}`, { credentials: 'include', cache: 'no-store' });
+    const data = await res.json().catch(() => ({}));
+    return { status: res.status, data: data as any };
   };
 
   const fetchMembers = async () => {
       try {
-        const data = await callApi('/admin/members');
+        const { status, data } = await callApi('/admin/members');
         if (data.ok) {
           setMembers(data.members || []);
           setTotalActiveMembers(data.summary?.totalActiveMembers || 0);
+          setError(null); setErrorHint(null);
+        } else if (status === 401) {
+          setErrorHint('auth');
+          setError(data.error || 'ยังไม่ได้เข้าสู่ระบบ หรือเซสชันหมดอายุ');
+        } else if (status === 403) {
+          setErrorHint('perm');
+          setError(data.error || 'บัญชีที่ล็อกอินอยู่ไม่มีสิทธิ์ผู้ดูแลระบบ');
         } else {
-          setError(data.error || 'ดึงข้อมูลไม่สำเร็จ');
+          setErrorHint(null);
+          setError(data.error || `ดึงข้อมูลไม่สำเร็จ (HTTP ${status})`);
         }
       } catch (err) {
+        setErrorHint(null);
         setError(err instanceof Error ? err.message : 'เชื่อมต่อไม่สำเร็จ');
       }
     };
 
     const fetchIncomeSummary = async () => {
         try {
-          const data = await callApi('/admin/income');
+          const { data } = await callApi('/admin/income');
           if (data.ok) {
             setIncomes(data.incomes || []);
           }
@@ -96,7 +109,7 @@ function AdminContent() {
 
     const fetchPositionData = async () => {
       try {
-        const data = await callApi('/admin/positions');
+        const { data } = await callApi('/admin/positions');
         if (data.ok) {
           setPositionData(data.positions || []);
           setTreeStructure(data.treeStructure || []);
@@ -131,8 +144,15 @@ function AdminContent() {
     return (
       <div className="p-8">
         <div className="card p-6 bg-sky-50 border-blue-100">
-          <h3 className="text-lg font-bold text-sky-700 mb-2">กรุณาเข้าสู่ระบบ</h3>
+          <h3 className="text-lg font-bold text-sky-700 mb-2">
+            {errorHint === 'auth' ? 'กรุณาเข้าสู่ระบบ' : errorHint === 'perm' ? 'เข้าสู่ระบบแล้ว แต่บัญชีนี้ยังไม่มีสิทธิ์ผู้ดูแลระบบ' : 'โหลดข้อมูลไม่สำเร็จ'}
+          </h3>
           <p className="text-slate-600 text-sm">{error}</p>
+          {errorHint === 'perm' && (
+            <p className="text-slate-500 text-xs mt-2">
+              วิธีแก้: เข้าสู่ระบบด้วยอีเมลผู้ดูแลระบบที่กำหนด (เช่น akarapol.pro798@gmail.com) หรือให้ผู้ดูแลเพิ่มบทบาท admin/super_admin ให้บัญชีนี้ — ไม่ต้องเข้าสู่ระบบซ้ำ
+            </p>
+          )}
           <div className="mt-3 flex gap-2">
           <button
             onClick={fetchMembers}
@@ -140,7 +160,12 @@ function AdminContent() {
           >
             ลองใหม่
           </button>
-          <Link href="/login" className="px-4 py-2 rounded-full bg-white border border-blue-200 text-sky-700 text-sm">ไปหน้าเข้าสู่ระบบ</Link>
+          {errorHint === 'auth' && (
+            <Link href="/login" className="px-4 py-2 rounded-full bg-white border border-blue-200 text-sky-700 text-sm">ไปหน้าเข้าสู่ระบบ</Link>
+          )}
+          {errorHint === 'perm' && (
+            <Link href="/" className="px-4 py-2 rounded-full bg-white border border-blue-200 text-sky-700 text-sm">กลับหน้าแรก</Link>
+          )}
           </div>
         </div>
       </div>

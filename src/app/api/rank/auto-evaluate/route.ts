@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
+import { isAdminFromPayload } from '@/lib/admin';
 import { evaluateRank, applyRankPromotion } from '@/lib/rankEngine';
 import { emitNotification, notifyAdmins } from '@/lib/notify';
 import { RANK_CATALOG } from '@/lib/rankCatalog';
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
         include: { roles: { include: { role: true } } } as any
       });
       const perms: string[] = [];
-      const allowed = perms.includes('rank.manage') || perms.includes('rank.approve') || (payload.roles && payload.roles.includes('admin'));
+      const allowed = perms.includes('rank.manage') || perms.includes('rank.approve') || await isAdminFromPayload(payload);
       if (!allowed) return NextResponse.json({ error: 'ต้องมีสิทธิ rank.manage' }, { status: 403 });
     }
 

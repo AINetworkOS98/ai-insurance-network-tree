@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
+import { isAdminFromPayload } from '@/lib/admin';
 import crypto from 'crypto';
 
 // POST /api/tree/run — รันจัดวางอัตโนมัติ (ต้องมี tree.manage + ขอบเขตทีม)
@@ -12,9 +13,9 @@ export async function POST(req: NextRequest){
     if(!payload) return NextResponse.json({ ok:false, error:'กรุณาเข้าสู่ระบบ' }, { status:401 });
     const actorId = (payload as any).sub;
 
-    // ตรวจสิทธิ
-    const roles = (payload as any).roles || ((payload as any).role ? [(payload as any).role] : []);
-    let hasPerm = roles.includes('admin') || roles.includes('super_admin');
+    // ตรวจสิทธิ (roles ในโทเคน / อีเมล Admin / role+สิทธิใน DB)
+    const isAdminUser = await isAdminFromPayload(payload);
+    let hasPerm = isAdminUser;
     if(!hasPerm){
       const actorRoles = await prisma.userRole.findMany({ where:{ userId: actorId }, include:{ role:{ include:{ permissions:true } } } }).catch(()=>[]);
       const permKeys = actorRoles.flatMap((ur:any)=> ur.role.permissions.map((rp:any)=> rp.permission.key));

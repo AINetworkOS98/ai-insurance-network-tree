@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
+import { isAdminFromPayload } from '@/lib/admin';
 import { mirrorToFirestore } from '@/lib/firestoreMirror';
 
 // POST /api/receipts/verify — ส่งตรวจ / อนุมัติ / ปฏิเสธ (ต้องมี document.verify)
@@ -54,8 +55,9 @@ export async function POST(req: NextRequest){
     }
 
     // verify/reject/duplicate/reverse ต้องมีสิทธิ document.verify
-    const roles = (payload as any).roles || [];
-    let hasPerm = roles.includes('admin') || roles.includes('super_admin');
+    // roles ในโทเคน / อีเมล Admin / role ใน DB
+    const isAdminUser = await isAdminFromPayload(payload);
+    let hasPerm = isAdminUser;
     if(!hasPerm){
       const actorRoles = await prisma.userRole.findMany({ where:{ userId: actorId }, include:{ role:{ include:{ permissions:true } } } }).catch(()=>[]);
       const permKeys = actorRoles.flatMap((ur:any)=> ur.role.permissions.map((rp:any)=> rp.permission.key));

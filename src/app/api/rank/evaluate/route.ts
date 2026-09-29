@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
+import { isAdminFromPayload } from '@/lib/admin';
 import { evaluateRank, applyRankPromotion } from '@/lib/rankEngine';
 
 // POST /api/rank/evaluate { userId?, action?: 'evaluate'|'promote' }
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest){
     if(targetId !== (payload.sub || payload.id)){
       const requester: any = await prisma.user.findUnique({ where:{ id: payload.sub || payload.id }, include:{ roles:{ include:{ role:true } } } as any });
       const perms: string[] = [];
-      const allowed = perms.includes('rank.manage') || perms.includes('rank.approve') || (payload.roles||[]).includes('admin');
+      const allowed = perms.includes('rank.manage') || perms.includes('rank.approve') || await isAdminFromPayload(payload);
       if(!allowed) return NextResponse.json({ error:'ต้องมีสิทธิ rank.manage / rank.approve' }, { status:403 });
     }
 

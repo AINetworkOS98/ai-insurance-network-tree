@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
+import { isAdminFromPayload } from '@/lib/admin';
 import { wouldCreateLoop } from '@/lib/referral';
 
 // PUT /api/sponsorship — แก้ผู้แนะนำ (สเปคหมวด 4: หลังยืนยันแล้ว สมาชิกแก้เองไม่ได้ ผู้ดูแลที่ได้รับสิทธิเท่านั้น แก้ได้พร้อมเหตุผลและประวัติก่อน-หลัง)
@@ -14,8 +15,7 @@ export async function PUT(req: NextRequest){
     const actorId = (payload as any).sub;
 
     // ตรวจสิทธิ: ต้องมี member.sponsor_edit หรือ admin
-    const roles = (payload as any).roles || ((payload as any).role ? [(payload as any).role] : []);
-    const hasPerm = roles.includes('admin') || roles.includes('super_admin');
+    const hasPerm = await isAdminFromPayload(payload);
     // fallback: ถ้าไม่มี roles ให้ตรวจจาก DB
     let allowed = hasPerm;
     if(!allowed){

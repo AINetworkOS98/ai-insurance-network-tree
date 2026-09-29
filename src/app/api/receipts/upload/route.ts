@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
+import { isAdminFromPayload } from '@/lib/admin';
 import crypto from 'crypto';
 import { mirrorToFirestore } from '@/lib/firestoreMirror';
 
@@ -92,8 +93,7 @@ export async function GET(req: NextRequest){
     const rankLevel = (payload as any).rankLevel ?? 0;
 
     // สมาชิกทั่วไปดูได้เฉพาะของตนเอง, ผู้มีสิทธิ document.verify ดูทั้งหมด
-    const roles = (payload as any).roles || [];
-    const canViewAll = rankLevel >= 3 || roles.includes('admin');
+    const canViewAll = rankLevel >= 3 || await isAdminFromPayload(payload);
 
     const where: any = canViewAll && searchParams.get('userId') ? { userId: searchParams.get('userId') } : { userId };
     if(canViewAll && !searchParams.get('userId')) delete where.userId; // admin ดูทั้งหมดถ้าไม่ระบุ userId

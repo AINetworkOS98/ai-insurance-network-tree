@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
+import { isAdminFromPayload } from '@/lib/admin';
+import { prisma } from '@/lib/prisma';
 import { closePeriodJob, previousPeriod, monthBounds } from '@/lib/periodEngine';
 
 // POST /api/periods/close { period } — ปิดยอด (ต้อง period.close), idempotent
@@ -9,10 +11,14 @@ export async function POST(req: NextRequest){
     const token = req.cookies.get('token')?.value || req.cookies.get('auth_token')?.value;
     if(!token) return NextResponse.json({ error:'กรุณาเข้าสู่ระบบ' }, { status:401 });
     let payload: any; try{ payload = verifyToken(token); }catch{ return NextResponse.json({ error:'โทเค็นไม่ถูกต้อง' }, { status:401 }); }
-    const allowed = payload.roles?.includes('admin') || payload.roles?.includes('finance');
+    // สิทธิ: admin (จากโทเคน/อีเมล Admin/role ใน DB) หรือ role finance ใน DB
+    const isAdminUser = await isAdminFromPayload(payload);
+    let allowed = isAdminUser;
     if(!allowed){
-      // ตรวจจาก DB roles ด้วยถ้ามี
+      const rows = await prisma.userRole.findMany({ where:{ userId: String((payload as any).sub) }, include:{ role:true } }).catch(()=>[] as any[]);
+      allowed = (rows as any[]).some((r:any)=> String(r?.role?.code||'').toLowerCase() === 'finance');
     }
+    if(!allowed) return NextResponse.json({ error:'ต้องเป็นผู้ดูแลระบบหรือฝ่ายการเงิน' }, { status:403 });
     const body = await req.json().catch(()=> ({} as any));
     if(body.auto){
       // ตัดยอดเดือนก่อน — เฉพาะเมื่อพ้น cutoff สิ้นเดือนนั้นแล้ว

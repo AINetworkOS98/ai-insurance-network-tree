@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
-import { getTicketDetail, updateTicketStatus } from '@/lib/support';
+import { getTicketDetail, updateTicketStatus, isAdminOrDb } from '@/lib/support';
 
 // GET /api/admin/support/[id] — ดูรายละเอียด ticket + messages
 export async function GET(
@@ -15,7 +15,7 @@ export async function GET(
 
     const payload = verifyToken(token);
     if (!payload) return NextResponse.json({ ok: false, error: 'โทเค็นไม่ถูกต้อง' }, { status: 401 });
-    if (!payload.roles?.includes('admin') && !payload.roles?.includes('super_admin'))
+    if (!(await isAdminOrDb(payload)))
       return NextResponse.json({ ok: false, error: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
 
     const { id } = await params;
@@ -69,7 +69,7 @@ export async function PATCH(
 
     const payload = verifyToken(token);
     if (!payload) return NextResponse.json({ ok: false, error: 'โทเค็นไม่ถูกต้อง' }, { status: 401 });
-    if (!payload.roles?.includes('admin') && !payload.roles?.includes('super_admin'))
+    if (!(await isAdminOrDb(payload)))
       return NextResponse.json({ ok: false, error: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
 
     const { id } = await params;
