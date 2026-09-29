@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import YearTimeline from '@/components/YearTimeline';
 import { RANK_CATALOG } from '@/lib/rankCatalog';
 
 export default function PeriodMaintenancePage(){
@@ -74,6 +75,9 @@ export default function PeriodMaintenancePage(){
         <main className="flex-1 p-6 space-y-4">
           <h1 className="text-xl font-bold text-navy">ตัดยอดและรักษายอด</h1>
           <p className="text-[11px] text-slate-500">เขตเวลา Asia/Bangkok — ตัดยอดทุกวันสิ้นเดือน 24:00 น. วันสิ้นเดือนถือปีพุทธศักราช — ปิดยอดสร้าง snapshot ห้ามแก้ย้อนหลังเงียบๆ สมาชิกทุกคนดูตารางได้</p>
+
+          <YearTimeline />
+
           {msg && <div className="p-2 rounded-xl bg-amber-50 border text-xs">{msg}</div>}
 
           <div className="card p-4">
