@@ -555,7 +555,7 @@ export default function YearTimeline({
         {/* ตัว timeline */}
         <div
           ref={scrollerRef}
-          className="relative overflow-visible md:max-h-[720px] md:overflow-y-auto md:overflow-x-hidden md:overscroll-contain scrollbar-none px-3 py-5 sm:px-5"
+          className="relative px-3 py-5 sm:px-5"
         >
           {/* เส้นกลาง + ไฟวิ่ง (สื่อว่าเวลาเดินอยู่ตลอด) */}
           <div className="pointer-events-none absolute bottom-4 left-[13px] top-4 w-px bg-gradient-to-b from-indigo-300/10 via-sky-300/40 to-slate-400/10 md:left-1/2" />
