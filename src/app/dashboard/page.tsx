@@ -258,7 +258,7 @@ export default function Dashboard() {
                 )}
               </div>
               <p className="text-xs text-slate-400 mt-2">
-                ข้อมูลจาก Firestore ตรงตามเวลาจริง • อัปเดตเมื่อเปิดหน้า
+                ตัวเลขจากทะเบียนจริง (Postgres) รวมกับข้อมูลเดิมใน Firestore • อัปเดตเมื่อเปิดหน้า
               </p>
             </div>
 
