@@ -12,10 +12,18 @@ interface Member {
   memberCode?: string;
   displayName?: string;
   name?: string;
+  email?: string | null;
   positionId?: string;
+  positionName?: string;
   personalFYC?: number;
   personalCOM?: number;
   status?: string;
+  /** สถานะฝั่งผู้ดูแล: pending (รออนุมัติ) · approved · rejected · deleted */
+  adminStatus?: 'pending' | 'approved' | 'rejected' | 'deleted';
+  deleted?: boolean;
+  autoRenew?: boolean;
+  autoRenewSelf?: boolean;
+  legacy?: boolean;
 }
 
 interface IncomeItem {
@@ -77,6 +85,8 @@ function AdminContent() {
         if (data.ok) {
           setMembers(data.members || []);
           setTotalActiveMembers(data.summary?.totalActiveMembers || 0);
+          setSummary(data.summary || null);
+          setAutoRenewGlobal(data.summary?.autoRenewGlobal === true);
           setError(null); setErrorHint(null);
         } else if (status === 401) {
           setErrorHint('auth');
@@ -118,6 +128,76 @@ function AdminContent() {
         console.error('Position data fetch error:', err);
       }
     };
+
+  // ── จัดการสมาชิก: อนุมัติ/ไม่อนุมัติ · ลบออก/คืนค่า · ต่ออายุอัตโนมัติ ──────────
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [globalBusy, setGlobalBusy] = useState(false);
+  const [notice, setNotice] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+  const [memberFilter, setMemberFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'deleted'>('all');
+  const [autoRenewGlobal, setAutoRenewGlobal] = useState(false);
+  const [summary, setSummary] = useState<any>(null);
+
+  const postAction = async (payload: any) => {
+    // credentials:'include' — ต้องส่งคุกกี้เซสชัน ไม่งั้นตัวกั้นผู้ดูแลตอบ 401
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/admin/members`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) throw new Error(data.error || `ทำรายการไม่สำเร็จ (HTTP ${res.status})`);
+    return data;
+  };
+
+  const memberAction = async (m: any, action: 'approve' | 'reject' | 'delete' | 'restore' | 'autoRenew', autoRenew?: boolean) => {
+    const label = m.name || m.memberCode || m.id;
+    const ask: Record<string, string> = {
+      approve: `อนุมัติสมาชิก ${label} ใช่หรือไม่?\n(สถานะจะเปลี่ยนเป็น ACTIVE)`,
+      reject: `ไม่อนุมัติ ${label} ใช่หรือไม่?\n(สถานะจะเปลี่ยนเป็น INACTIVE)`,
+      delete: `ลบ ${label} ออกจากระบบ?\n(ซ่อนจากทะเบียนที่ใช้งาน — กดคืนค่าได้ภายหลัง)`,
+      restore: `คืนค่า ${label} กลับเข้าระบบ ใช่หรือไม่?`,
+    };
+    if (ask[action] && !window.confirm(ask[action])) return;
+    setBusyId(m.id); setNotice(null);
+    try {
+      await postAction({ id: m.id, action, autoRenew, confirm: action === 'delete' ? 'DELETE' : undefined });
+      const done: Record<string, string> = {
+        approve: 'อนุมัติแล้ว',
+        reject: 'ตั้งเป็นไม่อนุมัติแล้ว',
+        delete: 'ลบออกแล้ว (กดคืนค่าได้)',
+        restore: 'คืนค่าแล้ว',
+        autoRenew: autoRenew ? 'เปิดต่ออายุอัตโนมัติแล้ว' : 'ปิดต่ออายุอัตโนมัติแล้ว',
+      };
+      setNotice({ kind: 'ok', text: `${label}: ${done[action]}` });
+      await fetchMembers();
+    } catch (err) {
+      setNotice({ kind: 'err', text: err instanceof Error ? err.message : 'ทำรายการไม่สำเร็จ' });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const toggleGlobalAutoRenew = async () => {
+    const next = !autoRenewGlobal;
+    if (!window.confirm(next ? 'เปิดต่ออายุอัตโนมัติให้สมาชิกทุกคนในระบบ?' : 'ปิดต่ออายุอัตโนมัติทั้งระบบ?')) return;
+    setGlobalBusy(true); setNotice(null);
+    try {
+      const data = await postAction({ action: 'autoRenewGlobal', autoRenew: next });
+      setAutoRenewGlobal(next);
+      setNotice({
+        kind: 'ok',
+        text: next
+          ? `เปิดต่ออายุอัตโนมัติทั้งระบบแล้ว — ตั้งค่าให้สมาชิก ${data.affected ?? 0} บัญชี`
+          : 'ปิดต่ออายุอัตโนมัติทั้งระบบแล้ว',
+      });
+      await fetchMembers();
+    } catch (err) {
+      setNotice({ kind: 'err', text: err instanceof Error ? err.message : 'สลับสวิตช์ไม่สำเร็จ' });
+    } finally {
+      setGlobalBusy(false);
+    }
+  };
 
   useEffect(() => {
       fetchMembers();
@@ -171,6 +251,8 @@ function AdminContent() {
       </div>
     );
   }
+
+  const visibleMembers = members.filter((m: any) => (memberFilter === 'all' ? true : m.adminStatus === memberFilter));
 
   return (
     <div>
@@ -256,44 +338,160 @@ function AdminContent() {
           {activeTab === 'members' && (
             <div>
               <div className="card p-5">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <h2 className="text-lg font-bold text-slate-800">สมาชิกทั้งหมด</h2>
-                  <span className="text-sm text-slate-500">ทั้งหมด {totalActiveMembers} รายการ</span>
+                  <span className="text-sm text-slate-500">
+                    ทั้งหมด {members.length} รายการ · ใช้งาน {summary?.totalActiveMembers ?? totalActiveMembers} ราย
+                    {summary?.sources ? ` · ทะเบียนหลัก ${summary.sources.postgres} · ข้อมูลเดิม ${summary.sources.legacy}` : ''}
+                  </span>
                 </div>
-                <div className="mt-4 space-y-3 max-h-[500px] overflow-y-auto">
-                  {members.length === 0 ? (
-                    <p className="text-sm text-slate-500">ไม่พบข้อมูลสมาชิก</p>
+
+                {/* สวิตช์ต่ออายุอัตโนมัติทั้งระบบ */}
+                <div className="mt-3 flex flex-wrap items-center gap-3 p-3 rounded-xl border border-blue-100 bg-[#f0f7ff]">
+                  <span className="text-sm font-semibold text-slate-700">🔄 ต่ออายุอัตโนมัติ (ทั้งระบบ)</span>
+                  <button
+                    onClick={toggleGlobalAutoRenew}
+                    disabled={globalBusy}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border ${
+                      autoRenewGlobal
+                        ? 'bg-emerald-500 border-emerald-500 text-white hover:bg-emerald-600'
+                        : 'bg-white border-blue-200 text-slate-600 hover:bg-white/70'
+                    } ${globalBusy ? 'opacity-50' : ''}`}
+                  >
+                    {globalBusy ? 'กำลังบันทึก...' : autoRenewGlobal ? 'เปิดอยู่ — กดเพื่อปิดทั้งระบบ' : 'ปิดอยู่ — กดเพื่อเปิดทั้งระบบ'}
+                  </button>
+                  <span className="text-[11px] text-slate-500">
+                    เปิดแล้วระบบจะตั้งค่าต่ออายุอัตโนมัติให้สมาชิกทุกบัญชี (บันทึกเป็นธงในระบบ + Audit Log) · ต่อรายคนใช้ปุ่มท้ายแถว
+                  </span>
+                </div>
+
+                {notice && (
+                  <div className={`mt-3 px-3 py-2 rounded-xl text-sm border ${
+                    notice.kind === 'ok' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-rose-50 border-rose-200 text-rose-700'
+                  }`}>
+                    {notice.kind === 'ok' ? '✅ ' : '⚠️ '}{notice.text}
+                  </div>
+                )}
+
+                {/* ตัวกรองตามสถานะ */}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {([
+                    ['all', 'ทั้งหมด', summary?.total],
+                    ['pending', 'รออนุมัติ', summary?.pending],
+                    ['approved', 'อนุมัติแล้ว', summary?.approved],
+                    ['rejected', 'ไม่อนุมัติ', summary?.rejected],
+                    ['deleted', 'ลบออกแล้ว', summary?.deleted],
+                  ] as const).map(([key, label, n]) => (
+                    <button
+                      key={key}
+                      onClick={() => setMemberFilter(key as any)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium border ${
+                        memberFilter === key
+                          ? 'bg-sky-400 border-sky-400 text-white'
+                          : 'bg-white border-blue-100 text-slate-600 hover:bg-[#f0f7ff]'
+                      }`}
+                    >
+                      {label}{typeof n === 'number' ? ` (${n})` : ''}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-4 space-y-3 max-h-[560px] overflow-y-auto">
+                  {visibleMembers.length === 0 ? (
+                    <p className="text-sm text-slate-500">
+                      {members.length === 0 ? 'ไม่พบข้อมูลสมาชิก' : 'ไม่มีสมาชิกในสถานะนี้ — กด “ทั้งหมด” เพื่อดูทุกสถานะ'}
+                    </p>
                   ) : (
                     <table className="w-full text-xs border border-blue-100">
                       <thead className="bg-[#f0f7ff] text-slate-600 border-b border-blue-100">
                         <tr>
-                          <th className="p-2 text-left">รหสมาชิก</th>
+                          <th className="p-2 text-left">รหัสสมาชิก</th>
                           <th className="p-2 text-left">ชื่อ-นามสกุล</th>
                           <th className="p-2 text-left">ตำแหน่ง</th>
-                          <th className="p-2 text-center">ผลงาน FYC</th>
-                          <th className="p-2 text-center">COM ส่วนตัว</th>
                           <th className="p-2 text-center">สถานะ</th>
+                          <th className="p-2 text-center">ต่ออายุอัตโนมัติ</th>
+                          <th className="p-2 text-center min-w-[300px]">การจัดการ (อนุมัติ · ลบ/คืนค่า)</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {members.map((m: any) => (
-                          <tr key={m.id} className="border-b">
-                            <td className="p-2 font-medium">{m.memberCode || m.id}</td>
-                            <td className="p-2">{m.displayName || m.name || '—'}</td>
-                            <td className="p-2">
-                              {DEFAULT_POSITIONS.find((p: any) => p.id === m.positionId)?.name || m.positionId}
-                            </td>
-                            <td className="p-2 text-center">{(m.personalFYC || 0).toLocaleString()}</td>
-                            <td className="p-2 text-center">{(m.personalCOM || 0).toLocaleString()}</td>
-                            <td className="p-2 text-center">
-                              {m.status === 'active' ? (
-                                <span className="text-green-600">Active</span>
-                              ) : (
-                                <span className="text-red-600">Inactive</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
+                        {visibleMembers.map((m: any) => {
+                          const st = ({
+                            pending: ['รออนุมัติ', 'bg-amber-50 text-amber-700 border-amber-200'],
+                            approved: ['อนุมัติแล้ว', 'bg-emerald-50 text-emerald-700 border-emerald-200'],
+                            rejected: ['ไม่อนุมัติ', 'bg-rose-50 text-rose-700 border-rose-200'],
+                            deleted: ['ลบออกแล้ว (คืนค่าได้)', 'bg-slate-100 text-slate-500 border-slate-300'],
+                          } as any)[m.adminStatus] || ['รออนุมัติ', 'bg-amber-50 text-amber-700 border-amber-200'];
+                          const busy = busyId === m.id;
+                          return (
+                            <tr key={m.id} className={`border-b ${m.deleted ? 'opacity-60' : ''}`}>
+                              <td className="p-2 font-medium font-mono">
+                                {m.memberCode || '—'}
+                                {m.legacy && <span className="ml-1 text-[10px] text-slate-400">(ข้อมูลเดิม)</span>}
+                              </td>
+                              <td className="p-2">
+                                <div className="font-medium">{m.name || '—'}</div>
+                                <div className="text-[11px] text-slate-400">{m.email || ''}</div>
+                              </td>
+                              <td className="p-2">{m.positionName || DEFAULT_POSITIONS.find((p: any) => p.id === m.positionId)?.name || m.positionId || '—'}</td>
+                              <td className="p-2 text-center">
+                                <span className={`px-2 py-0.5 rounded-full border text-[11px] ${st[1]}`}>{st[0]}</span>
+                                <div className="text-[10px] text-slate-400 mt-1">{m.status}</div>
+                              </td>
+                              <td className="p-2 text-center">
+                                <button
+                                  onClick={() => memberAction(m, 'autoRenew', !m.autoRenewSelf)}
+                                  disabled={busy}
+                                  className={`px-2 py-1 rounded-full text-[11px] border font-medium ${
+                                    m.autoRenewSelf
+                                      ? 'bg-emerald-500 border-emerald-500 text-white hover:bg-emerald-600'
+                                      : 'bg-white border-blue-200 text-slate-500 hover:bg-[#f0f7ff]'
+                                  } ${busy ? 'opacity-40' : ''}`}
+                                >
+                                  {m.autoRenewSelf ? '🔄 เปิด' : '⭕ ปิด'}
+                                </button>
+                                {m.autoRenew && !m.autoRenewSelf && (
+                                  <div className="text-[10px] text-emerald-600 mt-1">ตามค่าทั้งระบบ</div>
+                                )}
+                              </td>
+                              <td className="p-2">
+                                <div className="flex flex-wrap gap-1 justify-center">
+                                  <button
+                                    onClick={() => memberAction(m, 'approve')}
+                                    disabled={busy || (m.adminStatus === 'approved' && !m.deleted)}
+                                    className={`px-2 py-1 rounded-full text-[11px] font-medium text-white bg-emerald-500 hover:bg-emerald-600 ${busy || (m.adminStatus === 'approved' && !m.deleted) ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                  >
+                                    ✅ อนุมัติ
+                                  </button>
+                                  <button
+                                    onClick={() => memberAction(m, 'reject')}
+                                    disabled={busy || m.adminStatus === 'rejected'}
+                                    className={`px-2 py-1 rounded-full text-[11px] font-medium text-white bg-amber-500 hover:bg-amber-600 ${busy || m.adminStatus === 'rejected' ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                  >
+                                    ⛔ ไม่อนุมัติ
+                                  </button>
+                                  {m.deleted ? (
+                                    <button
+                                      onClick={() => memberAction(m, 'restore')}
+                                      disabled={busy}
+                                      className={`px-2 py-1 rounded-full text-[11px] font-medium text-white bg-sky-500 hover:bg-sky-600 ${busy ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                    >
+                                      ♻️ คืนค่า
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => memberAction(m, 'delete')}
+                                      disabled={busy || m.legacy}
+                                      className={`px-2 py-1 rounded-full text-[11px] font-medium text-white bg-rose-600 hover:bg-rose-700 ${busy || m.legacy ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                      title={m.legacy ? 'ข้อมูลเดิมใน Firestore — ลบ/คืนค่าได้เฉพาะสมาชิกในทะเบียนหลัก' : ''}
+                                    >
+                                      🗑️ ลบออก
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   )}
