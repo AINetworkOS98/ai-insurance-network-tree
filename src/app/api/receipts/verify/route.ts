@@ -75,15 +75,15 @@ export async function POST(req: NextRequest){
               await tx.receiptFile.update({ where:{ id: receiptId }, data:{ status:'Verified', verifiedAt: new Date(), creditedPeriod: creditedPeriod || new Date().toISOString().slice(0,7) } });
               await tx.receiptVerification.create({ data:{ receiptId, result:'Verified', reason: reason || 'ตรวจสอบกับแหล่งรับเงินจริงแล้ว', verifiedBy: actorId, source } });
 
-              // สร้าง PerformanceLedger ครั้งเดียว — แยก premium vs commission ตาม ledgerType
-              // สเปค: ใบเสร็จเบี้ยไม่ถูกนำไปนับเป็นค่าบำเหน็จโดยตรง
+              // สร้าง PerformanceLedger "แถวเดียวต่อใบเสร็จ" (ตารางมี unique(receiptId))
+              // เดิมโค้ดสร้าง 2 แถวด้วย receiptId เดียวกัน (แถวที่สองเป็นคอมมิชชัน 20,000 คงที่)
+              // → ชน unique ในทรานแซกชันเดียว ทำให้ Postgres abort ทั้งทรานแซกชัน แล้ว rollback เงียบ ๆ
+              //   (API ตอบ 200 แต่ข้อมูลไม่ถูกบันทึก) และเป็นการสร้างรายได้ที่ไม่มีอยู่จริง
               const type = ledgerType || ext?.type || 'premium';
-              // ถ้า type เป็น commission/com_plus ต้องมีรายงานค่าบำเหน็จแยก — ใบเสร็จ premium ห้ามใส่เป็น commission
               const ledgerTypeFinal = type.includes('commission') || type.includes('com') ? 'commission' : 'premium';
               const amount = ext?.amount ? String(ext.amount) : '0';
               const period = creditedPeriod || new Date().toISOString().slice(0,7);
 
-              // ป้องกันสร้างซ้ำด้วย unique(receiptId)
               await tx.performanceLedger.create({
                 data:{
                   userId: receipt.userId,
@@ -92,19 +92,7 @@ export async function POST(req: NextRequest){
                   amount,
                   period,
                 }
-              }).catch(()=>null);
-
-              // เพิ่มคอมมิชชัน 20,000 บาท สำหรับการอัปโหลด/สแกนใบเสร็จสำเร็จ
-              const commissionAmount = '20000';
-              await tx.performanceLedger.create({
-                data:{
-                  userId: receipt.userId,
-                  receiptId,
-                  type: 'commission_upload',
-                  amount: commissionAmount,
-                  period: new Date().toISOString().slice(0,7),
-                }
-              }).catch(()=>null);
+              });
             });
       await prisma.auditLog.create({ data:{ userId: actorId, action:'receipt.verify', entity:'ReceiptFile', entityId: receiptId, newValue:{ creditedPeriod } } });
       return NextResponse.json({ ok:true, status:'Verified', message:'รับรองยอดสำเร็จ — สร้างรายการผลงานแล้ว', creditedPeriod });

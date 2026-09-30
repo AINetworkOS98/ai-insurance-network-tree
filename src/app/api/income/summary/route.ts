@@ -3,12 +3,19 @@ import { calculateTotalIncome, PositionId, INITIAL_PLAN_VERSION } from '@/lib/ca
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
+/**
+ * แปลงระดับสายงาน (User.rankLevel) → ตำแหน่งที่ใช้คิดค่าตอบแทน
+ * ต้องตรงกับ rankCatalog.ts: 0=ผู้สนใจทั่วไป/สมาชิกทั่วไป, 1=ตัวแทน(agent), 2=หัวหน้าหน่วย(unit_manager),
+ * 3=ผู้จัดการศูนย์(center_manager), 4=ผู้จัดการภาค(region_manager)
+ * เดิมตารางนี้เลื่อนไป 1 ชั้น (1→unit_manager, 2→center_manager, ...) ทำให้ตัวแทนได้ค่าจัดงานหน่วย
+ * และหัวหน้าหน่วยได้ค่าจัดงานศูนย์ — คิดเงินเกินสิทธิ์จริงทุกระดับ
+ */
 const rankToPosition: Record<number, PositionId> = {
-  0: 'agent',
-  1: 'unit_manager',
-  2: 'center_manager',
-  3: 'region_manager',
-  4: 'executive_region',
+  0: 'agent' as PositionId,
+  1: 'agent' as PositionId,
+  2: 'unit_manager' as PositionId,
+  3: 'center_manager' as PositionId,
+  4: 'region_manager' as PositionId,
 };
 
 function asNumber(value: unknown): number {
