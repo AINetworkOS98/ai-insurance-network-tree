@@ -46,6 +46,8 @@ function LoginInner(){
       else if(m==='facebook_failed') setMsg('เข้าสู่ระบบด้วย Facebook ไม่สำเร็จ — ลองใหม่หรือใช้อีเมล/Google');
       else if(m==='github_failed') setMsg('เข้าสู่ระบบด้วย GitHub ไม่สำเร็จ — ลองใหม่หรือใช้อีเมล/Google');
       else if(m==='facebook_no_email' || m==='github_no_email') setMsg('บัญชีนี้ไม่มีอีเมล — กรุณาเปิดเผยอีเมลในขั้นตอนขอสิทธิ์แล้วลองใหม่');
+      else if(m==='unauthorized_client' || m==='tiktok_not_configured' || m.includes('tiktok'))
+        setMsg('TikTok Login ยังไม่พร้อมใช้งาน — แอป TikTok ยังไม่ได้ลงทะเบียน redirect URI นี้ ผู้ดูแลระบบต้องเพิ่ม https://ai-insurance-network-tree.vercel.app/api/auth/tiktok ใน TikTok Developer Console → Login Kit → Redirect URI แล้วบันทึก (แนะนำใช้ Google หรืออีเมล/รหัสผ่านไปก่อน)');
       else if(m!=='null' && m!=='') { setMsg(decodeURIComponent(m)); setMsgType('err'); }
       if(m) setMsgType('err');
     }
