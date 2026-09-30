@@ -188,9 +188,8 @@ export interface ActionResult {
 /** ลงมือตามคำสั่งผู้ดูแล — คืนค่าที่เกิดขึ้นจริงให้ UI แสดงผลได้ทันที */
 export async function applyMemberAction(input: ActionInput): Promise<ActionResult> {
   const { id, action, actorId, actorEmail } = input;
-  if (!id) return { ok: false, error: 'ไม่ระบุสมาชิก' };
 
-  // ── สวิตช์ทั้งระบบ ─────────────────────────────────────────────
+  // ── สวิตช์ทั้งระบบ (ไม่ผูกกับสมาชิกคนใดคนหนึ่ง จึงไม่ต้องมี id) ──────────────
   if (action === 'autoRenewGlobal') {
     const on = input.autoRenew === true;
     const users: any[] = await (prisma as any).user.findMany({ select: { id: true } }).catch(() => []);
@@ -199,6 +198,8 @@ export async function applyMemberAction(input: ActionInput): Promise<ActionResul
     await audit(actorId, on ? 'member.auto_renew_global_on' : 'member.auto_renew_global_off', GLOBAL_STATE_DOC, null, { autoRenewGlobal: on, affected }, input.reason);
     return { ok: true, action, autoRenewGlobal: on, affected, stateStored: stored };
   }
+
+  if (!id) return { ok: false, error: 'ไม่ระบุสมาชิก' };
 
   const user: any = isUuid(id)
     ? await (prisma as any).user.findUnique({ where: { id }, select: { id: true, status: true, email: true, memberCode: true } }).catch(() => null)
