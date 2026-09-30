@@ -44,7 +44,8 @@ export async function GET(req: NextRequest) {
 }
 
 // GET /api/admin/support/[id] — ดูรายละเอียด ticket (admin)
-export async function GET_ById(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+// ไม่ export — Next 16 อนุญาตให้ route file export เฉพาะ HTTP handler/config เท่านั้น
+async function GET_ById(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const token = req.cookies.get('token')?.value || req.cookies.get('auth_token')?.value;
     if (!token) return NextResponse.json({ ok: false, error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
@@ -88,7 +89,8 @@ export async function GET_ById(req: NextRequest, { params }: { params: Promise<{
 }
 
 // PATCH /api/admin/support/[id] — แก้สถานะ +หมายเหตุ (admin)
-export async function PATCH_ById(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+// ไม่ export — Next 16 อนุญาตให้ route file export เฉพาะ HTTP handler/config เท่านั้น
+async function PATCH_ById(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const token = req.cookies.get('token')?.value || req.cookies.get('auth_token')?.value;
     if (!token) return NextResponse.json({ ok: false, error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });

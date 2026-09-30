@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-export const DEFAULT_RECEIPT_SETTINGS = {
+// ไม่ export — Next 16 อนุญาตให้ route file export เฉพาะ HTTP handler/config เท่านั้น
+const DEFAULT_RECEIPT_SETTINGS = {
   maxAmount: 500000,          // เพดานรับรองต่อใบ — เกินนี้ verify ไม่ผ่าน
   autoVerifyLimit: 0,         // 0 = ปิด; >0 รับรองอัตโนมัติเมื่อยอดไม่เกินนี้ + confidence >= 0.8
   requirePolicyNo: false,     // บังคับเลขกรมธรรม์ก่อนส่งตรวจ
