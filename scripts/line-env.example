@@ -1,0 +1,18 @@
+# ไฟล์ตั้งค่า LINE — คัดลอกเป็น .env.line แล้ววางค่าจริง (ห้าม commit, .env* ถูก gitignore ไว้แล้ว)
+#
+# หาค่าได้จาก LINE Developers Console → เลือก Provider → channel ประเภท "Messaging API"
+#
+# 1) LINE_CHANNEL_ACCESS_TOKEN = แท็บ "Messaging API" → Channel access token (long-lived) → กด Issue แล้วคัดลอก
+#    (ถ้าเคยตั้งไว้แล้วให้กด Reissue / ดูค่าเดิม — token ยาวประมาณ 170 ตัวอักษร)
+#
+# 2) LINE_TARGET_ID = ปลายทางที่จะให้ระบบส่งข้อความหา
+#    • ส่งหาตัวเอง (แนะนำให้เริ่มแบบนี้): แท็บ "Messaging API" → "Your user ID" ขึ้นต้นด้วย U + hex 32 ตัว
+#    • ส่งเข้ากลุ่ม: เชิญ OA เข้ากลุ่ม แล้วดึง groupId (ขึ้นต้นด้วย C) จาก webhook ของ LINE
+#
+# ตั้งค่าให้ Backend (Vercel) ด้วยคำสั่งเดียว (ค่าไม่ถูกพิมพ์ออกจอ):
+#     node scripts/set-line-env.mjs
+# ตรวจไฟล์ก่อนโดยไม่ยิง Vercel:
+#     node scripts/set-line-env.mjs --dry
+
+LINE_CHANNEL_ACCESS_TOKEN=
+LINE_TARGET_ID=

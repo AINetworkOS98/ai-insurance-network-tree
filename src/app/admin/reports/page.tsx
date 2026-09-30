@@ -92,6 +92,7 @@ export default function AdminReportsPage() {
       setToast('❌ เชื่อมต่อไม่สำเร็จ');
     } finally {
       setTestingLine(false);
+      fetchLine();                       // อัปเดตสถานะทันทีหลังลองส่ง
       setTimeout(() => setToast(null), 4000);
     }
   }
@@ -185,17 +186,40 @@ export default function AdminReportsPage() {
                   <span className="text-sm text-slate-700">Email: {emailConnected ? '🟢 Connected' : '🔴 Not Connected'}</span>
                 </div>
                 {!line?.connected && (
-                  <p className="text-xs text-slate-500 mt-3 bg-[#f0f7ff] border border-[#dbeafe] rounded-xl p-3">
-                    ยังไม่ได้ตั้งค่า LINE — ตั้ง Environment Variables <code className="font-mono">LINE_CHANNEL_ACCESS_TOKEN</code> และ <code className="font-mono">LINE_TARGET_ID</code> ใน Backend (Vercel) แล้วลองใหม่
-                  </p>
+                  <div className="text-xs text-slate-600 mt-3 bg-[#f0f7ff] border border-[#dbeafe] rounded-xl p-3 space-y-2">
+                    <div className="font-semibold text-slate-700">ยังไม่ได้ตั้งค่า LINE — ทำตามนี้แล้วกด “ตรวจสถานะอีกครั้ง”</div>
+                    <ol className="list-decimal ml-4 space-y-1">
+                      <li>เปิด <span className="font-mono">LINE Developers Console</span> → เลือก channel ประเภท <b>Messaging API</b></li>
+                      <li>คัดลอก <code className="font-mono">Channel access token (long-lived)</code> → เก็บเป็น <code className="font-mono">LINE_CHANNEL_ACCESS_TOKEN</code></li>
+                      <li>ในแท็บเดียวกัน ใช้ <b>Your user ID</b> (ขึ้นต้นด้วย U) เป็น <code className="font-mono">LINE_TARGET_ID</code> (หรือ groupId ที่ขึ้นต้นด้วย C ถ้าส่งเข้ากลุ่ม)</li>
+                      <li>ตั้งค่าให้ Backend (Vercel) — เลือกวิธีใดวิธีหนึ่ง:
+                        <div className="mt-1 space-y-0.5">
+                          <div>• วางค่าในไฟล์ <code className="font-mono">.env.line</code> แล้วรัน <code className="font-mono">node scripts/set-line-env.mjs</code></div>
+                          <div>• หรือ Vercel → Project → Settings → Environment Variables → เพิ่ม 2 ตัวแปร (Production)</div>
+                        </div>
+                      </li>
+                      <li>Deploy ใหม่ 1 ครั้ง → กลับมากด “ตรวจสถานะอีกครั้ง” แล้วกด “ส่งข้อความทดสอบ LINE”</li>
+                    </ol>
+                    <div className="text-[11px] text-slate-500">
+                      ระบบจะบอกว่าตั้งค่าครบหรือไม่โดยไม่เปิดเผยตัว token (แสดงแค่ปลายทางแบบปิดบัง)
+                    </div>
+                  </div>
                 )}
-                <button
-                  onClick={testLine}
-                  disabled={testingLine}
-                  className="mt-4 px-5 py-2.5 rounded-full bg-sky-500 text-white text-sm font-semibold hover:bg-sky-600 disabled:opacity-40"
-                >
-                  {testingLine ? 'กำลังส่ง...' : 'ส่งข้อความทดสอบ LINE'}
-                </button>
+                <div className="flex flex-wrap gap-2 mt-4">
+                  <button
+                    onClick={testLine}
+                    disabled={testingLine}
+                    className="px-5 py-2.5 rounded-full bg-sky-500 text-white text-sm font-semibold hover:bg-sky-600 disabled:opacity-40"
+                  >
+                    {testingLine ? 'กำลังส่ง...' : 'ส่งข้อความทดสอบ LINE'}
+                  </button>
+                  <button
+                    onClick={fetchLine}
+                    className="px-5 py-2.5 rounded-full border bg-white text-slate-700 text-sm font-semibold"
+                  >
+                    ตรวจสถานะอีกครั้ง
+                  </button>
+                </div>
               </div>
             </>
           )}

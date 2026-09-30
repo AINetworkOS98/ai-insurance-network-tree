@@ -32,6 +32,8 @@ const PUBLIC_API = [
   '/api/search',
   '/api/members',
   '/api/visitor',
+  // เส้นทางสำหรับระบบอัตโนมัติ: route ตรวจสิทธิ์เอง (ผู้ดูแล หรือ Bearer CRON_SECRET) — ถ้าไม่มีสิทธิ์ตอบ 401
+  '/api/line',
 ];
 
 const PUBLIC_PAGES = [
