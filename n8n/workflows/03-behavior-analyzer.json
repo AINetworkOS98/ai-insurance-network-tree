@@ -1,0 +1,569 @@
+{
+  "name": "03 Behavior Analyzer",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -460,
+        0
+      ],
+      "id": "d2b89e3d-8c0a-4c16-b75e-2428f8ba1b22",
+      "name": "ทุก 15 นาที",
+      "notes": "Schedule Trigger ทุก 15 นาที (timezone Asia/Bangkok)"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/lead/events/recent",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "minutes",
+              "value": "20"
+            },
+            {
+              "name": "limit",
+              "value": "300"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -240,
+        0
+      ],
+      "id": "dc2ac6e1-8738-4451-9bae-4d4497c2ffe7",
+      "name": "ดึง Event ล่าสุด (/api/lead/events/recent)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "GET /api/lead/events/recent?minutes=20 — ดึง VisitorEvent ล่าสุดที่ยังไม่ถูกวิเคราะห์ (endpoint ต้องสร้างเพิ่ม; ต้องเปิดรับผู้เรียกที่มี CRON_SECRET) | หมายเหตุ: /api/track คำนวณ EngagementScore สะสมไว้แล้ว — WF03 ใช้ข้อมูลนี้เพื่อ (ก) ให้ AI สกัดความสนใจ และ (ข) ตรวจทานคะแนน/ระดับ ไม่ใช่บวกซ้ำ"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// จัดกลุ่ม event ตาม lead + คำนวณ Engagement Score ตามตารางคะแนนของสเปก\n// page_view+1 | return_visit+5 | video_view+3 | ดูเกิน 50%+5 | ดูจบ+8 | ดูคลิปเดิมซ้ำ+5\n// form_open+5 | form_submit+20 | เลือกหัวข้อ+10 | ขอให้ติดต่อกลับ+30\nconst res = $input.first().json || {};\nconst events = Array.isArray(res) ? res : (res.events || res.data || res.items || []);\nconst by = {};\nfor (const e of events) {\n  const pid = e.prospectId || e.prospect_id || e.visitorId || e.visitor_id;\n  if (!pid) continue;\n  const g = by[pid] || (by[pid] = { prospectId: pid, events: [], videos: {}, counts: {}, lastSeenAt: null });\n  const at = e.at || e.occurredAt || e.createdAt || null;\n  if (at && (!g.lastSeenAt || at > g.lastSeenAt)) g.lastSeenAt = at;\n  g.events.push({ type: String(e.type || ''), videoId: e.videoId || e.video_id || null, watchPct: Number(e.watchPct || e.watch_pct || 0) || 0 });\n}\nconst out = [];\nfor (const pid of Object.keys(by)) {\n  const g = by[pid];\n  let score = 0;\n  for (const e of g.events) {\n    g.counts[e.type] = (g.counts[e.type] || 0) + 1;\n    if (e.type === 'page_view') score += 1;\n    if (e.type === 'return_visit') score += 5;\n    if (e.type === 'video_view') { score += 3; if (e.videoId) g.videos[e.videoId] = (g.videos[e.videoId] || 0) + 1; }\n    if (e.watchPct > 50) score += 5;\n    if (e.watchPct >= 95 || e.type === 'video_complete') score += 8;\n    if (e.type === 'form_open') score += 5;\n    if (e.type === 'form_submit') score += 20;\n    if (e.type === 'topic_select' || e.type === 'topic_choose') score += 10;\n    if (e.type === 'callback_request') score += 30;\n  }\n  const repeatedVideos = Object.keys(g.videos).filter(v => g.videos[v] > 1);\n  score += repeatedVideos.length * 5; // ดูคลิปเดิมซ้ำ +5 ต่อคลิป\n  score = Math.max(0, Math.min(100, score));\n  const level = score >= 70 ? 'HIGH_INTENT' : score >= 40 ? 'INTERESTED' : score >= 20 ? 'WARM' : 'LOW';\n  out.push({ json: {\n    prospectId: pid, engagementScore: score, level: level,\n    behavior: { counts: g.counts, videos: Object.keys(g.videos), repeatedVideos: repeatedVideos, lastSeenAt: g.lastSeenAt, eventCount: g.events.length },\n    at: new Date().toISOString()\n  } });\n}\nif (out.length === 0) return [{ json: { none: true, reason: 'ไม่พบ event ใหม่ในช่วงเวลานี้' } }];\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -20,
+        0
+      ],
+      "id": "cc589a84-7d10-4c2d-b1a0-1941379332f8",
+      "name": "จัดกลุ่มตาม Lead + คำนวณคะแนน",
+      "onError": "continueRegularOutput",
+      "notes": "คำนวณ Engagement Score ตามตารางคะแนนในสเปก (สูงสุด 100) และแบ่งระดับ LOW/WARM/INTERESTED/HIGH_INTENT (ชื่อระดับเดียวกับแอป — 70+ = HIGH_INTENT)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "554bab80-2e0d-4177-9135-4f649a3dc326",
+              "leftValue": "={{ $json.none !== true }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        200,
+        0
+      ],
+      "id": "8838c4c8-5255-4cba-ba94-3a18448821df",
+      "name": "มี lead ให้วิเคราะห์?",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/ai/query",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ query: 'คุณคือ AI Interest Analyst วิเคราะห์พฤติกรรมผู้สนใจรายนี้แล้วตอบเป็น JSON เท่านั้น รูปแบบ {\"topics\":[{\"topic\":\"หัวข้อ\",\"weight\":0-100}],\"summaryThai\":\"สรุปสั้น\",\"suggestedAction\":\"สิ่งควรทำต่อ\"} | prospectId=' + $json.prospectId + ' | engagementScore=' + $json.engagementScore + ' | level=' + $json.level + ' | พฤติกรรม=' + JSON.stringify($json.behavior) + ' | ใช้ภาษาสุภาพ ห้ามอ้างว่ารู้ว่ากำลังดูอะไรอยู่แบบเรียลไทม์', mode: 'SMART', hasDataset: false, userId: 'n8n-03-behavior-analyzer' }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        420,
+        -160
+      ],
+      "id": "7b0fe7f1-01cd-41f3-b86e-811ec5582bff",
+      "name": "AI Interest Analyst (/api/ai/query)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "เรียก AI ผ่าน /api/ai/query ของแอปเอง (ไม่ต้องเก็บ AI API key ใน n8n) — endpoint นี้ยังไม่บังคับ auth แต่ส่ง Bearer CRON_SECRET เพื่อความสม่ำเสมอ; retry 3 ครั้ง"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// อ่านผล AI Interest Analyst (JSON) — ถ้า AI ล้มเหลว/ตอบไม่เป็น JSON ยังบันทึกคะแนนที่คำนวณเองต่อได้\nconst leads = $('จัดกลุ่มตาม Lead + คำนวณคะแนน').all();\nconst items = $input.all();\nconst out = [];\nitems.forEach(function (it, i) {\n  const lead = (leads[i] && leads[i].json) || {};\n  if (lead.none || lead.prospectId === undefined) return;\n  const raw = String(it.json.answer || it.json.text || it.json.content || '');\n  const m = raw.match(/\\{[\\s\\S]*\\}/);\n  let parsed = null;\n  if (m) { try { parsed = JSON.parse(m[0]); } catch (e) { parsed = null; } }\n  const topics = (parsed && Array.isArray(parsed.topics)) ? parsed.topics.slice(0, 5).map(function (t) {\n    return { topic: String(t.topic || t.name || '').slice(0, 80), weight: Math.max(0, Math.min(100, Number(t.weight || t.score || 0) || 0)) };\n  }) : [];\n  out.push({ json: {\n    prospectId: lead.prospectId, engagementScore: lead.engagementScore, level: lead.level,\n    behavior: lead.behavior, topics: topics,\n    aiOk: !!parsed,\n    aiSummary: (parsed && (parsed.summaryThai || parsed.summary)) ? String(parsed.summaryThai || parsed.summary).slice(0, 400) : null,\n    aiSuggestedAction: (parsed && parsed.suggestedAction) ? String(parsed.suggestedAction).slice(0, 200) : null,\n    aiError: parsed ? null : 'AI ตอบไม่ใช่ JSON ที่อ่านได้ (บันทึกคะแนนที่คำนวณเองต่อไป)',\n    at: new Date().toISOString()\n  } });\n});\nif (out.length === 0) return [{ json: { none: true, reason: 'ไม่มี lead ให้วิเคราะห์ในรอบนี้' } }];\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        -160
+      ],
+      "id": "a8b98ba7-48da-434b-a29d-8781f207b4ff",
+      "name": "อ่านผล AI + ตรวจรูปแบบ",
+      "onError": "continueRegularOutput",
+      "notes": "ถอด JSON จากคำตอบ AI; อ่านไม่ได้ = ยังบันทึกคะแนนต่อ (ไม่ทำให้งานหยุด)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/lead/score",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ prospectId: $json.prospectId, score: $json.engagementScore, scoreMode: 'set', level: $json.level, breakdown: $json.behavior, topics: $json.topics, aiOk: $json.aiOk, aiSummary: $json.aiSummary, aiSuggestedAction: $json.aiSuggestedAction, source: 'n8n-03-behavior-analyzer' }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        860,
+        -160
+      ],
+      "id": "5e875c5e-fdcc-4216-8bcf-1bc82f5c8d99",
+      "name": "บันทึกความสนใจ + Engagement Score (/api/lead/score)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "POST /api/lead/score — อัปเดต EngagementScore + LeadInterest (endpoint ต้องสร้างเพิ่ม) | ⚠️ ต้องเป็น idempotent: ตั้งค่า/ผสาน (scoreMode='set') ห้ามบวกซ้ำ เพราะ /api/track บวกคะแนนสะสมให้แล้วตอนเก็บ event"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// สรุปผลการอัปเดตคะแนน/ความสนใจ\nconst all = $('บันทึกความสนใจ + Engagement Score (/api/lead/score)').all();\nlet okCount = 0, failCount = 0, firstError = null;\nfor (const it of all) {\n  const j = it.json || {};\n  const c = j.statusCode === undefined ? null : Number(j.statusCode);\n  const ok = j.ok === true || (c !== null && c >= 200 && c < 300);\n  if (ok) okCount++;\n  else { failCount++; if (!firstError) firstError = String(j.error || j.message || ('HTTP ' + c)).slice(0, 300); }\n}\nreturn [{ json: {\n  ok: failCount === 0, workflow: '03-behavior-analyzer', stage: 'update_score',\n  detail: 'อัปเดต lead สำเร็จ ' + okCount + ' ราย / ล้มเหลว ' + failCount + ' ราย' + (firstError ? ' — ' + firstError : ''),\n  total: all.length, succeeded: okCount, failed: failCount, firstError: firstError,\n  alertText: (failCount === 0 ? 'Behavior Analyzer รอบล่าสุดสำเร็จ ' : 'แจ้งเตือน: Behavior Analyzer ล้มเหลว ') + okCount + ' ราย',\n  at: new Date().toISOString()\n} }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        -160
+      ],
+      "id": "5c155fb2-e73c-4a45-a598-ba1de80c46ef",
+      "name": "สรุปผล + สร้าง Log",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a01c32b0-34da-48d2-b4d5-7680fc63b4f6",
+              "leftValue": "={{ $json.ok }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1300,
+        -160
+      ],
+      "id": "9e14e2a4-40a9-4067-a0d9-44470c205e46",
+      "name": "อัปเดตสำเร็จทั้งหมด?",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/agent-log",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: '03-behavior-analyzer', ok: true, stage: 'update_score', detail: $json.detail, at: new Date().toISOString(), total: $json.total, failed: $json.failed }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1520,
+        -240
+      ],
+      "id": "fa39697f-8293-490f-9cdc-c93472cac3ce",
+      "name": "บันทึก Log สำเร็จ (/api/agent-log)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "โหนดบันทึก log ของงาน → POST /api/agent-log (endpoint รับ log จาก n8n; ต้องมีฝั่งแอป) อ้างความลับเป็น {{ $env.CRON_SECRET }} เท่านั้น"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/agent-log",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: '03-behavior-analyzer', ok: false, stage: 'update_score', detail: $json.detail, at: new Date().toISOString(), total: $json.total, firstError: $json.firstError }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1520,
+        20
+      ],
+      "id": "e455d0da-012f-4034-a5f6-188bb3d03f70",
+      "name": "บันทึก Log ล้มเหลว (/api/agent-log)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "โหนดบันทึก log ของงาน → POST /api/agent-log (endpoint รับ log จาก n8n; ต้องมีฝั่งแอป) อ้างความลับเป็น {{ $env.CRON_SECRET }} เท่านั้น"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.LINE_CHANNEL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $env.LINE_TARGET_ID, messages: [{ type: 'text', text: $('สรุปผล + สร้าง Log').first().json.alertText }] }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1740,
+        20
+      ],
+      "id": "35076e75-9a8c-4cc3-9ef5-838e8535255c",
+      "name": "แจ้งเตือนผู้ดูแล (LINE)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "แจ้งเตือนผู้ดูแลผ่าน LINE OA — ต้องมี LINE_CHANNEL_ACCESS_TOKEN และ LINE_TARGET_ID (ปัจจุบันยังไม่มีโทเคน; โหนดตั้ง neverError จึงไม่ทำให้งานล้มเหลว)"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        420,
+        140
+      ],
+      "id": "8fb5f0b6-e20a-45a8-b99d-895352ca7fb5",
+      "name": "จบรอบ (ไม่มี event ใหม่)",
+      "onError": "continueRegularOutput",
+      "notes": "ทางออกเมื่อไม่มี event ใหม่ในรอบนี้ — ไม่ต้องเรียก AI ไม่ต้องเขียน log"
+    }
+  ],
+  "connections": {
+    "ทุก 15 นาที": {
+      "main": [
+        [
+          {
+            "node": "ดึง Event ล่าสุด (/api/lead/events/recent)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ดึง Event ล่าสุด (/api/lead/events/recent)": {
+      "main": [
+        [
+          {
+            "node": "จัดกลุ่มตาม Lead + คำนวณคะแนน",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "จัดกลุ่มตาม Lead + คำนวณคะแนน": {
+      "main": [
+        [
+          {
+            "node": "มี lead ให้วิเคราะห์?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "มี lead ให้วิเคราะห์?": {
+      "main": [
+        [
+          {
+            "node": "AI Interest Analyst (/api/ai/query)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "จบรอบ (ไม่มี event ใหม่)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Interest Analyst (/api/ai/query)": {
+      "main": [
+        [
+          {
+            "node": "อ่านผล AI + ตรวจรูปแบบ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "อ่านผล AI + ตรวจรูปแบบ": {
+      "main": [
+        [
+          {
+            "node": "บันทึกความสนใจ + Engagement Score (/api/lead/score)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "บันทึกความสนใจ + Engagement Score (/api/lead/score)": {
+      "main": [
+        [
+          {
+            "node": "สรุปผล + สร้าง Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สรุปผล + สร้าง Log": {
+      "main": [
+        [
+          {
+            "node": "อัปเดตสำเร็จทั้งหมด?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "อัปเดตสำเร็จทั้งหมด?": {
+      "main": [
+        [
+          {
+            "node": "บันทึก Log สำเร็จ (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "บันทึก Log ล้มเหลว (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "บันทึก Log ล้มเหลว (/api/agent-log)": {
+      "main": [
+        [
+          {
+            "node": "แจ้งเตือนผู้ดูแล (LINE)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Bangkok",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true
+  },
+  "versionId": "43c5579e-2a24-4c17-bbc8-f194d6592245",
+  "meta": {
+    "description": "ทุก 15 นาที: ดึง event ล่าสุด → จัดกลุ่มตาม lead → AI Interest Analyst วิเคราะห์ความสนใจ → คำนวณ Engagement Score ตามตารางสเปก → อัปเดตฝั่งแอป → log | env: CRON_SECRET, LINE_CHANNEL_ACCESS_TOKEN, LINE_TARGET_ID",
+    "tags": [
+      "lead-nurturing",
+      "phase-5",
+      "ai",
+      "scoring"
+    ]
+  }
+}

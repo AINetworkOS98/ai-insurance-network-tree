@@ -1,0 +1,505 @@
+{
+  "name": "06 Lead Escalation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -460,
+        0
+      ],
+      "id": "cda7c532-4521-44e6-b9e7-063b38d20cd9",
+      "name": "ทุก 15 นาที",
+      "notes": "Schedule Trigger ทุก 15 นาที (timezone Asia/Bangkok)"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/dashboard/leads",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "minScore",
+              "value": "70"
+            },
+            {
+              "name": "status",
+              "value": "ACTIVE"
+            },
+            {
+              "name": "escalated",
+              "value": "false"
+            },
+            {
+              "name": "limit",
+              "value": "50"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -240,
+        0
+      ],
+      "id": "f4d44d75-5b3b-4126-9c0d-9e066b6a25b9",
+      "name": "ดึงผู้สนใจคะแนนสูง (/api/dashboard/leads)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "GET /api/dashboard/leads?minScore=70&status=ACTIVE&escalated=false — คืนผู้สนใจคะแนน ≥ 70 ที่ยังไม่ถูกยกระดับ พร้อมชื่อ/ช่องทางติดต่อ/ความสนใจ"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// กรองเฉพาะผู้สนใจคะแนน ≥ 70 (HIGH INTENT) ที่ยังไม่ถูกยกระดับ — กันสร้างงานซ้ำ\nconst res = $input.first().json || {};\nconst leads = Array.isArray(res) ? res : (res.leads || res.data || res.items || []);\nconst HIGH = 70;\nconst out = [];\nfor (const l of leads) {\n  const score = Number(l.engagementScore || l.score || 0) || 0;\n  const already = l.escalated === true || l.hasOpenTask === true\n    || String(l.stage || '').toUpperCase() === 'HIGH' || String(l.stage || '').toUpperCase() === 'HIGH_INTENT'\n    || String(l.level || '').toUpperCase() === 'HIGH_INTENT' && l.hasOpenTask === true;\n  if (score < HIGH || already) continue;\n  const topics = (l.topics || l.interests || []).map(function (t) { return String((t && t.topic) || t); });\n  out.push({ json: {\n    prospectId: l.prospectId || l.id, name: l.name || null, phone: l.phone || null,\n    email: l.email || null, channel: l.channel || 'LINE',\n    score: score, level: l.level || 'HIGH', topics: topics,\n    reason: 'คะแนนความสนใจ ' + score + ' (≥ ' + HIGH + ') — ต้องให้ตัวแทนมนุษย์ติดต่อ (AI ห้ามปิดการขายเอง)',\n    at: new Date().toISOString()\n  }, pairedItem: { item: 0 } });\n}\nif (out.length === 0) return [{ json: { none: true, reason: 'ไม่มีผู้สนใจคะแนน ≥ 70 ที่ยังไม่ถูกยกระดับ', checked: leads.length } }];\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -20,
+        0
+      ],
+      "id": "66d59e2e-fc10-4441-837b-53a1c83ffea1",
+      "name": "กรองคะแนน ≥ 70 + กันแจ้งซ้ำ",
+      "onError": "continueRegularOutput",
+      "notes": "กันสร้างงานซ้ำด้วย escalated/hasOpenTask/stage=HIGH — คะแนน 70 ขึ้นไปคือ HIGH INTENT ต้องส่งต่อมนุษย์"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "88be4ae2-25ef-441f-a3cc-f6bd04a90d1a",
+              "leftValue": "={{ $json.none !== true }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        200,
+        0
+      ],
+      "id": "809a5c99-6c9c-4146-a4c1-91376b3d0c80",
+      "name": "มีรายใหม่ที่ต้องยกระดับ?",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/agent-tasks",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ prospectId: $json.prospectId, type: 'high_intent_lead', priority: $json.score >= 85 ? 'urgent' : 'high', stage: 'HIGH_INTENT', status: 'open', assignee: null, note: $json.reason + (($json.topics && $json.topics.length) ? ' | ความสนใจ: ' + $json.topics.join(', ') : ''), contact: { phone: $json.phone, email: $json.email, channel: $json.channel }, score: $json.score, level: 'HIGH_INTENT', dedupeKey: 'escalate:' + $json.prospectId, dueAt: new Date(Date.now() + 3600000).toISOString(), source: 'n8n-06-lead-escalation' }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        420,
+        -160
+      ],
+      "id": "0288c9d9-ded4-45e3-aaff-fc53a5901039",
+      "name": "สร้างงานให้ตัวแทน (/api/agent-tasks)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "POST /api/agent-tasks (endpoint ต้องสร้างเพิ่ม) — สร้าง AgentTask ให้ตัวแทนมนุษย์ + stage=HIGH_INTENT | ⚠️ ต้อง idempotent ด้วย dedupeKey (แอปสร้างงาน high_intent_lead เองแล้วตอนคะแนน ≥ 70 ใน /api/track และ /api/lead/register) | retry 3 ครั้ง"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// สรุปผลการสร้างงานให้ตัวแทนจากผู้สนใจคะแนนสูง\nconst all = $('สร้างงานให้ตัวแทน (/api/agent-tasks)').all();\nlet okCount = 0, failCount = 0, firstError = null;\nconst taskIds = [];\nfor (const it of all) {\n  const j = it.json || {};\n  const c = j.statusCode === undefined ? null : Number(j.statusCode);\n  const ok = j.ok === true || (c !== null && c >= 200 && c < 300);\n  if (ok) { okCount++; if (j.taskId) taskIds.push(j.taskId); }\n  else { failCount++; if (!firstError) firstError = String(j.error || j.message || ('HTTP ' + c)).slice(0, 300); }\n}\nreturn [{ json: {\n  ok: failCount === 0, workflow: '06-lead-escalation', stage: 'escalate',\n  detail: 'สร้างงานให้ตัวแทนสำเร็จ ' + okCount + ' งาน / ล้มเหลว ' + failCount + ' งาน' + (firstError ? ' — ' + firstError : ''),\n  created: okCount, failed: failCount, taskIds: taskIds, firstError: firstError,\n  alertText: (failCount === 0\n    ? 'พบผู้สนใจความตั้งใจสูง (คะแนน ≥ 70) รายใหม่ ' + okCount + ' ราย — สร้างงานให้ตัวแทนแล้ว กรุณาติดต่อกลับโดยเร็ว'\n    : 'แจ้งเตือน: สร้างงานให้ตัวแทนไม่สำเร็จ ' + failCount + ' งาน — ' + firstError),\n  at: new Date().toISOString()\n} }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        -160
+      ],
+      "id": "4bf74ccc-7a2c-412b-9088-c8fd9e3e63a2",
+      "name": "สรุปผล + สร้าง Log",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ecdec0c9-9a17-4fa4-aa18-4502085bbdb7",
+              "leftValue": "={{ $json.ok }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        860,
+        -160
+      ],
+      "id": "64293d7e-dbbd-4314-9a4f-589c5f365e5c",
+      "name": "สร้างงานสำเร็จทั้งหมด?",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/agent-log",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: '06-lead-escalation', ok: true, stage: 'escalate', detail: $json.detail, at: new Date().toISOString(), created: $json.created, taskIds: $json.taskIds }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        -240
+      ],
+      "id": "a078fea7-0b6b-4554-ada5-55a851f5afc3",
+      "name": "บันทึก Log สำเร็จ (/api/agent-log)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "โหนดบันทึก log ของงาน → POST /api/agent-log (endpoint รับ log จาก n8n; ต้องมีฝั่งแอป) อ้างความลับเป็น {{ $env.CRON_SECRET }} เท่านั้น"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/agent-log",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: '06-lead-escalation', ok: false, stage: 'escalate', detail: $json.detail, at: new Date().toISOString(), created: $json.created, failed: $json.failed, firstError: $json.firstError }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        20
+      ],
+      "id": "2592ad75-6ed5-49f0-9f24-2cc4db1b9166",
+      "name": "บันทึก Log ล้มเหลว (/api/agent-log)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "โหนดบันทึก log ของงาน → POST /api/agent-log (endpoint รับ log จาก n8n; ต้องมีฝั่งแอป) อ้างความลับเป็น {{ $env.CRON_SECRET }} เท่านั้น"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.LINE_CHANNEL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $env.LINE_TARGET_ID, messages: [{ type: 'text', text: $('สรุปผล + สร้าง Log').first().json.alertText }] }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        20
+      ],
+      "id": "a737e2eb-0979-49c0-9f25-c780ae190ab2",
+      "name": "แจ้งเตือนตัวแทน (LINE)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "แจ้งตัวแทน/ผู้ดูแลให้ติดต่อผู้สนใจคะแนนสูงโดยเร็ว — LINE_CHANNEL_ACCESS_TOKEN + LINE_TARGET_ID"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        420,
+        140
+      ],
+      "id": "21e6989c-ca6b-4b89-8c08-c1aaf56b0005",
+      "name": "ไม่มีรายใหม่ (จบรอบ)",
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "ทุก 15 นาที": {
+      "main": [
+        [
+          {
+            "node": "ดึงผู้สนใจคะแนนสูง (/api/dashboard/leads)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ดึงผู้สนใจคะแนนสูง (/api/dashboard/leads)": {
+      "main": [
+        [
+          {
+            "node": "กรองคะแนน ≥ 70 + กันแจ้งซ้ำ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "กรองคะแนน ≥ 70 + กันแจ้งซ้ำ": {
+      "main": [
+        [
+          {
+            "node": "มีรายใหม่ที่ต้องยกระดับ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "มีรายใหม่ที่ต้องยกระดับ?": {
+      "main": [
+        [
+          {
+            "node": "สร้างงานให้ตัวแทน (/api/agent-tasks)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ไม่มีรายใหม่ (จบรอบ)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สร้างงานให้ตัวแทน (/api/agent-tasks)": {
+      "main": [
+        [
+          {
+            "node": "สรุปผล + สร้าง Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สรุปผล + สร้าง Log": {
+      "main": [
+        [
+          {
+            "node": "สร้างงานสำเร็จทั้งหมด?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สร้างงานสำเร็จทั้งหมด?": {
+      "main": [
+        [
+          {
+            "node": "บันทึก Log สำเร็จ (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "บันทึก Log ล้มเหลว (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "บันทึก Log ล้มเหลว (/api/agent-log)": {
+      "main": [
+        [
+          {
+            "node": "แจ้งเตือนตัวแทน (LINE)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "บันทึก Log สำเร็จ (/api/agent-log)": {
+      "main": [
+        [
+          {
+            "node": "แจ้งเตือนตัวแทน (LINE)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Bangkok",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true
+  },
+  "versionId": "9a59439c-4eaf-4ca9-8234-deb1e1016f5f",
+  "meta": {
+    "description": "ทุก 15 นาที: ดึงผู้สนใจคะแนน ≥ 70 ที่ยังไม่ถูกยกระดับ → สร้างงานให้ตัวแทนมนุษย์ (AgentTask, stage=HIGH) → แจ้งเตือน LINE → log | env: CRON_SECRET, LINE_CHANNEL_ACCESS_TOKEN, LINE_TARGET_ID",
+    "tags": [
+      "lead-nurturing",
+      "phase-5",
+      "escalation",
+      "human-handoff"
+    ]
+  }
+}

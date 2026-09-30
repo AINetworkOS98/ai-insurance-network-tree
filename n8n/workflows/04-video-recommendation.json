@@ -1,0 +1,568 @@
+{
+  "name": "04 Video Recommendation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -460,
+        0
+      ],
+      "id": "e45973d1-cb0f-4c49-8e00-cddbf433786b",
+      "name": "ทุก 1 ชั่วโมง",
+      "notes": "Schedule Trigger ทุก 1 ชั่วโมง (timezone Asia/Bangkok)"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/recommend/candidates",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "windowHours",
+              "value": "24"
+            },
+            {
+              "name": "limit",
+              "value": "50"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -240,
+        0
+      ],
+      "id": "d923e5af-595d-497e-b00f-9ed7d40475d1",
+      "name": "ดึงผู้สนใจ + คลังคลิป (/api/recommend/candidates)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "GET /api/recommend/candidates?windowHours=24 — คืน { leads:[{prospectId,interests,sentToday,sentThisWeek,lastSentVideoIds,channel}], videos:[...จากคลัง /api/videos], caps:{perDay,perWeek} } (คลังคลิปเป็นแหล่งจริงจาก /api/videos)"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// ด่าน ③ Frequency cap (≤2/วัน, ≤5/สัปดาห์) | ด่าน ④ Topic relevance | ด่าน ⑤ ไม่เคยส่งคลิปนี้\nconst res = $input.first().json || {};\nconst leads = Array.isArray(res) ? res : (res.leads || res.candidates || res.data || []);\nconst videos = Array.isArray(res.videos) ? res.videos : (res.library || []);\nconst CAP_DAY = Number((res.caps && res.caps.perDay) || 2);\nconst CAP_WEEK = Number((res.caps && res.caps.perWeek) || 5);\nconst out = [];\nconst skipped = { consent: 0, cap: 0, noClip: 0 };\nfor (const l of leads) {\n  const interests = (l.interests || l.topics || []).map(function (t) { return String((t && t.topic) || t).toLowerCase(); });\n  const sentToday = Number(l.sentToday || l.sentTodayCount || 0) || 0;\n  const sentThisWeek = Number(l.sentThisWeek || l.sentThisWeekCount || 0) || 0;\n  const lastSent = l.lastSentVideoIds || l.sentVideoIds || [];\n  const consentOk = l.consentMarketing !== false && l.unsubscribed !== true && l.optOut !== true;\n  const capOk = sentToday < CAP_DAY && sentThisWeek < CAP_WEEK;\n  const candidates = videos.filter(function (v) {\n    if (String(v.status || 'ACTIVE').toUpperCase() !== 'ACTIVE') return false;\n    if (lastSent.indexOf(v.videoId) !== -1) return false;\n    const topic = String(v.topic || '').toLowerCase();\n    const kw = (v.keywords || []).map(function (k) { return String(k).toLowerCase(); });\n    if (!interests.length) return true;\n    return interests.some(function (i) {\n      return (topic && (topic.indexOf(i) !== -1 || i.indexOf(topic) !== -1))\n        || kw.some(function (k) { return k.indexOf(i) !== -1 || i.indexOf(k) !== -1; });\n    });\n  }).slice(0, 8).map(function (v) {\n    return { videoId: v.videoId, title: v.title, topic: v.topic, url: v.url, cta: v.cta || null };\n  });\n  if (!consentOk) { skipped.consent++; continue; }\n  if (!capOk) { skipped.cap++; continue; }\n  if (!candidates.length) { skipped.noClip++; continue; }\n  out.push({ json: {\n    prospectId: l.prospectId || l.id, name: l.name || null, channel: l.channel || 'LINE',\n    interests: interests, sentToday: sentToday, sentThisWeek: sentThisWeek,\n    caps: { perDay: CAP_DAY, perWeek: CAP_WEEK }, lastSentVideoIds: lastSent,\n    videoCandidates: candidates\n  }, pairedItem: { item: 0 } });\n}\nif (out.length === 0) return [{ json: { none: true, reason: 'ไม่มีรายการที่ผ่านด่านในรอบนี้', skipped: skipped, leadsChecked: leads.length } }];\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -20,
+        0
+      ],
+      "id": "7eae5393-cc9c-4dc1-bf22-fc38e6481bd1",
+      "name": "คัดกรอง Topic + Frequency Cap (≤2/วัน ≤5/สัปดาห์)",
+      "onError": "continueRegularOutput",
+      "notes": "บังคับด่านความยินยอม + โควต้า ≤2 ครั้ง/วัน และ ≤5 ครั้ง/สัปดาห์ + เฉพาะคลิปที่ตรงหัวข้อและยังไม่เคยส่งให้รายนั้น"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ab64b42c-9bef-428f-94a8-976a9190bed3",
+              "leftValue": "={{ $json.none !== true }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        200,
+        0
+      ],
+      "id": "66832949-a5ee-402e-9a37-3af9131cde0a",
+      "name": "มีรายการที่ต้องแนะนำ?",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/ai/query",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ query: 'คุณคือ AI Video Recommender เลือกคลิปที่เหมาะกับผู้สนใจรายนี้มากที่สุด 1 คลิป จากลิสต์ที่ให้เท่านั้น แล้วตอบเป็น JSON รูปแบบ {\"videoId\":\"...\",\"reason\":\"เหตุผลสั้น\",\"confidence\":0.0-1.0,\"message\":\"ข้อความชวนดูสั้น ๆ\"} | prospectId=' + $json.prospectId + ' | ความสนใจ=' + JSON.stringify($json.interests) + ' | โควต้าที่เหลือ ต่อวัน ' + ($json.caps.perDay - $json.sentToday) + ' ต่อสัปดาห์ ' + ($json.caps.perWeek - $json.sentThisWeek) + ' | คลิปที่เลือกได้=' + JSON.stringify($json.videoCandidates) + ' | ห้ามเลือกคลิปนอกลิสต์ ห้ามกล่าวว่าติดตามว่ากำลังดูอะไรอยู่', mode: 'SMART', hasDataset: false, userId: 'n8n-04-video-recommender' }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        420,
+        -160
+      ],
+      "id": "ee4ae781-567e-46e8-895c-a2cca6ff1436",
+      "name": "AI Video Recommender (/api/ai/query)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "เรียก AI ผ่าน /api/ai/query ของแอป (ไม่เก็บ AI API key ใน n8n); retry 3 ครั้ง"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// อ่านคำแนะนำจาก AI + บังคับว่าต้องเป็นคลิปที่อยู่ในลิสต์ที่ผ่านด่านแล้วเท่านั้น\nconst leads = $('คัดกรอง Topic + Frequency Cap (≤2/วัน ≤5/สัปดาห์)').all();\nconst items = $input.all();\nconst out = [];\nitems.forEach(function (it, i) {\n  const lead = (leads[i] && leads[i].json) || {};\n  if (lead.none || !lead.prospectId) return;\n  const raw = String(it.json.answer || it.json.text || it.json.content || '');\n  const m = raw.match(/\\{[\\s\\S]*\\}/);\n  let parsed = null;\n  if (m) { try { parsed = JSON.parse(m[0]); } catch (e) { parsed = null; } }\n  const ids = (lead.videoCandidates || []).map(function (v) { return v.videoId; });\n  let pick = parsed && (parsed.videoId || parsed.video_id);\n  if (pick && ids.indexOf(pick) === -1) pick = null;   // AI เลือกคลิปนอกลิสต์ = ไม่รับ\n  if (!pick && ids.length) pick = ids[0];              // fallback: คลิปแรกที่เกี่ยวข้อง\n  if (!pick) return;\n  const clip = (lead.videoCandidates || []).filter(function (v) { return v.videoId === pick; })[0] || {};\n  out.push({ json: {\n    prospectId: lead.prospectId, channel: lead.channel, videoId: pick,\n    videoTitle: clip.title || null, videoUrl: clip.url || null, cta: clip.cta || null,\n    reason: (parsed && parsed.reason) ? String(parsed.reason).slice(0, 300) : 'ตรงกับความสนใจ: ' + (lead.interests || []).join(', '),\n    confidence: (parsed && Number(parsed.confidence)) ? Math.max(0, Math.min(1, Number(parsed.confidence))) : 0.6,\n    message: (parsed && parsed.message) ? String(parsed.message).slice(0, 600) : null,\n    aiOk: !!parsed, caps: lead.caps, sentToday: lead.sentToday, sentThisWeek: lead.sentThisWeek,\n    at: new Date().toISOString()\n  }, pairedItem: { item: i } });\n});\nif (out.length === 0) return [{ json: { none: true, reason: 'ไม่มีคำแนะนำที่ต้องบันทึกในรอบนี้' } }];\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        -160
+      ],
+      "id": "c097266e-ee4d-41f1-a09d-3803b695b638",
+      "name": "อ่านผล AI + กันส่งคลิปซ้ำ",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/recommend",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ prospectId: $json.prospectId, videoId: $json.videoId, reason: $json.reason, confidence: $json.confidence, channel: $json.channel, status: 'QUEUED', message: $json.message, caps: $json.caps, sentToday: $json.sentToday, sentThisWeek: $json.sentThisWeek, source: 'n8n-04-video-recommendation' }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        860,
+        -160
+      ],
+      "id": "aac83039-a108-4d33-bd00-7fce17ed9e49",
+      "name": "บันทึกคำแนะนำ (/api/recommend)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "POST /api/recommend — บันทึก Recommendation (สถานะ QUEUED ให้ระบบส่งตามช่องทาง; การนับโควต้าอาศัยข้อมูลนี้)"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// สรุปผลการบันทึกคำแนะนำ\nconst all = $('บันทึกคำแนะนำ (/api/recommend)').all();\nlet okCount = 0, failCount = 0, firstError = null;\nfor (const it of all) {\n  const j = it.json || {};\n  const c = j.statusCode === undefined ? null : Number(j.statusCode);\n  const ok = j.ok === true || (c !== null && c >= 200 && c < 300);\n  if (ok) okCount++;\n  else { failCount++; if (!firstError) firstError = String(j.error || j.message || ('HTTP ' + c)).slice(0, 300); }\n}\nreturn [{ json: {\n  ok: failCount === 0, workflow: '04-video-recommendation', stage: 'recommend',\n  detail: 'บันทึกคำแนะนำสำเร็จ ' + okCount + ' ราย / ล้มเหลว ' + failCount + ' ราย' + (firstError ? ' — ' + firstError : ''),\n  total: all.length, succeeded: okCount, failed: failCount, firstError: firstError,\n  alertText: (failCount === 0 ? 'Video Recommendation รอบล่าสุดสำเร็จ ' : 'แจ้งเตือน: Video Recommendation ล้มเหลว ') + okCount + ' ราย',\n  at: new Date().toISOString()\n} }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        -160
+      ],
+      "id": "301476d1-92b7-46d4-9bb0-70926e907f82",
+      "name": "สรุปผล + สร้าง Log",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1bff2fe5-de32-4ef8-a61f-3662ad12e397",
+              "leftValue": "={{ $json.ok }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1300,
+        -160
+      ],
+      "id": "c4a9565d-c410-461d-96a6-5a4688f3ce87",
+      "name": "บันทึกสำเร็จทั้งหมด?",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/agent-log",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: '04-video-recommendation', ok: true, stage: 'recommend', detail: $json.detail, at: new Date().toISOString(), total: $json.total, failed: $json.failed }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1520,
+        -240
+      ],
+      "id": "fd26e4bb-7bdc-490f-a605-3e08695390c6",
+      "name": "บันทึก Log สำเร็จ (/api/agent-log)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "โหนดบันทึก log ของงาน → POST /api/agent-log (endpoint รับ log จาก n8n; ต้องมีฝั่งแอป) อ้างความลับเป็น {{ $env.CRON_SECRET }} เท่านั้น"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/agent-log",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: '04-video-recommendation', ok: false, stage: 'recommend', detail: $json.detail, at: new Date().toISOString(), total: $json.total, firstError: $json.firstError }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1520,
+        20
+      ],
+      "id": "718df2fa-10e4-4f62-833d-3a6b25b1eaf5",
+      "name": "บันทึก Log ล้มเหลว (/api/agent-log)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "โหนดบันทึก log ของงาน → POST /api/agent-log (endpoint รับ log จาก n8n; ต้องมีฝั่งแอป) อ้างความลับเป็น {{ $env.CRON_SECRET }} เท่านั้น"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.LINE_CHANNEL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $env.LINE_TARGET_ID, messages: [{ type: 'text', text: $('สรุปผล + สร้าง Log').first().json.alertText }] }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1740,
+        20
+      ],
+      "id": "70a8f769-663a-4e4d-93a6-5a458c726770",
+      "name": "แจ้งเตือนผู้ดูแล (LINE)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "แจ้งเตือนผู้ดูแลผ่าน LINE OA — ต้องมี LINE_CHANNEL_ACCESS_TOKEN และ LINE_TARGET_ID (ปัจจุบันยังไม่มีโทเคน; โหนดตั้ง neverError จึงไม่ทำให้งานล้มเหลว)"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        420,
+        140
+      ],
+      "id": "35d90444-dea9-40b7-a0f8-9ee919490b32",
+      "name": "ข้ามรอบนี้ (โควต้าเต็ม/ไม่มีคลิปที่เกี่ยวข้อง)",
+      "onError": "continueRegularOutput",
+      "notes": "ทางออกเมื่อไม่มีรายการที่ผ่านด่าน (โควต้าเต็ม/ยังไม่ยินยอม/ไม่มีความสนใจตรงคลิป)"
+    }
+  ],
+  "connections": {
+    "ทุก 1 ชั่วโมง": {
+      "main": [
+        [
+          {
+            "node": "ดึงผู้สนใจ + คลังคลิป (/api/recommend/candidates)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ดึงผู้สนใจ + คลังคลิป (/api/recommend/candidates)": {
+      "main": [
+        [
+          {
+            "node": "คัดกรอง Topic + Frequency Cap (≤2/วัน ≤5/สัปดาห์)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "คัดกรอง Topic + Frequency Cap (≤2/วัน ≤5/สัปดาห์)": {
+      "main": [
+        [
+          {
+            "node": "มีรายการที่ต้องแนะนำ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "มีรายการที่ต้องแนะนำ?": {
+      "main": [
+        [
+          {
+            "node": "AI Video Recommender (/api/ai/query)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ข้ามรอบนี้ (โควต้าเต็ม/ไม่มีคลิปที่เกี่ยวข้อง)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Video Recommender (/api/ai/query)": {
+      "main": [
+        [
+          {
+            "node": "อ่านผล AI + กันส่งคลิปซ้ำ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "อ่านผล AI + กันส่งคลิปซ้ำ": {
+      "main": [
+        [
+          {
+            "node": "บันทึกคำแนะนำ (/api/recommend)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "บันทึกคำแนะนำ (/api/recommend)": {
+      "main": [
+        [
+          {
+            "node": "สรุปผล + สร้าง Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สรุปผล + สร้าง Log": {
+      "main": [
+        [
+          {
+            "node": "บันทึกสำเร็จทั้งหมด?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "บันทึกสำเร็จทั้งหมด?": {
+      "main": [
+        [
+          {
+            "node": "บันทึก Log สำเร็จ (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "บันทึก Log ล้มเหลว (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "บันทึก Log ล้มเหลว (/api/agent-log)": {
+      "main": [
+        [
+          {
+            "node": "แจ้งเตือนผู้ดูแล (LINE)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Bangkok",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true
+  },
+  "versionId": "a2e847a1-c02b-45a3-bbf0-a971e6ea78dc",
+  "meta": {
+    "description": "ทุก 1 ชั่วโมง: ดึงผู้สนใจ+คลังคลิป → ตรวจโควต้า ≤2/วัน ≤5/สัปดาห์ + ความตรงหัวข้อ + คลิปซ้ำ → AI Video Recommender เลือกคลิป → บันทึกคำแนะนำ → log | env: CRON_SECRET, LINE_CHANNEL_ACCESS_TOKEN, LINE_TARGET_ID",
+    "tags": [
+      "lead-nurturing",
+      "phase-5",
+      "ai",
+      "video"
+    ]
+  }
+}

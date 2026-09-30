@@ -1,0 +1,455 @@
+{
+  "name": "01 Visitor Tracking",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "track",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -460,
+        0
+      ],
+      "id": "e50dd76b-919d-4711-b129-daadfe4a05c3",
+      "name": "รับ Event จากเว็บ (Webhook /track)",
+      "webhookId": "e74fff96-723c-4a05-8c4f-92bbc034e6d0",
+      "notes": "Webhook รับ event (POST /webhook/track) ทั้งจากสคริปต์เว็บและจากแอป /api/track ที่ส่งต่อมา (N8N_WEBHOOK_BASE) — ตอบกลับทันทีด้วย responseMode=onReceived; ต้องแนบ header x-track-secret = $env.TRACK_WEBHOOK_SECRET"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// ตรวจ event จากเว็บ/app + ด่านความยินยอม (consent-gated) + แปลงชื่อ event ให้ตรงกับ /api/track\n// ด่าน ① Consent: ไม่มีความยินยอม = ไม่บันทึกอะไรเลย\n// รองรับ 2 ทาง: สคริปต์เว็บยิงตรงเข้า n8n หรือแอป /api/track ส่งต่อมา (ผ่าน N8N_WEBHOOK_BASE)\nconst ALIASES = { session_start: 'session_start', video_start: 'video_view', video_25: 'video_progress', video_50: 'video_progress', video_75: 'video_progress', button_click: 'cta_click' };\nconst ALLOWED = ['page_view', 'return_visit', 'video_view', 'video_progress', 'video_complete', 'form_open', 'form_submit', 'topic_select', 'callback_request', 'cta_click', 'session_start'];\nconst canonical = function (raw) {\n  const t = String(raw || '').toLowerCase().trim();\n  if (ALIASES[t]) return ALIASES[t];\n  return ALLOWED.indexOf(t) !== -1 ? t : null;\n};\nconst str = function (v, max) { return (v === undefined || v === null || v === '') ? null : String(v).slice(0, max || 500); };\nconst num = function (v) { const x = Number(v); return Number.isFinite(x) ? x : 0; };\n\nconst out = [];\nfor (const item of $input.all()) {\n  const body = item.json.body || item.json;\n  const headers = item.json.headers || {};\n  const expected = String($env.TRACK_WEBHOOK_SECRET || '');\n  const got = String(headers['x-track-secret'] || headers['X-Track-Secret'] || '');\n  const secretOk = expected ? got === expected : true; // ยังไม่ตั้ง env = โหมด dev\n\n  // consent — รับทุกรูปแบบเดียวกับฝั่งแอป (true / 'granted' / {analytics|tracking|status})\n  const c = body.consent;\n  let analytics = false, marketing = false, version = '1.0';\n  if (c === true) analytics = true;\n  else if (typeof c === 'string') analytics = c.toLowerCase() === 'granted';\n  else if (c && typeof c === 'object') {\n    analytics = c.analytics === true || c.tracking === true || c.status === 'granted' || c.analyticsConsent === true;\n    marketing = c.marketing === true;\n    version = str(c.version, 20) || '1.0';\n  } else analytics = body.analyticsConsent === true;\n\n  // UTM: รองรับทั้งแบบแบน (utmSource) และแบบ object (utm:{source,medium,...}) เหมือนฝั่งแอป\n  const u = (body.utm && typeof body.utm === 'object') ? body.utm : {};\n  const fb = {\n    pageUrl: str(body.pageUrl || body.url, 2000),\n    pagePath: str(body.pagePath || body.path, 500),\n    referrer: str(body.referrer, 2000),\n    utmSource: str(body.utmSource || body.utm_source || u.source, 200),\n    utmMedium: str(body.utmMedium || body.utm_medium || u.medium, 200),\n    utmCampaign: str(body.utmCampaign || body.utm_campaign || u.campaign, 200),\n    utmTerm: str(body.utmTerm || body.utm_term || u.term, 200),\n    utmContent: str(body.utmContent || body.utm_content || u.content, 200)\n  };\n\n  const rawList = (Array.isArray(body.events) && body.events.length) ? body.events : [body];\n  const events = [];\n  for (const raw of rawList.slice(0, 25)) {\n    const src = (raw && typeof raw === 'object') ? raw : {};\n    const type = canonical(src.type || src.event);\n    if (!type) continue; // type ที่ไม่รู้จัก → ทิ้ง ไม่ทำให้ทั้ง request ล้ม\n    const atRaw = src.at || src.timestamp || src.ts;\n    const at = atRaw ? new Date(atRaw) : new Date();\n    events.push({\n      eventId: str(src.eventId, 64), // ส่ง eventId เดิมกลับไป → แอปกันซ้ำด้วย unique eventId (ไม่นับคะแนนซ้ำ)\n      type: type,\n      at: Number.isNaN(at.getTime()) ? new Date().toISOString() : at.toISOString(),\n      pageUrl: str(src.pageUrl || src.url, 2000) || fb.pageUrl,\n      pagePath: str(src.pagePath || src.path, 500) || fb.pagePath,\n      referrer: str(src.referrer, 2000) || fb.referrer,\n      utmSource: str(src.utmSource || src.utm_source, 200) || fb.utmSource,\n      utmMedium: str(src.utmMedium || src.utm_medium, 200) || fb.utmMedium,\n      utmCampaign: str(src.utmCampaign || src.utm_campaign, 200) || fb.utmCampaign,\n      videoCode: str(src.videoCode || src.video_id || src.video, 64),\n      videoId: str(src.videoUuid, 64),\n      watchPct: Math.min(100, Math.max(0, num(src.watchPct || src.watch_pct))),\n      watchSeconds: num(src.watchSeconds || src.watch_seconds) || null,\n      meta: (src.meta && typeof src.meta === 'object') ? src.meta : undefined\n    });\n  }\n\n  const valid = secretOk && analytics && events.length > 0;\n  const reason = !secretOk ? 'secret ของ webhook ไม่ถูกต้อง'\n    : !analytics ? 'ยังไม่ได้รับความยินยอม (consent) จึงไม่บันทึก'\n    : 'ไม่พบ event ที่รู้จักใน payload';\n  out.push({ json: {\n    valid: valid, reason: valid ? null : reason,\n    visitorId: str(body.visitorId, 64), sessionId: str(body.sessionId, 64), prospectId: str(body.prospectId, 64),\n    consent: { analytics: analytics, marketing: marketing, version: version },\n    device: str(body.device, 40), browser: str(body.browser, 40),\n    utm: { source: fb.utmSource, medium: fb.utmMedium, campaign: fb.utmCampaign, content: fb.utmContent, term: fb.utmTerm },\n    events: events, eventCount: events.length, firstType: events.length ? events[0].type : null,\n    at: new Date().toISOString()\n  } });\n}\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        0
+      ],
+      "id": "34cbb95f-6711-4c91-8bfd-98af30735dab",
+      "name": "ตรวจสอบข้อมูล + ด่านความยินยอม (Validate)",
+      "onError": "continueRegularOutput",
+      "notes": "ด่าน ① Consent: เก็บเฉพาะเมื่อยินยอม + แปลงชื่อ event (video_50 → video_progress, button_click → cta_click) ให้ตรงกับตารางคะแนนของแอป"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ee5b7210-7ac8-4227-af7a-34461499545d",
+              "leftValue": "={{ $json.valid }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -20,
+        0
+      ],
+      "id": "4c54e9f4-2012-4f8e-9884-49b8f6e3a814",
+      "name": "ข้อมูลถูกต้องและยินยอม?",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/track",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ visitorId: $json.visitorId, sessionId: $json.sessionId, prospectId: $json.prospectId, consent: $json.consent, device: $json.device, browser: $json.browser, utm: $json.utm, events: $json.events, source: 'n8n-wf01' }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        200,
+        -120
+      ],
+      "id": "08739959-652e-4d52-9b98-1f6887b22513",
+      "name": "บันทึก Visitor + Event (/api/track)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "POST /api/track (มีอยู่จริงในรีโป) — ส่ง eventId เดิมกลับไปทุกตัว ⇒ ถ้าแอปบันทึกไปแล้วจะได้ duplicates (P2002) ไม่เกิดแถวซ้ำและไม่บวกคะแนนซ้ำ | ⚠️ ต้องเพิ่ม '/api/track' ใน PUBLIC_API ของ src/middleware.ts ไม่งั้นโดน 401 | retry 3 ครั้ง"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// ประเมินผลจาก /api/track (รวมกรณี event ซ้ำที่แอปบันทึกไว้แล้ว)\nconst res = $('บันทึก Visitor + Event (/api/track)').first().json || {};\nconst src = $('ตรวจสอบข้อมูล + ด่านความยินยอม (Validate)').first().json || {};\nconst status = res.statusCode === undefined ? null : Number(res.statusCode);\nconst ok = res.ok === true && (status === null || (status >= 200 && status < 300));\nconst stored = Number(res.stored || 0), dup = Number(res.duplicates || 0);\nconst detail = ok\n  ? 'บันทึก ' + stored + ' event' + (dup ? ' (ซ้ำ ' + dup + ' — ไม่นับคะแนน)' : '')\n    + (res.score === null || res.score === undefined ? '' : ' | คะแนน ' + res.score + ' (' + (res.level || '-') + ')')\n  : String(res.error || res.message || ('HTTP ' + (status === null ? 'ไม่ตอบสนอง' : status))).slice(0, 300);\nreturn [{ json: {\n  ok: ok, workflow: '01-visitor-tracking', stage: 'store_event', detail: detail,\n  statusCode: status, stored: stored, duplicates: dup, score: res.score, level: res.level,\n  visitorId: res.visitorId || src.visitorId, eventType: src.firstType, eventCount: src.eventCount,\n  alertText: ok\n    ? 'Visitor Tracking ปกติ (บันทึก ' + stored + ' event)'\n    : 'แจ้งเตือน: Visitor Tracking บันทึก event ไม่สำเร็จ — ' + detail,\n  at: new Date().toISOString()\n} }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        -120
+      ],
+      "id": "71a67ff6-82e2-4ed2-ab40-93d8615f5d06",
+      "name": "สรุปผล + สร้าง Log",
+      "onError": "continueRegularOutput",
+      "notes": "สรุป stored/duplicates/score จากผลจริงของ /api/track"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a4c0a0eb-4c00-4eef-8345-ed0aad43699c",
+              "leftValue": "={{ $json.ok }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        640,
+        -120
+      ],
+      "id": "b9341894-5100-4b22-9cf4-5e5209bab839",
+      "name": "บันทึกสำเร็จ?",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/agent-log",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: '01-visitor-tracking', ok: true, stage: 'store_event', detail: $json.detail, at: new Date().toISOString(), statusCode: $json.statusCode, stored: $json.stored, duplicates: $json.duplicates, visitorId: $json.visitorId }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        860,
+        -200
+      ],
+      "id": "e8d0b56a-ba89-49b0-accb-638aa3cb3f37",
+      "name": "บันทึก Log สำเร็จ (/api/agent-log)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "โหนดบันทึก log ของงาน → POST /api/agent-log (endpoint รับ log จาก n8n; ต้องมีฝั่งแอป) อ้างความลับเป็น {{ $env.CRON_SECRET }} เท่านั้น"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/agent-log",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: '01-visitor-tracking', ok: false, stage: 'store_event', detail: $json.detail, at: new Date().toISOString(), statusCode: $json.statusCode, stored: $json.stored, visitorId: $json.visitorId }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        860,
+        60
+      ],
+      "id": "007e3685-43f8-43fc-838f-42383724a533",
+      "name": "บันทึก Log ล้มเหลว (/api/agent-log)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "โหนดบันทึก log ของงาน → POST /api/agent-log (endpoint รับ log จาก n8n; ต้องมีฝั่งแอป) อ้างความลับเป็น {{ $env.CRON_SECRET }} เท่านั้น"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.LINE_CHANNEL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $env.LINE_TARGET_ID, messages: [{ type: 'text', text: $('สรุปผล + สร้าง Log').first().json.alertText }] }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        60
+      ],
+      "id": "cf6d3fae-15c6-43b9-8138-5ab01af0b29f",
+      "name": "แจ้งเตือนผู้ดูแล (LINE)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "แจ้งเตือนผู้ดูแลผ่าน LINE OA — ต้องมี LINE_CHANNEL_ACCESS_TOKEN และ LINE_TARGET_ID (ปัจจุบันยังไม่มีโทเคน; โหนดตั้ง neverError จึงไม่ทำให้งานล้มเหลว)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/agent-log",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: '01-visitor-tracking', ok: false, stage: 'consent_gate', detail: $json.reason, at: new Date().toISOString() }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        200,
+        160
+      ],
+      "id": "dbf78467-19d2-4405-b8bd-23aefcf03282",
+      "name": "บันทึก Log ปฏิเสธ (ไม่ยินยอม/ข้อมูลไม่ครบ)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "โหนดบันทึก log ของงาน → POST /api/agent-log (endpoint รับ log จาก n8n; ต้องมีฝั่งแอป) อ้างความลับเป็น {{ $env.CRON_SECRET }} เท่านั้น"
+    }
+  ],
+  "connections": {
+    "รับ Event จากเว็บ (Webhook /track)": {
+      "main": [
+        [
+          {
+            "node": "ตรวจสอบข้อมูล + ด่านความยินยอม (Validate)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ตรวจสอบข้อมูล + ด่านความยินยอม (Validate)": {
+      "main": [
+        [
+          {
+            "node": "ข้อมูลถูกต้องและยินยอม?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ข้อมูลถูกต้องและยินยอม?": {
+      "main": [
+        [
+          {
+            "node": "บันทึก Visitor + Event (/api/track)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "บันทึก Log ปฏิเสธ (ไม่ยินยอม/ข้อมูลไม่ครบ)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "บันทึก Visitor + Event (/api/track)": {
+      "main": [
+        [
+          {
+            "node": "สรุปผล + สร้าง Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สรุปผล + สร้าง Log": {
+      "main": [
+        [
+          {
+            "node": "บันทึกสำเร็จ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "บันทึกสำเร็จ?": {
+      "main": [
+        [
+          {
+            "node": "บันทึก Log สำเร็จ (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "บันทึก Log ล้มเหลว (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "บันทึก Log ล้มเหลว (/api/agent-log)": {
+      "main": [
+        [
+          {
+            "node": "แจ้งเตือนผู้ดูแล (LINE)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Bangkok",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true
+  },
+  "versionId": "d33f40cb-ec65-4285-986f-9eeb3b2d9e95",
+  "meta": {
+    "description": "รับ event จากเว็บ/แอป (consent-gated) → validate + แปลงชื่อ event → POST /api/track (idempotent ด้วย eventId) → log ผลทุกครั้ง | env: TRACK_WEBHOOK_SECRET, CRON_SECRET, LINE_CHANNEL_ACCESS_TOKEN, LINE_TARGET_ID",
+    "tags": [
+      "lead-nurturing",
+      "phase-4",
+      "tracking"
+    ]
+  }
+}

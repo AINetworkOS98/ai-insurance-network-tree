@@ -1,0 +1,899 @@
+{
+  "name": "02 Lead Registration",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -660,
+        0
+      ],
+      "id": "34696c13-555a-4277-9ec0-05adaf2ae545",
+      "name": "รับข้อมูลลงทะเบียน (Webhook /lead)",
+      "webhookId": "5a5e74b4-2470-4df7-97f8-bb7fd8168dc8",
+      "notes": "Webhook รับการลงทะเบียน (POST /webhook/lead) จากแอป /api/lead/register (N8N_WEBHOOK_BASE) หรือจากฟอร์มที่ยิงตรง — ตอบกลับทันที; แนบ header x-track-secret"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// ตรวจข้อมูลลงทะเบียน + ด่าน Consent (บังคับ): ไม่ยินยอม = ไม่สร้าง/ไม่ติดต่อ lead\n// รับได้ 2 รูปแบบ:\n//   A) แอปส่งต่อมาจาก /api/lead/register → มี prospectId + eventType 'lead.registered'|'lead.reregistered' (lead ถูกสร้างแล้ว)\n//   B) ฟอร์มยิงตรงเข้า n8n → ชื่อ + เบอร์/อีเมล/LINE + consent\nconst str = function (v, max) { return (v === undefined || v === null || v === '') ? null : String(v).slice(0, max || 300); };\nconst out = [];\nfor (const item of $input.all()) {\n  const body = item.json.body || item.json;\n  const headers = item.json.headers || {};\n  const expected = String($env.TRACK_WEBHOOK_SECRET || '');\n  const got = String(headers['x-track-secret'] || headers['X-Track-Secret'] || '');\n  const secretOk = expected ? got === expected : true;\n\n  const prospectId = str(body.prospectId, 64);\n  const eventType = String(body.eventType || '').toLowerCase();\n  const fromApp = !!prospectId && /^lead\\./.test(eventType);\n\n  const c = (body.consent && typeof body.consent === 'object') ? body.consent : {};\n  const consentPdpa = c.pdpa === true || c.granted === true || body.consent === true || body.pdpaConsent === true;\n  const consentMarketing = c.marketing === true || body.marketingConsent === true;\n  const consentVersion = str(c.version, 20) || str(body.consentVersion, 20) || '1.0';\n\n  const name = str(body.fullName, 120) || str(body.name, 120) || [str(body.firstName, 60), str(body.lastName, 60)].filter(Boolean).join(' ') || null;\n  const phone = str(body.phone, 20) ? String(body.phone).replace(/[^0-9+]/g, '') : null;\n  const email = str(body.email, 200) ? String(body.email).trim().toLowerCase() : null;\n  const lineId = str(body.lineId || body.lineUserId, 80);\n  const rawTopics = Array.isArray(body.topics) ? body.topics : (Array.isArray(body.interests) ? body.interests : []);\n  const topics = rawTopics.map(function (t) { return str((t && t.topic) || t, 60); }).filter(Boolean).slice(0, 8);\n\n  const phoneOk = phone ? phone.replace(/[^0-9]/g, '').length >= 9 : false;\n  const emailOk = email ? /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) : false;\n  const hasContact = phoneOk || emailOk || !!lineId || fromApp;\n\n  const valid = secretOk && consentPdpa && !!name && hasContact;\n  const reason = !secretOk ? 'secret ของ webhook ไม่ถูกต้อง'\n    : !consentPdpa ? 'ยังไม่ให้ความยินยอม (PDPA) จึงไม่สร้าง/ไม่ติดต่อ lead'\n    : !name ? 'ไม่ระบุชื่อ'\n    : !hasContact ? 'ไม่มีช่องทางติดต่อ (เบอร์โทร/อีเมล/LINE)' : null;\n\n  out.push({ json: {\n    valid: valid, reason: valid ? null : reason,\n    fromApp: fromApp, existingProspectId: prospectId,\n    prospectCode: str(body.prospectCode, 40), name: name, phone: phone, email: email, lineId: lineId,\n    topics: topics, consentPdpa: consentPdpa, consentMarketing: consentMarketing, consentVersion: consentVersion,\n    callbackRequested: body.callbackRequested === true || body.callback === true,\n    score: Number(body.score || 0) || 0, level: str(body.level, 20),\n    preferredChannel: str(body.preferredChannel || body.channel, 20),\n    visitorId: str(body.visitorId, 64), province: str(body.province, 80),\n    source: str(body.source || body.leadSource, 80) || 'web-form',\n    utm: (body.utm && typeof body.utm === 'object') ? body.utm : { source: str(body.utmSource, 200), medium: str(body.utmMedium, 200), campaign: str(body.utmCampaign, 200) },\n    ip: String(headers['x-forwarded-for'] || '').split(',')[0].trim() || null,\n    at: new Date().toISOString()\n  } });\n}\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -440,
+        0
+      ],
+      "id": "19a3767a-92f0-417d-a098-5b18306959d9",
+      "name": "ตรวจสอบข้อมูล + ความยินยอม (Validate)",
+      "onError": "continueRegularOutput",
+      "notes": "ด่าน Consent (บังคับตามสเปก PDPA): ไม่ยินยอมห้ามสร้าง/ห้ามติดต่อ lead — บันทึกแค่ log การปฏิเสธ + แยกทาง payload ที่แอปสร้าง lead แล้ว (eventType lead.*) ออกจากฟอร์มยิงตรง"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e50ad48b-de72-40bc-b8fa-05ecdbbeca2b",
+              "leftValue": "={{ $json.valid }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -220,
+        0
+      ],
+      "id": "62fae508-88af-492a-82cd-7074ae6a2fc3",
+      "name": "ยินยอมและข้อมูลครบถ้วน?",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0a5b4472-cad7-4579-9f64-77ff6ccd3f8f",
+              "leftValue": "={{ $json.fromApp }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        -220
+      ],
+      "id": "7e486766-3a28-4ee3-a1e2-38df6644e152",
+      "name": "lead ถูกสร้างมาแล้วจากแอป?",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// ทาง A: แอปสร้าง lead + consent + ความสนใจ + คะแนนไปแล้ว → เตรียมข้อมูลไปส่งข้อความ ไม่สร้างซ้ำ\nconst v = $input.first().json || {};\nreturn [{ json: {\n  existing: true, prospectId: v.existingProspectId, prospectCode: v.prospectCode || null,\n  name: v.name, topics: v.topics, lineId: v.lineId, phone: v.phone, email: v.email,\n  preferredChannel: v.preferredChannel, score: v.score, level: v.level,\n  source: v.source, consentMarketing: v.consentMarketing, highIntentTask: v.score >= 70\n} }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        -300
+      ],
+      "id": "f647c2f7-6034-43f1-88d6-599626e121ef",
+      "name": "เตรียมข้อมูล Lead (มีอยู่แล้ว)",
+      "onError": "continueRegularOutput",
+      "notes": "ทาง A: ไม่เรียก /api/lead/register ซ้ำ เพราะจะเพิ่มบันทึก consent และบวกคะแนนซ้ำ (แอปทำไปแล้ว)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/lead/register",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ fullName: $json.name, name: $json.name, phone: $json.phone, email: $json.email, lineId: $json.lineId, province: $json.province, interests: $json.topics, callbackRequested: $json.callbackRequested, consent: { pdpa: true, marketing: $json.consentMarketing, version: $json.consentVersion }, visitorId: $json.visitorId, source: $json.source, utm: $json.utm }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        -100
+      ],
+      "id": "603d466b-b896-4312-91f2-df3fed6d0e78",
+      "name": "สร้าง Lead (/api/lead/register)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "POST /api/lead/register (มีอยู่จริงในรีโป) — สร้าง/อัปเดต Prospect + ProspectConsent(PDPA/MARKETING) + LeadInterest + ChannelPreference + EngagementScore และกันซ้ำด้วยเบอร์/อีเมล (ตอบ existing:true) | ⚠️ ต้องเพิ่ม '/api/lead' ใน PUBLIC_API ของ src/middleware.ts | retry 3 ครั้ง"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cac759af-8715-4150-aa19-0ac27a9a53ed",
+              "leftValue": "={{ $json.ok === true }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        -100
+      ],
+      "id": "29037130-070b-4435-8a20-e35b2c152671",
+      "name": "สร้าง Lead สำเร็จ?",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// ทาง B: สร้าง lead ผ่าน /api/lead/register แล้วเอา id/คะแนนจริงจากผลตอบกลับ\nconst reg = $input.first().json || {};\nconst v = $('ตรวจสอบข้อมูล + ความยินยอม (Validate)').first().json || {};\nconst lead = reg.lead || {};\nreturn [{ json: {\n  existing: reg.existing === true, prospectId: lead.id || null, prospectCode: lead.prospectId || null,\n  name: lead.name || v.name, topics: reg.topics || v.topics, lineId: v.lineId,\n  phone: lead.phone || v.phone, email: v.email, preferredChannel: reg.preferredChannel || v.preferredChannel,\n  score: lead.score || 0, level: lead.level || null, source: v.source,\n  consentMarketing: (reg.consent && reg.consent.marketing) === true,\n  highIntentTask: reg.highIntentTask === true\n} }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        -40
+      ],
+      "id": "5276821b-7d5e-433f-8a46-2dad326811ff",
+      "name": "เตรียมข้อมูล Lead (สร้างใหม่)",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/agent-log",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: '02-lead-registration', ok: false, stage: 'create_lead', detail: String($('สร้าง Lead (/api/lead/register)').first().json.error || 'สร้าง lead ไม่สำเร็จ').slice(0, 300), at: new Date().toISOString() }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        -220
+      ],
+      "id": "331942e2-8606-4086-87eb-491e28f086ae",
+      "name": "บันทึก Log สร้าง Lead ไม่สำเร็จ (/api/agent-log)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "โหนดบันทึก log ของงาน → POST /api/agent-log (endpoint รับ log จาก n8n; ต้องมีฝั่งแอป) อ้างความลับเป็น {{ $env.CRON_SECRET }} เท่านั้น"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.LINE_CHANNEL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $env.LINE_TARGET_ID, messages: [{ type: 'text', text: 'แจ้งเตือน: สร้าง lead ไม่สำเร็จ — ' + String($('สร้าง Lead (/api/lead/register)').first().json.error || 'ไม่ทราบสาเหตุ').slice(0, 200) }] }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        -220
+      ],
+      "id": "26b2165b-3bc1-4538-a4d4-41e1d0c9883e",
+      "name": "แจ้งเตือนสร้าง Lead ไม่สำเร็จ (LINE)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "แจ้งเตือนผู้ดูแลผ่าน LINE OA — ต้องมี LINE_CHANNEL_ACCESS_TOKEN และ LINE_TARGET_ID (ปัจจุบันยังไม่มีโทเคน; โหนดตั้ง neverError จึงไม่ทำให้งานล้มเหลว)"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// รวมข้อมูล lead (จุดเดียวให้โหนดปลายทางอ้างอิงได้) + เตรียมข้อความต้อนรับที่มีช่องทางยกเลิกการติดตาม\nconst l = $input.first().json || {};\nconst unsub = 'https://ai-insurance-network-tree.vercel.app/unsubscribe?p=' + (l.prospectCode || l.prospectId || '');\nconst welcome = 'สวัสดีครับคุณ ' + (l.name || '') + ' ขอบคุณที่ให้ความสนใจ'\n  + ((l.topics && l.topics.length) ? 'เรื่อง ' + l.topics.join(', ') : '')\n  + ' — ทีมงานจะติดต่อกลับตามช่องทางที่คุณสะดวก ถ้าไม่ต้องการรับข้อความอีก พิมพ์ STOP หรือกดยกเลิกได้ที่ ' + unsub;\nreturn [{ json: Object.assign({}, l, {\n  welcomeText: welcome, unsubscribeUrl: unsub, at: new Date().toISOString()\n}) }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        -300
+      ],
+      "id": "aee9389f-d717-487d-9c0f-2d9dfff0bb16",
+      "name": "รวมข้อมูล Lead + เตรียมข้อความต้อนรับ",
+      "onError": "continueRegularOutput",
+      "notes": "จุดรวมของทั้ง 2 ทาง + ข้อความต้อนรับที่มีลิงก์ Unsubscribe ต่อท้ายเสมอ"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "039c993d-fade-4d21-9737-119c31085a7d",
+              "leftValue": "={{ $json.lineId !== null }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1100,
+        -300
+      ],
+      "id": "5e0ad66e-a6df-4879-94a0-bda608585bd7",
+      "name": "มี LINE userId ของผู้สนใจ?",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.LINE_CHANNEL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $json.lineId, messages: [{ type: 'text', text: $json.welcomeText }] }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        -380
+      ],
+      "id": "24bb7df7-29ad-4403-b0f9-69ae146ec9c8",
+      "name": "ส่งข้อความต้อนรับ (LINE)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "ส่งข้อความต้อนรับผ่าน LINE OA ให้ผู้สนใจโดยตรง (ต้องมี LINE_CHANNEL_ACCESS_TOKEN จริง — ปัจจุบันยังไม่มีโทเคน ตามแผนข้อ 8)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.LINE_CHANNEL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $env.LINE_TARGET_ID, messages: [{ type: 'text', text: 'มีผู้สนใจลงทะเบียนใหม่: ' + ($json.name || '') + (($json.topics && $json.topics.length) ? ' | ความสนใจ: ' + $json.topics.join(', ') : '') + ' | เบอร์: ' + ($json.phone || '-') + ' | อีเมล: ' + ($json.email || '-') + ' — ยังไม่มี LINE userId จึงส่งข้อความอัตโนมัติไม่ได้ กรุณาติดต่อกลับตามช่องทางที่สะดวก | ยกเลิกการติดตามได้ที่ ' + $json.unsubscribeUrl }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        -220
+      ],
+      "id": "7376d11a-abeb-4701-9189-e547b3e7404b",
+      "name": "แจ้งเตือนตัวแทนให้ติดต่อกลับ (LINE)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "ทางสำรองเมื่อ lead ไม่มี LINE userId — แจ้งตัวแทนมนุษย์ให้ติดต่อกลับเอง (อีเมลต้อนรับจะถูกจัดคิวผ่าน EmailMessage ของแอป)"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// สรุปผล: lead ถูกสร้าง/มีอยู่แล้ว + การส่งข้อความต้อนรับ/แจ้งเตือนตัวแทน\nconst lead = $('รวมข้อมูล Lead + เตรียมข้อความต้อนรับ').first().json || {};\nlet lineRes = null, notifyRes = null;\ntry { lineRes = $('ส่งข้อความต้อนรับ (LINE)').first().json; } catch (e) { lineRes = null; }\ntry { notifyRes = $('แจ้งเตือนตัวแทนให้ติดต่อกลับ (LINE)').first().json; } catch (e) { notifyRes = null; }\nconst res = lineRes || notifyRes || {};\nconst status = res.statusCode === undefined ? null : Number(res.statusCode);\nconst msgOk = status !== null && status >= 200 && status < 300;\nconst via = lineRes ? 'LINE' : 'แจ้งเตือนตัวแทน';\nconst detail = (lead.existing ? 'มีข้อมูล lead อยู่แล้ว (ไม่สร้างซ้ำ)' : 'สร้าง lead สำเร็จ')\n  + (msgOk ? ' + ส่งข้อความต้อนรับทาง LINE แล้ว'\n            : ' แต่ยังส่งข้อความอัตโนมัติไม่ได้ (' + String(res.error || ('HTTP ' + (status === null ? 'ไม่ตอบสนอง' : status))).slice(0, 140) + ') — แจ้งตัวแทนให้ติดต่อเองแล้ว');\nreturn [{ json: {\n  ok: true, workflow: '02-lead-registration', stage: 'register_lead', detail: detail,\n  prospectId: lead.prospectId, prospectCode: lead.prospectCode, existing: lead.existing === true,\n  name: lead.name, msgOk: msgOk, via: via, highIntentTask: lead.highIntentTask === true,\n  alertText: (lead.existing ? 'Lead เดิมลงทะเบียนซ้ำ: ' : 'Lead ลงทะเบียนใหม่: ')\n    + (lead.name || '') + (lead.prospectCode ? ' (' + lead.prospectCode + ')' : '')\n    + (msgOk ? '' : ' — ยังส่งข้อความอัตโนมัติไม่ได้ กรุณาติดต่อกลับ'),\n  at: new Date().toISOString()\n} }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        -300
+      ],
+      "id": "9facb1d9-7083-4b78-90f4-098c825d4e3b",
+      "name": "สรุปผล + สร้าง Log",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "77c73de0-9031-4a53-af46-3e976623f663",
+              "leftValue": "={{ $json.msgOk }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1760,
+        -300
+      ],
+      "id": "67b63740-2c1c-4152-bcc6-054254d4366a",
+      "name": "ส่งข้อความอัตโนมัติสำเร็จ?",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/agent-log",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: '02-lead-registration', ok: true, stage: 'register_lead', detail: $json.detail, at: new Date().toISOString(), prospectId: $json.prospectId, prospectCode: $json.prospectCode, existing: $json.existing, via: $json.via }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        -380
+      ],
+      "id": "5dfbc3df-8ae3-4575-b425-ccc2115d4fc0",
+      "name": "บันทึก Log สำเร็จ (/api/agent-log)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "โหนดบันทึก log ของงาน → POST /api/agent-log (endpoint รับ log จาก n8n; ต้องมีฝั่งแอป) อ้างความลับเป็น {{ $env.CRON_SECRET }} เท่านั้น"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/agent-log",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: '02-lead-registration', ok: false, stage: 'register_lead', detail: $json.detail, at: new Date().toISOString(), prospectId: $json.prospectId, via: $json.via }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        -180
+      ],
+      "id": "dc375bb8-45a0-47c3-9fdb-26aac50af6dc",
+      "name": "บันทึก Log ล้มเหลว (/api/agent-log)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "โหนดบันทึก log ของงาน → POST /api/agent-log (endpoint รับ log จาก n8n; ต้องมีฝั่งแอป) อ้างความลับเป็น {{ $env.CRON_SECRET }} เท่านั้น"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.LINE_CHANNEL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $env.LINE_TARGET_ID, messages: [{ type: 'text', text: $('สรุปผล + สร้าง Log').first().json.alertText }] }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        -180
+      ],
+      "id": "15da93a5-25c3-479b-b22a-07dbae24df0c",
+      "name": "แจ้งเตือนผู้ดูแล (LINE)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "แจ้งผลการลงทะเบียน/การส่งข้อความให้ทีมงาน (สำเร็จหรือล้มเหลว)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/agent-log",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: '02-lead-registration', ok: false, stage: 'consent_gate', detail: $json.reason, at: new Date().toISOString() }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -220,
+        160
+      ],
+      "id": "a9e7bc85-eb59-4682-b00e-34e229daea98",
+      "name": "บันทึก Log ปฏิเสธ (ไม่ยินยอม)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "โหนดบันทึก log ของงาน → POST /api/agent-log (endpoint รับ log จาก n8n; ต้องมีฝั่งแอป) อ้างความลับเป็น {{ $env.CRON_SECRET }} เท่านั้น"
+    }
+  ],
+  "connections": {
+    "รับข้อมูลลงทะเบียน (Webhook /lead)": {
+      "main": [
+        [
+          {
+            "node": "ตรวจสอบข้อมูล + ความยินยอม (Validate)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ตรวจสอบข้อมูล + ความยินยอม (Validate)": {
+      "main": [
+        [
+          {
+            "node": "ยินยอมและข้อมูลครบถ้วน?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ยินยอมและข้อมูลครบถ้วน?": {
+      "main": [
+        [
+          {
+            "node": "lead ถูกสร้างมาแล้วจากแอป?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "บันทึก Log ปฏิเสธ (ไม่ยินยอม)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "lead ถูกสร้างมาแล้วจากแอป?": {
+      "main": [
+        [
+          {
+            "node": "เตรียมข้อมูล Lead (มีอยู่แล้ว)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "สร้าง Lead (/api/lead/register)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "เตรียมข้อมูล Lead (มีอยู่แล้ว)": {
+      "main": [
+        [
+          {
+            "node": "รวมข้อมูล Lead + เตรียมข้อความต้อนรับ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สร้าง Lead (/api/lead/register)": {
+      "main": [
+        [
+          {
+            "node": "สร้าง Lead สำเร็จ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สร้าง Lead สำเร็จ?": {
+      "main": [
+        [
+          {
+            "node": "เตรียมข้อมูล Lead (สร้างใหม่)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "บันทึก Log สร้าง Lead ไม่สำเร็จ (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "เตรียมข้อมูล Lead (สร้างใหม่)": {
+      "main": [
+        [
+          {
+            "node": "รวมข้อมูล Lead + เตรียมข้อความต้อนรับ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "บันทึก Log สร้าง Lead ไม่สำเร็จ (/api/agent-log)": {
+      "main": [
+        [
+          {
+            "node": "แจ้งเตือนสร้าง Lead ไม่สำเร็จ (LINE)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "รวมข้อมูล Lead + เตรียมข้อความต้อนรับ": {
+      "main": [
+        [
+          {
+            "node": "มี LINE userId ของผู้สนใจ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "มี LINE userId ของผู้สนใจ?": {
+      "main": [
+        [
+          {
+            "node": "ส่งข้อความต้อนรับ (LINE)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "แจ้งเตือนตัวแทนให้ติดต่อกลับ (LINE)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ส่งข้อความต้อนรับ (LINE)": {
+      "main": [
+        [
+          {
+            "node": "สรุปผล + สร้าง Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "แจ้งเตือนตัวแทนให้ติดต่อกลับ (LINE)": {
+      "main": [
+        [
+          {
+            "node": "สรุปผล + สร้าง Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สรุปผล + สร้าง Log": {
+      "main": [
+        [
+          {
+            "node": "ส่งข้อความอัตโนมัติสำเร็จ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ส่งข้อความอัตโนมัติสำเร็จ?": {
+      "main": [
+        [
+          {
+            "node": "บันทึก Log สำเร็จ (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "บันทึก Log ล้มเหลว (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "บันทึก Log ล้มเหลว (/api/agent-log)": {
+      "main": [
+        [
+          {
+            "node": "แจ้งเตือนผู้ดูแล (LINE)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Bangkok",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true
+  },
+  "versionId": "7ce8de21-0095-410f-b546-627850deeec1",
+  "meta": {
+    "description": "รับการลงทะเบียน lead (จากแอปหรือฟอร์มยิงตรง) → ตรวจ consent (บังคับ) → สร้าง lead เมื่อยังไม่มี (ไม่สร้างซ้ำเมื่อแอปสร้างแล้ว) → ส่งข้อความต้อนรับ/แจ้งตัวแทน → log | env: TRACK_WEBHOOK_SECRET, CRON_SECRET, LINE_CHANNEL_ACCESS_TOKEN, LINE_TARGET_ID",
+    "tags": [
+      "lead-nurturing",
+      "phase-4",
+      "consent"
+    ]
+  }
+}

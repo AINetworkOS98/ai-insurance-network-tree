@@ -1,0 +1,732 @@
+{
+  "name": "05 Follow-up",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -460,
+        0
+      ],
+      "id": "65b06290-3fe5-4346-a57f-afbe109f5e9c",
+      "name": "ทุก 30 นาที",
+      "notes": "Schedule Trigger ทุก 30 นาที (timezone Asia/Bangkok)"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/followup/due",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "window",
+              "value": "30m"
+            },
+            {
+              "name": "limit",
+              "value": "50"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -240,
+        0
+      ],
+      "id": "6bf8da4b-782b-4766-b95d-290f687391e6",
+      "name": "ดึง Follow-up ที่ถึงกำหนด (/api/followup/due)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "GET /api/followup/due?window=30m — คืนรายการ FollowUp ที่ถึงกำหนด พร้อมสถานะความยินยอม/opt-out/จำนวนที่ส่งไปแล้ว (ส่งเป็น=false ถ้าถอนความยินยอม)"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// ด่าน ① Consent ② Opt-out/Unsubscribe ③ Frequency cap (≤2/วัน, ≤5/สัปดาห์)\n// ตรวจก่อนส่งทุกครั้ง — ถอนความยินยอม = หยุดทุกช่องทางทันที\nconst res = $input.first().json || {};\nconst due = Array.isArray(res) ? res : (res.followUps || res.items || res.data || []);\nconst CAP_DAY = 2, CAP_WEEK = 5;\nconst out = [];\nconst skipped = { consent: 0, cap: 0, noChannel: 0 };\nfor (const f of due) {\n  const consentOk = (f.consentMarketing === true || f.consent === true)\n    && f.unsubscribed !== true && f.optOut !== true && f.doNotContact !== true;\n  const sentToday = Number(f.sentToday || 0) || 0;\n  const sentThisWeek = Number(f.sentThisWeek || 0) || 0;\n  const capOk = sentToday < CAP_DAY && sentThisWeek < CAP_WEEK;\n  const contact = f.lineUserId || f.phone || f.email || null;\n  if (!consentOk) { skipped.consent++; continue; }\n  if (!capOk) { skipped.cap++; continue; }\n  if (!contact) { skipped.noChannel++; continue; }\n  const prospectId = f.prospectId || f.prospect_id || null;\n  out.push({ json: {\n    followUpId: f.followUpId || f.id, prospectId: prospectId, name: f.name || null,\n    dayOffset: f.dayOffset || null,\n    channel: String(f.channel || (f.lineUserId ? 'LINE' : 'EMAIL')).toUpperCase(),\n    lineUserId: f.lineUserId || null, phone: f.phone || null, email: f.email || null,\n    topic: f.topic || (f.interests || [])[0] || null, interests: f.interests || [],\n    lastContactAt: f.lastContactAt || f.sentAt || null,\n    sentToday: sentToday, sentThisWeek: sentThisWeek, caps: { perDay: CAP_DAY, perWeek: CAP_WEEK },\n    scheduledAt: f.scheduledAt || null,\n    unsubscribeUrl: 'https://ai-insurance-network-tree.vercel.app/unsubscribe?p=' + (prospectId || '')\n  }, pairedItem: { item: 0 } });\n}\nif (out.length === 0) return [{ json: { none: true, reason: 'ไม่มี follow-up ที่ผ่านด่านในรอบนี้', skipped: skipped, checked: due.length } }];\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -20,
+        0
+      ],
+      "id": "9736d1c5-c3b3-48a9-bb59-c3fd6af9c8ed",
+      "name": "ตรวจ Consent + Opt-out + Frequency cap",
+      "onError": "continueRegularOutput",
+      "notes": "ด่าน ①②③: ความยินยอม, opt-out/unsubscribe, โควต้า ≤2/วัน และ ≤5/สัปดาห์ — ตรวจก่อนส่งทุกครั้ง"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c09ed008-88d6-48d8-8715-672bb2bf884c",
+              "leftValue": "={{ $json.none !== true }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        200,
+        0
+      ],
+      "id": "5cffd14a-0adf-4ae9-86ca-c46b3542ff64",
+      "name": "ผ่านด่านและมีโควต้า?",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/ai/query",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ query: 'คุณคือผู้ช่วยเขียนข้อความติดตามผลของตัวแทนประกัน ภาษาไทย สุภาพ เป็นมิตร ห้ามอ้างว่ารู้ว่าผู้รับกำลังดูอะไรอยู่ ห้ามกดดัน ห้ามขายตรง ๆ ให้เชิญชวนนัดหมายหรือสอบถามความต้องการ ตอบเป็น JSON รูปแบบ {\"subject\":\"หัวข้ออีเมล\",\"message\":\"ข้อความ\"} | prospectId=' + $json.prospectId + ' | ชื่อ=' + ($json.name || 'ไม่ระบุ') + ' | วันที่ติดตาม=' + ($json.dayOffset || 1) + ' | ความสนใจ=' + JSON.stringify($json.interests) + ' | หัวข้อ=' + ($json.topic || 'ประกัน') + ' | ช่องทาง=' + $json.channel, mode: 'SMART', hasDataset: false, userId: 'n8n-05-followup-writer' }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        420,
+        -160
+      ],
+      "id": "79ea0857-a74d-4fb7-bb98-1eeb02ee165a",
+      "name": "AI Follow-up Writer (/api/ai/query)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "เรียก AI ผ่าน /api/ai/query ของแอป (ไม่เก็บ AI API key ใน n8n); retry 3 ครั้ง"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// อ่านข้อความจาก AI + ต่อท้ายช่องทางยกเลิกการติดตาม (บังคับทุกข้อความ)\nconst leads = $('ตรวจ Consent + Opt-out + Frequency cap').all();\nconst items = $input.all();\nconst FOOTER = ' — ถ้าไม่ต้องการรับข้อความอีก พิมพ์ STOP หรือกดยกเลิกได้ที่: ';\nconst out = [];\nitems.forEach(function (it, i) {\n  const lead = (leads[i] && leads[i].json) || {};\n  if (lead.none || !lead.followUpId) return;\n  const raw = String(it.json.answer || it.json.text || it.json.content || '');\n  const m = raw.match(/\\{[\\s\\S]*\\}/);\n  let parsed = null;\n  if (m) { try { parsed = JSON.parse(m[0]); } catch (e) { parsed = null; } }\n  let body = (parsed && (parsed.message || parsed.text)) ? String(parsed.message || parsed.text) : '';\n  if (!body) body = 'สวัสดีครับคุณ ' + (lead.name || '') + ' ถ้าต้องการให้ทีมงานส่งข้อมูลเพิ่มเติมหรือนัดหมาย ทักกลับได้เลยครับ';\n  body = body.replace(/\\s+/g, ' ').slice(0, 700);\n  const subject = (parsed && parsed.subject) ? String(parsed.subject).slice(0, 120) : 'ข้อมูลที่คุณสนใจจากทีมงาน';\n  out.push({ json: Object.assign({}, lead, {\n    message: body + FOOTER + lead.unsubscribeUrl,\n    messageText: body, subject: subject, aiOk: !!parsed, at: new Date().toISOString()\n  }), pairedItem: { item: i } });\n});\nif (out.length === 0) return [{ json: { none: true, reason: 'ไม่มีข้อความที่ต้องส่งในรอบนี้' } }];\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        -160
+      ],
+      "id": "a32b5bbe-1877-4ed8-b8d9-182dc6c78940",
+      "name": "อ่านข้อความ + ต่อท้ายทางเลือกถอนความยินยอม",
+      "onError": "continueRegularOutput",
+      "notes": "ทุกข้อความต้องมีช่องทางยกเลิกการติดตาม (Unsubscribe/STOP) ต่อท้ายเสมอ"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2eb1470c-35a5-4124-935d-f6739e4d8f99",
+              "leftValue": "={{ $json.channel }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "LINE"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        860,
+        -160
+      ],
+      "id": "8e895ca1-d70c-4b07-b547-73cda9661870",
+      "name": "ช่องทาง = LINE?",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.LINE_CHANNEL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $json.lineUserId || $env.LINE_TARGET_ID, messages: [{ type: 'text', text: $json.message }] }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        -260
+      ],
+      "id": "93d255b7-8a02-4735-a3a1-fbc697229533",
+      "name": "ส่งข้อความ LINE (Messaging API)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "ส่งผ่าน LINE Messaging API ตรงจาก n8n — ต้องมี LINE_CHANNEL_ACCESS_TOKEN และต้องมี lineUserId ของผู้รับ (ยังไม่มีโทเคน: จะได้ 401 แต่โหนดตั้ง neverError จึงไม่ทำให้งานล้ม)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/followup/send",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ followUpId: $json.followUpId, prospectId: $json.prospectId, channel: 'EMAIL', to: $json.email, subject: $json.subject, message: $json.message, source: 'n8n-05-followup' }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        -40
+      ],
+      "id": "41661318-0ba6-4e4e-84b1-a6d352531e79",
+      "name": "ส่งอีเมลผ่านแอป (/api/followup/send)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "POST /api/followup/send — ให้แอปจัดคิว/ส่งอีเมลเอง (มี suppression + consent ฝั่งแอปอยู่แล้ว) ช่องทาง SMS/โทรศัพท์ก็ส่งผ่านโหนดนี้ให้แอปตัดสินใจ"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/followup/result",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ followUpId: $('อ่านข้อความ + ต่อท้ายทางเลือกถอนความยินยอม').item.json.followUpId, prospectId: $('อ่านข้อความ + ต่อท้ายทางเลือกถอนความยินยอม').item.json.prospectId, channel: $('อ่านข้อความ + ต่อท้ายทางเลือกถอนความยินยอม').item.json.channel, status: ((($json.statusCode === undefined ? 0 : Number($json.statusCode)) >= 200 && ($json.statusCode === undefined ? 0 : Number($json.statusCode)) < 300 && $json.ok !== false) ? 'SENT' : 'FAILED'), providerRef: ($json.messageId || $json.id || null), error: ($json.error ? String($json.error).slice(0, 300) : null), messagePreview: String($('อ่านข้อความ + ต่อท้ายทางเลือกถอนความยินยอม').item.json.messageText || '').slice(0, 120), source: 'n8n-05-followup' }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        -160
+      ],
+      "id": "22dc660d-72c2-4b5a-bd77-80e98eacac6f",
+      "name": "บันทึกผลการส่ง (/api/followup/result)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "POST /api/followup/result — บันทึกสถานะการส่ง (SENT/FAILED) ผูกกับ followUpId (idempotent) ใช้ทำโควต้าและกันส่งซ้ำ"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// สรุปผลการส่ง follow-up (อ่านจากโหนดบันทึกผลการส่ง)\nconst all = $('บันทึกผลการส่ง (/api/followup/result)').all();\nlet sent = 0, fail = 0, firstError = null;\nfor (const it of all) {\n  const j = it.json || {};\n  const c = j.statusCode === undefined ? null : Number(j.statusCode);\n  const ok = j.ok === true || (c !== null && c >= 200 && c < 300);\n  if (ok) sent++;\n  else { fail++; if (!firstError) firstError = String(j.error || j.message || ('HTTP ' + c)).slice(0, 300); }\n}\nreturn [{ json: {\n  ok: fail === 0, workflow: '05-followup', stage: 'send_followup',\n  detail: 'ส่งข้อความสำเร็จ ' + sent + ' ราย / ล้มเหลว ' + fail + ' ราย' + (firstError ? ' — ' + firstError : ''),\n  sent: sent, failed: fail, firstError: firstError,\n  alertText: (fail === 0 ? 'Follow-up รอบล่าสุดส่งสำเร็จ ' : 'แจ้งเตือน: Follow-up ส่งไม่สำเร็จ ') + sent + ' ราย',\n  at: new Date().toISOString()\n} }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1520,
+        -160
+      ],
+      "id": "685cbcf0-9477-41fb-8d85-474c78757fd6",
+      "name": "สรุปผล + สร้าง Log",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "eb047eed-fd1a-4132-9bb9-f0f2bffc8110",
+              "leftValue": "={{ $json.ok }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1740,
+        -160
+      ],
+      "id": "5e0da6ac-d081-4597-8b0d-70c8857589dc",
+      "name": "ส่งสำเร็จทั้งหมด?",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/agent-log",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: '05-followup', ok: true, stage: 'send_followup', detail: $json.detail, at: new Date().toISOString(), sent: $json.sent, failed: $json.failed }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1960,
+        -240
+      ],
+      "id": "8a23b1b5-c67c-4732-b7ab-1e0a36c7b176",
+      "name": "บันทึก Log สำเร็จ (/api/agent-log)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "โหนดบันทึก log ของงาน → POST /api/agent-log (endpoint รับ log จาก n8n; ต้องมีฝั่งแอป) อ้างความลับเป็น {{ $env.CRON_SECRET }} เท่านั้น"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/agent-log",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: '05-followup', ok: false, stage: 'send_followup', detail: $json.detail, at: new Date().toISOString(), sent: $json.sent, failed: $json.failed, firstError: $json.firstError }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1960,
+        20
+      ],
+      "id": "edd1e54b-8496-470b-b977-05387b66ad40",
+      "name": "บันทึก Log ล้มเหลว (/api/agent-log)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "โหนดบันทึก log ของงาน → POST /api/agent-log (endpoint รับ log จาก n8n; ต้องมีฝั่งแอป) อ้างความลับเป็น {{ $env.CRON_SECRET }} เท่านั้น"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.LINE_CHANNEL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $env.LINE_TARGET_ID, messages: [{ type: 'text', text: $('สรุปผล + สร้าง Log').first().json.alertText }] }) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2180,
+        20
+      ],
+      "id": "b7d5716b-d099-4c53-8d53-1621562c50c8",
+      "name": "แจ้งเตือนผู้ดูแล (LINE)",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "notes": "แจ้งเตือนผู้ดูแลผ่าน LINE OA — ต้องมี LINE_CHANNEL_ACCESS_TOKEN และ LINE_TARGET_ID (ปัจจุบันยังไม่มีโทเคน; โหนดตั้ง neverError จึงไม่ทำให้งานล้มเหลว)"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        420,
+        140
+      ],
+      "id": "93cfa2d6-a480-4647-8854-6a3abd37e422",
+      "name": "ข้ามรอบนี้ (ไม่ยินยอม/โควต้าเต็ม)",
+      "onError": "continueRegularOutput",
+      "notes": "ทางออกเมื่อไม่มีรายการที่ผ่านด่าน — ไม่ส่งอะไรเลย (เคารพการถอนความยินยอมทันที)"
+    }
+  ],
+  "connections": {
+    "ทุก 30 นาที": {
+      "main": [
+        [
+          {
+            "node": "ดึง Follow-up ที่ถึงกำหนด (/api/followup/due)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ดึง Follow-up ที่ถึงกำหนด (/api/followup/due)": {
+      "main": [
+        [
+          {
+            "node": "ตรวจ Consent + Opt-out + Frequency cap",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ตรวจ Consent + Opt-out + Frequency cap": {
+      "main": [
+        [
+          {
+            "node": "ผ่านด่านและมีโควต้า?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ผ่านด่านและมีโควต้า?": {
+      "main": [
+        [
+          {
+            "node": "AI Follow-up Writer (/api/ai/query)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ข้ามรอบนี้ (ไม่ยินยอม/โควต้าเต็ม)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Follow-up Writer (/api/ai/query)": {
+      "main": [
+        [
+          {
+            "node": "อ่านข้อความ + ต่อท้ายทางเลือกถอนความยินยอม",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "อ่านข้อความ + ต่อท้ายทางเลือกถอนความยินยอม": {
+      "main": [
+        [
+          {
+            "node": "ช่องทาง = LINE?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ช่องทาง = LINE?": {
+      "main": [
+        [
+          {
+            "node": "ส่งข้อความ LINE (Messaging API)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ส่งอีเมลผ่านแอป (/api/followup/send)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ส่งข้อความ LINE (Messaging API)": {
+      "main": [
+        [
+          {
+            "node": "บันทึกผลการส่ง (/api/followup/result)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ส่งอีเมลผ่านแอป (/api/followup/send)": {
+      "main": [
+        [
+          {
+            "node": "บันทึกผลการส่ง (/api/followup/result)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "บันทึกผลการส่ง (/api/followup/result)": {
+      "main": [
+        [
+          {
+            "node": "สรุปผล + สร้าง Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สรุปผล + สร้าง Log": {
+      "main": [
+        [
+          {
+            "node": "ส่งสำเร็จทั้งหมด?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ส่งสำเร็จทั้งหมด?": {
+      "main": [
+        [
+          {
+            "node": "บันทึก Log สำเร็จ (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "บันทึก Log ล้มเหลว (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "บันทึก Log ล้มเหลว (/api/agent-log)": {
+      "main": [
+        [
+          {
+            "node": "แจ้งเตือนผู้ดูแล (LINE)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Bangkok",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true
+  },
+  "versionId": "863a2ec0-9634-43cb-ad03-3701b2aaae08",
+  "meta": {
+    "description": "ทุก 30 นาที: ดึง follow-up ที่ถึงกำหนด → ตรวจ consent/opt-out/โควต้า → AI เขียนข้อความ + ต่อท้าย Unsubscribe → ส่ง LINE หรืออีเมลผ่านแอป → บันทึกผล → log | env: CRON_SECRET, LINE_CHANNEL_ACCESS_TOKEN, LINE_TARGET_ID",
+    "tags": [
+      "lead-nurturing",
+      "phase-5",
+      "ai",
+      "followup"
+    ]
+  }
+}

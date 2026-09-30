@@ -8,6 +8,9 @@ import { isAdminOnlyPage, canAccessAdminOnlyPage } from '@/lib/access-rules';
 
 const PUBLIC_API = [
   '/api/support', // ฟอร์มติดต่อสาธารณะ — เข้าถึงได้โดยไม่ต้องล็อกอิน (route ตรวจ rate-limit + เบอร์โทรเอง)
+  '/api/track', // เก็บพฤติกรรมผู้เข้าชม — ต้องยินยอมก่อนเก็บ (route ตรวจ consent เอง)
+  '/api/lead', // ลงทะเบียนลีดจากฟอร์มสาธารณะ (route ตรวจความยินยอม + กันสแปมเอง)
+  '/api/maintenance', // งานดูแลระบบ — route บังคับ Authorization: Bearer $CRON_SECRET เอง
   '/api/auth/login',
   '/api/auth/register',
   '/api/auth/verify-email',
