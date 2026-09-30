@@ -32,6 +32,9 @@ function LoginInner(){
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<Provider | null>(null);
   const [showPass, setShowPass] = useState(false);
+  // TikTok: เปิดใช้เฉพาะเมื่อ TikTok Developer Console ตั้งค่า Login Kit (Web) + redirect URI แล้ว
+  // ตั้ง env NEXT_PUBLIC_TIKTOK_ENABLED=1 บน Vercel เพื่อเปิดปุ่มกลับมา
+  const tiktokReady = process.env.NEXT_PUBLIC_TIKTOK_ENABLED === '1';
 
   useEffect(()=>{
     if(errorParam==='suspended'){
@@ -70,6 +73,12 @@ function LoginInner(){
 
   async function loginSocial(provider: Provider){
     if(provider==='tiktok'){
+      // ยังไม่ตั้งค่า Login Kit ฝั่ง TikTok -> ไม่เด้งออกไปเจอ error ของ TikTok
+      if(!tiktokReady){
+        setMsg('TikTok Login อยู่ระหว่างตั้งค่า — ผู้ดูแลต้องเปิด Login Kit (Configure for Web) และลงทะเบียน redirect URI https://ai-insurance-network-tree.vercel.app/api/auth/tiktok ใน TikTok Developer Console → Manage apps ก่อน (ตอนนี้แนะนำใช้ Google / อีเมล-รหัสผ่าน / GitHub)');
+        setMsgType('err');
+        return;
+      }
       setSocialLoading('tiktok'); setMsg('');
       try{
         const res = await fetch('/api/auth/tiktok', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'init' }) });
@@ -192,7 +201,7 @@ function LoginInner(){
               {providerBtns.map(p=>(
                 <button key={p.id} onClick={()=> loginSocial(p.id)} disabled={!!socialLoading || loading} className={`${btnBase} ${p.style}`}>
                   <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${p.iconStyle}`}>{p.icon}</span>
-                  <span className="flex-1 text-left">{socialLoading===p.id ? 'กำลังเชื่อม...' : p.label}</span>
+                  <span className="flex-1 text-left">{socialLoading===p.id ? 'กำลังเชื่อม...' : p.label}{p.id==='tiktok' && !tiktokReady ? ' (อยู่ระหว่างตั้งค่า)' : ''}</span>
                 </button>
               ))}
             </div>
