@@ -381,6 +381,7 @@ export async function POST(req: NextRequest) {
 
     let stored = 0;
     let duplicates = 0;
+    let failed = 0;
     let scoreDeltaTotal = 0;
     const breakdown: Record<string, number> = {};
     const queued: string[] = [];
@@ -397,18 +398,26 @@ export async function POST(req: NextRequest) {
 
       let isRepeat = false;
       if (video && visitor) {
-        const prior = await db.videoView.count({ where: { videoId: video.id, visitorId } }).catch(() => 0);
+        const prior = await db.videoView.count({ where: { videoId: video.id, visitorId: visitor.id } }).catch(() => 0);
         isRepeat = prior > 0;
       }
 
       const delta = scoreForEvent(ev.type, ev.watchPct, isRepeat);
 
       // ── 3) เขียน event (unique eventId = idempotent) ─────────────────────
+      // ⚠️ visitor_events.visitor_id เป็น FK → visitors.id (uuid PK) ไม่ใช่ visitors.visitor_id
+      //    (รหัสสาธารณะที่เว็บเก็บใน localStorage) — ใส่ค่าผิดตัวจะได้ P2003 FK violation
+      //    แล้วถูก catch กลืน → stored:0 เงียบ ๆ (เคสจริง 2026-10-01)
+      if (!visitor?.id) {
+        console.error('[track] no visitor row id — skip event', ev.type);
+        failed++;
+        continue;
+      }
       try {
         await db.visitorEvent.create({
           data: {
             eventId: ev.eventId,
-            visitorId,
+            visitorId: visitor.id,
             sessionId: sessionId || undefined,
             prospectId: targetProspectId || undefined,
             type: ev.type,
@@ -438,6 +447,7 @@ export async function POST(req: NextRequest) {
         scoreDeltaTotal += delta;
       } catch (e: any) {
         if (String(e?.code) === 'P2002') { duplicates++; continue; } // ยิงซ้ำ — ไม่นับคะแนนซ้ำ
+        failed++;
         console.error('[track] visitorEvent.create failed', e?.message);
         continue;
       }
@@ -447,7 +457,7 @@ export async function POST(req: NextRequest) {
         try {
           const since = new Date(now.getTime() - 2 * 60 * 60 * 1000); // session ภายใน 2 ชม.
           const prev = await db.videoView.findFirst({
-            where: { videoId: video.id, visitorId, ...(sessionId ? { sessionId } : { startedAt: { gte: since } }) },
+            where: { videoId: video.id, visitorId: visitor.id, ...(sessionId ? { sessionId } : { startedAt: { gte: since } }) },
             orderBy: { startedAt: 'desc' },
           });
           const completed = ev.type === 'video_complete' || ev.watchPct >= 95;
@@ -465,7 +475,7 @@ export async function POST(req: NextRequest) {
           } else {
             await db.videoView.create({
               data: {
-                visitorId,
+                visitorId: visitor.id,
                 prospectId: targetProspectId || undefined,
                 videoId: video.id,
                 sessionId: sessionId || undefined,
@@ -604,6 +614,7 @@ export async function POST(req: NextRequest) {
       visitorId,
       stored,
       duplicates,
+      errors: failed,
       events: stored,
       scoreDelta: scoreDeltaTotal,
       score,

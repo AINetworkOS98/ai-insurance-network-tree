@@ -11,6 +11,14 @@ const PUBLIC_API = [
   '/api/track', // เก็บพฤติกรรมผู้เข้าชม — ต้องยินยอมก่อนเก็บ (route ตรวจ consent เอง)
   '/api/lead', // ลงทะเบียนลีดจากฟอร์มสาธารณะ (route ตรวจความยินยอม + กันสแปมเอง)
   '/api/maintenance', // งานดูแลระบบ — route บังคับ Authorization: Bearer $CRON_SECRET เอง
+  // เส้นทางที่ n8n (และเว็บ) เรียก — route ตรวจสิทธิ์เอง (คุกกี้ token หรือ Bearer CRON_SECRET)
+  '/api/dashboard/leads',
+  '/api/agent-log',
+  '/api/agent-tasks',
+  '/api/lead/score',
+  '/api/recommend',
+  '/api/followup/due',
+  '/api/followup/result',
   '/api/auth/login',
   '/api/auth/register',
   '/api/auth/verify-email',

@@ -353,7 +353,16 @@ async function tableStatus() {
 export async function GET(req: NextRequest) {
   if (!allowed(req)) return NextResponse.json({ ok: false, error: 'ต้องมีสิทธิ์ (Bearer CRON_SECRET)' }, { status: 401 });
   const st = await tableStatus();
-  return NextResponse.json({ ok: true, ...st, total: NEW_TABLES.length });
+  const counts: Record<string, number> = {};
+  for (const t of NEW_TABLES) {
+    try {
+      const r: any[] = await (prisma as any).$queryRawUnsafe(`SELECT COUNT(*)::int AS n FROM "${t}"`);
+      counts[t] = r?.[0]?.n ?? 0;
+    } catch {
+      counts[t] = -1;
+    }
+  }
+  return NextResponse.json({ ok: true, ...st, total: NEW_TABLES.length, counts });
 }
 
 export async function POST(req: NextRequest) {

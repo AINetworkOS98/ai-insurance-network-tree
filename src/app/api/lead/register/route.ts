@@ -400,7 +400,10 @@ export async function POST(req: NextRequest) {
     const visitorId = str(body?.visitorId || body?.visitor_id, 64);
     let linkedEvents = 0;
     if (visitorId) {
-      await db.visitor.update({
+      // ⚠️ visitor_events.visitor_id / video_views.visitor_id เป็น FK → visitors.id (uuid PK)
+      //    ส่วน visitorId ที่เว็บส่งมาคือ visitors.visitor_id (รหัสสาธารณะ) — ต้องแปลงก่อน
+      //    ไม่งั้น Postgres จะ error uuid แล้ว .catch() กลืน → linkedEvents = 0 เงียบ ๆ
+      const visitorRow = await db.visitor.update({
         where: { visitorId },
         data: {
           prospectId: prospect.id,
@@ -409,15 +412,17 @@ export async function POST(req: NextRequest) {
           consentAt: now,
         },
       }).catch(() => null);
-      const upd = await db.visitorEvent.updateMany({
-        where: { visitorId, prospectId: null },
-        data: { prospectId: prospect.id },
-      }).catch(() => null);
-      linkedEvents = upd?.count || 0;
-      await db.videoView.updateMany({
-        where: { visitorId, prospectId: null },
-        data: { prospectId: prospect.id },
-      }).catch(() => null);
+      if (visitorRow?.id) {
+        const upd = await db.visitorEvent.updateMany({
+          where: { visitorId: visitorRow.id, prospectId: null },
+          data: { prospectId: prospect.id },
+        }).catch(() => null);
+        linkedEvents = upd?.count || 0;
+        await db.videoView.updateMany({
+          where: { visitorId: visitorRow.id, prospectId: null },
+          data: { prospectId: prospect.id },
+        }).catch(() => null);
+      }
     }
 
     // ── ⑬ EventOutbox → n8n WF02 (ข้อความต้อนรับ/แจ้งเตือนตัวแทน ส่งที่ n8n) ─
