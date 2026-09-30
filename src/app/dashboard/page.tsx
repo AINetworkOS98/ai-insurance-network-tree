@@ -84,14 +84,14 @@ export default function Dashboard() {
           setIncomeSummary({ estimated, approved, paid });
         }
 
-        // 4) system health
-        const healthRes = await fetch('/api/admin/backup', {
+        // 4) system health — เส้นทางที่ถูกคือ /api/system/health (เดิมเรียก /api/admin/backup ซึ่งไม่มี → 404 HTML → JSON.parse พัง)
+        const healthRes = await fetch('/api/system/health', {
           credentials: 'include',
           headers: authHeaders(),
         });
         const healthData = await healthRes.json();
         if (mounted && healthData.ok) {
-          setHealth(healthData.health || null);
+          setHealth({ db: healthData.db, firestore: healthData.firestore, lastBackup: healthData.lastBackup } as HealthStatus);
         }
       } catch (e: any) {
         if (mounted) setError(e?.message || 'เกิดข้อผิดพลาด');
@@ -107,7 +107,8 @@ export default function Dashboard() {
   const token = getToken();
   const isLoggedIn = !!token;
 
-  const activeMembers = members.filter((m) => m.status === 'active').length;
+  // สถานะจาก API เป็นตัวพิมพ์ใหญ่ (ACTIVE) — เทียบแบบไม่สนตัวพิมพ์ ไม่งั้นการ์ดจะโชว์ "Active 0 • อื่นๆ N" ผิด
+  const activeMembers = members.filter((m) => String(m.status).toLowerCase() === 'active').length;
   const totalMembers = members.length;
 
   const unitsFilled = positions
