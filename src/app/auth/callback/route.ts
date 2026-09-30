@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { sql, sqlOne, sqlRun } from '@/lib/sqlLite';
 import { signToken } from '@/lib/auth';
 import { generateMemberCode, generateReferralCode } from '@/lib/referral';
+import { relayBase, relaySig, verifyRelaySig, mintTicket } from '@/lib/oauthRelay';
 
 /**
  * GET /auth/callback — รับ callback จาก Google (server-side OAuth)
@@ -28,15 +29,38 @@ export async function GET(req: NextRequest) {
   const code = searchParams.get('code');
   const state = searchParams.get('state');
   const error = searchParams.get('error');
+  const relayHostParam = searchParams.get('relay_host');
+  const relayed = searchParams.get('relayed') === '1';
   const back = (path: string) => NextResponse.redirect(new URL(path, getBaseUrl(req)));
 
   if (error) return back(`/login?error=${encodeURIComponent(error)}`);
   if (!code) return back('/login?error=no_code');
 
+  // ---- โหมดส่งต่อ: เด้งไปโฮสต์ที่เร็วทันที (เส้นทางนี้ไม่แตะฐานข้อมูลเลย) ----
+  // แพลนแชร์ตัดคำขอที่ทำงานหนัก (Google + DB) ด้วย 504 → ให้โฮสต์ที่เร็วกว่าแลกโค้ดแทน
+  const relayTarget = relayBase();
+  if (relayTarget && !relayed && !relayHostParam) {
+    const self = getBaseUrl(req);
+    const u = new URL('/auth/callback', relayTarget);
+    u.searchParams.set('code', code);
+    if (state) u.searchParams.set('state', state);
+    u.searchParams.set('relayed', '1');
+    u.searchParams.set('relay_host', self);
+    u.searchParams.set('relay_sig', relaySig(code, state, self));
+    mark('relay-out');
+    if (LOG) console.log('[oauth] relay out -> ' + relayTarget + ' ' + step.join(' '));
+    return NextResponse.redirect(u.toString());
+  }
+  if (relayed && !verifyRelaySig(searchParams.get('relay_sig'), code, state, String(relayHostParam || ''))) {
+    return back('/login?error=relay_signature');
+  }
+
   try {
     const clientId = process.env.GOOGLE_CLIENT_ID!;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET!;
-    const redirectUri = process.env.GOOGLE_CALLBACK_URL || `${getBaseUrl(req)}/auth/callback`;
+    const redirectUri = relayed && relayHostParam
+      ? `${String(relayHostParam).replace(/\/$/, '')}/auth/callback`   // ต้องตรงกับตอนเริ่มล็อกอิน (Google บังคับ)
+      : (process.env.GOOGLE_CALLBACK_URL || `${getBaseUrl(req)}/auth/callback`);
     mark('params-ready');
 
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
@@ -118,11 +142,22 @@ export async function GET(req: NextRequest) {
     mark('user-resolved');
     if (['SUSPENDED', 'RESIGNED', 'INACTIVE'].includes(String(user.status))) return back('/login?error=suspended');
 
-    const token = signToken({ sub: user.id, email: user.email, rankLevel: user.rankLevel ?? 0, status: String(user.status) });
-    mark('token-signed');
-
     let next = '/';
     try { if (state) { const s = JSON.parse(Buffer.from(state, 'base64url').toString()); if (s.next && String(s.next).startsWith('/')) next = s.next; } } catch {}
+
+    // ---- โหมดส่งต่อ: ออกตั๋วอายุ 2 นาที แล้วเด้งกลับโฮสต์ต้นทางไปแลกเป็นคุกกี้ที่นั่น ----
+    // (โฮสต์ต้นทางตรวจลายเซ็นตั๋วอย่างเดียว ไม่แตะฐานข้อมูล → เร็วพอสำหรับแพลนแชร์)
+    if (relayed && relayHostParam) {
+      const ticket = mintTicket({ sub: user.id, email: user.email, rankLevel: user.rankLevel ?? 0, status: String(user.status), next });
+      const dest = new URL('/auth/session', String(relayHostParam));
+      dest.searchParams.set('ticket', ticket);
+      mark('ticket-out');
+      if (LOG) console.log('[oauth] relay ticket -> ' + String(relayHostParam) + ' ' + step.join(' '));
+      return NextResponse.redirect(dest.toString());
+    }
+
+    const token = signToken({ sub: user.id, email: user.email, rankLevel: user.rankLevel ?? 0, status: String(user.status) });
+    mark('token-signed');
 
     const res = back(next);
     res.cookies.set('token', token, { httpOnly: true, path: '/', maxAge: 60 * 60 * 24 * 7, sameSite: 'lax' });
