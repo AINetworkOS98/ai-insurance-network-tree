@@ -8,7 +8,12 @@ function getBaseUrl(req: NextRequest){
 }
 
 // GET /auth/callback — รับ callback จาก Google (server-side OAuth ไม่ผ่าน Firebase)
+// LOG_OAUTH=1 → พิมพ์เวลาที่ใช้แต่ละขั้นลง runtime log (ใช้หาจุดที่ช้าบนโฮสต์แรมจำกัด)
 export async function GET(req: NextRequest){
+  const LOG = process.env.LOG_OAUTH === '1';
+  const t0 = Date.now();
+  const step: string[] = [];
+  const mark = (label: string) => { const dt = Date.now() - t0; step.push(`${label}:${dt}ms`); if (LOG) console.log(`[oauth] ${label} @${dt}ms`); };
   const { searchParams } = new URL(req.url);
   const code = searchParams.get('code');
   const state = searchParams.get('state');
@@ -19,6 +24,7 @@ export async function GET(req: NextRequest){
     const clientId = process.env.GOOGLE_CLIENT_ID!;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET!;
     const redirectUri = process.env.GOOGLE_CALLBACK_URL || `${getBaseUrl(req)}/auth/callback`;
+    mark('params-ready');
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method:'POST',
       headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
@@ -31,6 +37,7 @@ export async function GET(req: NextRequest){
       }),
     });
     const tokenJson:any = await tokenRes.json();
+    mark('token-exchange');
     if(!tokenRes.ok) return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(tokenJson.error_description||tokenJson.error||'google token exchange failed')}`, getBaseUrl(req)));
     const idToken = tokenJson.id_token;
     if(!idToken) return NextResponse.redirect(new URL('/login?error=no_id_token', getBaseUrl(req)));
@@ -42,9 +49,11 @@ export async function GET(req: NextRequest){
     const name = String(payload.name|| email.split('@')[0] || 'ผู้ใช้ Google');
     if(!email) return NextResponse.redirect(new URL('/login?error=no_email', getBaseUrl(req)));
     let identity = await prisma.authIdentity.findFirst({ where:{ provider:'google', providerUserId: googleSub } }).catch(()=>null);
+    mark('identity-query');
     let user:any = null;
     if(identity){
       user = await prisma.user.findUnique({ where:{ id: identity.userId } });
+      mark('user-lookup');
     } else {
       user = await prisma.user.findUnique({ where:{ email } }).catch(()=>null);
       if(user){
@@ -91,9 +100,12 @@ export async function GET(req: NextRequest){
       }
     }
     if(!user) return NextResponse.redirect(new URL('/login?error=server', getBaseUrl(req)));
+    mark('user-resolved');
     if(['SUSPENDED','RESIGNED','INACTIVE'].includes(String(user.status))) return NextResponse.redirect(new URL('/login?error=suspended', getBaseUrl(req)));
     const token = signToken({ sub: user.id, email: user.email, rankLevel: user.rankLevel ?? 0, status: String(user.status) });
+    mark('token-signed');
     await prisma.userSession.create({ data:{ userId: user.id, tokenHash: token.slice(-32), expiresAt: new Date(Date.now()+7*24*60*60*1000) } }).catch(()=>null);
+    mark('session-saved');
     // งานเบื้องหลัง: ตั้งสิทธิ์แอดมินไม่ต้องรอ (บนโฮสต์ที่ดิสก์ช้า/แรมจำกัด การ await import โมดูลหนัก
     // เช่น lib/admin → firebase-admin ทำให้คำขอค้างจน proxy ตัดเป็น 504)
     void (async () => {
@@ -102,10 +114,11 @@ export async function GET(req: NextRequest){
     let next = '/';
     try{ if(state){ const s=JSON.parse(Buffer.from(state,'base64url').toString()); if(s.next && String(s.next).startsWith('/')) next=s.next; } }catch{}
     const res = NextResponse.redirect(new URL(next, getBaseUrl(req)));
+    if (LOG) console.log('[oauth] success ' + step.join(' '));
     res.cookies.set('token', token, { httpOnly:true, path:'/', maxAge:60*60*24*7, sameSite:'lax' });
     return res;
   }catch(e:any){
-    console.error('auth handler', e);
+    console.error('auth handler', e, step.join(' '));
     return NextResponse.redirect(new URL('/login?error=google_failed', getBaseUrl(req)));
   }
 }
