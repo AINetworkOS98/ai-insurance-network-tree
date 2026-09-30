@@ -59,7 +59,9 @@ export async function POST(req: NextRequest) {
     await createSupportTicketEvent(ticket);
 
     // ── ส่งอีเมล + สร้างแจ้งเตือนในเมนูให้ Admin ──
-    const { sendEmail, escapeHtml } = await import('@/lib/memberMessages');
+    const { escapeHtml } = await import('@/lib/memberMessages');
+    // ใช้ mailer.ts (เลือกผู้ส่งอัตโนมัติ: SMTP ของ Hostinger ก่อน แล้วค่อย Resend)
+    const { sendMail } = await import('@/lib/mailer');
     const adminEmailList = ['akarapol.pro798@gmail.com'];
     const time = new Date(ticket.createdAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
     const adminSubject = `📩 Support Ticket ใหม่: ${ticket.subject}`;
@@ -92,7 +94,9 @@ export async function POST(req: NextRequest) {
               } as any,
             });
           }
-          await sendEmail({ to: adminEmail, subject: adminSubject, html: adminHtml });
+          const mailRes = await sendMail({ to: adminEmail, subject: adminSubject, html: adminHtml });
+          if (mailRes.ok) console.log(`[support] ส่งอีเมลถึงแอดมินสำเร็จ (provider=${mailRes.provider})`);
+          else console.error(`[support] ส่งอีเมลล้มเหลว (provider=${mailRes.provider}) error=${mailRes.error}`);
         } catch (e) {
           console.error('Admin notify error:', e);
         }
