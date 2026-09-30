@@ -46,9 +46,12 @@ export default function ProgressView() {
         // ระดับปัจจุบันของผู้ใช้ที่ล็อกอิน (API อ่านจาก DB ไม่ใช่ค่าในโทเคน)
         const sr = await fetch('/api/income/summary', { credentials: 'include' });
         const sj = await sr.json();
-        // ยอดผลงานที่รับรองแล้ว — ถ้าไม่มีข้อมูลให้ถือเป็น 0 (ไม่เดายอด)
+        // ยอดผลงานที่ใช้ตัดสินคุณสมบัติ = เบี้ย/FYC เท่านั้น (ไม่รวมแถวค่าบำเหน็จ ซึ่งไม่ใช่ผลงานเบี้ย)
+        // ถ้าไม่มีข้อมูลให้ถือเป็น 0 (ไม่เดายอด)
         const tx = Array.isArray(sj?.transactions) ? sj.transactions : [];
-        const sum = tx.reduce((a: number, t: any) => a + Number(t?.amount || t?.approvedAmount || 0), 0);
+        const sum = tx
+          .filter((t: any) => ['premium', 'fyc'].includes(String(t?.type || '').toLowerCase()))
+          .reduce((a: number, t: any) => a + Number(t?.amount || t?.approvedAmount || 0), 0);
         if (mounted) { setMyRank(typeof sj?.rank === 'number' ? sj.rank : null); setFyc(sum); }
 
         // ขนาดทีม (ข้อมูลประกอบ) — นับจากทะเบียนสมาชิกจริง
