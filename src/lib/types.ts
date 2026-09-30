@@ -266,6 +266,8 @@ export interface IncomeBreakdown {
   centerBonus: number;
   regionType1: number;
   regionType2: number;
+  regionSeparation: number;
+  targetManagement: number;
   regionBonus: number;
   annualBonus: number;
   specialBonus: number;

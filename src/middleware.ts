@@ -86,7 +86,7 @@ export async function middleware(req: NextRequest) {
   // ตรวจที่นี่เสมอ ไม่พึ่งการซ่อนเมนูอย่างเดียว (ตรงกับกติกาหมวด 2 ของระบบ)
   if (isPage && isAdminOnlyPage(pathname)) {
     const restrictedToken = getToken(req);
-    const restrictedPayload = restrictedToken ? verifyTokenEdge(restrictedToken) : null;
+    const restrictedPayload = restrictedToken ? await verifyTokenEdge(restrictedToken) : null;
     if (!restrictedPayload) {
       const loginUrl = new URL('/login', req.url);
       loginUrl.searchParams.set('next', pathname);
@@ -115,7 +115,7 @@ export async function middleware(req: NextRequest) {
     if (!token) {
       return NextResponse.json({ ok: false, error: 'กรุณาเข้าสู่ระบบ', errorEn: 'Unauthorized' }, { status: 401 });
     }
-    const payload = verifyTokenEdge(token);
+    const payload = await verifyTokenEdge(token);
     if (!payload) {
       return NextResponse.json({ ok: false, error: 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่' }, { status: 401 });
     }
@@ -156,7 +156,7 @@ export async function middleware(req: NextRequest) {
   if(!token){
     return NextResponse.redirect(new URL('/admin', req.url));
   }
-  const payload = verifyTokenEdge(token);
+  const payload = await verifyTokenEdge(token);
   if(!payload){
     const loginUrl = new URL('/login', req.url);
     loginUrl.searchParams.set('next', pathname);

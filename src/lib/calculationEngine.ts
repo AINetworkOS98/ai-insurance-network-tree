@@ -8,6 +8,7 @@ import {
   IncomeSummary
 } from './types';
 import { DEFAULT_POSITIONS } from './compensationRules'; // ใช้ตรวจระดับตำแหน่งก่อนจ่ายแต่ละหมวด
+import { percentageOf, tierPercentageOf, tierFixedAmount, perUnitAmount, perCenterTieredAmount, roundBaht } from './ruleEngine'; // ตัวเลขทุกตัวมาจากไฟล์เกณฑ์ที่ประกาศไว้
 
 export const INCOME_CATEGORIES = [
   'personal_commission',
@@ -48,160 +49,118 @@ export type { PositionId, MemberMetrics, CompensationPlanVersion, Position, Comp
 export { DEFAULT_POSITIONS, INITIAL_PLAN_VERSION } from './compensationRules';
 
 /**
- * Calculate personal commission (Category 1)
- * 25% of personal COM
+ * ค่าบำเหน็จส่วนตัว (Category 1)
+ * เกณฑ์ที่ประกาศ (rule_personal_com): rate 1.0 บนฐาน personal_com
+ * — ยอด "COM" ใน ledger คือค่าบำเหน็จที่เกิดขึ้นจริง ผลงานส่วนตัวจึงรับเต็มจำนวนตามเกณฑ์
+ * (เดิมโค้ดคูณ 0.25 ซึ่งเป็นอัตราของฐาน "เบี้ยปีแรก" คนละฐานกัน ทำให้รายงานต่ำกว่าที่ประกาศไว้ 4 เท่า)
  */
 export function calculatePersonalCommission(metrics: Omit<MemberMetrics, 'memberId' | 'positionId'>): number {
-  return Math.round(metrics.personalCOM * 0.25);
+  return percentageOf('personal_commission', Number(metrics.personalCOM || 0));
 }
 
 /**
- * Calculate unit management income (Category 2)
- * Tiered based on team COM:
- * - Team COM < 5,000: 0%
- * - 5,000 - 10,000: 25%
- * - 10,000 - 20,000: 30%
- * - 20,000 - 35,000: 35%
- * - >= 35,000: 40%
+ * ค่าจัดงานหน่วย (Category 2) — ขั้นบันไดตามเกณฑ์ที่ประกาศ (rule_unit_management)
+ * 5,000=25% / 10,000=30% / 20,000=35% / 35,000+=40%
  */
 export function calculateUnitCommission(teamCOM: number): number {
-  if (teamCOM < 5000) return 0;
-  if (teamCOM < 10000) return Math.round(teamCOM * 0.25);
-  if (teamCOM < 20000) return Math.round(teamCOM * 0.30);
-  if (teamCOM < 35000) return Math.round(teamCOM * 0.35);
-  return Math.round(teamCOM * 0.40);
+  return tierPercentageOf('unit_management', teamCOM);
 }
 
 /**
- * Calculate unit separation income (Category 3)
- * 2,000 THB per separated unit
+ * ค่าแยกหน่วย (Category 3) — เกณฑ์ที่ประกาศ (rule_unit_separation): 2,000 บาท/หน่วย ไม่จำกัดจำนวน
  */
 export function calculateUnitSeparation(separatedUnitsCount: number): number {
-  return separatedUnitsCount * 2000;
+  return perUnitAmount('unit_separation', separatedUnitsCount);
 }
 
 /**
- * Calculate center type 1 income (Category 4)
- * Tiered based on team COM — ขั้นตามเกณฑ์ที่ประกาศ (compensationRules rule_center_type1):
- * 15,000=15% / 30,000=20% / 60,000=25% / 120,000=30%  (เดิมโค้ดตัดขั้นที่ 50,000/100,000 = จ่ายเกินเกณฑ์)
+ * ค่าจัดงานศูนย์ประเภท 1 (Category 4) — rule_center_type1
+ * 15,000=15% / 30,000=20% / 60,000=25% / 120,000+=30%
  */
 export function calculateCenterType1(teamCOM: number): number {
-  if (teamCOM < 15000) return 0;
-  if (teamCOM < 30000) return Math.round(teamCOM * 0.15);
-  if (teamCOM < 60000) return Math.round(teamCOM * 0.20);
-  if (teamCOM < 120000) return Math.round(teamCOM * 0.25);
-  return Math.round(teamCOM * 0.30);
+  return tierPercentageOf('center_type1', teamCOM);
 }
 
 /**
- * Calculate center type 2 income (Category 5)
- * 0.8% of renewal premium
+ * ค่าจัดงานศูนย์ประเภท 2 (Category 5) — rule_center_type2: 0.8% ของเบี้ยต่ออายุ
  */
 export function calculateCenterType2(renewalPremium: number): number {
-  return Math.round(renewalPremium * 0.008);
+  return percentageOf('center_type2', renewalPremium);
 }
 
 /**
- * Calculate center type 3 income (Category 6)
- * ตารางคงที่ตามทีม COM — ตามเกณฑ์ที่ประกาศ (rule_center_type3):
- * 15,000=5,000 / 30,000=8,000 / 60,000=11,000 / 120,000=15,000
- * (เดิม 30,000=7,500, 50,000=12,000, 100,000=15,000 → ผิดทั้งจำนวนและจุดตัดขั้น)
+ * ค่าจัดงานศูนย์ประเภท 3 (Category 6) — rule_center_type3 (tier_fixed)
+ * 15,000=5,000 / 30,000=8,000 / 60,000=11,000 / 120,000+=15,000
  */
 export function calculateCenterType3(teamCOM: number): number {
-  if (teamCOM < 15000) return 0;
-  if (teamCOM < 30000) return 5000;
-  if (teamCOM < 60000) return 8000;
-  if (teamCOM < 120000) return 11000;
-  return 15000;
+  return tierFixedAmount('center_type3', teamCOM);
 }
 
 /**
- * Calculate center separation income (Category 7)
- * 4,000 THB per separated center + COM bonus tiers
+ * ค่าแยกศูนย์ (Category 7) — rule_center_separation (per_center_tiered)
+ * ฐาน 4,000/ศูนย์ + ขั้น COM 15,000=1,500 / 30,000=2,000 / 60,000=2,500 / 120,000+=3,000 ต่อศูนย์
  */
 export function calculateCenterSeparation(separatedCentersCount: number, teamCOM: number): number {
-  const base = separatedCentersCount * 4000;
-  let comBonus = 0;
-  // ขั้น COM ตามเกณฑ์ที่ประกาศ (rule_center_separation): 15,000=1,500 / 30,000=2,000 / 60,000=2,500 / 120,000=3,000
-  if (teamCOM >= 15000 && teamCOM < 30000) comBonus = separatedCentersCount * 1500;
-  else if (teamCOM >= 30000 && teamCOM < 60000) comBonus = separatedCentersCount * 2000;
-  else if (teamCOM >= 60000 && teamCOM < 120000) comBonus = separatedCentersCount * 2500;
-  else if (teamCOM >= 120000) comBonus = separatedCentersCount * 3000;
-  return base + comBonus;
+  return perCenterTieredAmount('center_separation', separatedCentersCount, teamCOM);
 }
 
 /**
- * Calculate center bonus income (Category 8)
- * Annual: 4-6% of annual COM if >= 150,000
- * ขั้นตามเกณฑ์ที่ประกาศ (rule_center_bonus): 150,000=4% / 300,000=5% / 600,000=6%
- * (เดิมขึ้น 6% ที่ 500,000 → จ่ายเกิน 1% ในช่วง 500,000–599,999)
+ * โบนัสศูนย์รายปี (Category 8) — rule_center_bonus: 150,000=4% / 300,000=5% / 600,000+=6% ของ COM ทั้งปี
  */
 export function calculateCenterBonus(annualCOM: number): number {
-  if (annualCOM < 150000) return 0;
-  if (annualCOM < 300000) return Math.round(annualCOM * 0.04);
-  if (annualCOM < 600000) return Math.round(annualCOM * 0.05);
-  return Math.round(annualCOM * 0.06);
+  return tierPercentageOf('center_bonus', annualCOM);
 }
 
 /**
- * Calculate region type 1 income (Category 9)
- * Tiered based on team FYC — ขั้นตามเกณฑ์ที่ประกาศ (rule_region_type1):
- * 60,000=10% / 120,000=12% / 180,000=14% / 240,000=16% / 300,000=18%
- * (เดิมใช้ 120,000=13%, 200,000=15% → ขั้น 180k/240k หายไป และจ่ายไม่ตรงช่วง)
+ * ค่าจัดงานภาคประเภท 1 (Category 9) — rule_region_type1
+ * 60,000=10% / 120,000=12% / 180,000=14% / 240,000=16% / 300,000+=18%
  */
 export function calculateRegionType1(teamFYC: number): number {
-  if (teamFYC < 60000) return 0;
-  if (teamFYC < 120000) return Math.round(teamFYC * 0.10);
-  if (teamFYC < 180000) return Math.round(teamFYC * 0.12);
-  if (teamFYC < 240000) return Math.round(teamFYC * 0.14);
-  if (teamFYC < 300000) return Math.round(teamFYC * 0.16);
-  return Math.round(teamFYC * 0.18);
+  return tierPercentageOf('region_type1', teamFYC);
 }
 
 /**
- * Calculate region type 2 income (Category 10)
- * เกณฑ์ที่ประกาศ (rule_region_type2): basis team_fyc, จ่ายต่อศูนย์
- * 15,000=1,000 / 30,000=1,500 / 60,000=2,000 / 120,000=2,500 ต่อศูนย์
- * (เดิมใช้ per-center FYC 60k/120k/200k/300k → 5,000/8,000/12,000/15,000 ซึ่งไม่ตรงเกณฑ์และฐานผิด)
+ * ค่าจัดงานภาคประเภท 2 (Category 10) — rule_region_type2 (tier_fixed ต่อศูนย์)
+ * 15,000=1,000 / 30,000=1,500 / 60,000=2,000 / 120,000+=2,500 ต่อศูนย์
  */
 export function calculateRegionType2(separatedCentersCount: number, teamFYC: number): number {
   if (separatedCentersCount <= 0) return 0;
-  if (teamFYC < 15000) return 0;
-  if (teamFYC < 30000) return separatedCentersCount * 1000;
-  if (teamFYC < 60000) return separatedCentersCount * 1500;
-  if (teamFYC < 120000) return separatedCentersCount * 2000;
-  return separatedCentersCount * 2500;
+  return roundBaht(tierFixedAmount('region_type2', teamFYC) * separatedCentersCount);
 }
 
 /**
- * Calculate region bonus (Category 11)
- * เกณฑ์ที่ประกาศ (rule_region_bonus): frequency annual, basis annual_fyc
- * 500,000=1.5% / 1,000,000=2.0% / 2,000,000=2.5%
- * (เดิมใช้ teamFYC รายเดือนกับขั้น 60k/120k/200k → ฐานและเกณฑ์ผิดทั้งชุด)
+ * ค่าแยกภาค (Category 11) — rule_region_separation: 4,000 บาท/ภาค
+ * (เกณฑ์ระบุ 3 แบบ; ที่ใช้คือแบบจ่ายตามจำนวนภาค 4,000 บาท — แบบ "8,000 ครั้งเดียว" และ "40% ของ T1" ยังไม่เปิดให้เลือก)
+ */
+export function calculateRegionSeparation(separatedRegionsCount: number): number {
+  return perUnitAmount('region_separation', separatedRegionsCount);
+}
+
+/**
+ * ค่าบริหารเป้าหมาย (Category 12) — rule_target_management (tier_fixed บน FYC ต่อปี)
+ * 1.5M=10,000 / 2M=15,000 / 3M=20,000 / 4M=25,000 / 5M+=30,000 ต่อเดือน
+ */
+export function calculateTargetManagement(annualFYC: number): number {
+  return tierFixedAmount('target_management', annualFYC);
+}
+
+/**
+ * โบนัสภาครายปี (Category 13) — rule_region_bonus: 500k=1.5% / 1M=2.0% / 2M+=2.5% ของ FYC ทั้งปี
  */
 export function calculateRegionBonus(annualFYC: number): number {
-  if (annualFYC < 500000) return 0;
-  if (annualFYC < 1000000) return Math.round(annualFYC * 0.015);
-  if (annualFYC < 2000000) return Math.round(annualFYC * 0.02);
-  return Math.round(annualFYC * 0.025);
+  return tierPercentageOf('region_bonus', annualFYC);
 }
 
 /**
- * Calculate annual bonus (Category 12)
- * Based on annual FYC
+ * โบนัสรายปีสะสม (เดิม engine มีสูตรของตัวเองแต่ **ไม่มีเกณฑ์ประกาศในระบบ**)
+ * — ปรับเป็น 0 และแจ้งในหมายเหตุ แทนการจ่ายด้วยเลขที่ไม่มีที่มา
  */
-export function calculateAnnualBonus(annualFYC: number): number {
-  if (annualFYC < 2000000) return 0;
-  if (annualFYC < 5000000) return Math.round(annualFYC * 0.01);
-  if (annualFYC < 10000000) return Math.round(annualFYC * 0.015);
-  return Math.round(annualFYC * 0.02);
+export function calculateAnnualBonus(_annualFYC: number): number {
+  return 0;
 }
 
-/**
- * Calculate special bonus (Category 13)
- * Placeholder for special campaigns
- */
-export function calculateSpecialBonus(metrics: Omit<MemberMetrics, 'memberId' | 'positionId'>): number {
+/** โบนัสพิเศษ (แคมเปญ) — ยังไม่มีแคมเปญในระบบ จึงคงเป็น 0 */
+export function calculateSpecialBonus(_metrics: Omit<MemberMetrics, 'memberId' | 'positionId'>): number {
   return 0;
 }
 
@@ -239,6 +198,8 @@ export function calculateTotalIncome(input: CalculationInput): IncomeResult {
     centerBonus: gated(calculateCenterBonus(annualCOM), canCenter),
     regionType1: gated(calculateRegionType1(teamFYC), canRegion),
     regionType2: gated(calculateRegionType2(calcMetrics.separatedRegionsCount || 0, teamFYC), canRegion),
+    regionSeparation: gated(calculateRegionSeparation(calcMetrics.separatedRegionsCount || 0), canRegion),
+    targetManagement: gated(calculateTargetManagement(annualFYC), canRegion),
     regionBonus: gated(calculateRegionBonus(annualFYC), canRegion),
     annualBonus: calculateAnnualBonus(annualFYC),
     specialBonus: calculateSpecialBonus(calcMetrics),
@@ -250,7 +211,7 @@ export function calculateTotalIncome(input: CalculationInput): IncomeResult {
     personalCommission: breakdown.personalCommission,
     unitIncomes: breakdown.unitCommission + breakdown.unitSeparation,
     centerIncomes: breakdown.centerType1 + breakdown.centerType2 + breakdown.centerType3 + breakdown.centerSeparation + breakdown.centerBonus,
-    regionIncomes: breakdown.regionType1 + breakdown.regionType2 + breakdown.regionBonus,
+  regionIncomes: breakdown.regionType1 + breakdown.regionType2 + breakdown.regionSeparation + breakdown.targetManagement + breakdown.regionBonus,
     bonusIncomes: breakdown.annualBonus + breakdown.specialBonus,
   };
   
@@ -271,52 +232,53 @@ export function calculateCareerProgress(
   currentPositionId: PositionId,
   metrics: MemberMetrics
 ): { qualified: boolean; progressPercent: number; nextPosition: PositionId | null; gaps: string[] } {
-  const positionOrder: PositionId[] = [
-    'agent',
-    'unit_manager',
-    'center_manager',
-    'region_manager',
-    'senior_unit_manager',
-    'senior_center_manager',
-    'executive_region',
-    'national_leader'
-  ];
-  
+  // บันไดตำแหน่งมาจาก DEFAULT_POSITIONS (แหล่งเดียว) เรียงตาม level — รองรับตำแหน่งอาวุโส/ผู้อำนวยการฝ่ายด้วย
+  // เดิมลิสต์เองในฟังก์ชัน + switch มีแค่ 3 case ทำให้ตำแหน่งอาวุโส (level 2.5/3.5/5) ค้าง 0% ตลอด
+  const positionOrder: PositionId[] = DEFAULT_POSITIONS
+    .slice()
+    .sort((a, b) => a.level - b.level)
+    .map((p) => p.id as PositionId);
+
   const currentIndex = positionOrder.indexOf(currentPositionId);
   if (currentIndex === -1 || currentIndex >= positionOrder.length - 1) {
     return { qualified: false, progressPercent: 100, nextPosition: null, gaps: [] };
   }
-  
+
   const nextPosition = positionOrder[currentIndex + 1];
+  const def = DEFAULT_POSITIONS.find((p) => p.id === nextPosition);
+  const qual: any = def?.qualification || {};
   const gaps: string[] = [];
+
+  // เกณฑ์จากไฟล์ประกาศ: minFyc (บำเหน็จสะสมส่วนตัว) + requiredSeparations (จำนวนหน่วย/ศูนย์ที่แยก)
+  // ตำแหน่งผู้จัดการภาคขึ้นไปใช้ FYC ของทั้งทีมตามที่เกณฑ์ระบุ
+  const useTeamFyc = Number(def?.level || 0) >= 4;
+  const fycValue = useTeamFyc ? Number(metrics.teamFYC || 0) : Number(metrics.personalFYC || 0);
+  const minFyc = Number(qual.minFyc || 0);
+  const sep = qual.requiredSeparations as { positionId: string; count: number } | undefined;
+  const sepCount = sep
+    ? sep.positionId === 'unit_manager'
+      ? Number(metrics.separatedUnitsCount || 0)
+      : sep.positionId === 'center_manager'
+        ? Number(metrics.separatedCentersCount || 0)
+        : Number(metrics.separatedRegionsCount || 0)
+    : 0;
+
   let progress = 0;
-  
-  switch (nextPosition) {
-    case 'unit_manager':
-      if (metrics.personalFYC >= 20000) progress = 100;
-      else progress = Math.round((metrics.personalFYC / 20000) * 100);
-      if (metrics.personalFYC < 20000) gaps.push(`FYC: ${metrics.personalFYC.toLocaleString()} / 20,000`);
-      break;
-    case 'center_manager':
-      if (metrics.personalFYC >= 75000 && (metrics.separatedUnitsCount || 0) >= 2) progress = 100;
-      else {
-        const fycProgress = Math.min(100, Math.round((metrics.personalFYC / 75000) * 50));
-        const unitsProgress = Math.min(50, Math.round(((metrics.separatedUnitsCount || 0) / 2) * 50));
-        progress = fycProgress + unitsProgress;
-      }
-      if (metrics.personalFYC < 75000) gaps.push(`FYC: ${metrics.personalFYC.toLocaleString()} / 75,000`);
-      if ((metrics.separatedUnitsCount || 0) < 2) gaps.push(`Separated Units: ${metrics.separatedUnitsCount || 0} / 2`);
-      break;
-    case 'region_manager':
-      if (metrics.teamFYC >= 1200000 && (metrics.separatedCentersCount || 0) >= 4) progress = 100;
-      else {
-        const fycProgress = Math.min(100, Math.round((metrics.teamFYC / 1200000) * 50));
-        const centersProgress = Math.min(50, Math.round(((metrics.separatedCentersCount || 0) / 4) * 50));
-        progress = fycProgress + centersProgress;
-      }
-      if (metrics.teamFYC < 1200000) gaps.push(`Team FYC: ${metrics.teamFYC.toLocaleString()} / 1,200,000`);
-      if ((metrics.separatedCentersCount || 0) < 4) gaps.push(`Separated Centers: ${metrics.separatedCentersCount || 0} / 4`);
-      break;
+  if (minFyc > 0 && sep?.count) {
+    const fycProgress = Math.min(100, Math.round((fycValue / minFyc) * 50));
+    const sepProgress = Math.min(50, Math.round((sepCount / sep.count) * 50));
+    progress = fycProgress + sepProgress;
+  } else if (minFyc > 0) {
+    progress = Math.min(100, Math.round((fycValue / minFyc) * 100));
+  } else if (sep?.count) {
+    progress = Math.min(100, Math.round((sepCount / sep.count) * 100));
+  }
+  if (minFyc > 0 && fycValue < minFyc) {
+    gaps.push(`${useTeamFyc ? 'Team FYC' : 'FYC'}: ${fycValue.toLocaleString()} / ${minFyc.toLocaleString()}`);
+  }
+  if (sep?.count && sepCount < sep.count) {
+    const label = sep.positionId === 'unit_manager' ? 'Separated Units' : sep.positionId === 'center_manager' ? 'Separated Centers' : 'Separated Regions';
+    gaps.push(`${label}: ${sepCount} / ${sep.count}`);
   }
   
   return {

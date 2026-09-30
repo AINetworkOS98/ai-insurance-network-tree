@@ -7,7 +7,7 @@ import { mirrorToFirestore } from '@/lib/firestoreMirror';
 // GET /api/periods — ดูรอบทั้งหมด + snapshot ของตัวเอง
 export async function GET(req: NextRequest){
   try{
-    const token = req.cookies.get('token')?.value || req.cookies.get('auth_token')?.value;
+    const token = req.cookies.get('token')?.value || req.cookies.get('auth_token')?.value || req.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
     if(!token) return NextResponse.json({ error:'กรุณาเข้าสู่ระบบ' }, { status:401 });
     let payload: any; try{ payload = verifyToken(token); }catch{ return NextResponse.json({ error:'โทเค็นไม่ถูกต้อง' }, { status:401 }); }
     const userId = payload.sub || payload.id;
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest){
 // POST /api/periods — สร้างรอบ + กฎ cutoff (ต้อง period.close)
 export async function POST(req: NextRequest){
   try{
-    const token = req.cookies.get('token')?.value || req.cookies.get('auth_token')?.value;
+    const token = req.cookies.get('token')?.value || req.cookies.get('auth_token')?.value || req.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
     if(!token) return NextResponse.json({ error:'กรุณาเข้าสู่ระบบ' }, { status:401 });
     let payload: any; try{ payload = verifyToken(token); }catch{ return NextResponse.json({ error:'โทเค็นไม่ถูกต้อง' }, { status:401 }); }
     const body = await req.json();

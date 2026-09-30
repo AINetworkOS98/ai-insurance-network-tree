@@ -31,7 +31,9 @@ export async function POST(req: NextRequest){
     }catch{}
 
     if(action === 'submit'){
-      // ผู้ส่งตรวจ — ต้องตรวจทานข้อมูล OCR ก่อน
+      // ผู้ส่งตรวจ — ต้องเป็นเจ้าของใบเสร็จเท่านั้น (เดิมใครล็อกอินก็ส่งใบของคนอื่นได้)
+      if(String(receipt.userId) !== String(actorId)) return NextResponse.json({ ok:false, error:'ส่งตรวจได้เฉพาะใบเสร็จของตนเอง' }, { status:403 });
+      // ต้องตรวจทานข้อมูล OCR ก่อน
       if(receipt.status !== 'Extracted') return NextResponse.json({ ok:false, error:'สถานะต้องเป็น Extracted ก่อนส่งตรวจ' }, { status:400 });
       // ตรวจว่าข้อมูลสำคัญครบ
       if(!ext?.amount || !ext?.paidAt) return NextResponse.json({ ok:false, error:'กรุณาตรวจทานจำนวนเงินและวันที่ชำระให้ครบก่อนส่ง' }, { status:400 });
@@ -41,10 +43,11 @@ export async function POST(req: NextRequest){
       const amt = Number(ext.amount);
       const ltype = String(ext?.type || cfg.defaultLedgerType);
       if(cfg.autoVerifyLimit > 0 && amt > 0 && amt <= Number(cfg.autoVerifyLimit) && conf >= 0.8 && ltype === 'premium'){
+        // ไม่กลืน error ของการเขียน ledger: ถ้าล้มต้องไม่ตอบว่าสำเร็จ (ไม่งั้นข้อมูลหายเงียบ)
         await prisma.$transaction(async (tx:any)=>{
           await tx.receiptFile.update({ where:{ id: receiptId }, data:{ status:'Verified', verifiedAt: new Date(), creditedPeriod: new Date().toISOString().slice(0,7) } });
           await tx.receiptVerification.create({ data:{ receiptId, result:'Verified', reason:'รับรองอัตโนมัติตามค่าที่ตั้งไว้ (ยอดไม่เกินเพดาน + OCR มั่นใจ)', verifiedBy: actorId, source:'auto_rule' } });
-          await tx.performanceLedger.create({ data:{ userId: receipt.userId, receiptId, type:'premium', amount: String(ext.amount), period: new Date().toISOString().slice(0,7) } }).catch(()=>null);
+          await tx.performanceLedger.create({ data:{ userId: receipt.userId, receiptId, type:'premium', amount: String(ext.amount), period: new Date().toISOString().slice(0,7) } });
         });
         await prisma.auditLog.create({ data:{ userId: actorId, action:'receipt.auto_verify', entity:'ReceiptFile', entityId: receiptId } }).catch(()=>null);
         return NextResponse.json({ ok:true, status:'Verified', message:'รับรองอัตโนมัติตามค่าที่ตั้งไว้ — สร้างรายการผลงานแล้ว' });
