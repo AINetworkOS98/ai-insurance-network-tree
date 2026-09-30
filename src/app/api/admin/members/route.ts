@@ -98,10 +98,13 @@ export async function GET(req: NextRequest) {
       const db = getDb();
       const snap = await db.collection('members').get();
       const seen = new Set(members.map((m: any) => String(m.memberCode || '').trim()).filter(Boolean));
+      const seenEmails = new Set(members.map((m: any) => String(m.email || '').trim().toLowerCase()).filter(Boolean));
       for (const doc of snap.docs) {
         const m: FirestoreMember = { id: doc.id, ...doc.data() } as FirestoreMember;
         if (!m.memberCode && !m.displayName && !m.name) continue; // ข้ามเอกสารสรุปที่ไม่ใช่แถวสมาชิก (เช่น MANUAL_TEST)
         if (m.memberCode && seen.has(String(m.memberCode).trim())) continue;
+        // คนเดียวกันที่มีอยู่แล้วในทะเบียนหลัก (เทียบอีเมล) — ไม่ต้องแสดงซ้ำ
+        if (m.email && seenEmails.has(String(m.email).trim().toLowerCase())) continue;
         const st = normalizeState(states.get(doc.id) || null, m.status);
         members.push({
           id: doc.id,
