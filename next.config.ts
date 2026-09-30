@@ -18,6 +18,8 @@ const nextConfig: NextConfig = {
   // จึง build ด้วย webpack — แต่ webpack จะรัน "ตัวตรวจ type ของ route" เข้มกว่า ทำให้ route files
   // ที่ export ค่าคงที่นอกเหนือ handler ไม่ผ่าน เฉพาะบนโฮสต์นั้นเราจึงข้าม type-check ตอน build
   // (type ยังตรวจได้ด้วย `npx tsc --noEmit` ในเครื่อง/CI ตามปกติ)
+  // โฮสต์ที่รัน Next.js แบบ standalone (Hostinger Web App) — เปิดด้วย env เพื่อไม่กระทบ Vercel
+  ...(process.env.BUILD_STANDALONE === '1' ? { output: 'standalone' as const } : {}),
   typescript: { ignoreBuildErrors: process.env.NEXT_SKIP_TS_BUILD === '1' },
 };
 

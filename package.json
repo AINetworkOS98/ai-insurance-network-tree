@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && node scripts/migrate-deploy.js && next build --webpack",
-    "start": "next start",
+    "build": "prisma generate && node scripts/migrate-deploy.js && next build --webpack && node scripts/postbuild-standalone.js",
+    "start": "node scripts/start.js",
     "lint": "eslint"
   },
   "dependencies": {
