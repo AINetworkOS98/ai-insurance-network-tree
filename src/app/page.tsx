@@ -12,7 +12,7 @@ export default function Home() {
 
   const shortcuts = [
     { href: '/tree',       title: 'ผังเครือข่าย 1 แตก 5',   desc: 'ดูผังสายงานกว้าง 5 คน',                  icon: '🌳' },
-    { href: '/recruit',    title: 'ชวนสมาชิกใหม่',          desc: 'ส่งลิงก์ชวนเข้าทีม',                     icon: '🤝' },
+    { href: '/referral',   title: 'ชวนสมาชิก',              desc: 'ส่งลิงก์ชวนเข้าทีม',                     icon: '🤝' },
     { href: '/register',   title: 'สมัครสมาชิก',            desc: 'สร้างบัญชีเพื่อเข้าระบบ',                 icon: '📝' },
     { href: '/login',      title: 'เข้าสู่ระบบ',            desc: 'อีเมล / Google / Facebook',               icon: '🔑' },
     { href: '/dashboard',  title: 'แดชบอร์ด',             desc: 'ภาพรวมผลงานและรายได้',                  icon: '📊' },

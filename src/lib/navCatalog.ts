@@ -93,7 +93,6 @@ export const NAV_ENTRIES: NavEntry[] = [
 
   // ── หัวหน้าหน่วยขึ้นไป (rank 2) ────────────────────────────────────────────
   { href: '/progress', section: 'unit', label: 'ความก้าวหน้า (บอร์ดโมเดลธุรกิจ)', key: 'sb_progress', icon: '⬆', minRank: 2 },
-  { href: '/recruit', section: 'unit', label: 'รับสมัคร/คัดเลือกตัวแทน', key: 'sb_recruit', icon: '🧑‍💼', minRank: 2 },
 
   // ── ผู้จัดการศูนย์ขึ้นไป (rank 3) ──────────────────────────────────────────
   { href: '/receipts/settings', section: 'center', label: 'ตั้งค่าการรับเงิน (ระดับศูนย์)', key: 'sb_receipt_settings', icon: '⚙', minRank: 3 },

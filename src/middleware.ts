@@ -134,7 +134,7 @@ export async function middleware(req: NextRequest) {
   // --- Page guard: ล็อกอินก่อนเข้าระบบ ---
   // ให้หน้าแรกและหน้าสาธารณะผ่านได้โดยไม่ต้องล็อกอิน
   // หน้าที่ต้องล็อกอิน: /dashboard, /tree, /income, /members, /admin, /reports, /receipts, /prospects, /appointments, /referral, /settings, /notifications, /periods, /rank-plans ฯลฯ
-  const protectedPrefixes = ['/dashboard','/tree','/income','/members','/reports','/receipts','/documents','/prospects','/appointments','/referral','/settings','/notifications','/periods','/rank-plans','/progress','/recruit'];
+  const protectedPrefixes = ['/dashboard','/tree','/income','/members','/reports','/receipts','/documents','/prospects','/appointments','/referral','/settings','/notifications','/periods','/rank-plans','/progress'];
 
   const needsAuth = protectedPrefixes.some(p => pathname === p || pathname.startsWith(p + '/'));
 
