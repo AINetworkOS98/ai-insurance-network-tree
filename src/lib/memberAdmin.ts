@@ -135,20 +135,25 @@ async function writeAllAutoRenew(ids: string[], on: boolean, actor?: string | nu
 }
 
 async function audit(actorId: string | null | undefined, action: string, entityId: string, oldValue: any, newValue: any, reason?: string) {
+  const actor = isUuid(String(actorId || '')) ? String(actorId) : null;
+  const payload: any = {
+    action,
+    entity: 'User',
+    entityId,
+    oldValue: oldValue ?? undefined,
+    newValue: newValue ?? undefined,
+    reason: reason || null,
+  };
   try {
-    await (prisma as any).auditLog.create({
-      data: {
-        userId: isUuid(String(actorId || '')) ? String(actorId) : null,
-        action,
-        entity: 'User',
-        entityId,
-        oldValue: oldValue ?? undefined,
-        newValue: newValue ?? undefined,
-        reason: reason || null,
-      },
-    });
+    await (prisma as any).auditLog.create({ data: { userId: actor, ...payload } });
   } catch (e: any) {
-    console.warn('[memberAdmin] audit skipped:', e?.message);
+    // FK userId ล้มได้เมื่อผู้ลงมือไม่ใช่แถวในตาราง User (เช่นโทเคนผู้ดูแลที่ไม่มีบัญชีจริง)
+    // บันทึกแบบไม่ผูกผู้ใช้แทน — ห้ามให้ประวัติการแก้ไขหายเงียบ ๆ
+    try {
+      await (prisma as any).auditLog.create({ data: { userId: null, ...payload, newValue: { ...(newValue || {}), actorId: actor || actorId || null } } });
+    } catch (e2: any) {
+      console.error('[memberAdmin] audit failed:', e2?.message || e2);
+    }
   }
 }
 
