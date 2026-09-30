@@ -78,12 +78,14 @@ export async function GET(req: NextRequest){
         await prisma.referralCode.create({ data:{ userId: user.id, code: newReferralCode! } }).catch(()=>null);
         await prisma.placementQueue.create({ data:{ userId: user.id, sponsorId: null, reason:'สมัครด้วย Google — รออนุมัติและจัดวางผัง' } }).catch(()=>null);
 
-      // แจ้งเตือนสมัครเข้า (social): ตัวเอง + ผู้บริหารระบบ
-      try{
-        const { emitNotification: __em, notifyAdmins: __na } = await import('@/lib/notify');
-        await __em({ userId: user.id, type:'register_welcome', title:'สมัครสมาชิกสำเร็จ', body:`รหัสสมาชิก ${user.memberCode}`, referenceId:'/members' }).catch(()=>null);
-        await __na({ type:'member_registered', title:'สมาชิกสมัครใหม่', body:`${user.email}`, referenceId:'/admin/members' });
-      }catch{}
+      // แจ้งเตือนสมัครเข้า (social): ตัวเอง + ผู้บริหารระบบ — ทำเบื้องหลัง ไม่บล็อกการล็อกอิน
+      void (async () => {
+        try{
+          const { emitNotification: __em, notifyAdmins: __na } = await import('@/lib/notify');
+          await __em({ userId: user.id, type:'register_welcome', title:'สมัครสมาชิกสำเร็จ', body:`รหัสสมาชิก ${user.memberCode}`, referenceId:'/members' }).catch(()=>null);
+          await __na({ type:'member_registered', title:'สมาชิกสมัครใหม่', body:`${user.email}`, referenceId:'/admin/members' });
+        }catch{}
+      })();
         identity = await prisma.authIdentity.create({ data:{ userId: user.id, provider:'google', providerUserId: googleSub, email } });
         await prisma.auditLog.create({ data:{ userId: user.id, action:'auth.register_google', entity:'User', entityId: user.id, newValue:{ email, rankLevel:0 } } });
       }
@@ -92,7 +94,11 @@ export async function GET(req: NextRequest){
     if(['SUSPENDED','RESIGNED','INACTIVE'].includes(String(user.status))) return NextResponse.redirect(new URL('/login?error=suspended', getBaseUrl(req)));
     const token = signToken({ sub: user.id, email: user.email, rankLevel: user.rankLevel ?? 0, status: String(user.status) });
     await prisma.userSession.create({ data:{ userId: user.id, tokenHash: token.slice(-32), expiresAt: new Date(Date.now()+7*24*60*60*1000) } }).catch(()=>null);
-    try{ const __adm = await import('@/lib/admin'); if(__adm.isAdminEmail(user.email)) await __adm.ensureSuperAdmin(user.id); }catch{}
+    // งานเบื้องหลัง: ตั้งสิทธิ์แอดมินไม่ต้องรอ (บนโฮสต์ที่ดิสก์ช้า/แรมจำกัด การ await import โมดูลหนัก
+    // เช่น lib/admin → firebase-admin ทำให้คำขอค้างจน proxy ตัดเป็น 504)
+    void (async () => {
+      try{ const __adm = await import('@/lib/admin'); if(__adm.isAdminEmail(user.email)) await __adm.ensureSuperAdmin(user.id); }catch{}
+    })();
     let next = '/';
     try{ if(state){ const s=JSON.parse(Buffer.from(state,'base64url').toString()); if(s.next && String(s.next).startsWith('/')) next=s.next; } }catch{}
     const res = NextResponse.redirect(new URL(next, getBaseUrl(req)));
