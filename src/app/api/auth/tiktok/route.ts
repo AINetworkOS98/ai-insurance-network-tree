@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const TIKTOK_AUTH_URL = 'https://www.tiktok.com/v2/auth/authorize/';
 const TIKTOK_TOKEN_URL = 'https://open.tiktokapis.com/v2/oauth/token/';
+// ใช้ env เป็นหลัก — บนโฮสต์ที่ proxy ไม่ส่ง Host ให้ (เช่น Hostinger) req.url จะกลายเป็น 0.0.0.0:3000
+function baseUrl(){ return process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'; }
 
 // POST { action:'init' } -> { url }  หรือ  POST { code, state } -> สร้าง session
 // GET ?code=xxx&state=yyy  -> callback จาก TikTok (redirect)
@@ -127,10 +129,10 @@ export async function GET(req: NextRequest){
   const error = url.searchParams.get('error');
 
   if(error){
-    return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(error)}`, req.url));
+    return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(error)}`, baseUrl()));
   }
   if(!code){
-    return NextResponse.redirect(new URL('/login?error=no_code', req.url));
+    return NextResponse.redirect(new URL('/login?error=no_code', baseUrl()));
   }
 
   // แลก code ผ่าน POST handler เดียวกันแล้ว redirect หน้าแรก
@@ -140,7 +142,7 @@ export async function GET(req: NextRequest){
   const redirectUri = process.env.TIKTOK_REDIRECT_URI || `${appUrl}/api/auth/tiktok`;
 
   if(!clientKey || !clientSecret){
-    return NextResponse.redirect(new URL('/login?error=tiktok_not_configured', req.url));
+    return NextResponse.redirect(new URL('/login?error=tiktok_not_configured', baseUrl()));
   }
 
   try{
@@ -157,7 +159,7 @@ export async function GET(req: NextRequest){
     });
     const tokenJson:any = await tokenRes.json().catch(()=> ({}));
     if(!tokenJson.access_token){
-      return NextResponse.redirect(new URL('/login?error=tiktok_token_failed', req.url));
+      return NextResponse.redirect(new URL('/login?error=tiktok_token_failed', baseUrl()));
     }
     const userRes = await fetch('https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,avatar_url', {
       headers:{ Authorization: `Bearer ${tokenJson.access_token}` },
@@ -195,7 +197,7 @@ export async function GET(req: NextRequest){
             break;
           }catch(e:any){ if(String(e.code)==='P2002' && attempt<2) continue; throw e; }
         }
-        if(!user) return NextResponse.redirect(new URL('/login?error=user_create_failed', req.url));
+        if(!user) return NextResponse.redirect(new URL('/login?error=user_create_failed', baseUrl()));
         await prisma.referralCode.create({ data:{ userId: user.id, code: newReferralCode! } }).catch(()=>null);
         await prisma.placementQueue.create({ data:{ userId: user.id, sponsorId: null, reason:'สมัครด้วย TikTok — รออนุมัติและจัดวางผัง' } }).catch(()=>null);
 
@@ -208,15 +210,15 @@ export async function GET(req: NextRequest){
       }
       identity = await prisma.authIdentity.create({ data:{ userId: user.id, provider:'tiktok', providerUserId: openId, email: pseudoEmail }}).catch(()=> identity);
     }
-    if(!user) return NextResponse.redirect(new URL('/login?error=user_create_failed', req.url));
+    if(!user) return NextResponse.redirect(new URL('/login?error=user_create_failed', baseUrl()));
     const token = signToken({ sub: user.id, email: user.email, rankLevel: user.rankLevel ?? 0, status: String(user.status) });
     await prisma.userSession.create({ data:{ userId: user.id, tokenHash: token.slice(-32), expiresAt: new Date(Date.now()+7*24*60*60*1000) }}).catch(()=>{});
     try{ const __adm = await import('@/lib/admin'); if(__adm.isAdminEmail(user.email)) await __adm.ensureSuperAdmin(user.id); }catch{}
-    const res = NextResponse.redirect(new URL('/', req.url));
+    const res = NextResponse.redirect(new URL('/', baseUrl()));
     res.cookies.set('token', token, { httpOnly:true, path:'/', maxAge:60*60*24*7, sameSite:'lax' });
     return res;
   }catch(e:any){
     console.error('tiktok GET callback', e);
-    return NextResponse.redirect(new URL('/login?error=tiktok_callback_failed', req.url));
+    return NextResponse.redirect(new URL('/login?error=tiktok_callback_failed', baseUrl()));
   }
 }

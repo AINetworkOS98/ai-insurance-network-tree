@@ -13,8 +13,8 @@ export async function GET(req: NextRequest){
   const code = searchParams.get('code');
   const state = searchParams.get('state');
   const error = searchParams.get('error');
-  if(error) return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(error)}`, req.url));
-  if(!code) return NextResponse.redirect(new URL('/login?error=no_code', req.url));
+  if(error) return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(error)}`, getBaseUrl(req)));
+  if(!code) return NextResponse.redirect(new URL('/login?error=no_code', getBaseUrl(req)));
   try{
     const clientId = process.env.GOOGLE_CLIENT_ID!;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET!;
@@ -31,16 +31,16 @@ export async function GET(req: NextRequest){
       }),
     });
     const tokenJson:any = await tokenRes.json();
-    if(!tokenRes.ok) return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(tokenJson.error_description||tokenJson.error||'google token exchange failed')}`, req.url));
+    if(!tokenRes.ok) return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(tokenJson.error_description||tokenJson.error||'google token exchange failed')}`, getBaseUrl(req)));
     const idToken = tokenJson.id_token;
-    if(!idToken) return NextResponse.redirect(new URL('/login?error=no_id_token', req.url));
+    if(!idToken) return NextResponse.redirect(new URL('/login?error=no_id_token', getBaseUrl(req)));
     const parts = idToken.split('.');
     const payload = JSON.parse(Buffer.from(parts[1].replace(/-/g,'+').replace(/_/g,'/'),'base64').toString());
     const email = String(payload.email||'').toLowerCase();
     const emailVerified = !!payload.email_verified;
     const googleSub = String(payload.sub||'');
     const name = String(payload.name|| email.split('@')[0] || 'ผู้ใช้ Google');
-    if(!email) return NextResponse.redirect(new URL('/login?error=no_email', req.url));
+    if(!email) return NextResponse.redirect(new URL('/login?error=no_email', getBaseUrl(req)));
     let identity = await prisma.authIdentity.findFirst({ where:{ provider:'google', providerUserId: googleSub } }).catch(()=>null);
     let user:any = null;
     if(identity){
@@ -48,9 +48,9 @@ export async function GET(req: NextRequest){
     } else {
       user = await prisma.user.findUnique({ where:{ email } }).catch(()=>null);
       if(user){
-        if(!emailVerified) return NextResponse.redirect(new URL('/login?error=google_email_not_verified', req.url));
+        if(!emailVerified) return NextResponse.redirect(new URL('/login?error=google_email_not_verified', getBaseUrl(req)));
         const emailIdentity = await prisma.authIdentity.findFirst({ where:{ provider:'google', email } }).catch(()=>null);
-        if(emailIdentity && emailIdentity.userId !== user.id) return NextResponse.redirect(new URL('/login?error=email_linked_to_other', req.url));
+        if(emailIdentity && emailIdentity.userId !== user.id) return NextResponse.redirect(new URL('/login?error=email_linked_to_other', getBaseUrl(req)));
         if(emailIdentity){
           // เคยเชื่อมไว้แล้ว (อาจค้างจากรอบก่อน) — reuse ไม่สร้างซ้ำ
           identity = emailIdentity;
@@ -74,7 +74,7 @@ export async function GET(req: NextRequest){
             break;
           }catch(e:any){ if(String(e.code)==='P2002' && attempt<2) continue; throw e; }
         }
-        if(!user) return NextResponse.redirect(new URL('/login?error=server', req.url));
+        if(!user) return NextResponse.redirect(new URL('/login?error=server', getBaseUrl(req)));
         await prisma.referralCode.create({ data:{ userId: user.id, code: newReferralCode! } }).catch(()=>null);
         await prisma.placementQueue.create({ data:{ userId: user.id, sponsorId: null, reason:'สมัครด้วย Google — รออนุมัติและจัดวางผัง' } }).catch(()=>null);
 
@@ -88,18 +88,18 @@ export async function GET(req: NextRequest){
         await prisma.auditLog.create({ data:{ userId: user.id, action:'auth.register_google', entity:'User', entityId: user.id, newValue:{ email, rankLevel:0 } } });
       }
     }
-    if(!user) return NextResponse.redirect(new URL('/login?error=server', req.url));
-    if(['SUSPENDED','RESIGNED','INACTIVE'].includes(String(user.status))) return NextResponse.redirect(new URL('/login?error=suspended', req.url));
+    if(!user) return NextResponse.redirect(new URL('/login?error=server', getBaseUrl(req)));
+    if(['SUSPENDED','RESIGNED','INACTIVE'].includes(String(user.status))) return NextResponse.redirect(new URL('/login?error=suspended', getBaseUrl(req)));
     const token = signToken({ sub: user.id, email: user.email, rankLevel: user.rankLevel ?? 0, status: String(user.status) });
     await prisma.userSession.create({ data:{ userId: user.id, tokenHash: token.slice(-32), expiresAt: new Date(Date.now()+7*24*60*60*1000) } }).catch(()=>null);
     try{ const __adm = await import('@/lib/admin'); if(__adm.isAdminEmail(user.email)) await __adm.ensureSuperAdmin(user.id); }catch{}
     let next = '/';
     try{ if(state){ const s=JSON.parse(Buffer.from(state,'base64url').toString()); if(s.next && String(s.next).startsWith('/')) next=s.next; } }catch{}
-    const res = NextResponse.redirect(new URL(next, req.url));
+    const res = NextResponse.redirect(new URL(next, getBaseUrl(req)));
     res.cookies.set('token', token, { httpOnly:true, path:'/', maxAge:60*60*24*7, sameSite:'lax' });
     return res;
   }catch(e:any){
     console.error('auth handler', e);
-    return NextResponse.redirect(new URL('/login?error=google_failed', req.url));
+    return NextResponse.redirect(new URL('/login?error=google_failed', getBaseUrl(req)));
   }
 }
