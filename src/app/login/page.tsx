@@ -152,7 +152,6 @@ function LoginInner(){
     {id:'google', label:'ดำเนินการต่อด้วย Google', style:'bg-white border-[#e8eef5] hover:bg-[#f8fafc] text-slate-700', icon:'G', iconStyle:'bg-white border border-slate-200 text-slate-600 shadow-sm'},
     {id:'facebook', label:'ดำเนินการต่อด้วย Facebook', style:'bg-[#f0f7ff] border-[#dbeafe] hover:bg-[#e8f0ff] text-[#2563eb]', icon:'f', iconStyle:'bg-white text-[#1877F2] shadow-sm'},
     {id:'github', label:'ดำเนินการต่อด้วย GitHub', style:'bg-[#f8fafc] border-[#e2e8f0] hover:bg-[#f1f5f9] text-slate-700', icon:'⌁', iconStyle:'bg-slate-800 text-white shadow-sm'},
-    {id:'tiktok', label:'ดำเนินการต่อด้วย TikTok', style:'bg-[#fdf2f8] border-[#fce7f3] hover:bg-[#fce7f3] text-[#be185d]', icon:'♪', iconStyle:'bg-[#ec4899] text-white shadow-sm'},
   ];
 
   return (
@@ -180,7 +179,7 @@ function LoginInner(){
               <h1 className="mt-5 text-[24px] font-bold leading-tight text-slate-800">ยินดีต้อนรับกลับ</h1>
               <p className="mt-2.5 text-[13px] text-slate-500 leading-relaxed">เข้าสู่ระบบเพื่อจัดการเครือข่าย ผัง 1 แตก 5 และข้อมูลสมาชิก — ปลอดภัย รวดเร็ว สไตล์สากลที่คุ้นเคย</p>
               <div className="mt-6 space-y-2.5 text-xs text-slate-600">
-                <div className="flex items-center gap-2.5"><span className="w-7 h-7 rounded-full bg-white border border-[#dbeafe] text-[#3b82f6] flex items-center justify-center shadow-sm text-[11px]">✓</span> เข้าได้ด้วย Google / Facebook / GitHub / TikTok</div>
+                <div className="flex items-center gap-2.5"><span className="w-7 h-7 rounded-full bg-white border border-[#dbeafe] text-[#3b82f6] flex items-center justify-center shadow-sm text-[11px]">✓</span> เข้าได้ด้วย Google / Facebook / GitHub</div>
                 <div className="flex items-center gap-2.5"><span className="w-7 h-7 rounded-full bg-white border border-[#dbeafe] text-[#3b82f6] flex items-center justify-center shadow-sm text-[11px]">✓</span> ผังเครือข่าย 1×5 อัตโนมัติ พร้อม KPI</div>
                 <div className="flex items-center gap-2.5"><span className="w-7 h-7 rounded-full bg-white border border-[#dbeafe] text-[#3b82f6] flex items-center justify-center shadow-sm text-[11px]">✓</span> ข้อมูลปลอดภัย เข้ารหัสมาตรฐานสากล</div>
               </div>
@@ -201,7 +200,7 @@ function LoginInner(){
               {providerBtns.map(p=>(
                 <button key={p.id} onClick={()=> loginSocial(p.id)} disabled={!!socialLoading || loading} className={`${btnBase} ${p.style}`}>
                   <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${p.iconStyle}`}>{p.icon}</span>
-                  <span className="flex-1 text-left">{socialLoading===p.id ? 'กำลังเชื่อม...' : p.label}{p.id==='tiktok' && !tiktokReady ? ' (อยู่ระหว่างตั้งค่า)' : ''}</span>
+                  <span className="flex-1 text-left">{socialLoading===p.id ? 'กำลังเชื่อม...' : p.label}</span>
                 </button>
               ))}
             </div>
