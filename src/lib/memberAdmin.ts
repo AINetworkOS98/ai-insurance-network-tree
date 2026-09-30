@@ -194,7 +194,8 @@ export async function applyMemberAction(input: ActionInput): Promise<ActionResul
     const on = input.autoRenew === true;
     const users: any[] = await (prisma as any).user.findMany({ select: { id: true } }).catch(() => []);
     const stored = await writeGlobalAutoRenew(on, actorEmail || actorId);
-    const affected = await writeAllAutoRenew(users.map((u) => u.id), on, actorEmail || actorId);
+    // เปิดทั้งระบบ = ตั้งให้ทุกคน · ปิดทั้งระบบ = ล้างเฉพาะสวิตช์กลาง (ไม่ลบค่าที่ตั้งรายคนไว้)
+    const affected = on ? await writeAllAutoRenew(users.map((u) => u.id), true, actorEmail || actorId) : 0;
     await audit(actorId, on ? 'member.auto_renew_global_on' : 'member.auto_renew_global_off', GLOBAL_STATE_DOC, null, { autoRenewGlobal: on, affected }, input.reason);
     return { ok: true, action, autoRenewGlobal: on, affected, stateStored: stored };
   }

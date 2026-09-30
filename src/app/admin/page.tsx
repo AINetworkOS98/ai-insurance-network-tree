@@ -440,16 +440,20 @@ function AdminContent() {
                               <td className="p-2 text-center">
                                 <button
                                   onClick={() => memberAction(m, 'autoRenew', !m.autoRenewSelf)}
-                                  disabled={busy}
+                                  disabled={busy || autoRenewGlobal}
+                                  title={autoRenewGlobal ? 'สวิตช์ทั้งระบบเปิดอยู่ — ปิดที่สวิตช์ด้านบนก่อนจึงจะตั้งรายคนได้' : ''}
                                   className={`px-2 py-1 rounded-full text-[11px] border font-medium ${
                                     m.autoRenewSelf
                                       ? 'bg-emerald-500 border-emerald-500 text-white hover:bg-emerald-600'
                                       : 'bg-white border-blue-200 text-slate-500 hover:bg-[#f0f7ff]'
-                                  } ${busy ? 'opacity-40' : ''}`}
+                                  } ${busy || autoRenewGlobal ? 'opacity-40 cursor-not-allowed' : ''}`}
                                 >
                                   {m.autoRenewSelf ? '🔄 เปิด' : '⭕ ปิด'}
                                 </button>
-                                {m.autoRenew && !m.autoRenewSelf && (
+                                {autoRenewGlobal && (
+                                  <div className="text-[10px] text-emerald-600 mt-1">บังคับเปิดทั้งระบบ</div>
+                                )}
+                                {!autoRenewGlobal && m.autoRenew && !m.autoRenewSelf && (
                                   <div className="text-[10px] text-emerald-600 mt-1">ตามค่าทั้งระบบ</div>
                                 )}
                               </td>
