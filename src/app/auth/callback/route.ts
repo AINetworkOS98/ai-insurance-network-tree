@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { signToken } from '@/lib/auth';
 import { generateMemberCode, generateReferralCode } from '@/lib/referral';
@@ -104,18 +104,23 @@ export async function GET(req: NextRequest){
     if(['SUSPENDED','RESIGNED','INACTIVE'].includes(String(user.status))) return NextResponse.redirect(new URL('/login?error=suspended', getBaseUrl(req)));
     const token = signToken({ sub: user.id, email: user.email, rankLevel: user.rankLevel ?? 0, status: String(user.status) });
     mark('token-signed');
-    await prisma.userSession.create({ data:{ userId: user.id, tokenHash: token.slice(-32), expiresAt: new Date(Date.now()+7*24*60*60*1000) } }).catch(()=>null);
-    mark('session-saved');
-    // งานเบื้องหลัง: ตั้งสิทธิ์แอดมินไม่ต้องรอ (บนโฮสต์ที่ดิสก์ช้า/แรมจำกัด การ await import โมดูลหนัก
-    // เช่น lib/admin → firebase-admin ทำให้คำขอค้างจน proxy ตัดเป็น 504)
-    void (async () => {
-      try{ const __adm = await import('@/lib/admin'); if(__adm.isAdminEmail(user.email)) await __adm.ensureSuperAdmin(user.id); }catch{}
-    })();
+    // ร่องรอยไว้ตรวจ (เปิดด้วย LOG_OAUTH=1) — เขียนก่อนตอบ เพื่อให้รู้ว่าไปถึงขั้นนี้ได้จริง
+    if (LOG) { try { await prisma.auditLog.create({ data:{ userId: user.id, action:'oauth_trace', entity:'Auth', entityId: user.id, newValue:{ step:'user-resolved', ms: Date.now()-t0 } } }); } catch {} }
     let next = '/';
     try{ if(state){ const s=JSON.parse(Buffer.from(state,'base64url').toString()); if(s.next && String(s.next).startsWith('/')) next=s.next; } }catch{}
     const res = NextResponse.redirect(new URL(next, getBaseUrl(req)));
-    if (LOG) console.log('[oauth] success ' + step.join(' '));
     res.cookies.set('token', token, { httpOnly:true, path:'/', maxAge:60*60*24*7, sameSite:'lax' });
+
+    // งานเบื้องหลังทั้งหมด — ตอบผู้ใช้ "ก่อน" แล้วค่อยเขียน DB
+    // เหตุผล: บนโฮสต์แชร์ (Hostinger Cloud Startup) การรอเขียน DB ในคำขอเดียวกันทำให้ proxy ตัดที่ ~55s เป็น 504
+    // ความปลอดภัย: การยืนยันสิทธิ์ใช้ลายเซ็น JWT (ไม่มีการอ่านตาราง UserSession ตอนตรวจ token)
+    // การบันทึก session/สิทธิ์แอดมินเป็นงานติดตามผล จึงย้ายมาที่นี่ได้โดยไม่ทำให้ล็อกอินเสีย
+    after(async () => {
+      try { await prisma.userSession.create({ data:{ userId: user.id, tokenHash: token.slice(-32), expiresAt: new Date(Date.now()+7*24*60*60*1000) } }); } catch {}
+      try{ const __adm = await import('@/lib/admin'); if(__adm.isAdminEmail(user.email)) await __adm.ensureSuperAdmin(user.id); }catch{}
+      if (LOG) { try { await prisma.auditLog.create({ data:{ userId: user.id, action:'oauth_trace', entity:'Auth', entityId: user.id, newValue:{ step:'background-done', ms: Date.now()-t0 } } }); } catch {} }
+    });
+    if (LOG) console.log('[oauth] success ' + step.join(' ') + ` total:${Date.now()-t0}ms`);
     return res;
   }catch(e:any){
     console.error('auth handler', e, step.join(' '));
