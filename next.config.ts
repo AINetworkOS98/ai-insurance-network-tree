@@ -13,7 +13,9 @@ const nextConfig: NextConfig = {
   // tsconfig `paths` (`@/*` → `./src/*`) ใช้ alias อัตโนมัติ ไม่ต้องมี webpack config
   turbopack: {},
   // firebase-admin ใช้ require() กับ ESM-only deps (jose) — ต้องโหลดเป็น external บน server
-  serverExternalPackages: ['firebase-admin'],
+  // pg: ใช้ในเส้นทางล็อกอิน (/auth/callback) แบบเบา ๆ — โหลดจาก node_modules โดยตรง ไม่ให้ webpack bundle
+  //     (pg มี optional dep 'pg-native' ที่ webpack เตือน/พังได้)
+  serverExternalPackages: ['firebase-admin', 'pg'],
   // บนโฮสต์ที่ sandbox จำกัด process (เช่น Web App ของ Hostinger) Turbopack panic ตอน parse CSS
   // จึง build ด้วย webpack — แต่ webpack จะรัน "ตัวตรวจ type ของ route" เข้มกว่า ทำให้ route files
   // ที่ export ค่าคงที่นอกเหนือ handler ไม่ผ่าน เฉพาะบนโฮสต์นั้นเราจึงข้าม type-check ตอน build
