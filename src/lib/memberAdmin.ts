@@ -26,6 +26,8 @@ export interface MemberAdminState {
   deletedAt?: string | null;
   deletedFromStatus?: string | null;
   autoRenew: boolean;
+  /** true = ผู้ดูแลตั้งค่าต่ออายุรายคนไว้เอง · false = ยังไม่ตั้ง ใช้ค่าสวิตช์ทั้งระบบ */
+  autoRenewSet?: boolean;
   autoRenewAt?: string | null;
   approvedAt?: string | null;
   rejectedAt?: string | null;
@@ -46,6 +48,7 @@ function emptyState(): MemberAdminState {
 /** แปลงข้อมูลดิบจาก Firestore/Postgres เป็นสถานะผู้ดูแลที่ใช้แสดงผลได้ */
 export function normalizeState(raw: any, fallbackStatus?: string): MemberAdminState {
   const s: MemberAdminState = { ...emptyState(), ...(raw || {}) };
+  s.autoRenewSet = !!(raw && Object.prototype.hasOwnProperty.call(raw, 'autoRenew'));
   const userStatus = String(fallbackStatus || '').toUpperCase();
   if (s.deleted) { s.adminStatus = 'deleted'; return s; }
   if (raw?.adminStatus) {
@@ -113,8 +116,8 @@ async function writeGlobalAutoRenew(on: boolean, actor?: string | null) {
   }
 }
 
-/** เขียน per-doc ให้สมาชิกทุกคน (ใช้ตอนสวิตช์ทั้งระบบ) — batch ละ 400 */
-async function writeAllAutoRenew(ids: string[], on: boolean, actor?: string | null) {
+/** เขียน per-doc ให้สมาชิกทุกคน (เก็บไว้ใช้เมื่อต้องการบังคับทั้งระบบแบบทับค่าตัวเอง) — batch ละ 400 */
+export async function writeAllAutoRenew(ids: string[], on: boolean, actor?: string | null) {
   const clean = Array.from(new Set(ids.filter((i) => i && isUuid(i))));
   try {
     const db = await fdb();
@@ -194,15 +197,17 @@ export interface ActionResult {
 export async function applyMemberAction(input: ActionInput): Promise<ActionResult> {
   const { id, action, actorId, actorEmail } = input;
 
-  // ── สวิตช์ทั้งระบบ (ไม่ผูกกับสมาชิกคนใดคนหนึ่ง จึงไม่ต้องมี id) ──────────────
+  // ── สวิตช์ทั้งระบบ = "ค่าเริ่มต้น" ของทุกคน ไม่ทับค่าที่ตั้งรายคน ──────────────
+  // กติกา: สมาชิกที่ยังไม่ตั้งรายคน → ใช้ค่าทั้งระบบ · สมาชิกที่ตั้งไว้เอง (เปิด/ปิด) → ใช้ค่าตัวเอง
+  // จึงไม่เขียนทับเอกสารรายคนเลย เพื่อไม่ให้คำสั่ง "ปิดทั้งระบบ" ไปทับchoice ของสมาชิกแต่ละคนเงียบ ๆ
   if (action === 'autoRenewGlobal') {
     const on = input.autoRenew === true;
-    const users: any[] = await (prisma as any).user.findMany({ select: { id: true } }).catch(() => []);
     const stored = await writeGlobalAutoRenew(on, actorEmail || actorId);
-    // เปิดทั้งระบบ = ตั้งให้ทุกคน · ปิดทั้งระบบ = ล้างเฉพาะสวิตช์กลาง (ไม่ลบค่าที่ตั้งรายคนไว้)
-    const affected = on ? await writeAllAutoRenew(users.map((u) => u.id), true, actorEmail || actorId) : 0;
-    await audit(actorId, on ? 'member.auto_renew_global_on' : 'member.auto_renew_global_off', GLOBAL_STATE_DOC, null, { autoRenewGlobal: on, affected }, input.reason);
-    return { ok: true, action, autoRenewGlobal: on, affected, stateStored: stored };
+    const users: any[] = await (prisma as any).user.findMany({ select: { id: true } }).catch(() => []);
+    const states = await readAdminStates(users.map((u: any) => u.id));
+    const governed = users.filter((u: any) => !Object.prototype.hasOwnProperty.call(states.get(u.id) || {}, 'autoRenew')).length;
+    await audit(actorId, on ? 'member.auto_renew_global_on' : 'member.auto_renew_global_off', GLOBAL_STATE_DOC, null, { autoRenewGlobal: on, governed }, input.reason);
+    return { ok: true, action, autoRenewGlobal: on, affected: governed, stateStored: stored };
   }
 
   if (!id) return { ok: false, error: 'ไม่ระบุสมาชิก' };

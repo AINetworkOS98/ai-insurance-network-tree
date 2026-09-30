@@ -23,6 +23,7 @@ interface Member {
   deleted?: boolean;
   autoRenew?: boolean;
   autoRenewSelf?: boolean;
+  autoRenewSet?: boolean;
   legacy?: boolean;
 }
 
@@ -188,8 +189,8 @@ function AdminContent() {
       setNotice({
         kind: 'ok',
         text: next
-          ? `เปิดต่ออายุอัตโนมัติทั้งระบบแล้ว — ตั้งค่าให้สมาชิก ${data.affected ?? 0} บัญชี`
-          : 'ปิดต่ออายุอัตโนมัติทั้งระบบแล้ว',
+          ? `เปิดต่ออายุอัตโนมัติทั้งระบบแล้ว — ใช้กับสมาชิก ${data.affected ?? 0} บัญชีที่ยังไม่ตั้งรายคน`
+          : 'ปิดต่ออายุอัตโนมัติทั้งระบบแล้ว (สมาชิกที่ตั้งรายคนไว้ยังใช้ค่าของตัวเอง)',
       });
       await fetchMembers();
     } catch (err) {
@@ -361,7 +362,7 @@ function AdminContent() {
                     {globalBusy ? 'กำลังบันทึก...' : autoRenewGlobal ? 'เปิดอยู่ — กดเพื่อปิดทั้งระบบ' : 'ปิดอยู่ — กดเพื่อเปิดทั้งระบบ'}
                   </button>
                   <span className="text-[11px] text-slate-500">
-                    เปิดแล้วระบบจะตั้งค่าต่ออายุอัตโนมัติให้สมาชิกทุกบัญชี (บันทึกเป็นธงในระบบ + Audit Log) · ต่อรายคนใช้ปุ่มท้ายแถว
+                    ค่าเริ่มต้นของทั้งระบบ — มีผลกับสมาชิกที่ยังไม่ตั้งรายคน · สมาชิกที่ตั้งไว้เองจะใช้ค่าของตัวเอง (ปุ่มท้ายแถว) · บันทึกเป็น Audit Log ทุกครั้ง
                   </span>
                 </div>
 
@@ -439,23 +440,20 @@ function AdminContent() {
                               </td>
                               <td className="p-2 text-center">
                                 <button
-                                  onClick={() => memberAction(m, 'autoRenew', !m.autoRenewSelf)}
-                                  disabled={busy || autoRenewGlobal}
-                                  title={autoRenewGlobal ? 'สวิตช์ทั้งระบบเปิดอยู่ — ปิดที่สวิตช์ด้านบนก่อนจึงจะตั้งรายคนได้' : ''}
+                                  onClick={() => memberAction(m, 'autoRenew', !(m.autoRenewSet ? m.autoRenewSelf : m.autoRenew))}
+                                  disabled={busy}
+                                  title={m.autoRenewSet ? 'ตั้งค่าไว้รายคน — กดเพื่อสลับ' : 'ยังไม่ตั้งรายคน ใช้ค่าสวิตช์ทั้งระบบ — กดเพื่อตั้งเฉพาะคนนี้'}
                                   className={`px-2 py-1 rounded-full text-[11px] border font-medium ${
-                                    m.autoRenewSelf
+                                    (m.autoRenewSet ? m.autoRenewSelf : m.autoRenew)
                                       ? 'bg-emerald-500 border-emerald-500 text-white hover:bg-emerald-600'
                                       : 'bg-white border-blue-200 text-slate-500 hover:bg-[#f0f7ff]'
-                                  } ${busy || autoRenewGlobal ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                  } ${busy ? 'opacity-40' : ''}`}
                                 >
-                                  {m.autoRenewSelf ? '🔄 เปิด' : '⭕ ปิด'}
+                                  {(m.autoRenewSet ? m.autoRenewSelf : m.autoRenew) ? '🔄 เปิด' : '⭕ ปิด'}
                                 </button>
-                                {autoRenewGlobal && (
-                                  <div className="text-[10px] text-emerald-600 mt-1">บังคับเปิดทั้งระบบ</div>
-                                )}
-                                {!autoRenewGlobal && m.autoRenew && !m.autoRenewSelf && (
-                                  <div className="text-[10px] text-emerald-600 mt-1">ตามค่าทั้งระบบ</div>
-                                )}
+                                <div className={`text-[10px] mt-1 ${m.autoRenewSet ? 'text-slate-400' : 'text-sky-600'}`}>
+                                  {m.autoRenewSet ? 'ตั้งรายคน' : `ตามค่าทั้งระบบ (${autoRenewGlobal ? 'เปิด' : 'ปิด'})`}
+                                </div>
                               </td>
                               <td className="p-2">
                                 <div className="flex flex-wrap gap-1 justify-center">
