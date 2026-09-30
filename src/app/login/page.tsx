@@ -84,7 +84,7 @@ function LoginInner(){
         const res = await fetch('/api/auth/tiktok', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'init' }) });
         const j = await res.json();
         if(j.url){ location.href = j.url; return; }
-        setMsg(j.error || 'TikTok Login ยังไม่ได้ตั้งค่า — กรุณาใช้อีเมล/ Google / Facebook / GitHub ก่อน');
+        setMsg(j.error || 'TikTok Login ยังไม่ได้ตั้งค่า — กรุณาใช้อีเมล/ Google / GitHub ก่อน');
         setMsgType('err');
       }catch(e:any){ setMsg('TikTok Login ไม่พร้อมใช้งาน — ลองวิธีอื่นก่อน'); setMsgType('err'); }
       setSocialLoading(null);
@@ -150,7 +150,6 @@ function LoginInner(){
   const btnBase = "w-full py-2.5 rounded-xl border text-[13px] font-medium flex items-center justify-center gap-2.5 disabled:opacity-50 transition-all shadow-sm hover:shadow hover:-translate-y-[1px] active:translate-y-0";
   const providerBtns: {id:Provider,label:string,style:string,icon:string,iconStyle:string}[] = [
     {id:'google', label:'ดำเนินการต่อด้วย Google', style:'bg-white border-[#e8eef5] hover:bg-[#f8fafc] text-slate-700', icon:'G', iconStyle:'bg-white border border-slate-200 text-slate-600 shadow-sm'},
-    {id:'facebook', label:'ดำเนินการต่อด้วย Facebook', style:'bg-[#f0f7ff] border-[#dbeafe] hover:bg-[#e8f0ff] text-[#2563eb]', icon:'f', iconStyle:'bg-white text-[#1877F2] shadow-sm'},
     {id:'github', label:'ดำเนินการต่อด้วย GitHub', style:'bg-[#f8fafc] border-[#e2e8f0] hover:bg-[#f1f5f9] text-slate-700', icon:'⌁', iconStyle:'bg-slate-800 text-white shadow-sm'},
   ];
 
@@ -179,7 +178,7 @@ function LoginInner(){
               <h1 className="mt-5 text-[24px] font-bold leading-tight text-slate-800">ยินดีต้อนรับกลับ</h1>
               <p className="mt-2.5 text-[13px] text-slate-500 leading-relaxed">เข้าสู่ระบบเพื่อจัดการเครือข่าย ผัง 1 แตก 5 และข้อมูลสมาชิก — ปลอดภัย รวดเร็ว สไตล์สากลที่คุ้นเคย</p>
               <div className="mt-6 space-y-2.5 text-xs text-slate-600">
-                <div className="flex items-center gap-2.5"><span className="w-7 h-7 rounded-full bg-white border border-[#dbeafe] text-[#3b82f6] flex items-center justify-center shadow-sm text-[11px]">✓</span> เข้าได้ด้วย Google / Facebook / GitHub</div>
+                <div className="flex items-center gap-2.5"><span className="w-7 h-7 rounded-full bg-white border border-[#dbeafe] text-[#3b82f6] flex items-center justify-center shadow-sm text-[11px]">✓</span> เข้าได้ด้วย Google / GitHub / อีเมล</div>
                 <div className="flex items-center gap-2.5"><span className="w-7 h-7 rounded-full bg-white border border-[#dbeafe] text-[#3b82f6] flex items-center justify-center shadow-sm text-[11px]">✓</span> ผังเครือข่าย 1×5 อัตโนมัติ พร้อม KPI</div>
                 <div className="flex items-center gap-2.5"><span className="w-7 h-7 rounded-full bg-white border border-[#dbeafe] text-[#3b82f6] flex items-center justify-center shadow-sm text-[11px]">✓</span> ข้อมูลปลอดภัย เข้ารหัสมาตรฐานสากล</div>
               </div>
@@ -239,7 +238,7 @@ function LoginInner(){
             {msg && <div className={`mt-4 p-3 rounded-2xl border text-xs leading-relaxed ${msgType==='ok' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : msgType==='err' ? 'bg-red-50 border-red-200 text-red-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>{msg}</div>}
             {firebaseConfigError && (
               <div className="mt-4 p-4 rounded-2xl border border-amber-200 bg-amber-50 text-xs leading-relaxed text-amber-900">
-                <div className="font-bold mb-1">⚠️ ปุ่ม Google/Facebook/GitHub ยังใช้ไม่ได้ — ขาด Firebase Web API Key</div>
+                <div className="font-bold mb-1">⚠️ ปุ่ม Google/GitHub ยังใช้ไม่ได้ — ขาด Firebase Web API Key</div>
                 <div>สาเหตุของ <span className="font-mono">auth/api-key-not-valid</span>: โค้ดยังมีคีย์ตัวอย่าง (<span className="font-mono">***</span>) ไม่ใช่คีย์จริงของโปรเจกต์ akarapol798</div>
                 <div className="mt-2 font-semibold">วิธีแก้ (ทำครั้งเดียว):</div>
                 <ol className="mt-1 ml-4 list-decimal space-y-1">
