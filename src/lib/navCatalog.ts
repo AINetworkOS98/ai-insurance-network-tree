@@ -84,8 +84,6 @@ export const NAV_ENTRIES: NavEntry[] = [
   { href: '/reports', section: 'agent', label: 'รายงาน', key: 'sb_reports', icon: '▤', minRank: 1 },
   { href: '/appointments', section: 'agent', label: 'นัดหมาย', key: 'sb_appointments', icon: '📅', minRank: 1 },
   { href: '/documents', section: 'agent', label: 'สแกนใบเสร็จรับเงิน', key: 'sb_documents', icon: '📄', minRank: 1 },
-  { href: '/chat', section: 'agent', label: 'คุยกับ AI', key: 'sb_chat', icon: '💬', minRank: 1 },
-  { href: '/os', section: 'agent', label: 'OS ทำงาน (โต๊ะทำงาน)', key: 'sb_os', icon: '🧠', minRank: 1 },
 
   // เมนูย่อย "สร้างเครือข่าย" (rank 1 ขึ้นไป)
   { href: '/referral', section: 'agent', sub: 'network', label: 'ชวนสมาชิก', key: 'sb_invite', icon: '✉', minRank: 1 },
