@@ -151,9 +151,11 @@ export async function POST(req: NextRequest) {
       renewalPremium: personal.renewalPremium,
       directMembersCount: (children.get(userId) || []).length,
       activeMembersCount: activeTeamIds.length,
-      separatedUnitsCount: activeTeam.filter(user => user.rankLevel === 1).length,
-      separatedCentersCount: activeTeam.filter(user => user.rankLevel === 2).length,
-      separatedRegionsCount: activeTeam.filter(user => user.rankLevel >= 3).length,
+      // นับหน่วย/ศูนย์/ภาค ตามระดับสายงานจริง (rankCatalog): 2=หัวหน้าหน่วย, 3=ผู้จัดการศูนย์, 4=ผู้จัดการภาค
+      // เดิมนับ rankLevel 1 เป็น "หน่วย" (เลื่อนไป 1 ชั้น) ทำให้จำนวนที่ใช้ตัดสินคุณสมบัติไม่ตรงกับระดับจริง
+      separatedUnitsCount: activeTeam.filter(user => user.rankLevel === 2).length,
+      separatedCentersCount: activeTeam.filter(user => user.rankLevel === 3).length,
+      separatedRegionsCount: activeTeam.filter(user => user.rankLevel >= 4).length,
       annualFYC: team.fyc * 12,
       annualCOM: team.com * 12,
       status: member.status === 'ACTIVE' ? 'active' : 'inactive',
