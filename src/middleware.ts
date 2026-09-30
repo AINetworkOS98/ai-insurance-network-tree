@@ -7,6 +7,7 @@ import { isAdminOnlyPage, canAccessAdminOnlyPage } from '@/lib/access-rules';
 // เมื่อสถานะถูกพัก/คัดออก (SUSPENDED/RESIGNED/INACTIVE) ต้องยกเลิกสิทธิทันที
 
 const PUBLIC_API = [
+  '/api/support', // ฟอร์มติดต่อสาธารณะ — เข้าถึงได้โดยไม่ต้องล็อกอิน (route ตรวจ rate-limit + เบอร์โทรเอง)
   '/api/auth/login',
   '/api/auth/register',
   '/api/auth/verify-email',

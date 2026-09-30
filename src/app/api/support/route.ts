@@ -7,14 +7,29 @@ import {
 import { createSupportTicketEvent } from '@/lib/supportEvents';
 import { sendToGoogleSheet } from '@/lib/googleSheet';
 
+// ── กันสแปม: จำกัด 5 ครั้ง / 10 นาที ต่อ IP สำหรับผู้ที่ยังไม่ล็อกอิน ──
+const RL_ANON = new Map<string, number[]>();
+function allowAnonymous(ip: string, max = 5, windowMs = 10 * 60 * 1000) {
+  const now = Date.now();
+  const arr = (RL_ANON.get(ip) || []).filter((t) => now - t < windowMs);
+  if (arr.length >= max) { RL_ANON.set(ip, arr); return false; }
+  arr.push(now);
+  RL_ANON.set(ip, arr);
+  if (RL_ANON.size > 5000) RL_ANON.clear();
+  return true;
+}
+
 // POST /api/support — สร้าง ticket ใหม่ (ผู้ใช้ทั่วไป)
 export async function POST(req: NextRequest) {
   try {
     const token = req.cookies.get('token')?.value || req.cookies.get('auth_token')?.value;
-    if (!token) return NextResponse.json({ ok: false, error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
+    const user = token ? await getCurrentUser(token).catch(() => null) : null;
 
-    const user = await getCurrentUser(token);
-    if (!user) return NextResponse.json({ ok: false, error: 'ไม่พบข้อมูลผู้ใช้' }, { status: 403 });
+    // คนที่ยังไม่ล็อกอินก็ส่งเรื่องได้ — แต่จำกัดจำนวนครั้งต่อ IP กันสแปม
+    const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || req.headers.get('x-real-ip') || 'unknown';
+    if (!user && !allowAnonymous(ip)) {
+      return NextResponse.json({ ok: false, error: 'ส่งเรื่องบ่อยเกินไป — กรุณารอสักครู่แล้วลองใหม่ (เข้าสู่ระบบเพื่อส่งได้ไม่จำกัด)' }, { status: 429 });
+    }
 
     const body = await req.json().catch(() => ({} as any));
     const subject = String(body?.subject || '').trim();
@@ -36,11 +51,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'LINE ID ไม่ถูกต้อง' }, { status: 400 });
     }
 
-    const name = user.displayName || `${user.firstName} ${user.lastName}`.trim() || user.email || 'สมาชิก';
+    const bodyName = String(body?.name || '').trim();
+    const name = user
+      ? (user.displayName || `${user.firstName} ${user.lastName}`.trim() || user.email || 'สมาชิก')
+      : (bodyName || 'ผู้ติดต่อ (ไม่ระบุชื่อ)');
+    // ผู้ที่ยังไม่ล็อกอินต้องให้เบอร์โทรไว้ติดต่อกลับ
+    if (!user && !phone) return NextResponse.json({ ok: false, error: 'กรุณากรอกเบอร์โทรเพื่อให้เจ้าหน้าที่ติดต่อกลับ' }, { status: 400 });
+
+    // ผู้ที่ยังไม่ล็อกอิน: ผูก ticket กับบัญชีแอดมิน (สคีมาบังคับต้องมี userId) และกำกับว่ามาจากฟอร์มสาธารณะ
+    let ownerId = user?.id;
+    if (!ownerId) {
+      const admin = await prisma.user.findUnique({ where: { email: 'akarapol.pro798@gmail.com' }, select: { id: true } }).catch(() => null);
+      ownerId = admin?.id;
+      if (!ownerId) return NextResponse.json({ ok: false, error: 'ระบบยังไม่พร้อมรับข้อความ — กรุณาติดต่อทางโทรศัพท์' }, { status: 503 });
+    }
+    const finalName = user ? name : `(ฟอร์มสาธารณะ) ${name}`;
 
     const ticket = await createTicket({
-      userId: user.id,
-      name,
+      userId: ownerId,
+      name: finalName,
       phone: phone || undefined,
       lineId: lineId || undefined,
       subject,
@@ -52,7 +81,7 @@ export async function POST(req: NextRequest) {
       data: {
         ticketId: ticket.id,
         senderType: 'USER',
-        senderId: user.id,
+        senderId: ownerId,
         message,
       },
     });
