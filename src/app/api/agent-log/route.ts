@@ -48,6 +48,30 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // ── แจ้งเตือนทางอีเมล (ใช้แทน LINE ที่ยังไม่มีโทเคน) ──
+    // ส่งเฉพาะเรื่องที่ควรรู้ — ไม่สแปมทุก page_view
+    let emailResult = 'skipped';
+    const important = !ok
+      || /lead|ลีด|high|escalat|follow|ติดต่อ|agent|error|fail|form_submit|callback|สมัคร|ลงทะเบียน/i.test(
+           `${workflow} ${stage} ${detail} ${JSON.stringify(body).slice(0, 600)}`);
+    if (important) {
+      try {
+        const { sendMail } = await import('@/lib/mailer');
+        const head = !ok ? '⚠️ ระบบแจ้งความผิดพลาด' : '🔔 แจ้งเตือนจากระบบ';
+        const html = `<div style="font-family:sans-serif;line-height:1.6">
+          <h3 style="margin:0 0 8px">${head}: ${workflow}</h3>
+          <p style="margin:0 0 6px"><b>ขั้นตอน:</b> ${stage || '-'}</p>
+          <p style="margin:0 0 6px"><b>รายละเอียด:</b> ${detail || '-'}</p>
+          <p style="margin:12px 0 0;color:#666;font-size:12px">${at.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })} · source=${source}</p>
+        </div>`;
+        const r: any = await sendMail({ to: 'akarapol.pro798@gmail.com', subject: `${head} ${workflow}`, html });
+        emailResult = r?.ok ? `sent(${r?.provider})` : `failed(${r?.error || 'unknown'})`;
+        console.log(`[agent-log] email ${emailResult} workflow=${workflow}`);
+      } catch (err: any) {
+        emailResult = `failed(${String(err?.message || err).slice(0, 120)})`;
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       logged: true,
@@ -57,6 +81,7 @@ export async function POST(req: NextRequest) {
       workflow,
       stage,
       via: auth.via,
+      email: emailResult,
     });
   } catch (e: any) {
     console.error('[agent-log] error', e?.message);
