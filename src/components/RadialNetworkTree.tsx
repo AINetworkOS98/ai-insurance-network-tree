@@ -42,6 +42,18 @@ function radiusOf(level: number) {
   return level === 0 ? 0 : 118 * Math.pow(level, 1.32);
 }
 
+/** อักษรย่อจากชื่อจริง — ตัดอักขระพิเศษ/วงเล็บออกก่อน (เช่น "คุณ (ตัวอย่าง)" ต้องไม่ได้ "ค(") */
+function memberInitials(name: string) {
+  return String(name || '')
+    .replace(/[^\u0E00-\u0E7F A-Za-z]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
+
 /** สร้างโครงสร้าง 5-ary tree ตามจำนวนชั้น + คืนลำดับ level-order (BFS) */
 function buildSkeleton(maxDepth: number) {
   const make = (
@@ -259,7 +271,6 @@ export default function RadialNetworkTree({ filter, demoOnly = false }: {
             {ordered.map((n) => {
               const r = n.level === 0 ? 34 : n.level === 1 ? 22 : n.level === 2 ? 14 : 9;
               const col = n.status === 'vacant' ? '#475569' : BRANCH_COLORS[n.branch % FANOUT];
-              const initials = (n.name || '').split(' ').map((w) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
               return (
                 <g key={n.id}>
                   <title>{`${n.memberId} — ${n.name}${n.rankName ? ' • ' + n.rankName : ''} (ชั้น ${n.level}, ช่อง ${n.slot})`}</title>
@@ -270,7 +281,7 @@ export default function RadialNetworkTree({ filter, demoOnly = false }: {
                   <circle cx={n.x} cy={n.y} r={r} fill={n.status === 'vacant' ? '#0f172a' : `${col}22`}
                           stroke={col} strokeWidth={n.status === 'vacant' ? 1 : 2}
                           strokeDasharray={n.status === 'vacant' ? '3 3' : undefined} />
-                  {n.status !== 'vacant' && n.avatarUrl && n.level <= 1 ? (
+                  {n.status !== 'vacant' && n.avatarUrl && n.level <= 2 ? (
                     <>
                       <clipPath id={`rnClip${n.id.replace(/\./g, '-')}`}><circle cx={n.x} cy={n.y} r={r - 2} /></clipPath>
                       <image href={n.avatarUrl} x={n.x - r} y={n.y - r} width={r * 2} height={r * 2}
@@ -281,7 +292,7 @@ export default function RadialNetworkTree({ filter, demoOnly = false }: {
                       <text x={n.x} y={n.y + (n.level === 0 ? 6 : n.level === 1 ? 4.5 : 3.5)} textAnchor="middle"
                             fontSize={n.level === 0 ? 20 : n.level === 1 ? 14 : 10}
                             fontWeight={700} fill={n.status === 'vacant' ? '#64748b' : '#e2e8f0'}>
-                        {n.status === 'vacant' ? '·' : initials}
+                        {n.status === 'vacant' ? '·' : memberInitials(n.name)}
                       </text>
                     )
                   )}
@@ -321,7 +332,7 @@ export default function RadialNetworkTree({ filter, demoOnly = false }: {
       </div>
 
       <div className="mt-2 text-[11px] text-slate-400">
-        แสดงชื่อ/รูปเฉพาะชั้น 0-1 • ชั้น 2 แสดงอักษรย่อ • ชั้น 3 ขึ้นไปแสดงจุด (hover ดูรายละเอียด)
+        แสดงรูปสมาชิกจริง (ถ้ามีการอัปโหลดรูป) ถึงชั้น 2 • ไม่มีรูปจะแสดงอักษรย่อในวงกลมสีตามสาย • ชั้น 3 ขึ้นไปแสดงจุด (hover ดูรายละเอียด)
       </div>
     </div>
   );

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { getDb } from '@/lib/firebase-admin';
 import { rankName } from '@/lib/rankCatalog';
+import { verifyToken } from '@/lib/auth';
 
 interface FirestoreMember {
   id: string;
@@ -34,6 +36,12 @@ interface FirestoreMember {
 
 export async function GET(req: NextRequest) {
   try {
+    // ต้องเข้าสู่ระบบก่อน — ห้ามเปิดทะเบียนสมาชิกให้คนภายนอก (ชื่อ/อีเมล/รหัสแนะนำ)
+    const token = (await cookies()).get('token')?.value;
+    const session = token ? verifyToken(token) : null;
+    if (!session) {
+      return NextResponse.json({ ok: false, error: 'ต้องเข้าสู่ระบบก่อน' }, { status: 401 });
+    }
     const db = getDb();
     const { searchParams } = new URL(req.url);
     const memberId = searchParams.get('memberId');

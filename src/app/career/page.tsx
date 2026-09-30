@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import CareerNetworkTree from '@/components/CareerNetworkTree';
+import RadialNetworkTree from '@/components/RadialNetworkTree';
+import CareerProjector from '@/components/CareerProjector';
 
 // เมนูขึ้นตำแหน่ง — เห็นได้เฉพาะระดับตัวแทนขึ้นไป
 // เกณฑ์: โครงสร้างรายได้ ไทยประกันชีวิต (update 15 Jan 64), เลื่อนตามผัง 1 แตก 5
@@ -76,6 +78,20 @@ export default function CareerPage(){
           </div>
           {msg && <div className="p-2 rounded-xl bg-amber-50 border text-xs">{msg}</div>}
 
+          {/* ── เครือข่าย 1 แตก 5 — รูปสมาชิกจริงตามที่สมัครเข้ามา ── */}
+          <div className="card p-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="font-semibold text-sm">🕸️ เครือข่ายของฉัน — ผัง 1 แตก 5</h3>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                รูป/ชื่อตามสมาชิกที่สมัครเข้ามาในระบบ (1 คน แตกได้ 5 สาย ต่อเนื่องทุกชั้น)
+              </span>
+            </div>
+            <div className="mt-3">
+              {/* ผู้ใช้ที่ล็อกอินระดับตัวแทนขึ้นไปเห็นข้อมูลจริง • ผู้เยี่ยมชมเห็นข้อมูลตัวอย่างสาธิต */}
+              <RadialNetworkTree demoOnly={!me || rank < 1} />
+            </div>
+          </div>
+
           <div className="card p-5">
             <h3 className="font-semibold text-sm">บันไดตำแหน่ง</h3>
             <div className="mt-3 space-y-2">
@@ -92,6 +108,9 @@ export default function CareerPage(){
               ))}
             </div>
           </div>
+
+          {/* ── ตัวคำนวณ: ต่อจากเครือข่าย + ลำดับการขึ้นตำแหน่ง ── */}
+          <CareerProjector />
 
           <div className="card p-5">
             <h3 className="font-semibold text-sm">ความคืบหน้าของฉัน {progress?.targetRankNameTh ? `→ ${progress.targetRankNameTh}` : ''}</h3>
