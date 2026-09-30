@@ -8,7 +8,7 @@ import { closePeriodJob, previousPeriod, monthBounds } from '@/lib/periodEngine'
 // POST /api/periods/close { auto:true } — ตัดยอดเดือนก่อนอัตโนมัติถ้าพ้นเที่ยงคืนสิ้นเดือนแล้ว
 export async function POST(req: NextRequest){
   try{
-    const token = req.cookies.get('token')?.value || req.cookies.get('auth_token')?.value;
+    const token = req.cookies.get('token')?.value || req.cookies.get('auth_token')?.value || req.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
     if(!token) return NextResponse.json({ error:'กรุณาเข้าสู่ระบบ' }, { status:401 });
     let payload: any; try{ payload = verifyToken(token); }catch{ return NextResponse.json({ error:'โทเค็นไม่ถูกต้อง' }, { status:401 }); }
     // สิทธิ: admin (จากโทเคน/อีเมล Admin/role ใน DB) หรือ role finance ใน DB
@@ -30,7 +30,8 @@ export async function POST(req: NextRequest){
     }
     const { period } = body;
     if(!period) return NextResponse.json({ error:'ต้องระบุ period (YYYY-MM)' }, { status:400 });
-    const res: any = await closePeriodJob(period, payload.sub || payload.id);
+    // finalize:true = สั่งปิดยอดจริงแม้ยังมียอดค้างตรวจ (ใช้เฉพาะเมื่อผู้มีสิทธิยืนยันแล้ว)
+    const res: any = await closePeriodJob(period, payload.sub || payload.id, { finalize: !!body.finalize });
     return NextResponse.json({ ok:true, ...res, period });
   }catch(e:any){ return NextResponse.json({ error:e?.message || 'error' }, { status:500 }); }
 }
