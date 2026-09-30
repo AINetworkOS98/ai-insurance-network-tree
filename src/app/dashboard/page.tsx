@@ -53,8 +53,10 @@ export default function Dashboard() {
         }
 
         // 2) positions (admin-only — gracefully degrade)
+        // ยืนยันตัวตนด้วยคุกกี้ httpOnly (อ่าน document.cookie ไม่ได้) — ส่ง Authorization เฉพาะเมื่อมีค่าเท่านั้น
         const posRes = await fetch('/api/admin/positions', {
-          headers: { Authorization: `Bearer ${getToken()}` },
+          credentials: 'include',
+          headers: authHeaders(),
         });
         const posData = await posRes.json();
         if (mounted && posData.ok) {
@@ -64,7 +66,8 @@ export default function Dashboard() {
 
         // 3) income summary (admin-only)
         const incRes = await fetch('/api/admin/income', {
-          headers: { Authorization: `Bearer ${getToken()}` },
+          credentials: 'include',
+          headers: authHeaders(),
         });
         const incData = await incRes.json();
         if (mounted && incData.ok && incData.incomes) {
@@ -83,7 +86,8 @@ export default function Dashboard() {
 
         // 4) system health
         const healthRes = await fetch('/api/admin/backup', {
-          headers: { Authorization: `Bearer ${getToken()}` },
+          credentials: 'include',
+          headers: authHeaders(),
         });
         const healthData = await healthRes.json();
         if (mounted && healthData.ok) {
@@ -356,4 +360,14 @@ function getToken(): string {
       .find((row) => row.startsWith('token='))
       ?.split('=')[1] || ''
   );
+}
+
+/**
+ * คุกกี้ `token` เป็น httpOnly (อ่านด้วย JS ไม่ได้) — ถ้าส่ง header `Authorization: Bearer ` ว่าง ๆ
+ * ไปจะทำให้ middleware มองว่าโทเค็นว่างแล้วตอบ 401 (หน้าที่ต้องล็อกอินจึงไม่ขึ้นข้อมูล)
+ * จึงส่ง header เฉพาะเมื่ออ่านค่าได้จริง นอกนั้นพึ่งคุกกี้ที่แนบไปกับคำขออัตโนมัติ
+ */
+function authHeaders(): Record<string, string> {
+  const t = getToken();
+  return t ? { Authorization: `Bearer ${t}` } : {};
 }
