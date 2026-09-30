@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
 export async function GET(req: NextRequest) {
-  const appId = process.env.FACEBOOK_APP_ID;
-  const appSecret = process.env.FACEBOOK_APP_SECRET;
+  const appId = process.env.FACEBOOK_APP_ID || process.env.FB_APP_ID;
+  const appSecret = process.env.FACEBOOK_APP_SECRET || process.env.FB_APP_SECRET;
   const redirectUri = process.env.FACEBOOK_REDIRECT_URI || `${req.headers.get('origin')}/api/auth/facebook/callback`;
 
   if (!appId || !appSecret) {

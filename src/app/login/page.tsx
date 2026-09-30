@@ -41,7 +41,7 @@ function LoginInner(){
       const m = String(errorParam);
       if(m.includes('redirect_uri_mismatch')) setMsg('Google OAuth ยังไม่ได้เพิ่ม redirect URI — แจ้งผู้ดูแลเพิ่ม https://ai-insurance-network-tree.vercel.app/auth/callback ใน Google Cloud Console → Credentials → OAuth 2.0 Client');
       else if(m==='google_failed' || m.includes('google')) setMsg('เข้าสู่ระบบด้วย Google ไม่สำเร็จ — ลองใหม่หรือใช้อีเมล/รหัสผ่าน');
-      else if(m==='facebook_not_configured') setMsg('Facebook Login ยังไม่ได้ตั้งค่า — ผู้ดูแลต้องเพิ่ม FB_APP_ID/FB_APP_SECRET ใน Vercel ก่อน');
+      else if(m==='facebook_not_configured') setMsg('Facebook Login ยังไม่ได้ตั้งค่า — ผู้ดูแลต้องเพิ่ม FACEBOOK_APP_ID + FACEBOOK_APP_SECRET (หรือชื่อ FB_APP_ID/FB_APP_SECRET ก็ได้) ใน Vercel → Settings → Environment Variables แล้ว Redeploy');
       else if(m==='github_not_configured') setMsg('GitHub Login ยังไม่ได้ตั้งค่า — ผู้ดูแลต้องเพิ่ม GITHUB_CLIENT_ID/GITHUB_CLIENT_SECRET ใน Vercel ก่อน');
       else if(m==='facebook_failed') setMsg('เข้าสู่ระบบด้วย Facebook ไม่สำเร็จ — ลองใหม่หรือใช้อีเมล/Google');
       else if(m==='github_failed') setMsg('เข้าสู่ระบบด้วย GitHub ไม่สำเร็จ — ลองใหม่หรือใช้อีเมล/Google');

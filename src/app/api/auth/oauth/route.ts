@@ -16,7 +16,7 @@ function getRedirectUri(req: NextRequest){
   return `${getBaseUrl(req)}/api/auth/oauth`;
 }
 function getCreds(provider: Provider){
-  if(provider === 'facebook') return { id: process.env.FB_APP_ID || '', secret: process.env.FB_APP_SECRET || '' };
+  if(provider === 'facebook') return { id: process.env.FB_APP_ID || process.env.FACEBOOK_APP_ID || '', secret: process.env.FB_APP_SECRET || process.env.FACEBOOK_APP_SECRET || '' };
   return { id: process.env.GITHUB_CLIENT_ID || '', secret: process.env.GITHUB_CLIENT_SECRET || '' };
 }
 function failUrl(req: NextRequest, code: string){
