@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuth } from 'firebase-admin/auth';
-import { getAdminApp } from '@/lib/firebase-admin';
 import { prisma } from '@/lib/prisma';
 import { signToken } from '@/lib/auth';
 import { generateMemberCode, generateReferralCode } from '@/lib/referral';
@@ -143,6 +141,9 @@ export async function POST(req: NextRequest){
     const { idToken } = await req.json();
     if(!idToken) return NextResponse.json({ ok:false, error:'กรุณาส่ง idToken จาก Google' }, { status:400 });
 
+    // โหลด firebase-admin แบบ lazy: GET (เริ่ม OAuth) ไม่ต้องพึ่งโมดูลนี้เลย
+    const { getAuth } = await import('firebase-admin/auth');
+    const { getAdminApp } = await import('@/lib/firebase-admin');
     // ต้อง init Admin SDK ก่อนเรียก getAuth() — ไม่งั้น default app ไม่มี (500)
     try { getAdminApp(); } catch (e: any) {
       return NextResponse.json({ ok:false, error:'เซิร์ฟเวอร์ยังไม่ได้ตั้งค่า Firebase Admin — ติดต่อผู้ดูแลระบบ' }, { status:500 });
