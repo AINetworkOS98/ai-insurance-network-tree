@@ -590,7 +590,11 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 7) ส่งต่อ n8n WF01 (ครั้งเดียวต่อ request, ส่งเป็นชุด) ───────────────
-    const forward = await forwardToN8n({
+    // ⚠️ กันวนลูป: WF01 มี node "บันทึก Visitor + Event (/api/track)" ที่ POST กลับเข้ามาที่นี่
+    //    เพื่อบันทึก DB ต่อ — ถ้าเราส่งต่อไป n8n อีก จะเกิดลูปไม่สิ้นสุด (WF01 → /api/track → WF01 → ...)
+    //    WF01 ติด marker มาใน body ว่า source: 'n8n-wf01' ⇒ request ที่มาจาก n8n ห้าม forward กลับ
+    const isFromN8n = String((body as any)?.source || '') === 'n8n-wf01';
+    const forward = isFromN8n ? 'skipped' : await forwardToN8n({
       visitorId,
       sessionId,
       prospectId: targetProspectId,
