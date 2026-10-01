@@ -166,6 +166,16 @@ export async function POST(req: NextRequest) {
     const id = String(body?.id || '').trim();
     const action = String(body?.action || '').trim() as MemberAction;
     const allowed: MemberAction[] = ['approve', 'reject', 'delete', 'restore', 'autoRenew', 'autoRenewGlobal'];
+    // คำสั่งตรวจ/รันรอบต่ออายุอัตโนมัติ — ใช้เครื่องยนต์เดียวกับ cron
+    if (action === 'previewRenewal' || action === 'runRenewal') {
+      const { runRenewalCycle } = await import('@/lib/renewalEngine');
+      const result = await runRenewalCycle({
+        dry: action === 'previewRenewal',
+        actorId: g.decoded?.sub || null,
+        actorEmail: g.decoded?.email || null,
+      });
+      return NextResponse.json({ ok: result.ok, action, renewal: result, error: result.error });
+    }
     if (!allowed.includes(action)) {
       return NextResponse.json({ ok: false, error: 'คำสั่งไม่ถูกต้อง (รองรับ: approve · reject · delete · restore · autoRenew · autoRenewGlobal)' }, { status: 400 });
     }

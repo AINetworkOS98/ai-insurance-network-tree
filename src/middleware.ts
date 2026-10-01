@@ -37,6 +37,7 @@ const PUBLIC_API = [
   '/api/ai/stream',
   '/api/cron/hermes-sync',
   '/api/cron/backup',
+  '/api/cron/renewal',
   '/api/cron/registration-sync',
   '/api/cron/email-sync',
   '/api/read-file',

@@ -137,6 +137,29 @@ function AdminContent() {
   const [memberFilter, setMemberFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'deleted'>('all');
   const [autoRenewGlobal, setAutoRenewGlobal] = useState(false);
   const [summary, setSummary] = useState<any>(null);
+  const [renewal, setRenewal] = useState<any>(null);
+  const [renewalBusy, setRenewalBusy] = useState(false);
+
+  const runRenewal = async (dry: boolean) => {
+    if (!dry && !window.confirm('ต่ออายุให้สมาชิกที่ถึงกำหนดตอนนี้เลยหรือไม่?\n(ระบบจะบันทึกประวัติ + แจ้งเตือนให้สมาชิกแต่ละคน)')) return;
+    setRenewalBusy(true); setNotice(null);
+    try {
+      const data = await postAction({ action: dry ? 'previewRenewal' : 'runRenewal' });
+      setRenewal(data.renewal || null);
+      const r = data.renewal || {};
+      setNotice({
+        kind: 'ok',
+        text: dry
+          ? `ตรวจรอบต่ออายุ: ถึงกำหนด ${r.wouldRenew ?? 0} ราย · ยังไม่ถึง ${r.skipped ?? 0} ราย (dry-run — ยังไม่เขียนข้อมูล)`
+          : `ต่ออายุแล้ว ${r.renewed ?? 0} ราย · ข้าม ${r.skipped ?? 0} ราย${r.errors ? ` · ผิดพลาด ${r.errors} ราย` : ''}`,
+      });
+      await fetchMembers();
+    } catch (err) {
+      setNotice({ kind: 'err', text: err instanceof Error ? err.message : 'ตรวจรอบไม่สำเร็จ' });
+    } finally {
+      setRenewalBusy(false);
+    }
+  };
 
   const postAction = async (payload: any) => {
     // credentials:'include' — ต้องส่งคุกกี้เซสชัน ไม่งั้นตัวกั้นผู้ดูแลตอบ 401
@@ -365,6 +388,57 @@ function AdminContent() {
                     ค่าเริ่มต้นของทั้งระบบ — มีผลกับสมาชิกที่ยังไม่ตั้งรายคน · สมาชิกที่ตั้งไว้เองจะใช้ค่าของตัวเอง (ปุ่มท้ายแถว) · บันทึกเป็น Audit Log ทุกครั้ง
                   </span>
                 </div>
+
+                {/* ตรวจ/รันรอบต่ออายุอัตโนมัติ — ใช้เครื่องยนต์เดียวกับ Vercel Cron (/api/cron/renewal รันวันละครั้ง 03:00 UTC) */}
+                <div className="mt-3 flex flex-wrap items-center gap-3 p-3 rounded-xl border border-blue-100">
+                  <span className="text-sm font-semibold text-slate-700">📅 รอบต่ออายุอัตโนมัติ</span>
+                  <button
+                    onClick={() => runRenewal(true)}
+                    disabled={renewalBusy}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border bg-white border-blue-200 text-slate-600 hover:bg-[#f0f7ff] ${renewalBusy ? 'opacity-50' : ''}`}
+                  >
+                    {renewalBusy ? 'กำลังตรวจ...' : '🔎 ตรวจรอบ (dry-run)'}
+                  </button>
+                  <button
+                    onClick={() => runRenewal(false)}
+                    disabled={renewalBusy}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border bg-sky-500 border-sky-500 text-white hover:bg-sky-600 ${renewalBusy ? 'opacity-50' : ''}`}
+                  >
+                    ▶️ ต่ออายุที่ถึงกำหนดตอนนี้
+                  </button>
+                  <span className="text-[11px] text-slate-500">
+                    รอบต่ออายุคิดจากวันครบรอบปีของสมาชิกแต่ละคน · รันซ้ำได้ไม่ซ้ำซ้อน (รอบที่ต่อแล้วจะเลื่อนไปปีถัดไป)
+                  </span>
+                </div>
+
+                {renewal && renewal.rows?.length > 0 && (
+                  <div className="mt-3 p-3 rounded-xl border border-blue-100 bg-[#f0f7ff]">
+                    <div className="text-xs font-semibold text-slate-700">
+                      ผลตรวจรอบ {String(renewal.ranAt || '').slice(0, 19).replace('T', ' ')} UTC
+                      {renewal.dry ? ' (dry-run)' : ''} — ตรวจ {renewal.checked} · ต่ออายุ {renewal.renewed} · ถึงกำหนด {renewal.wouldRenew} · ข้าม {renewal.skipped}
+                    </div>
+                    <table className="w-full text-[11px] mt-2">
+                      <thead className="text-slate-500">
+                        <tr>
+                          <th className="text-left p-1">สมาชิก</th>
+                          <th className="text-left p-1">ที่มาของค่า</th>
+                          <th className="text-left p-1">รอบถัดไป</th>
+                          <th className="text-left p-1">ผล</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {renewal.rows.map((r: any) => (
+                          <tr key={r.id} className="border-t border-blue-100">
+                            <td className="p-1">{r.name}{r.memberCode ? ` (${r.memberCode})` : ''}</td>
+                            <td className="p-1">{r.autoRenewSource === 'self' ? 'ตั้งรายคน' : 'ค่าทั้งระบบ'}</td>
+                            <td className="p-1">{r.nextRenewalAt ? String(r.nextRenewalAt).slice(0, 10) : '—'}{typeof r.daysLeft === 'number' ? ` (อีก ${r.daysLeft} วัน)` : ''}</td>
+                            <td className="p-1">{r.reason || r.outcome}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
 
                 {notice && (
                   <div className={`mt-3 px-3 py-2 rounded-xl text-sm border ${

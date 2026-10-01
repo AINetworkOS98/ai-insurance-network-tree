@@ -12,7 +12,7 @@
 
 import { prisma } from '@/lib/prisma';
 
-export type MemberAction = 'approve' | 'reject' | 'delete' | 'restore' | 'autoRenew' | 'autoRenewGlobal';
+export type MemberAction = 'approve' | 'reject' | 'delete' | 'restore' | 'autoRenew' | 'autoRenewGlobal' | 'previewRenewal' | 'runRenewal';
 
 export const ADMIN_STATE_COLLECTION = 'memberAdminState';
 export const GLOBAL_STATE_DOC = 'system';
@@ -91,6 +91,11 @@ async function writeAdminState(id: string, patch: Record<string, any>) {
     console.warn('[memberAdmin] write state skipped:', e?.message);
     return false;
   }
+}
+
+/** เขียนธงผู้ดูแลบางฟิลด์ (ใช้ร่วมกับเครื่องยนต์ต่ออายุอัตโนมัติ) */
+export async function writeAdminStatePatch(id: string, patch: Record<string, any>) {
+  return writeAdminState(id, patch);
 }
 
 /** สวิตช์ต่ออายุอัตโนมัติทั้งระบบ (เก็บที่ doc `system`) */
