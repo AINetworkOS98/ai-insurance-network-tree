@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Insurance Network Tree — n8n Style</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0f;
+    overflow: hidden;
+    font-family: 'Inter', system-ui, sans-serif;
+    color: #e0e0e0;
+  }
+  canvas {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+  }
+  #ui-overlay {
+    position: fixed;
+    top: 20px;
+    left: 24px;
+    pointer-events: none;
+    z-index: 10;
+  }
+  #ui-overlay h1 {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #8b5cf6;
+    margin-bottom: 4px;
+  }
+  #ui-overlay p {
+    font-size: 11px;
+    color: #666;
+    letter-spacing: 0.02em;
+  }
+  #stats {
+    position: fixed;
+    bottom: 20px;
+    right: 24px;
+    font-size: 10px;
+    color: #444;
+    font-family: 'JetBrains Mono', monospace;
+    pointer-events: none;
+    z-index: 10;
+  }
+</style>
+</head>
+<body>
+<div id="ui-overlay">
+  <h1>AI Insurance Network</h1>
+  <p>ทรงกลมกลาง → 5 สายหลัก → ขยายไม่สิ้นสุด</p>
+</div>
+<canvas id="c"></canvas>
+<div id="stats"></div>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const stats = document.getElementById('stats');
+
+let W, H, cx, cy;
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  cx = W / 2;
+  cy = H / 2;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── Color palette (n8n-inspired) ──
+const palette = [
+  '#8b5cf6', // purple (primary)
+  '#06b6d4', // cyan
+  '#10b981', // emerald
+  '#f59e0b', // amber
+  '#ef4444', // red
+  '#ec4899', // pink
+  '#6366f1', // indigo
+  '#14b8a6', // teal
+];
+
+// ── Tree node ──
+class Node {
+  constructor(x, y, depth, branchIdx, parentColor) {
+    this.x = x;
+    this.y = y;
+    this.depth = depth;
+    this.branchIdx = branchIdx;
+    this.radius = Math.max(8, 28 - depth * 1.8);
+    this.color = palette[branchIdx % palette.length];
+    this.parentColor = parentColor;
+    this.id = Node._id++;
+    this.glowPhase = Math.random() * Math.PI * 2;
+    this.connections = [];
+    this.children = [];
+    this.label = depth === 0 ? 'AI Insurance Hub' : depth === 1 ? `Branch ${branchIdx + 1}` : '';
+  }
+  static _id = 0;
+}
+
+// ── Connection (edge) with particles ──
+class Connection {
+  constructor(a, b, color) {
+    this.a = a;
+    this.b = b;
+    this.color = color;
+    this.particles = [];
+    // Spawn particles along this edge
+    const count = Math.max(2, Math.floor(6 - (a.depth + b.depth) * 0.3));
+    for (let i = 0; i < count; i++) {
+      this.particles.push({
+        t: Math.random(),        // 0..1 along edge
+        speed: 0.002 + Math.random() * 0.004,
+        size: 2 + Math.random() * 3,
+        offset: (Math.random() - 0.5) * 6,
+        phase: Math.random() * Math.PI * 2,
+      });
+    }
+  }
+
+  update() {
+    for (const p of this.particles) {
+      p.t += p.speed;
+      if (p.t > 1) p.t = 0;
+    }
+  }
+
+  draw(ctx) {
+    const ax = this.a.x, ay = this.a.y;
+    const bx = this.b.x, by = this.b.y;
+    const dx = bx - ax, dy = by - ay;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len < 1) return;
+    const nx = -dy / len, ny = dx / len;
+
+    // Glow line (thick, low opacity)
+    ctx.save();
+    ctx.shadowColor = this.color;
+    ctx.shadowBlur = 12;
+    ctx.globalAlpha = 0.15;
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(bx, by);
+    ctx.stroke();
+    ctx.restore();
+
+    // Core line (thin)
+    ctx.globalAlpha = 0.25;
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(bx, by);
+    ctx.stroke();
+
+    // Particles (running lights)
+    for (const p of this.particles) {
+      const t = p.t;
+      const px = ax + dx * t;
+      const py = ay + dy * t;
+      const offX = nx * p.offset;
+      const offY = ny * p.offset;
+
+      const alpha = 0.5 + 0.5 * Math.sin(t * Math.PI);
+      const glow = ctx.createRadialGradient(px + offX, py + offY, 0, px + offX, py + offY, p.size * 4);
+      glow.addColorStop(0, this.color);
+      glow.addColorStop(0.4, this.color + '88');
+      glow.addColorStop(1, this.color + '00');
+
+      ctx.save();
+      ctx.shadowColor = this.color;
+      ctx.shadowBlur = 20;
+      ctx.fillStyle = glow;
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.arc(px + offX, py + offY, p.size * 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Bright core
+      ctx.globalAlpha = alpha * 0.9;
+      ctx.fillStyle = '#fff';
+      ctx.shadowColor = this.color;
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(px + offX, py + offY, p.size * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ── Build tree ──
+let nodes = [];
+let connections = [];
+const MAX_DEPTH = 7;
+const BRANCH_FACTOR = 5; // 1 หรือ 5 — ตั้งตรงนี้
+
+function buildTree() {
+  nodes = [];
+  connections = [];
+  Node._id = 0;
+
+  // Root
+  const root = new Node(cx, cy, 0, 0, null);
+  nodes.push(root);
+
+  // Recursive branching
+  function branch(parent, depth, startAngle, count) {
+    if (depth >= MAX_DEPTH) return;
+    const angleStep = (Math.PI * 2) / count;
+    const spread = 0.4 + depth * 0.12; // กว้างขึ้นเรื่อยๆ
+    const dist = 80 + depth * 55 + Math.random() * 20;
+
+    for (let i = 0; i < count; i++) {
+      const angle = startAngle + i * angleStep + (Math.random() - 0.5) * 0.15;
+      const x = parent.x + Math.cos(angle) * dist;
+      const y = parent.y + Math.sin(angle) * dist;
+      // Clamp to screen
+      const clampedX = Math.max(40, Math.min(W - 40, x));
+      const clampedY = Math.max(40, Math.min(H - 40, y));
+      const child = new Node(clampedX, clampedY, depth + 1, i, parent.color);
+      nodes.push(child);
+      parent.children.push(child);
+      const conn = new Connection(parent, child, child.color);
+      connections.push(conn);
+      child.connections.push(conn);
+      parent.connections.push(conn);
+
+      // Recurse
+      if (depth + 1 < MAX_DEPTH) {
+        // Each child branches further — fewer branches per level for visual clarity
+        const nextCount = Math.max(2, count - 1);
+        const nextAngle = angle - (nextCount * angleStep) / 2 + (Math.random() - 0.5) * 0.3;
+        branch(child, depth + 1, nextAngle, nextCount);
+      }
+    }
+  }
+
+  // Root → 5 branches
+  branch(root, 0, 0, BRANCH_FACTOR);
+}
+
+buildTree();
+
+// ── Camera ──
+let cam = { x: 0, y: 0, zoom: 1, targetZoom: 1 };
+let isDragging = false;
+let dragStart = { x: 0, y: 0, camX: 0, camY: 0 };
+
+canvas.addEventListener('mousedown', e => {
+  isDragging = true;
+  dragStart.x = e.clientX;
+  dragStart.y = e.clientY;
+  dragStart.camX = cam.x;
+  dragStart.camY = cam.y;
+});
+canvas.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  cam.x = dragStart.camX + (e.clientX - dragStart.x);
+  cam.y = dragStart.camY + (e.clientY - dragStart.y);
+});
+canvas.addEventListener('mouseup', () => { isDragging = false; });
+canvas.addEventListener('mouseleave', () => { isDragging = false; });
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? 0.9 : 1.1;
+  cam.targetZoom = Math.max(0.3, Math.min(3, cam.targetZoom * delta));
+}, { passive: false });
+
+// Touch
+let touchDist = 0;
+canvas.addEventListener('touchstart', e => {
+  if (e.touches.length === 2) {
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    touchDist = Math.sqrt(dx * dx + dy * dy);
+  }
+});
+canvas.addEventListener('touchmove', e => {
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    const newDist = Math.sqrt(dx * dx + dy * dy);
+    const scale = newDist / touchDist;
+    cam.targetZoom = Math.max(0.3, Math.min(3, cam.targetZoom * scale));
+    touchDist = newDist;
+  }
+}, { passive: false });
+
+// ── Animation ──
+let frame = 0;
+let hoveredNode = null;
+
+function drawPersonIcon(ctx, x, y, radius, color, isHovered) {
+  const r = radius;
+  ctx.save();
+
+  // Outer glow ring
+  const glowSize = isHovered ? 30 : 15 + Math.sin(frame * 0.02 + (nodes.indexOf(hoveredNode) >= 0 ? hoveredNode.glowPhase : 0)) * 5;
+  const glow = ctx.createRadialGradient(x, y, r * 0.5, x, y, r + glowSize);
+  glow.addColorStop(0, color + '44');
+  glow.addColorStop(0.5, color + '22');
+  glow.addColorStop(1, color + '00');
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(x, y, r + glowSize, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Main circle
+  ctx.shadowColor = color;
+  ctx.shadowBlur = isHovered ? 25 : 12;
+  ctx.fillStyle = '#0d0d14';
+  ctx.strokeStyle = color;
+  ctx.lineWidth = isHovered ? 2.5 : 1.8;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Person silhouette (簡單的頭+身)
+  const headR = r * 0.32;
+  const bodyW = r * 0.5;
+  const bodyH = r * 0.55;
+
+  ctx.fillStyle = color + 'cc';
+  ctx.shadowBlur = 0;
+
+  // Head
+  ctx.beginPath();
+  ctx.arc(x, y - r * 0.1, headR, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Body (简略的服饰形状)
+  ctx.beginPath();
+  ctx.moveTo(x - bodyW, y + r * 0.15);
+  ctx.quadraticCurveTo(x - bodyW * 1.1, y + r * 0.5, x - bodyW * 0.6, y + r * 0.55);
+  ctx.lineTo(x + bodyW * 0.6, y + r * 0.55);
+  ctx.quadraticCurveTo(x + bodyW * 1.1, y + r * 0.5, x + bodyW, y + r * 0.15);
+  ctx.closePath();
+  ctx.fill();
+
+  // Eyes (小亮点)
+  ctx.fillStyle = '#fff';
+  ctx.shadowBlur = 4;
+  ctx.shadowColor = color;
+  ctx.beginPath();
+  ctx.arc(x - headR * 0.35, y - r * 0.12, headR * 0.15, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(x + headR * 0.35, y - r * 0.12, headR * 0.15, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function loop() {
+  frame++;
+  const dt = 1;
+
+  // Smooth zoom
+  cam.zoom += (cam.targetZoom - cam.zoom) * 0.08;
+
+  // Clear
+  ctx.clearRect(0, 0, W, H);
+
+  // Background subtle grid
+  ctx.save();
+  ctx.globalAlpha = 0.04;
+  ctx.strokeStyle = '#8b5cf6';
+  ctx.lineWidth = 0.5;
+  const gridSize = 40 * cam.zoom;
+  const offX = (-cam.x % gridSize + gridSize) % gridSize;
+  const offY = (-cam.y % gridSize + gridSize) % gridSize;
+  for (let x = offX; x < W; x += gridSize) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, H);
+    ctx.stroke();
+  }
+  for (let y = offY; y < H; y += gridSize) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(W, y);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Apply camera
+  ctx.save();
+  ctx.translate(cam.x, cam.y);
+  ctx.scale(cam.zoom, cam.zoom);
+
+  // Update & draw connections
+  for (const c of connections) {
+    c.update();
+    c.draw(ctx);
+  }
+
+  // Draw nodes (depth-sorted: deeper = on top)
+  const sorted = [...nodes].sort((a, b) => a.depth - b.depth);
+
+  // Hover detection (screen space)
+  const mouse = lastMouse || { x: 0, y: 0 };
+  const screenMouse = {
+    x: (mouse.x - cam.x) / cam.zoom,
+    y: (mouse.y - cam.y) / cam.zoom,
+  };
+
+  hoveredNode = null;
+  for (const n of sorted) {
+    const dx = screenMouse.x - n.x;
+    const dy = screenMouse.y - n.y;
+    if (dx * dx + dy * dy < (n.radius + 8) * (n.radius + 8)) {
+      hoveredNode = n;
+      break;
+    }
+  }
+
+  for (const n of sorted) {
+    const isHover = n === hoveredNode;
+    drawPersonIcon(ctx, n.x, n.y, n.radius, n.color, isHover);
+  }
+
+  ctx.restore();
+
+  // Stats
+  let particleCount = 0;
+  for (const c of connections) particleCount += c.particles.length;
+  stats.textContent = `โหนด ${nodes.length} · เส้น ${connections.length} · อนุภาค ${particleCount} · ระดับ ${MAX_DEPTH} · ขยายแบบไม่จำกัด`;
+
+  requestAnimationFrame(loop);
+}
+
+let lastMouse = { x: 0, y: 0 };
+canvas.addEventListener('mousemove', e => {
+  lastMouse = { x: e.clientX, y: e.clientY };
+});
+
+// Center camera on double-click
+canvas.addEventListener('dblclick', () => {
+  cam.x = 0;
+  cam.y = 0;
+  cam.targetZoom = 1;
+});
+
+loop();
+</script>
+</body>
+</html>

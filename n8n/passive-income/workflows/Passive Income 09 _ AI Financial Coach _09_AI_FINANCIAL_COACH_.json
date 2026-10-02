@@ -1,0 +1,286 @@
+{
+  "name": "Passive Income 09 · AI Financial Coach (09_AI_FINANCIAL_COACH)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pi-coach",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "e9665fff-b439-40cc-9c63-57f1ef9af142",
+      "name": "Webhook ถามโค้ชการเงิน",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "56dd3878-412d-4aa4-98cc-57ec52f2921f"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// §19 WF09 — เตรียมคำถามสำหรับโค้ชการเงิน AI\nconst body = ($json.body && typeof $json.body === 'object') ? $json.body : ($json || {});\nconst s = (v, m) => (v === null || v === undefined) ? '' : String(v).trim().slice(0, m);\nconst question = s(body.question || body.message || body.q, 1500);\nif (!question) return [{ json: { ok: false, error: 'ต้องส่ง { question: \"...\" }', ready: false } }];\nconst history = Array.isArray(body.history) ? body.history.slice(-6).map(h => ({\n  role: (String(h.role || 'user') === 'assistant' ? 'assistant' : 'user'), content: s(h.content || h.text, 600),\n})) : [];\nreturn [{ json: { ok: true, ready: true, question, history, userId: s(body.userId, 64) || null,\n  name: s(body.name, 80) || null, rank: s(body.rank, 40) || null,\n  context: (body.context && typeof body.context === 'object') ? body.context : null } }];\n"
+      },
+      "id": "a1ec6a70-91ce-4ecb-9727-87720da44bdf",
+      "name": "เตรียมคำถาม",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "1e695fc1-cadc-4061-8adc-c9a8a1611334",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              },
+              "leftValue": "={{ $json.ready }}",
+              "rightValue": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2f50dbc1-6158-48e7-931b-3c40419f8e4f",
+      "name": "มีคำถามหรือไม่",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "a2f45418-6469-41d8-bdbe-18766131d84c",
+      "name": "ตอบกลับ (ไม่มีคำถาม)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify({ question: $json.question, history: $json.history, user: { id: $json.userId, name: $json.name, rank: $json.rank }, context: $json.context }) }}",
+        "options": {
+          "systemMessage": "คุณคือ 'โค้ชการเงิน' ของ AI Insurance Network Tree — ให้คำปรึกษาภาษาไทยกับตัวแทนประกันและสมาชิกในเครือข่าย\nหลักการ: ①ตอบตรงคำถาม กระชับ 6-10 บรรทัด ②ให้ขั้นตอนที่ทำได้จริงเป็นข้อ ๆ ③อ้างอิงตัวเลข/บริบทที่ผู้ใช้ให้มา ถ้าไม่มีให้บอกว่ายังขาดข้อมูล\nข้อห้ามเด็ดขาด: ห้ามรับประกันผลตอบแทน ห้ามให้คำแนะนำลงทุนเฉพาะเจาะจง (หุ้น/คริปโต/สินทรัพย์เสี่ยง) ห้ามให้คำแนะนำภาษี/กฎหมายที่ต้องมีผู้เชี่ยวชาญยืนยัน ห้ามสัญญาว่าจะปิดการขายได้ — ถ้าคำถามเข้าข่าย ให้แนะนำปรึกษาผู้เชี่ยวชาญที่ได้รับใบอนุญาต"
+        }
+      },
+      "id": "41c1bb16-d119-4391-9134-35b807368a22",
+      "name": "AI โค้ชการเงิน (Gemini)",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        660,
+        -60
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 10000
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gemini-3.5-flash-lite"
+        },
+        "options": {}
+      },
+      "id": "f1215dd5-73ed-411a-89d1-86a3a606dfdf",
+      "name": "Gemini Chat Model (Coach)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        660,
+        180
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "openrouter-workflow-1790828913760",
+          "name": "Google Gemini API (OpenAI-compatible)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst src = $('เตรียมคำถาม').first().json;\nconst answer = String(($json && $json.output) || '').trim();\nreturn [{ json: { ok: true, question: src.question, answer: answer, userId: src.userId,\n  answeredAt: new Date().toISOString(), source: 'n8n-pi-09' } }];\n"
+      },
+      "id": "83384045-951d-4741-9796-c35da142c45a",
+      "name": "จัดรูปคำตอบ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/agent-log",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: 'PI 09 AI Financial Coach', ok: true, stage: 'coach-answer', detail: 'คำถาม: ' + $json.question + '\\nคำตอบ: ' + $json.answer }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "95398400-04d4-429a-978a-bd16127950e7",
+      "name": "บันทึกคำถาม-คำตอบ (/api/agent-log)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        -60
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "e2b84b9c-7334-42c0-8ad0-9775ed7f1e04",
+      "name": "ตอบกลับคำตอบโค้ช",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1320,
+        -60
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook ถามโค้ชการเงิน": {
+      "main": [
+        [
+          {
+            "node": "เตรียมคำถาม",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "เตรียมคำถาม": {
+      "main": [
+        [
+          {
+            "node": "มีคำถามหรือไม่",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "มีคำถามหรือไม่": {
+      "main": [
+        [
+          {
+            "node": "AI โค้ชการเงิน (Gemini)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ตอบกลับ (ไม่มีคำถาม)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Chat Model (Coach)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI โค้ชการเงิน (Gemini)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI โค้ชการเงิน (Gemini)": {
+      "main": [
+        [
+          {
+            "node": "จัดรูปคำตอบ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "จัดรูปคำตอบ": {
+      "main": [
+        [
+          {
+            "node": "บันทึกคำถาม-คำตอบ (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "บันทึกคำถาม-คำตอบ (/api/agent-log)": {
+      "main": [
+        [
+          {
+            "node": "ตอบกลับคำตอบโค้ช",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "a7d8069f-ac7a-4919-b0ff-d4d6e51a263b"
+  },
+  "active": true,
+  "versionId": "2daef74e-1390-4408-b99d-b8f994d5ab9e"
+}

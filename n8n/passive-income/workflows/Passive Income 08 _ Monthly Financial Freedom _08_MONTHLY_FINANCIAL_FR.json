@@ -1,0 +1,325 @@
+{
+  "name": "Passive Income 08 · Monthly Financial Freedom (08_MONTHLY_FINANCIAL_FREEDOM)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 1 * *"
+            }
+          ]
+        },
+        "options": {
+          "timezone": "Asia/Bangkok"
+        }
+      },
+      "id": "85fa2eb2-7d6b-44f1-b0ef-ac23692c6011",
+      "name": "ทุกวันที่ 1 ของเดือน 09:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/members/count",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "4bb71fe3-48c9-4ea6-8178-a33564104d50",
+      "name": "การเงิน: สมาชิก",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        -160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/dashboard/leads?limit=500",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "aa7b09b4-6a6d-4618-a2ce-1211c1972dd2",
+      "name": "การเงิน: ผู้สนใจ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        -160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/agent-tasks?status=done&limit=200",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "a9a30cfc-c707-4253-a0a6-d404e2158ce6",
+      "name": "การเงิน: งานที่ปิดแล้ว",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        -160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst pick = (names) => { for (const n of names) { try { const j = $(n).first().json; if (j) return j; } catch (e) {} } return {}; };\n\n// §19 WF08 — วางแผนอิสรภาพทางการเงินรายเดือน (ใช้ตัวเลขจริงที่มีในระบบ + สมมติฐานที่ตั้งได้)\nconst members = pick(['การเงิน: สมาชิก']);\nconst leads = pick(['การเงิน: ผู้สนใจ']);\nconst done = pick(['การเงิน: งานที่ปิดแล้ว']);\nconst sd = $getWorkflowStaticData('global');\n// สมมติฐาน (แก้ได้ใน workflow: static data key 'assumptions')\nconst A = Object.assign({\n  avgPremium: 24000,        // เบี้ยเฉลี่ยต่อกรมธรรม์ (บาท/ปี)\n  commissionRate: 0.25,     // อัตราค่าตอบแทนรวมปีแรก\n  conversionRate: 0.12,     // อัตราปิดการขายจากผู้สนใจ\n  activeRate: 0.35,         // สัดส่วนสมาชิกที่ active จริง\n  incomePerActiveMember: 3500,  // รายได้ทีมต่อสมาชิก active ต่อเดือน (บาท)\n  expenseRatio: 0.35,       // ค่าใช้จ่ายทีม/ดำเนินงาน\n  reinvestRatio: 0.30,      // เก็บ Reinvest\n  welfareRatio: 0.10,       // สวัสดิการทีม\n  monthlyTarget: 100000,    // เป้าหมายอิสรภาพทางการเงินต่อเดือน (บาท)\n}, sd.assumptions || {});\nconst leadsTotal = Number(leads.total || 0);\nconst membersTotal = Number(members.total || 0);\nconst membersActive = Number(members.active || 0) || Math.round(membersTotal * A.activeRate);\nconst tasksClosed = Number(done.total || (done.tasks || []).length || 0);\nconst deals = Math.round(leadsTotal * A.conversionRate);\nconst directIncome = Math.round(deals * A.avgPremium * A.commissionRate / 12);\nconst teamIncome = Math.round(membersActive * A.incomePerActiveMember);\nconst passiveIncome = directIncome + teamIncome;\nconst expense = Math.round(passiveIncome * A.expenseRatio);\nconst netProfit = passiveIncome - expense;\nconst reinvest = Math.round(netProfit * A.reinvestRatio);\nconst welfare = Math.round(netProfit * A.welfareRatio);\nconst freedomRatio = Math.round((passiveIncome / A.monthlyTarget) * 1000) / 10;\nconst month = new Date().toISOString().slice(0, 7);\nconst snap = { month, passiveIncome, directIncome, teamIncome, expense, netProfit, reinvest, welfare,\n  freedomRatio, leadsTotal, membersTotal, membersActive, deals, tasksClosed, at: new Date().toISOString() };\nsd.monthly = Array.isArray(sd.monthly) ? sd.monthly.filter(m => m.month !== month) : [];\nsd.monthly.push(snap);\nif (sd.monthly.length > 36) sd.monthly = sd.monthly.slice(-36);\nconst prev = sd.monthly.length > 1 ? sd.monthly[sd.monthly.length - 2] : null;\nreturn [{ json: { snap, assumptions: A, prev, gap: Math.max(0, A.monthlyTarget - passiveIncome),\n  nextTarget: Math.round(passiveIncome * 1.2), history: sd.monthly.slice(-6),\n  summary: 'เดือน ' + month + ': รายได้เชิงรับประมาณ ' + passiveIncome.toLocaleString('th-TH') + ' บาท'\n    + ' (ตัวแทนเอง ' + directIncome.toLocaleString('th-TH') + ' + ทีม ' + teamIncome.toLocaleString('th-TH') + ')'\n    + ' · กำไรสุทธิ ' + netProfit.toLocaleString('th-TH') + ' บาท · คิดเป็น ' + freedomRatio + '% ของเป้าหมาย '\n    + A.monthlyTarget.toLocaleString('th-TH') + ' บาท' } }];\n"
+      },
+      "id": "ee44b322-b8ac-41f7-89e3-6964a6bd29bb",
+      "name": "คำนวณอิสรภาพทางการเงิน",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify({ summary: $json.summary, snapshot: $json.snap, assumptions: $json.assumptions, gap: $json.gap, history: $json.history }) }}",
+        "options": {
+          "systemMessage": "คุณเป็นที่ปรึกษาการเงินสำหรับตัวแทนประกันในประเทศไทย\nวิเคราะห์ตัวเลขที่ให้มา (เป็น 'ประมาณการ' จากจำนวนผู้สนใจ/สมาชิกจริง) และให้แผนทำเงินเดือนหน้า ภาษาไทย 4-6 บรรทัด:\n1) ตัวเลขสำคัญที่ต้องดู 2) ช่องว่างกับเป้าหมายและสาเหตุที่เป็นไปได้ 3) 3 การกระทำที่ทำได้จริงใน 30 วัน\nข้อกำหนด: ห้ามรับประกันผลตอบแทน ห้ามให้คำแนะนำการลงทุนเฉพาะเจาะจง (หุ้น/คริปโต) ระบุชัดว่าตัวเลขเป็นประมาณการจากสมมติฐาน"
+        }
+      },
+      "id": "26a0e8ee-f439-40ea-ab5f-ca9d4bd85488",
+      "name": "AI วิเคราะห์การเงิน + แผนเดือนหน้า (Gemini)",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        -160
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 10000
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gemini-3.5-flash-lite"
+        },
+        "options": {}
+      },
+      "id": "9965d115-38da-413b-abeb-8db269f6a4a0",
+      "name": "Gemini Chat Model (Finance)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        80
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "openrouter-workflow-1790828913760",
+          "name": "Google Gemini API (OpenAI-compatible)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/agent-log",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: 'PI 08 Financial Freedom', ok: true, stage: 'monthly-financial', detail: $('คำนวณอิสรภาพทางการเงิน').first().json.summary + '\\n\\n' + ($json.output || '') + '\\n\\nสมมติฐาน: ' + JSON.stringify($('คำนวณอิสรภาพทางการเงิน').first().json.assumptions), snapshot: $('คำนวณอิสรภาพทางการเงิน').first().json.snap }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "6be52a1a-510b-461a-a5c2-7aced0fe6a40",
+      "name": "ส่งรายงานการเงินรายเดือน (/api/agent-log)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        -160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst log = $json || {};\nconst c = $('คำนวณอิสรภาพทางการเงิน').first().json;\nreturn [{ json: { ok: log.ok === true, emailed: log.email || 'skipped', summary: c.summary,\n  freedomRatio: c.snap.freedomRatio, gap: c.gap, plan: String($('AI วิเคราะห์การเงิน + แผนเดือนหน้า (Gemini)').first().json.output || '').slice(0, 800) } }];\n"
+      },
+      "id": "63ae9bd8-da2a-4d9b-afe3-8cd97a163262",
+      "name": "สรุปผลการเงินรายเดือน",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        -160
+      ]
+    }
+  ],
+  "connections": {
+    "ทุกวันที่ 1 ของเดือน 09:00": {
+      "main": [
+        [
+          {
+            "node": "การเงิน: สมาชิก",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "การเงิน: สมาชิก": {
+      "main": [
+        [
+          {
+            "node": "การเงิน: ผู้สนใจ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "การเงิน: ผู้สนใจ": {
+      "main": [
+        [
+          {
+            "node": "การเงิน: งานที่ปิดแล้ว",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "การเงิน: งานที่ปิดแล้ว": {
+      "main": [
+        [
+          {
+            "node": "คำนวณอิสรภาพทางการเงิน",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "คำนวณอิสรภาพทางการเงิน": {
+      "main": [
+        [
+          {
+            "node": "AI วิเคราะห์การเงิน + แผนเดือนหน้า (Gemini)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI วิเคราะห์การเงิน + แผนเดือนหน้า (Gemini)": {
+      "main": [
+        [
+          {
+            "node": "ส่งรายงานการเงินรายเดือน (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ส่งรายงานการเงินรายเดือน (/api/agent-log)": {
+      "main": [
+        [
+          {
+            "node": "สรุปผลการเงินรายเดือน",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Chat Model (Finance)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI วิเคราะห์การเงิน + แผนเดือนหน้า (Gemini)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "a7d8069f-ac7a-4919-b0ff-d4d6e51a263b"
+  },
+  "active": true,
+  "versionId": "9258256b-7025-4df8-a43f-c9dd944a9f04"
+}

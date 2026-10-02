@@ -1,0 +1,288 @@
+{
+  "name": "TikTok Video 01 · Video Sync (01_VIDEO_SYNC)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 * * * *"
+            }
+          ]
+        },
+        "options": {
+          "timezone": "Asia/Bangkok"
+        }
+      },
+      "id": "2ad03c9e-ea6b-4005-9de1-7eda16f34abf",
+      "name": "ทุก 1 ชั่วโมง (ซิงก์คลังวิดีโอ)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -200,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/videos/list?status=all&limit=500",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "019001c2-265d-4d55-a26a-564083b5d422",
+      "name": "ดึงรายการวิดีโอ (/api/videos/list)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        40,
+        -120
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// ตรวจความถูกต้องของคลังวิดีโอ: URL ต้องเป็นลิงก์ TikTok, กันซ้ำด้วย video id\nconst res = $json || {};\nconst list = Array.isArray(res.videos) ? res.videos : [];\nconst re = /tiktok\\.com\\/(?:@[A-Za-z0-9._-]+\\/)?video\\/(\\d+)/i;\nconst seen = new Set();\nconst ok = [], dup = [], invalid = [];\nfor (const v of list) {\n  const m = String(v.url || '').match(re);\n  if (!m) { invalid.push(v.url || '(ไม่มี URL)'); continue; }\n  const id = v.tiktokId || m[1];\n  if (seen.has(id)) { dup.push(id); continue; }\n  seen.add(id);\n  ok.push({ id, title: v.title, status: v.status, url: v.url, viewCount: v.viewCount || 0 });\n}\nreturn [{ json: {\n  total: list.length, usable: ok.length, duplicates: dup.length, invalid: invalid.length,\n  sample: ok.slice(0, 5),\n  message: `คลังวิดีโอ TikTok: ใช้ได้ ${ok.length}/${list.length} รายการ (ซ้ำ ${dup.length}, รูปแบบผิด ${invalid.length})`,\n} }];\n"
+      },
+      "id": "0736a989-9353-4f8c-9b7b-b2c84f42ad81",
+      "name": "ตรวจ + กันซ้ำ + สรุปคลัง",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        280,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/agent-log",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'video_sync', workflow: 'TikTok Video Sync', status: 'ok', message: $json.message, detail: { total: $json.total, usable: $json.usable, duplicates: $json.duplicates, invalid: $json.invalid }, source: 'n8n-tiktok-video' }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "aea0dfa9-ec46-4c34-871c-a480b7c266a5",
+      "name": "บันทึกสรุป (/api/agent-log)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        -120
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "add-video",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "f1a151ca-6037-4adb-bafe-6a3b7267d2b3",
+      "name": "Webhook รับคำขอ",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        40,
+        160
+      ],
+      "webhookId": "f770d002-e6aa-4948-9d20-e7a2044ca491"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// รับลิงก์จากผู้ใช้/admin → ส่งต่อให้แอปตรวจ URL, กันซ้ำ และบันทึก (ไม่ scrape TikTok)\nconst body = ($json.body && typeof $json.body === 'object') ? $json.body : ($json || {});\nconst one = (v) => (v === null || v === undefined) ? '' : String(v).trim();\nlet urls = [];\nif (Array.isArray(body.urls)) urls = body.urls.map(one).filter(Boolean);\nelse if (one(body.url)) urls = [one(body.url)];\nurls = urls.slice(0, 200);\nreturn [{ json: { urls, count: urls.length, valid: urls.length > 0,\n  title: one(body.title) || undefined, topic: one(body.topic) || undefined,\n  durationSec: Number(body.durationSec || 0) || undefined,\n  hint: urls.length ? null : 'ต้องส่ง url หรือ urls (ลิงก์ TikTok)' } }];\n"
+      },
+      "id": "324e1a02-5c1a-47f2-972d-13f379ca34d4",
+      "name": "ตรวจลิงก์ที่ส่งเข้ามา",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        280,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/videos/add",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ urls: $('ตรวจลิงก์ที่ส่งเข้ามา').first().json.urls, title: $('ตรวจลิงก์ที่ส่งเข้ามา').first().json.title, topic: $('ตรวจลิงก์ที่ส่งเข้ามา').first().json.topic, durationSec: $('ตรวจลิงก์ที่ส่งเข้ามา').first().json.durationSec }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "df587b2c-dd30-4efb-946b-717d3c3e4776",
+      "name": "เพิ่ม/อัปเดตวิดีโอ (/api/videos/add)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// อ้างผลจาก node 'เพิ่ม/อัปเดตวิดีโอ' โดยตรง + ถ้าลิงก์ว่างให้ตอบ error ที่อ่านรู้เรื่อง\nconst asked = $('ตรวจลิงก์ที่ส่งเข้ามา').first().json;\nconst res = $json || {};\nif (!asked.valid) return [{ json: { success: false, error: 'url_required', hint: asked.hint } }];\nreturn [{ json: { success: res.ok === true, received: asked.count, created: res.created || 0,\n  updated: res.updated || 0, failed: res.failed || 0, results: res.results || [], username: \"@aka989._\" } }];\n"
+      },
+      "id": "e58b91f4-6c60-4818-a329-5b467d7d91cf",
+      "name": "สรุปผลการเพิ่มวิดีโอ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "178e9ae5-8991-4168-9958-4f13fb856b22",
+      "name": "ตอบกลับ (ผลการเพิ่มวิดีโอ)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1000,
+        160
+      ]
+    }
+  ],
+  "connections": {
+    "ทุก 1 ชั่วโมง (ซิงก์คลังวิดีโอ)": {
+      "main": [
+        [
+          {
+            "node": "ดึงรายการวิดีโอ (/api/videos/list)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ดึงรายการวิดีโอ (/api/videos/list)": {
+      "main": [
+        [
+          {
+            "node": "ตรวจ + กันซ้ำ + สรุปคลัง",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ตรวจ + กันซ้ำ + สรุปคลัง": {
+      "main": [
+        [
+          {
+            "node": "บันทึกสรุป (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook รับคำขอ": {
+      "main": [
+        [
+          {
+            "node": "ตรวจลิงก์ที่ส่งเข้ามา",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ตรวจลิงก์ที่ส่งเข้ามา": {
+      "main": [
+        [
+          {
+            "node": "เพิ่ม/อัปเดตวิดีโอ (/api/videos/add)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "เพิ่ม/อัปเดตวิดีโอ (/api/videos/add)": {
+      "main": [
+        [
+          {
+            "node": "สรุปผลการเพิ่มวิดีโอ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สรุปผลการเพิ่มวิดีโอ": {
+      "main": [
+        [
+          {
+            "node": "ตอบกลับ (ผลการเพิ่มวิดีโอ)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "a7d8069f-ac7a-4919-b0ff-d4d6e51a263b"
+  },
+  "active": true,
+  "versionId": "d92aca33-4d01-4c7e-8601-063c1655b3ef"
+}

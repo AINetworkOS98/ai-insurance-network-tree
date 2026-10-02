@@ -1,0 +1,345 @@
+{
+  "name": "Passive Income 06 · Daily KPI Report (06_DAILY_KPI)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 20 * * *"
+            }
+          ]
+        },
+        "options": {
+          "timezone": "Asia/Bangkok"
+        }
+      },
+      "id": "07a235a0-be53-42df-ac63-877784188107",
+      "name": "ทุกวัน 20:30 (Asia/Bangkok)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/members/count",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "06a08475-9353-4f7c-97ab-c436c80be166",
+      "name": "KPI: สมาชิก",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        -240
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/dashboard/leads?limit=200",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "cadf8390-41f2-47f9-9a29-1815bb3b9bf9",
+      "name": "KPI: ผู้สนใจ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        -240
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/followup/due?window=24h&limit=200",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "b58807f9-54cb-46cd-8de4-4dcdd2888172",
+      "name": "KPI: ติดตามค้าง",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        -240
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/agent-tasks?status=open&limit=100",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "bdf5432f-7d4c-411c-8f23-c0830ec6cd39",
+      "name": "KPI: งานค้าง",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        -240
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/visitor",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "2152c7bf-1a3f-4bbd-897a-f58a40e0e445",
+      "name": "KPI: ผู้เข้าชม",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        -240
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst pick = (names) => { for (const n of names) { try { const j = $(n).first().json; if (j) return j; } catch (e) {} } return {}; };\n\n// §19 WF06 — รวม KPI รายวัน + เทียบกับเมื่อวาน (เก็บประวัติใน static data ของ workflow)\nconst members = pick(['KPI: สมาชิก']);\nconst leads = pick(['KPI: ผู้สนใจ']);\nconst follow = pick(['KPI: ติดตามค้าง']);\nconst tasks = pick(['KPI: งานค้าง']);\nconst visitor = pick(['KPI: ผู้เข้าชม']);\nconst stats = leads.stats || {};\nconst kpi = {\n  date: new Date().toISOString().slice(0, 10),\n  members: Number(members.total || 0), membersActive: Number(members.active || 0), membersWithRank: Number(members.withRank || 0),\n  leadsTotal: Number(leads.total || (leads.leads || []).length || 0),\n  leadsHigh: Number(stats.high || 0), leadsInterested: Number(stats.interested || 0),\n  leadsWarm: Number(stats.warm || 0), leadsLow: Number(stats.low || 0), leadsConsent: Number(stats.consent || 0),\n  followupDue: Number(follow.followUps ? follow.followUps.length : (follow.due || 0)),\n  tasksOpen: Number(tasks.total || (tasks.tasks || []).length || 0),\n  visitors: Number(visitor.count || visitor.total || 0),\n};\nconst sd = $getWorkflowStaticData('global');\nsd.history = Array.isArray(sd.history) ? sd.history : [];\nconst prev = sd.history.length ? sd.history[sd.history.length - 1] : null;\nconst diff = {};\nif (prev) for (const k of Object.keys(kpi)) {\n  if (typeof kpi[k] === 'number' && typeof prev[k] === 'number') diff[k] = kpi[k] - prev[k];\n}\nsd.history.push(kpi);\nif (sd.history.length > 90) sd.history = sd.history.slice(-90);\nconst trend = (v) => v > 0 ? ('+' + v) : String(v);\nreturn [{ json: { kpi, diff, prevDate: prev ? prev.date : null, days: sd.history.length,\n  headline: 'ผู้สนใจใหม่รวม ' + kpi.leadsTotal + ' (HOT ' + kpi.leadsHigh + ') · งานค้าง ' + kpi.tasksOpen\n    + ' · ติดตามค้าง ' + kpi.followupDue + ' · สมาชิก active ' + kpi.membersActive + '/' + kpi.members,\n  dayOverDay: prev ? ('สมาชิก ' + trend(diff.members || 0) + ' · ผู้สนใจ ' + trend(diff.leadsTotal || 0)\n    + ' · HOT ' + trend(diff.leadsHigh || 0) + ' · งานค้าง ' + trend(diff.tasksOpen || 0)) : 'ไม่มีข้อมูลเมื่อวาน (รอบแรก)',\n  sources: { members: !!members.total, leads: !!leads.total, followup: !!follow, tasks: !!tasks.total, visitor: !!visitor.count } } }];\n"
+      },
+      "id": "a22a2155-ba49-40a9-a49c-5ab63c65c718",
+      "name": "รวม KPI + เทียบกับเมื่อวาน",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/agent-log",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: 'PI 06 Daily KPI', ok: true, stage: 'daily-kpi', detail: 'KPI ' + $json.kpi.date + '\\n' + $json.headline + '\\nเทียบเมื่อวาน: ' + $json.dayOverDay + '\\nผู้เข้าชม ' + $json.kpi.visitors + ' · ยินยอมการตลาด ' + $json.kpi.leadsConsent + '\\nค่าเต็ม: ' + JSON.stringify($json.kpi), kpi: $json.kpi, diff: $json.diff }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "9f1f8dd0-74a4-4e22-8891-91e42c17d094",
+      "name": "ส่งรายงาน KPI รายวัน (/api/agent-log)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        -240
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst log = $json || {};\nconst k = $('รวม KPI + เทียบกับเมื่อวาน').first().json;\nreturn [{ json: { ok: log.ok === true, emailed: log.email || 'skipped', date: k.kpi.date,\n  headline: k.headline, sources: k.sources, historyDays: k.days } }];\n"
+      },
+      "id": "39afd803-aad6-46e3-8696-aaa4603f56a2",
+      "name": "สรุปผล KPI",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1780,
+        -240
+      ]
+    }
+  ],
+  "connections": {
+    "ทุกวัน 20:30 (Asia/Bangkok)": {
+      "main": [
+        [
+          {
+            "node": "KPI: สมาชิก",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KPI: สมาชิก": {
+      "main": [
+        [
+          {
+            "node": "KPI: ผู้สนใจ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KPI: ผู้สนใจ": {
+      "main": [
+        [
+          {
+            "node": "KPI: ติดตามค้าง",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KPI: ติดตามค้าง": {
+      "main": [
+        [
+          {
+            "node": "KPI: งานค้าง",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KPI: งานค้าง": {
+      "main": [
+        [
+          {
+            "node": "KPI: ผู้เข้าชม",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KPI: ผู้เข้าชม": {
+      "main": [
+        [
+          {
+            "node": "รวม KPI + เทียบกับเมื่อวาน",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "รวม KPI + เทียบกับเมื่อวาน": {
+      "main": [
+        [
+          {
+            "node": "ส่งรายงาน KPI รายวัน (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ส่งรายงาน KPI รายวัน (/api/agent-log)": {
+      "main": [
+        [
+          {
+            "node": "สรุปผล KPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "a7d8069f-ac7a-4919-b0ff-d4d6e51a263b"
+  },
+  "active": true,
+  "versionId": "7c90745d-2aa1-431b-955a-6de082eb862a"
+}

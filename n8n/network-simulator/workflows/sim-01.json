@@ -1,0 +1,131 @@
+{
+  "name": "Network Sim 01 · Member Created",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "member-created",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "f7d04413-5665-4866-8336-fddf2a2b05c6",
+      "name": "Webhook รับเหตุการณ์",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "b20e095c-4148-4055-af46-f0d84997054c"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/sim/member",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body || {}) }}"
+      },
+      "id": "e044f33b-b03f-4d9a-94e2-3c03c09d0980",
+      "name": "บันทึกสมาชิกใหม่ (/api/sim/member)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// สรุปผลลัพธ์ของ \"Network Sim 01 · Member Created\"\n// รับข้อมูลจาก HTTP Request node (โหนดก่อนหน้า)\nconst res = $json || {};\nconst ok = res.success !== false && res.error === undefined;\nconst base = {\n  workflow: \"Network Sim 01 · Member Created\",\n  ok: ok,\n  receivedAt: new Date().toISOString(),\n};\n  base.memberCode = (res.member && (res.member.code || res.member.memberCode)) || res.memberCode || null;\n  base.treeDepth = res.depth !== undefined ? res.depth : null;\nreturn [{ json: Object.assign(base, { result: res }) }];\n"
+      },
+      "id": "b08e68dd-ca10-465f-9a3b-77d139673274",
+      "name": "สรุปผล",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "b5cf09ec-236b-4756-8856-bcbec73b90a0",
+      "name": "ตอบกลับ",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        780,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook รับเหตุการณ์": {
+      "main": [
+        [
+          {
+            "node": "บันทึกสมาชิกใหม่ (/api/sim/member)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "บันทึกสมาชิกใหม่ (/api/sim/member)": {
+      "main": [
+        [
+          {
+            "node": "สรุปผล",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สรุปผล": {
+      "main": [
+        [
+          {
+            "node": "ตอบกลับ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "",
+    "saveExecutionProgress": true
+  },
+  "active": false,
+  "pinData": {},
+  "versionId": "32c1e364-fe10-45f7-9aad-ca071a16778c",
+  "meta": {},
+  "tags": []
+}

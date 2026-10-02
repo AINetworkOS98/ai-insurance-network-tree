@@ -1,0 +1,128 @@
+{
+  "name": "Network Sim 02 · Check 1-to-5 Structure",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "check-1-to-5",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "67d0958b-fdc2-4b5c-9d22-8f2e983d6a5c",
+      "name": "Webhook รับเหตุการณ์",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "7a34afaf-3ce8-479d-8bf2-5c4699abb926"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/sim/check?code={{ encodeURIComponent($json.query.code || '') }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "f101d4f9-e516-44dc-bd13-e8f70a32c8d5",
+      "name": "ตรวจโครงสร้าง 1 แตก 5 (/api/sim/check)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// สรุปผลลัพธ์ของ \"Network Sim 02 · Check 1-to-5 Structure\"\n// รับข้อมูลจาก HTTP Request node (โหนดก่อนหน้า)\nconst res = $json || {};\nconst ok = res.success !== false && res.error === undefined;\nconst base = {\n  workflow: \"Network Sim 02 · Check 1-to-5 Structure\",\n  ok: ok,\n  receivedAt: new Date().toISOString(),\n};\n  base.memberCode = res.memberCode || null;\n  base.directCount = res.directCount !== undefined ? res.directCount : null;\n  base.validStructure = res.validStructure !== undefined ? res.validStructure : null;\nreturn [{ json: Object.assign(base, { result: res }) }];\n"
+      },
+      "id": "c055380b-2783-4c25-9c22-690b2477a739",
+      "name": "สรุปผล",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "9d5de6f2-8e65-44f2-b4b8-0cb6133cf67b",
+      "name": "ตอบกลับ",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        780,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook รับเหตุการณ์": {
+      "main": [
+        [
+          {
+            "node": "ตรวจโครงสร้าง 1 แตก 5 (/api/sim/check)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ตรวจโครงสร้าง 1 แตก 5 (/api/sim/check)": {
+      "main": [
+        [
+          {
+            "node": "สรุปผล",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สรุปผล": {
+      "main": [
+        [
+          {
+            "node": "ตอบกลับ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "",
+    "saveExecutionProgress": true
+  },
+  "active": false,
+  "pinData": {},
+  "versionId": "900b51e7-3b2e-4cd1-916e-f0b41bc4c2fb",
+  "meta": {},
+  "tags": []
+}

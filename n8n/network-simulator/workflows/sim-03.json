@@ -1,0 +1,131 @@
+{
+  "name": "Network Sim 03 · Promotion Rule Engine",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "promotion-check",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "e4d62919-48b7-4788-8064-ed574b63b924",
+      "name": "Webhook รับเหตุการณ์",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "6a3e9ea7-6ada-4da5-9a60-be3d3266b56b"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/sim/promotion-check",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body || {}) }}"
+      },
+      "id": "162328d4-c788-46cd-b4e6-13b806c9ed83",
+      "name": "คำนวณเงื่อนไขเลื่อนตำแหน่ง (/api/sim/promotion-check)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// สรุปผลลัพธ์ของ \"Network Sim 03 · Promotion Rule Engine\"\n// รับข้อมูลจาก HTTP Request node (โหนดก่อนหน้า)\nconst res = $json || {};\nconst ok = res.success !== false && res.error === undefined;\nconst base = {\n  workflow: \"Network Sim 03 · Promotion Rule Engine\",\n  ok: ok,\n  receivedAt: new Date().toISOString(),\n};\n  base.promoted = res.promoted !== undefined ? res.promoted : null;\n  base.fromRank = res.fromRank || null;\n  base.toRank = res.toRank || null;\nreturn [{ json: Object.assign(base, { result: res }) }];\n"
+      },
+      "id": "df9584e0-eecf-40f6-a324-26091994ed9d",
+      "name": "สรุปผล",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "60dfc804-2762-44ea-9549-de124ae474d4",
+      "name": "ตอบกลับ",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        780,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook รับเหตุการณ์": {
+      "main": [
+        [
+          {
+            "node": "คำนวณเงื่อนไขเลื่อนตำแหน่ง (/api/sim/promotion-check)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "คำนวณเงื่อนไขเลื่อนตำแหน่ง (/api/sim/promotion-check)": {
+      "main": [
+        [
+          {
+            "node": "สรุปผล",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สรุปผล": {
+      "main": [
+        [
+          {
+            "node": "ตอบกลับ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "",
+    "saveExecutionProgress": true
+  },
+  "active": false,
+  "pinData": {},
+  "versionId": "d0cc90a6-df83-404e-97fa-d4b0cd8c31e7",
+  "meta": {},
+  "tags": []
+}

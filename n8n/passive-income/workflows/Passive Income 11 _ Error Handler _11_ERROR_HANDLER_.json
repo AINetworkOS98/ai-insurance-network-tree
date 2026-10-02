@@ -1,0 +1,227 @@
+{
+  "name": "Passive Income 11 · Error Handler (11_ERROR_HANDLER)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "c10ea78e-3f37-4a0f-bd6d-bdc809be43dd",
+      "name": "รับ error จาก workflow อื่น",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// §19 WF11 — จัดรูปแบบ error จาก workflow อื่น + ประเมินความรุนแรง\nconst e = ($json && typeof $json === 'object') ? $json : {};\nconst exec = e.execution || {};\nconst wfInfo = e.workflow || {};\nconst err = exec.error || e.error || {};\nconst node = err.node || {};\nconst msg = String(err.message || e.message || 'unknown error');\nconst stack = String(err.stack || '').slice(0, 600);\nconst workflowName = wfInfo.name || e.workflowName || 'unknown workflow';\nconst executionId = exec.id || e.executionId || null;\nconst url = exec.url || (executionId ? ('http://localhost:5679/execution/' + executionId) : null);\nconst critical = /credential|auth|401|403|payment|database|prisma|ECONN|timeout|out of memory|EACCES/i.test(msg)\n  || /payment required|no credit/i.test(msg);\nconst severity = critical ? 'critical' : (/429|503|rate limit|temporar/i.test(msg) ? 'transient' : 'normal');\nconst at = new Date().toISOString();\nreturn [{ json: { ok: false, severity, critical, workflowName, executionId, url,\n  node: node.name || e.nodeName || null, message: msg, stack,\n  retryHint: severity === 'transient' ? 'ล้มเหลวชั่วคราว — ระบบจะ retry อัตโนมัติในรอบถัดไป' : 'ต้องตรวจสอบด้วยคน',\n  detail: 'ผิดพลาดใน ' + workflowName + (node.name ? (' · node ' + node.name) : '') + '\\\\nสาเหตุ: ' + msg\n    + '\\\\nระดับ: ' + severity + (url ? ('\\\\nดูรายละเอียด: ' + url) : ''),\n  at,\n  dedupeKey: 'pi11:' + workflowName + ':' + String(msg).slice(0, 60) } }];\n"
+      },
+      "id": "5ebae657-df07-4e68-9050-98fa1a040849",
+      "name": "จัดรูปแบบ error + ประเมินความรุนแรง",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/agent-log",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: 'PI 11 Error Handler', ok: false, stage: 'workflow-error', detail: $json.detail + '\\nseverity=' + $json.severity + ' · executionId=' + ($json.executionId || '-'), errorWorkflow: $json.workflowName, severity: $json.severity }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "7d314e9d-77c8-40f2-960c-97a71118788a",
+      "name": "แจ้งผู้ดูแลทันที (/api/agent-log)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "fb11e5a4-2d33-4924-bc0a-e23f3ec3f1c5",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              },
+              "leftValue": "={{ $json.critical }}",
+              "rightValue": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8fd738ec-c779-4701-b438-88734765a7df",
+      "name": "ต้องสร้างงานแก้ไข (critical) หรือไม่",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/agent-tasks",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'data_cleanup', priority: 'urgent', status: 'open', title: 'แก้ error: ' + $json.workflowName + ($json.node ? (' / ' + $json.node) : ''), note: $json.detail + '\\n\\nstack: ' + $json.stack, dedupeKey: $json.dedupeKey, source: 'n8n-pi-11' }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "7d6aa100-fbb1-4579-b2a3-78837fe1cb76",
+      "name": "สร้างงานแก้ไข (/api/agent-tasks)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        -160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst log = $json || {};\nconst e = $('จัดรูปแบบ error + ประเมินความรุนแรง').first().json;\nreturn [{ json: { ok: false, severity: e.severity, workflow: e.workflowName, node: e.node,\n  executionId: e.executionId, taskId: log.taskId || null, emailed: log.email || 'skipped',\n  retryHint: e.retryHint, url: e.url } }];\n"
+      },
+      "id": "46b5089d-2860-4874-8481-9200d61a9a85",
+      "name": "สรุปเหตุการณ์ (critical)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst e = $('จัดรูปแบบ error + ประเมินความรุนแรง').first().json;\nreturn [{ json: { ok: false, severity: e.severity, workflow: e.workflowName, node: e.node,\n  executionId: e.executionId, retryHint: e.retryHint, url: e.url, handled: true } }];\n"
+      },
+      "id": "3a9851a6-91f8-4be2-b91f-70a5f1e3ae91",
+      "name": "สรุปเหตุการณ์ (ทั่วไป)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        160
+      ]
+    }
+  ],
+  "connections": {
+    "รับ error จาก workflow อื่น": {
+      "main": [
+        [
+          {
+            "node": "จัดรูปแบบ error + ประเมินความรุนแรง",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "จัดรูปแบบ error + ประเมินความรุนแรง": {
+      "main": [
+        [
+          {
+            "node": "แจ้งผู้ดูแลทันที (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "แจ้งผู้ดูแลทันที (/api/agent-log)": {
+      "main": [
+        [
+          {
+            "node": "ต้องสร้างงานแก้ไข (critical) หรือไม่",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ต้องสร้างงานแก้ไข (critical) หรือไม่": {
+      "main": [
+        [
+          {
+            "node": "สร้างงานแก้ไข (/api/agent-tasks)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "สรุปเหตุการณ์ (ทั่วไป)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สร้างงานแก้ไข (/api/agent-tasks)": {
+      "main": [
+        [
+          {
+            "node": "สรุปเหตุการณ์ (critical)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": true,
+  "versionId": "2446d4bb-705d-419a-a23e-76caf4b345a8"
+}

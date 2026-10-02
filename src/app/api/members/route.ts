@@ -1,0 +1,142 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { getDb } from '@/lib/firebase-admin';
+import { rankName } from '@/lib/rankCatalog';
+import { verifyToken } from '@/lib/auth';
+
+interface FirestoreMember {
+  id: string;
+  memberCode?: string;
+  displayName?: string;
+  name?: string;
+  positionId?: string;
+  role?: string;
+  status?: string;
+  rankLevel?: number;
+  rankName?: string;
+  province?: string;
+  district?: string;
+  subdistrict?: string;
+  addressLine?: string;
+  zipCode?: string;
+  lineId?: string;
+  facebookUrl?: string;
+  tiktokUrl?: string;
+  referralCode?: string;
+  branch?: string;
+  personalFYC?: number;
+  personalCOM?: number;
+  sponsorId?: string;
+  joinDate?: string;
+  uid?: string;
+  email?: string;
+  phone?: string;
+  avatarUrl?: string;
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    // ต้องเข้าสู่ระบบก่อน — ห้ามเปิดทะเบียนสมาชิกให้คนภายนอก (ชื่อ/อีเมล/รหัสแนะนำ)
+    const token = (await cookies()).get('token')?.value;
+    const session = token ? verifyToken(token) : null;
+    if (!session) {
+      return NextResponse.json({ ok: false, error: 'ต้องเข้าสู่ระบบก่อน' }, { status: 401 });
+    }
+    const db = getDb();
+    const { searchParams } = new URL(req.url);
+    const memberId = searchParams.get('memberId');
+    
+    if (memberId) {
+      // Single member detail
+      const memberRef = db.collection('members').doc(memberId);
+      const memberSnap = await memberRef.get();
+      
+      if (!memberSnap.exists) {
+        return NextResponse.json({ ok: false, error: 'ไม่พบสมาชิก' }, { status: 404 });
+      }
+      
+      const member: FirestoreMember = { id: memberSnap.id, ...memberSnap.data() } as FirestoreMember;
+      
+      // Also get memberAccess
+      const accessRef = db.collection('memberAccess').doc(member.uid || '');
+      const accessSnap = await accessRef.get();
+      
+      return NextResponse.json({ ok: true, member, memberAccess: accessSnap.exists ? accessSnap.data() : null });
+    }
+    
+    // List all members — รวมฐานเดียวกับ /settings (Prisma User) + Firestore members
+    let members: FirestoreMember[] = [];
+    // 1) Prisma users (ฐานหลักจาก /settings และ /register)
+    try{
+      const { prisma } = await import('@/lib/prisma');
+      const users = await prisma.user.findMany({ take: 100, orderBy:{ createdAt:'desc' }, select:{ id:true, email:true, firstName:true, lastName:true, displayName:true, phone:true, province:true, district:true, subdistrict:true, addressLine:true, zipCode:true, lineId:true, facebookUrl:true, tiktokUrl:true, memberCode:true, referralCode:true, status:true, rankLevel:true, createdAt:true } as any });
+      for(const u of users as any[]){
+        members.push({
+          id: u.id,
+          memberCode: u.memberCode || undefined,
+          name: u.displayName || `${u.firstName||''} ${u.lastName||''}`.trim() || u.email,
+          status: String(u.status||'PENDING'),
+          rankLevel: (u as any).rankLevel ?? 0,
+          rankName: rankName((u as any).rankLevel ?? 0),
+          province: u.province || undefined,
+          district: u.district || undefined,
+          subdistrict: u.subdistrict || undefined,
+          addressLine: (u as any).addressLine || undefined,
+          zipCode: (u as any).zipCode || undefined,
+          lineId: (u as any).lineId || undefined,
+          facebookUrl: (u as any).facebookUrl || undefined,
+          tiktokUrl: (u as any).tiktokUrl || undefined,
+          referralCode: u.referralCode || undefined,
+          email: u.email || undefined,
+          phone: u.phone || undefined,
+          joinDate: u.createdAt ? new Date(u.createdAt).toISOString() : undefined,
+          uid: u.id,
+          avatarUrl: u.avatarUrl || undefined,
+        });
+      }
+    }catch(e){ console.error('prisma members fetch skipped', (e as any)?.message); }
+    
+    return NextResponse.json({ ok: true, members });
+    
+  } catch (error: any) {
+    console.error('Members list error:', error);
+    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  }
+}
+export async function PUT(req: NextRequest){
+  try{
+    const body = await req.json().catch(()=>({}));
+    const token = req.cookies.get('token')?.value || req.cookies.get('auth_token')?.value || req.headers.get('authorization')?.replace(/^Bearer\s+/i,'') || '';
+    let userId:string|null = null;
+    if(token){
+      try{ const { verifyToken } = await import('@/lib/auth'); const p:any = verifyToken(token); if(p?.sub) userId = String(p.sub); }catch{}
+    }
+    const allowed = ['firstName','lastName','phone','nickname','occupation','province','district','subdistrict','addressLine','zipCode','lineId','facebookUrl','tiktokUrl'];
+    const data:any = {};
+    for(const k of allowed){ if(typeof body[k]==='string') data[k]= String(body[k]).trim() || null; }
+    if(userId){
+      const { prisma } = await import('@/lib/prisma');
+      const updated = await prisma.user.update({ where:{ id:userId }, data }).catch(async (e:any)=>{
+        if(String(e?.code)==='P2022' || String(e?.message)?.includes('column')){
+          const fb:any={}; for(const k of ['firstName','lastName','phone','province']){ if(data[k]!==undefined) fb[k]=data[k]; }
+          return prisma.user.update({ where:{ id:userId }, data: fb });
+        }
+        throw e;
+      });
+      try{
+        const db=getDb();
+        const snap = await db.collection('members').where('uid','==',userId).limit(1).get().catch(()=>null);
+        if(snap && !snap.empty) await snap.docs[0].ref.update({ ...data, updatedAt: new Date().toISOString() }).catch(()=>null);
+      }catch{}
+      return NextResponse.json({ ok:true, memberCode: (updated as any).memberCode, referralCode: (updated as any).referralCode });
+    }
+    try{
+      const db=getDb();
+      const snap = await db.collection('members').limit(1).get();
+      if(!snap.empty){ await snap.docs[0].ref.update({ ...data, updatedAt: new Date().toISOString() }); return NextResponse.json({ ok:true }); }
+    }catch{}
+    return NextResponse.json({ ok:false, error:'กรุณาเข้าสู่ระบบก่อนบันทึก' }, {status:401});
+  }catch(e:any){
+    return NextResponse.json({ ok:false, error:e?.message||'error' }, {status:500});
+  }
+}

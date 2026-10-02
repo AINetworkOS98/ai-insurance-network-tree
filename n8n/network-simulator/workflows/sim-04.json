@@ -1,0 +1,131 @@
+{
+  "name": "Network Sim 04 · Payment Verification (DEMO)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "payment-verified",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "35e27581-02c1-4748-97d6-6a533e4dabeb",
+      "name": "Webhook รับเหตุการณ์",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "dfe8916e-d9cb-471f-95b3-f6949948d961"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/sim/payment",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body || {}) }}"
+      },
+      "id": "102d1b8a-679d-4d26-a343-db8866c60a1a",
+      "name": "ตรวจสอบการชำระเงิน DEMO (/api/sim/payment)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// สรุปผลลัพธ์ของ \"Network Sim 04 · Payment Verification (DEMO)\"\n// รับข้อมูลจาก HTTP Request node (โหนดก่อนหน้า)\nconst res = $json || {};\nconst ok = res.success !== false && res.error === undefined;\nconst base = {\n  workflow: \"Network Sim 04 · Payment Verification (DEMO)\",\n  ok: ok,\n  receivedAt: new Date().toISOString(),\n};\n  base.verified = res.verified !== undefined ? res.verified : null;\n  base.paymentId = res.paymentId || null;\n  base.amount = res.amount !== undefined ? res.amount : null;\nreturn [{ json: Object.assign(base, { result: res }) }];\n"
+      },
+      "id": "bd9bf7bd-0a65-463b-ac33-0665adb86fc1",
+      "name": "สรุปผล",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "b495ff43-a8f6-4a33-b8fd-d593f47d56b4",
+      "name": "ตอบกลับ",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        780,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook รับเหตุการณ์": {
+      "main": [
+        [
+          {
+            "node": "ตรวจสอบการชำระเงิน DEMO (/api/sim/payment)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ตรวจสอบการชำระเงิน DEMO (/api/sim/payment)": {
+      "main": [
+        [
+          {
+            "node": "สรุปผล",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สรุปผล": {
+      "main": [
+        [
+          {
+            "node": "ตอบกลับ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "",
+    "saveExecutionProgress": true
+  },
+  "active": false,
+  "pinData": {},
+  "versionId": "3cd7c3ae-03a8-434d-8411-ce588c448770",
+  "meta": {},
+  "tags": []
+}

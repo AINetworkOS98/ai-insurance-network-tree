@@ -1,0 +1,325 @@
+{
+  "name": "Passive Income 07 · Weekly Report (07_WEEKLY_REPORT)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1"
+            }
+          ]
+        },
+        "options": {
+          "timezone": "Asia/Bangkok"
+        }
+      },
+      "id": "7aed0d4e-75ee-4747-9224-dcc06ea79705",
+      "name": "ทุกวันจันทร์ 09:00 (Asia/Bangkok)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/dashboard/leads?limit=500",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "716b7619-41a4-4842-9009-3fba06802c58",
+      "name": "รวบรวม: ผู้สนใจ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        -160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/members/count",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "c1b2e14f-40d8-491c-822c-cfa59c2a55ca",
+      "name": "รวบรวม: สมาชิก",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        -160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/followup/due?window=2d&limit=200",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "183ba5cc-d79e-44fa-bb44-5eb6256d677b",
+      "name": "รวบรวม: ติดตาม",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        -160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst pick = (names) => { for (const n of names) { try { const j = $(n).first().json; if (j) return j; } catch (e) {} } return {}; };\n\n// §19 WF07 — รวบรวมข้อมูลสัปดาห์ + ประวัติ KPI 7 วันล่าสุด\nconst leads = pick(['รวบรวม: ผู้สนใจ']);\nconst members = pick(['รวบรวม: สมาชิก']);\nconst follow = pick(['รวบรวม: ติดตาม']);\nconst stats = leads.stats || {};\nconst sd = $getWorkflowStaticData('global');\nconst history = (Array.isArray(sd.history) ? sd.history : []).slice(-7);\nconst first = history.length ? history[0] : null;\nconst last = history.length ? history[history.length - 1] : null;\nconst delta = (k) => (first && last && typeof first[k] === 'number' && typeof last[k] === 'number') ? last[k] - first[k] : null;\nconst week = {\n  weekEnding: new Date().toISOString().slice(0, 10),\n  leadsNow: Number(leads.total || 0), leadsHigh: Number(stats.high || 0), leadsInterested: Number(stats.interested || 0),\n  membersNow: Number(members.total || 0), membersActive: Number(members.active || 0),\n  followupDueNow: Number(follow.followUps ? follow.followUps.length : (follow.due || 0)),\n  snapshots: history.length,\n  growth: { members: delta('members'), leads: delta('leadsTotal'), hot: delta('leadsHigh'), tasks: delta('tasksOpen') },\n};\nreturn [{ json: { week, history, dataReady: true } }];\n"
+      },
+      "id": "4f990841-4029-456c-9bb4-374e62a64851",
+      "name": "รวบรวมข้อมูลสัปดาห์",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify($json.week) }}",
+        "options": {
+          "systemMessage": "คุณเป็นที่ปรึกษาการเติบโตธุรกิจตัวแทนประกันในประเทศไทย (AI Insurance Network Tree)\nสรุปภาพรวมสัปดาห์ที่ผ่านมาเป็นภาษาไทย 4-6 บรรทัด (bullet ได้) ให้ครบ:\n1) สิ่งที่ดีขึ้น 2) จุดที่ต้องแก้ 3) งานที่ควรทำสัปดาห์หน้า 3 ข้อ\nอ้างอิงจากตัวเลขที่ให้มาเท่านั้น ห้ามแต่งตัวเลขขึ้นเอง ถ้าข้อมูลไม่พอให้บอกตรง ๆ ว่าข้อมูลยังน้อย"
+        }
+      },
+      "id": "fba654fd-89c4-4b75-a0e1-e840ae19cd4d",
+      "name": "AI สรุปภาพรวมรายสัปดาห์ (Gemini)",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        -160
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 10000
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gemini-3.5-flash-lite"
+        },
+        "options": {}
+      },
+      "id": "15d4b4da-ce7c-414e-a7de-db9bc9e5a90d",
+      "name": "Gemini Chat Model (Weekly)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        80
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "openrouter-workflow-1790828913760",
+          "name": "Google Gemini API (OpenAI-compatible)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/agent-log",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: 'PI 07 Weekly Report', ok: true, stage: 'weekly-report', detail: 'รายงานสัปดาห์ ปิดวันที่ ' + $('รวบรวมข้อมูลสัปดาห์').first().json.week.weekEnding + ' | ' + ($('AI สรุปภาพรวมรายสัปดาห์ (Gemini)').first().json.output || '') + ' | ตัวเลข: ' + JSON.stringify($('รวบรวมข้อมูลสัปดาห์').first().json.week) }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "90b89e50-e2fc-4643-bf1a-749089b49d2f",
+      "name": "ส่งรายงานสัปดาห์ (/api/agent-log)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        -160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst log = $json || {};\nconst w = $('รวบรวมข้อมูลสัปดาห์').first().json;\nreturn [{ json: { ok: log.ok === true, emailed: log.email || 'skipped', week: w.week,\n  aiSummary: String($('AI สรุปภาพรวมรายสัปดาห์ (Gemini)').first().json.output || '').slice(0, 600) } }];\n"
+      },
+      "id": "e1d56505-4ab1-47a9-a517-5e15d93ebb1e",
+      "name": "สรุปผลรายงานสัปดาห์",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        -160
+      ]
+    }
+  ],
+  "connections": {
+    "ทุกวันจันทร์ 09:00 (Asia/Bangkok)": {
+      "main": [
+        [
+          {
+            "node": "รวบรวม: ผู้สนใจ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "รวบรวม: ผู้สนใจ": {
+      "main": [
+        [
+          {
+            "node": "รวบรวม: สมาชิก",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "รวบรวม: สมาชิก": {
+      "main": [
+        [
+          {
+            "node": "รวบรวม: ติดตาม",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "รวบรวม: ติดตาม": {
+      "main": [
+        [
+          {
+            "node": "รวบรวมข้อมูลสัปดาห์",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "รวบรวมข้อมูลสัปดาห์": {
+      "main": [
+        [
+          {
+            "node": "AI สรุปภาพรวมรายสัปดาห์ (Gemini)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI สรุปภาพรวมรายสัปดาห์ (Gemini)": {
+      "main": [
+        [
+          {
+            "node": "ส่งรายงานสัปดาห์ (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ส่งรายงานสัปดาห์ (/api/agent-log)": {
+      "main": [
+        [
+          {
+            "node": "สรุปผลรายงานสัปดาห์",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Chat Model (Weekly)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI สรุปภาพรวมรายสัปดาห์ (Gemini)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "a7d8069f-ac7a-4919-b0ff-d4d6e51a263b"
+  },
+  "active": true,
+  "versionId": "3fed6358-b588-4f55-9d20-7eb3356e4510"
+}

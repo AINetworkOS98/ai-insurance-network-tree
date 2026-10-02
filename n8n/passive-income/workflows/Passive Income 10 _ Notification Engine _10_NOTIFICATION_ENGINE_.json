@@ -1,0 +1,372 @@
+{
+  "name": "Passive Income 10 · Notification Engine (10_NOTIFICATION_ENGINE)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pi-notify",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "e89cba7d-c857-4cd2-b267-3c59391634d2",
+      "name": "Webhook รับ Event แจ้งเตือน",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        -160
+      ],
+      "webhookId": "b757bb94-1dab-4c06-a540-0cd66076fde1"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// §19 WF10 — คัดกรองการแจ้งเตือน: กันซ้ำ + ช่วงเวลางดรบกวน + จัดลำดับความสำคัญ\nconst body = ($json.body && typeof $json.body === 'object') ? $json.body : ($json || {});\nconst s = (v, m) => (v === null || v === undefined) ? '' : String(v).trim().slice(0, m);\nconst TYPE_MAP = {\n  lead_new: { level: 'normal', label: 'ผู้สนใจใหม่' }, lead_hot: { level: 'urgent', label: 'ผู้สนใจคะแนนสูง' },\n  followup_due: { level: 'high', label: 'ถึงกำหนดติดตาม' }, appointment: { level: 'high', label: 'นัดหมาย' },\n  income: { level: 'normal', label: 'รายได้/ค่าตอบแทน' }, member_new: { level: 'normal', label: 'สมาชิกใหม่' },\n  system: { level: 'low', label: 'ระบบ' }, error: { level: 'urgent', label: 'ข้อผิดพลาดระบบ' },\n};\nconst key = s(body.event || body.type || 'system', 40).toLowerCase();\nconst meta = TYPE_MAP[key] || { level: s(body.level, 20) || 'normal', label: key };\nconst dedupeKey = s(body.dedupeKey || body.idempotencyKey, 160) || (key + ':' + s(body.subject || body.detail, 80));\nconst sd = $getWorkflowStaticData('global');\nsd.seen = sd.seen || {};\nsd.queue = Array.isArray(sd.queue) ? sd.queue : [];\nconst now = Date.now();\nif (sd.seen[dedupeKey] && now - sd.seen[dedupeKey] < 6 * 3600e3) {\n  return [{ json: { ok: true, sent: false, reason: 'duplicate', dedupeKey, level: meta.level, label: meta.label } }];\n}\nsd.seen[dedupeKey] = now;\nconst keys = Object.keys(sd.seen);\nif (keys.length > 400) for (const k of keys.sort((a, b) => sd.seen[a] - sd.seen[b]).slice(0, 200)) delete sd.seen[k];\nconst hourBkk = Number(new Date().toLocaleString('en-GB', { timeZone: 'Asia/Bangkok', hour: '2-digit', hour12: false }));\nconst quiet = hourBkk >= 22 || hourBkk < 7;\nconst urgent = meta.level === 'urgent';\nconst shouldSend = urgent || !quiet;\nconst item = { dedupeKey, event: key, label: meta.label, level: meta.level, quiet, urgent,\n  title: s(body.subject || body.title, 160) || meta.label, detail: s(body.detail || body.message, 900),\n  prospectId: body.prospectId || null, agent: s(body.agent, 80) || null, at: new Date().toISOString() };\nif (!shouldSend) {\n  sd.queue.push(item);\n  if (sd.queue.length > 100) sd.queue = sd.queue.slice(-100);\n  return [{ json: Object.assign({}, item, { ok: true, sent: false, reason: 'quiet_hours_queued', queueSize: sd.queue.length, shouldSend: false }) }];\n}\nreturn [{ json: Object.assign({}, item, { ok: true, sent: true, shouldSend: true }) }];\n"
+      },
+      "id": "e9a5fa92-1254-4d01-b5b1-f3d446e939da",
+      "name": "คัดกรอง + กันซ้ำ + ช่วงเวลางดรบกวน",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "45ed0174-55fb-42ec-b2aa-f20ee1b1ea36",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              },
+              "leftValue": "={{ $json.shouldSend }}",
+              "rightValue": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bec58a80-c2a5-40c2-88db-efabb6c80fde",
+      "name": "ส่งทันทีหรือไม่",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "d214cb1f-8989-4486-9618-94e0668b9220",
+      "name": "ตอบกลับ (เข้าคิว/ปิดแจ้งเตือน)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/agent-log",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: 'PI 10 Notification Engine', ok: true, stage: $json.event, detail: '[' + $json.level + '] ' + $json.label + ' — ' + $json.title + ($json.detail ? ('\\n' + $json.detail) : '') + ($json.agent ? ('\\nตัวแทน: ' + $json.agent) : ''), level: $json.level, dedupeKey: $json.dedupeKey, prospectId: $json.prospectId }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "2204cf59-e859-4e7d-8d4f-81117d32df39",
+      "name": "ส่งแจ้งเตือน (/api/agent-log)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        -280
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "984ae8fd-54a9-4963-a570-98859041c433",
+      "name": "ตอบกลับ (ส่งแล้ว)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        -280
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "6a723d62-f993-4b31-96d6-a05210df62fc",
+      "name": "ทุก 30 นาที (ปล่อยคิว)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// ปล่อยคิวที่ค้างช่วงเวลางดรบกวน\nconst sd = $getWorkflowStaticData('global');\nsd.queue = Array.isArray(sd.queue) ? sd.queue : [];\nconst hourBkk = Number(new Date().toLocaleString('en-GB', { timeZone: 'Asia/Bangkok', hour: '2-digit', hour12: false }));\nconst canFlush = !(hourBkk >= 22 || hourBkk < 7);\nconst out = canFlush ? sd.queue : [];\nif (canFlush) sd.queue = [];\nreturn [{ json: { canFlush, flushed: out.length, pending: sd.queue.length, items: out,\n  digest: out.map(i => '• [' + i.level + '] ' + i.label + ' — ' + i.title + (i.detail ? (' · ' + i.detail) : '')).join('\\n') } }];\n"
+      },
+      "id": "3c5c97e3-39bd-4859-8a88-a2efbd4aeeb2",
+      "name": "ปล่อยคิวหลังเวลาเงียบ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "ce83f58e-619f-4f8c-abaa-34f3bfa8b2ba",
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              },
+              "leftValue": "={{ $json.flushed }}",
+              "rightValue": 1
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f94accf8-31d8-40be-8545-6b2275d89d8e",
+      "name": "มีคิวที่ต้องปล่อยหรือไม่",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        200
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "dff6f5eb-90be-4552-bc2c-91ff92c00f4a",
+      "name": "ไม่มีคิวค้าง",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        660,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/agent-log",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: 'PI 10 Notification Engine', ok: true, stage: 'digest', detail: 'สรุปการแจ้งเตือนที่ค้างช่วงเวลาเงียบ ' + $json.flushed + ' รายการ\\n' + $json.digest }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "873dee4c-a450-4970-88f9-8c2174b2488e",
+      "name": "ส่งสรุปคิว (/api/agent-log)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        200
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst log = $json || {};\nconst f = $('ปล่อยคิวหลังเวลาเงียบ').first().json;\nreturn [{ json: { ok: true, flushed: f.flushed, emailed: log.email || 'skipped', pending: f.pending } }];\n"
+      },
+      "id": "cc54466a-442a-4c63-a1f6-ce4b483fba8f",
+      "name": "สรุปการปล่อยคิว",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        200
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook รับ Event แจ้งเตือน": {
+      "main": [
+        [
+          {
+            "node": "คัดกรอง + กันซ้ำ + ช่วงเวลางดรบกวน",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "คัดกรอง + กันซ้ำ + ช่วงเวลางดรบกวน": {
+      "main": [
+        [
+          {
+            "node": "ส่งทันทีหรือไม่",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ส่งทันทีหรือไม่": {
+      "main": [
+        [
+          {
+            "node": "ส่งแจ้งเตือน (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ตอบกลับ (เข้าคิว/ปิดแจ้งเตือน)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ส่งแจ้งเตือน (/api/agent-log)": {
+      "main": [
+        [
+          {
+            "node": "ตอบกลับ (ส่งแล้ว)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ทุก 30 นาที (ปล่อยคิว)": {
+      "main": [
+        [
+          {
+            "node": "ปล่อยคิวหลังเวลาเงียบ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ปล่อยคิวหลังเวลาเงียบ": {
+      "main": [
+        [
+          {
+            "node": "มีคิวที่ต้องปล่อยหรือไม่",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "มีคิวที่ต้องปล่อยหรือไม่": {
+      "main": [
+        [
+          {
+            "node": "ส่งสรุปคิว (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ไม่มีคิวค้าง",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ส่งสรุปคิว (/api/agent-log)": {
+      "main": [
+        [
+          {
+            "node": "สรุปการปล่อยคิว",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "a7d8069f-ac7a-4919-b0ff-d4d6e51a263b"
+  },
+  "active": true,
+  "versionId": "91b81345-b2d2-4dab-b3bf-801b8aa99577"
+}

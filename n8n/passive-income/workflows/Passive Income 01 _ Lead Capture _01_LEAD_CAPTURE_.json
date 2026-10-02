@@ -1,0 +1,426 @@
+{
+  "name": "Passive Income 01 · Lead Capture (01_LEAD_CAPTURE)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pi-lead-capture",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "7ddb97bb-4ec8-4e83-a257-479e49367ac1",
+      "name": "Webhook รับ Lead (ทุกช่องทาง)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "7063d426-5fd4-4a0c-bee8-9466c4cc10da"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// §19 WF01 — รับ Lead จากทุกช่องทาง → รูปแบบเดียวกับ POST /api/lead/register\nconst body = ($json.body && typeof $json.body === 'object') ? $json.body : ($json || {});\nconst s = (v, max) => (v === null || v === undefined) ? '' : String(v).trim().slice(0, max);\nconst CH = { website: 'website_lead_box', web: 'website_lead_box', facebook: 'facebook_lead_ads', fb: 'facebook_lead_ads',\n  line: 'line_oa', linetv: 'line_oa', tiktok: 'tiktok', tt: 'tiktok', ig: 'instagram', instagram: 'instagram',\n  phone: 'phone_call', call: 'phone_call', manual: 'manual_entry', agent: 'agent_referral', referral: 'agent_referral' };\nconst rawChannel = (s(body.channel || body.source || (body.utm && body.utm.source) || 'website', 40) || 'website').toLowerCase();\nconst channel = CH[rawChannel] || rawChannel;\nlet interests = [];\nif (Array.isArray(body.interests)) interests = body.interests.map(x => s(x, 60)).filter(Boolean);\nelse if (typeof body.interests === 'string') interests = body.interests.split(/[,;|]/).map(x => x.trim()).filter(Boolean);\nif (!interests.length && typeof body.interest === 'string') interests = [s(body.interest, 60)];\nconst c = (body.consent && typeof body.consent === 'object') ? body.consent : {};\nconst pdpa = c.pdpa === true || body.pdpaConsent === true || body.consent === true;\nconst marketing = c.marketing === true || body.marketingConsent === true;\nconst payload = {\n  fullName: s(body.fullName || body.name || ((s(body.firstName,60) + ' ' + s(body.lastName,60)).trim()), 120),\n  phone: s(body.phone || body.tel, 30),\n  email: s(body.email, 120).toLowerCase(),\n  nickname: s(body.nickname, 60) || undefined,\n  province: s(body.province, 60) || undefined,\n  occupation: s(body.occupation, 80) || undefined,\n  ageRange: s(body.ageRange || body.age_range, 20) || undefined,\n  lineId: s(body.lineId || body.line_id, 60) || undefined,\n  interests: interests.slice(0, 8),\n  callbackRequested: !!(body.callbackRequested || body.callback_requested || body.callback),\n  consent: { pdpa: pdpa, marketing: marketing, version: s(c.version || body.consentVersion, 12) || '1.0' },\n  visitorId: s(body.visitorId || body.visitor_id, 64) || undefined,\n  source: channel,\n  ref: s(body.ref || body.referralCode, 40) || undefined,\n  utm: (body.utm && typeof body.utm === 'object') ? body.utm : { source: rawChannel, campaign: s(body.campaign, 80) || undefined },\n};\nconst missing = [];\nif (!payload.fullName) missing.push('fullName');\nif (!payload.phone && !payload.email) missing.push('phone หรือ email');\nreturn [{ json: { channel, payload, missing, pdpa, receivedAt: new Date().toISOString(),\n  intakeOk: missing.length === 0 && pdpa } }];\n"
+      },
+      "id": "f67853a7-b54e-4e22-9724-66a481a8edf0",
+      "name": "แปลงข้อมูล Lead + ตรวจ PDPA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "00c03ffd-26da-4dd0-b56c-c78be48ff3d0",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              },
+              "leftValue": "={{ $json.pdpa }}",
+              "rightValue": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f0f9501e-8848-475e-b73f-2be50fd1f6f6",
+      "name": "ยินยอม PDPA หรือไม่",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/lead/register",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.payload) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "1f2c8e7a-51d1-46c5-b30f-63c3a8d3856a",
+      "name": "ลงทะเบียน Lead (/api/lead/register)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        -160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// สรุปผลจาก /api/lead/register → ใช้ตัดสินว่าจะแจ้งเตือน/สร้างงานอย่างไร\nconst reg = $json || {};\nconst src = $('แปลงข้อมูล Lead + ตรวจ PDPA').first().json;\nconst lead = reg.lead || {};\nconst score = Number(lead.score || 0);\nreturn [{ json: {\n  ok: reg.ok === true,\n  existing: reg.existing === true,\n  prospectId: lead.prospectId || lead.id || null,\n  name: lead.name || src.payload.fullName,\n  phone: src.payload.phone || null,\n  email: src.payload.email || null,\n  channel: src.channel,\n  interests: src.payload.interests || [],\n  callbackRequested: src.payload.callbackRequested,\n  score: score,\n  level: lead.level || 'LOW',\n  hot: score >= 70,\n  preferredChannel: reg.preferredChannel || null,\n  consent: reg.consent || src.payload.consent,\n  topics: reg.topics || [],\n  error: reg.error || null,\n  message: reg.message || '',\n} }];\n"
+      },
+      "id": "e795409c-66ea-49ff-9257-4ccb2f0e0d4f",
+      "name": "สรุปผลลัพธ์ Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/agent-log",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: 'PI 01 Lead Capture', ok: $json.ok, stage: $json.hot ? 'hot-lead' : 'new-lead', detail: 'Lead ใหม่ · ช่องทาง ' + $json.channel + ' · ' + $json.name + ' · โทร ' + ($json.phone || '-') + ' · อีเมล ' + ($json.email || '-') + ' · คะแนน ' + $json.score + ' (' + $json.level + ')' + ' · ความสนใจ ' + JSON.stringify($json.interests) + ($json.callbackRequested ? ' · ขอให้ติดต่อกลับ' : '') + ($json.existing ? ' · (มีข้อมูลอยู่แล้ว)' : ''), prospectId: $json.prospectId, leadScore: $json.score, leadLevel: $json.level }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "3959e993-39b5-4991-929b-c696874c063a",
+      "name": "แจ้งเตือนทีมขาย (/api/agent-log)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        -160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "27585e6f-07d7-4fc0-8f22-d5550ab902b7",
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              },
+              "leftValue": "={{ $('สรุปผลลัพธ์ Lead').first().json.score }}",
+              "rightValue": 70
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "60c8ab7f-11fe-4664-a0d6-c90d47fc379b",
+      "name": "คะแนนถึงเกณฑ์ HOT (≥70) หรือไม่",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1340,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/agent-tasks",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ prospectId: $('สรุปผลลัพธ์ Lead').first().json.prospectId, type: 'high_intent_lead', priority: $('สรุปผลลัพธ์ Lead').first().json.score >= 85 ? 'urgent' : 'high', stage: $('สรุปผลลัพธ์ Lead').first().json.level, status: 'open', score: $('สรุปผลลัพธ์ Lead').first().json.score, level: $('สรุปผลลัพธ์ Lead').first().json.level, dedupeKey: 'pi01:hot:' + $('สรุปผลลัพธ์ Lead').first().json.prospectId, note: 'Lead HOT จากช่องทาง ' + $('สรุปผลลัพธ์ Lead').first().json.channel + ' — โทรติดต่อภายใน 30 นาที\\nความสนใจ: ' + JSON.stringify($('สรุปผลลัพธ์ Lead').first().json.interests), contact: { phone: $('สรุปผลลัพธ์ Lead').first().json.phone, email: $('สรุปผลลัพธ์ Lead').first().json.email, channel: $('สรุปผลลัพธ์ Lead').first().json.preferredChannel || 'phone' }, source: 'n8n-pi-01' }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "047d98da-ba1e-43a0-a99d-8fb5544d95e5",
+      "name": "สร้างงานให้ตัวแทน (/api/agent-tasks)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        -300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/agent-log",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: 'PI 01 Lead Capture', ok: true, stage: 'hot-lead-alert', detail: 'HOT LEAD — ต้องติดต่อทันที · ' + ($('สรุปผลลัพธ์ Lead').first().json.name || '') + ' · โทร ' + ($('สรุปผลลัพธ์ Lead').first().json.phone || '-') + ' · คะแนน ' + ($('สรุปผลลัพธ์ Lead').first().json.score ?? '-') + ' → taskId ' + ($json.taskId || '-'), taskId: $json.taskId, prospectId: $('สรุปผลลัพธ์ Lead').first().json.prospectId }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "7f25c4b8-c59d-4cbe-ab4c-88f4a371fc87",
+      "name": "แจ้งเตือน Lead HOT (/api/agent-log)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1780,
+        -300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "10edfb61-d8fe-4069-940c-eb3ea489d213",
+      "name": "ตอบกลับ (Lead HOT)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2000,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "617d0bbf-7381-4278-a49d-575d06492b85",
+      "name": "ตอบกลับ (Lead ปกติ)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1560,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, code: 'consent_required', error: 'ต้องได้รับความยินยอม (PDPA) ก่อนบันทึกข้อมูล', missing: $json.missing }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "b7cfd966-5507-4ec1-aeb5-900e7dc1d1d8",
+      "name": "ตอบกลับ (ไม่ผ่าน PDPA)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        680,
+        160
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook รับ Lead (ทุกช่องทาง)": {
+      "main": [
+        [
+          {
+            "node": "แปลงข้อมูล Lead + ตรวจ PDPA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "แปลงข้อมูล Lead + ตรวจ PDPA": {
+      "main": [
+        [
+          {
+            "node": "ยินยอม PDPA หรือไม่",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ยินยอม PDPA หรือไม่": {
+      "main": [
+        [
+          {
+            "node": "ลงทะเบียน Lead (/api/lead/register)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ตอบกลับ (ไม่ผ่าน PDPA)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ลงทะเบียน Lead (/api/lead/register)": {
+      "main": [
+        [
+          {
+            "node": "สรุปผลลัพธ์ Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สรุปผลลัพธ์ Lead": {
+      "main": [
+        [
+          {
+            "node": "แจ้งเตือนทีมขาย (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "แจ้งเตือนทีมขาย (/api/agent-log)": {
+      "main": [
+        [
+          {
+            "node": "คะแนนถึงเกณฑ์ HOT (≥70) หรือไม่",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "คะแนนถึงเกณฑ์ HOT (≥70) หรือไม่": {
+      "main": [
+        [
+          {
+            "node": "สร้างงานให้ตัวแทน (/api/agent-tasks)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ตอบกลับ (Lead ปกติ)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สร้างงานให้ตัวแทน (/api/agent-tasks)": {
+      "main": [
+        [
+          {
+            "node": "แจ้งเตือน Lead HOT (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "แจ้งเตือน Lead HOT (/api/agent-log)": {
+      "main": [
+        [
+          {
+            "node": "ตอบกลับ (Lead HOT)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "a7d8069f-ac7a-4919-b0ff-d4d6e51a263b"
+  },
+  "active": true,
+  "versionId": "b8c0b486-4e9a-45e4-b6bd-309e63c4da3c"
+}

@@ -1,0 +1,597 @@
+{
+  "name": "Passive Income 03 · Follow-up Engine (03_FOLLOWUP_ENGINE)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "1dd95506-6a51-4f3a-9cae-80c6c854c24f",
+      "name": "ทุก 15 นาที",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pi-followup-run",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "a9d3d687-bed6-4add-8df5-1542b3689fe6",
+      "name": "Webhook สั่งรันทันที",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        120
+      ],
+      "webhookId": "1dca150a-3d0f-4bcc-b75c-76a231dd8757"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/followup/due?window=24h&limit=50",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "76c2b49f-e370-4946-a86d-21c3246833c5",
+      "name": "ดึงรายการติดตามที่ถึงกำหนด (/api/followup/due)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// §19 WF03 — คัดรายการติดตามที่ถึงกำหนด: ต้องผ่าน ①consent ②opt-out ③โควต้าความถี่\nconst res = $json || {};\nconst items = res.followUps || res.items || res.data || [];\nconst queue = [], blocked = [];\nfor (const f of items) {\n  const channel = String(f.channel || 'email').toLowerCase();\n  const reasons = [];\n  if (f.unsubscribed === true || f.optOut === true) reasons.push('opt-out');\n  if (channel === 'email' && f.consentMarketing === false) reasons.push('ไม่ยินยอมการตลาด');\n  if (Number(f.sentToday || 0) >= 1) reasons.push('ส่งแล้ววันนี้');\n  if (Number(f.sentThisWeek || 0) >= 3) reasons.push('ครบโควต้าสัปดาห์');\n  if (reasons.length) { blocked.push({ followUpId: f.followUpId, name: f.name, reasons }); continue; }\n  queue.push({ followUpId: f.followUpId || null, prospectId: f.prospectId, name: f.name || 'ผู้สนใจ',\n    channel, email: f.email || null, phone: f.phone || null, lineUserId: f.lineUserId || null,\n    dayOffset: f.dayOffset ?? null, topic: f.topic || null, interests: f.interests || [],\n    scheduledAt: f.scheduledAt || null, lastContactAt: f.lastContactAt || null });\n}\nreturn [{ json: { due: items.length, queue, blockedCount: blocked.length, blocked: blocked.slice(0, 10),\n  window: res.window || '24h', at: new Date().toISOString() } }];\n"
+      },
+      "id": "4beb5a33-2089-4053-8fe4-fc81b860bbeb",
+      "name": "กรอง consent + โควต้าความถี่",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "7a381ddf-cf89-406c-8ea8-8b7782cf2f61",
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              },
+              "leftValue": "={{ $json.queue.length }}",
+              "rightValue": 1
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "77934bf8-e8d1-4e85-8565-30e108429a2f",
+      "name": "มีรายการต้องติดตามหรือไม่",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        680,
+        0
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "16729bb9-c876-4af8-bae3-2f836c55cdb1",
+      "name": "ไม่มีรายการต้องติดตาม",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        900,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        },
+        "batchSize": 5
+      },
+      "id": "c0d3e52a-2a5b-4b97-870c-ee99631ab3bc",
+      "name": "วนทีละ 5 รายการ",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        900,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify({ name: $json.name, channel: $json.channel, topic: $json.topic, interests: $json.interests, dayOffset: $json.dayOffset, lastContactAt: $json.lastContactAt }) }}",
+        "options": {
+          "systemMessage": "คุณเป็นผู้ช่วยเขียนข้อความติดตามลูกค้าของตัวแทนประกันในประเทศไทย (AI Insurance Network Tree)\nเขียนข้อความติดตามผลความสนใจประกัน ภาษาไทย สุภาพ เป็นกันเอง ความยาว 3-5 บรรทัด\nข้อกำหนด: ห้ามสัญญาผลตอบแทน ห้ามกดดัน ห้ามใช้คำโฆษณาเกินจริง ต้องมีช่องทางให้ติดต่อกลับ และต้องเปิดโอกาสให้ปฏิเสธได้ (เช่น 'หากยังไม่สะดวก สามารถแจ้งยกเลิกได้เลย')\nตอบเฉพาะตัวข้อความ (plain text) ไม่ต้องมีคำอธิบายอื่น"
+        }
+      },
+      "id": "24c95a4b-0293-4e1b-b910-ba2d6105d956",
+      "name": "AI ร่างข้อความติดตาม (Gemini)",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        -120
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 10000
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gemini-3.5-flash-lite"
+        },
+        "options": {}
+      },
+      "id": "2b714de0-4861-47b4-8498-5ff267887980",
+      "name": "Gemini Chat Model (Follow-up)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        120
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "openrouter-workflow-1790828913760",
+          "name": "Google Gemini API (OpenAI-compatible)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// ประกอบร่างข้อความ + payload สำหรับสร้างงานให้ตัวแทน\nconst draft = String(($json && $json.output) || '').trim();\nconst item = $('วนทีละ 5 รายการ').first().json;\nconst name = item.name || 'ผู้สนใจ';\nconst subject = 'ติดตามผลความสนใจประกัน — ' + name;\nconst body = draft || ('สวัสดีคุณ ' + name + '\\n\\nขออนุญาตติดตามความสนใจที่แจ้งไว้กับ AI Insurance Network Tree '\n  + (item.topic ? ('เรื่อง ' + item.topic + ' ') : '') + '\\nยินดีให้ข้อมูลเพิ่มเติมโดยไม่มีข้อผูกมัดค่ะ\\n\\nด้วยความนับถือ\\nทีมตัวแทน AI Insurance Network Tree');\nreturn [{ json: { followUpId: item.followUpId, prospectId: item.prospectId, name, channel: item.channel,\n  email: item.email, phone: item.phone, dayOffset: item.dayOffset, topic: item.topic,\n  subject, draft: body, live: String($env.PI_FOLLOWUP_LIVE || 'false') === 'true' } }];\n"
+      },
+      "id": "c369ea0e-b576-421a-8ffe-61a439895806",
+      "name": "ประกอบร่าง + payload งาน",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "aeb9fad0-4213-4bbf-9164-3b6bd99f6ea0",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              },
+              "leftValue": "={{ $json.live }}",
+              "rightValue": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4383392c-5992-480d-b1f1-500261c986f6",
+      "name": "ส่งอัตโนมัติหรือไม่ (PI_FOLLOWUP_LIVE)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1560,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/lead/reply",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ prospectId: $json.prospectId, email: $json.email, name: $json.name, subject: $json.subject, source: 'n8n-pi-03', dryRun: false }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "b81ba14a-90f8-4af0-8d36-6f470266abcd",
+      "name": "ส่งอีเมลติดตาม (/api/lead/reply)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1780,
+        -240
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/followup/result",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ followUpId: $('ประกอบร่าง + payload งาน').first().json.followUpId || null, prospectId: $('ประกอบร่าง + payload งาน').first().json.prospectId, channel: 'email', status: $json.ok === false ? 'FAILED' : 'SENT', providerRef: 'n8n-pi-03', messagePreview: ($json.message || $json.error || '').slice(0, 200), source: 'n8n-pi-03' }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "8996ef8a-a0df-401d-9dc5-a5f3022604dc",
+      "name": "บันทึกผลการส่ง (/api/followup/result)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2000,
+        -240
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/agent-tasks",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ prospectId: $json.prospectId, type: 'follow_up_call', priority: 'normal', status: 'open', note: 'ร่างข้อความติดตาม (รอตัวแทนกดส่ง)\\nหัวข้อ: ' + ($json.subject || '') + '\\n\\n' + $json.draft, contact: { phone: $json.phone, email: $json.email, channel: $json.channel }, dedupeKey: 'pi03:' + $json.followUpId, source: 'n8n-pi-03' }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "8bcd1973-802a-4f12-bc7c-c00e50c1d316",
+      "name": "สร้างงานให้ตัวแทนส่งเอง (/api/agent-tasks)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1780,
+        40
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// ส่งกลับเข้า loop (splitInBatches จะดึงรายการถัดไปเอง) — อ่านค่าที่ต้องใช้จาก node 'ประกอบร่าง + payload งาน'\nconst src = $('ประกอบร่าง + payload งาน').first().json;\nreturn [{ json: { followUpId: src.followUpId || null, prospectId: src.prospectId, name: src.name,\n  ok: $json.ok !== false, sent: $json.sent === true,\n  taskId: $json.taskId || null, via: $json.via || null, error: $json.error || null } }];\n"
+      },
+      "id": "c11809b2-b04d-4f3f-868a-e534362d3c57",
+      "name": "สรุปผลรายรายการ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2220,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// สรุปผลรอบติดตาม (จากผลที่วนได้ทั้งหมด)\nconst rows = $('สรุปผลรายรายการ').all().map(i => i.json);\nconst sent = rows.filter(r => r.sent).length;\nconst tasks = rows.filter(r => r.taskId).length;\nconst failed = rows.filter(r => r.ok === false).length;\nconst src = $('กรอง consent + โควต้าความถี่').first().json;\nreturn [{ json: { ok: failed === 0, due: src.due, queued: src.queue.length, sent, tasks, failed,\n  blocked: src.blockedCount, at: new Date().toISOString() } }];\n"
+      },
+      "id": "9c4775d1-7143-44dd-9dc6-ac6e68ce55d1",
+      "name": "สรุปผลรอบติดตาม",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/agent-log",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: 'PI 03 Follow-up Engine', ok: $json.ok, stage: 'followup-round', detail: 'รอบติดตาม: ถึงกำหนด ' + $json.due + ' · เข้าคิว ' + $json.queued + ' · ส่งอัตโนมัติ ' + $json.sent + ' · มอบงานตัวแทน ' + $json.tasks + ' · ล้มเหลว ' + $json.failed + ' · ถูกบล็อก ' + $json.blocked }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "de7cf1b4-ce78-4e73-baea-a1d28b9e19d0",
+      "name": "บันทึกสรุปรอบติดตาม (/api/agent-log)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        -360
+      ],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "ทุก 15 นาที": {
+      "main": [
+        [
+          {
+            "node": "ดึงรายการติดตามที่ถึงกำหนด (/api/followup/due)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook สั่งรันทันที": {
+      "main": [
+        [
+          {
+            "node": "ดึงรายการติดตามที่ถึงกำหนด (/api/followup/due)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ดึงรายการติดตามที่ถึงกำหนด (/api/followup/due)": {
+      "main": [
+        [
+          {
+            "node": "กรอง consent + โควต้าความถี่",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "กรอง consent + โควต้าความถี่": {
+      "main": [
+        [
+          {
+            "node": "มีรายการต้องติดตามหรือไม่",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "มีรายการต้องติดตามหรือไม่": {
+      "main": [
+        [
+          {
+            "node": "วนทีละ 5 รายการ",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ไม่มีรายการต้องติดตาม",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "วนทีละ 5 รายการ": {
+      "main": [
+        [
+          {
+            "node": "สรุปผลรอบติดตาม",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI ร่างข้อความติดตาม (Gemini)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Chat Model (Follow-up)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI ร่างข้อความติดตาม (Gemini)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI ร่างข้อความติดตาม (Gemini)": {
+      "main": [
+        [
+          {
+            "node": "ประกอบร่าง + payload งาน",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ประกอบร่าง + payload งาน": {
+      "main": [
+        [
+          {
+            "node": "ส่งอัตโนมัติหรือไม่ (PI_FOLLOWUP_LIVE)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ส่งอัตโนมัติหรือไม่ (PI_FOLLOWUP_LIVE)": {
+      "main": [
+        [
+          {
+            "node": "ส่งอีเมลติดตาม (/api/lead/reply)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "สร้างงานให้ตัวแทนส่งเอง (/api/agent-tasks)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ส่งอีเมลติดตาม (/api/lead/reply)": {
+      "main": [
+        [
+          {
+            "node": "บันทึกผลการส่ง (/api/followup/result)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สร้างงานให้ตัวแทนส่งเอง (/api/agent-tasks)": {
+      "main": [
+        [
+          {
+            "node": "สรุปผลรายรายการ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "บันทึกผลการส่ง (/api/followup/result)": {
+      "main": [
+        [
+          {
+            "node": "สรุปผลรายรายการ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สรุปผลรายรายการ": {
+      "main": [
+        [
+          {
+            "node": "วนทีละ 5 รายการ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สรุปผลรอบติดตาม": {
+      "main": [
+        [
+          {
+            "node": "บันทึกสรุปรอบติดตาม (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "a7d8069f-ac7a-4919-b0ff-d4d6e51a263b"
+  },
+  "active": true,
+  "versionId": "c429baf8-27ab-4388-ab9b-5802ac332383"
+}

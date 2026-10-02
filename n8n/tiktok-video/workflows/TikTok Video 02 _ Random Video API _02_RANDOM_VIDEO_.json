@@ -1,0 +1,195 @@
+{
+  "name": "TikTok Video 02 · Random Video API (02_RANDOM_VIDEO)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "random-video",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "25d60242-1703-4b81-8572-26565d5adc4d",
+      "name": "Webhook รับคำขอ",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "0afa93b5-b690-4707-8782-07f06041b3a6"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/videos/list?status=active&limit=500",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "76032bd2-ff84-436f-b71b-38ad5634a2bb",
+      "name": "ดึงคลังวิดีโอ (/api/videos/list)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Random Queue Engine — สุ่มแบบไล่คิว ไม่ใช่ ORDER BY RANDOM() ทุกครั้ง\n// + กันเล่นซ้ำ: ไม่เลือกวิดีโอที่อยู่ในประวัติ 10 รายการล่าสุด (ถ้ายังมีตัวอื่นเหลือ)\n// สถานะคิว/ประวัติเก็บใน static data ของ workflow (รอดข้ามการรีสตาร์ท)\nconst res = $json || {};\nconst list = Array.isArray(res.videos) ? res.videos : (Array.isArray(res) ? res : []);\nconst src = $('Webhook รับคำขอ').first().json || {};\nconst q = (src.query && typeof src.query === 'object') ? src.query : {};\nconst sid = String(q.sid || q.session || 'anon').slice(0, 64);\n\nconst key = (v) => String(v.tiktokId || v.videoId || v.id || '');\nconst active = list.filter(v => v && (v.status ? v.status === 'active' : true) && key(v));\n\nconst sd = $getWorkflowStaticData('global');\nif (!Array.isArray(sd.recent)) sd.recent = [];\nif (!Array.isArray(sd.queue)) sd.queue = [];\n\nconst ids = new Set(active.map(key));\nsd.queue = sd.queue.filter(id => ids.has(id));          // ลบตัวที่ถูกปิด/ลบออกจากคลัง\nlet reshuffled = false;\nif (!sd.queue.length) {                                  // คิวหมด → shuffle ใหม่\n  sd.queue = active.map(key);\n  for (let i = sd.queue.length - 1; i > 0; i--) {\n    const j = Math.floor(Math.random() * (i + 1));\n    [sd.queue[i], sd.queue[j]] = [sd.queue[j], sd.queue[i]];\n  }\n  reshuffled = true;\n}\n\nlet pickKey = sd.queue.find(id => !sd.recent.includes(id));\nif (!pickKey) { // กันซ้ำแล้วไม่เหลือตัวเลือก → อนุญาตให้วนซ้ำและล้างประวัติ\n  pickKey = sd.queue[0] || sd.recent[0] || null;\n  sd.recent = [];\n}\nif (pickKey) sd.queue = sd.queue.filter(id => id !== pickKey);\nif (pickKey) { sd.recent.unshift(pickKey); sd.recent = sd.recent.slice(0, 10); }\n\nconst pick = active.find(v => key(v) === pickKey) || null;\nreturn [{ json: {\n  success: !!pick,\n  sid,\n  id: pick ? (pick.tiktokId || pick.videoId || key(pick)) : null,\n  registerId: pick ? (pick.videoId || null) : null,\n  title: pick ? pick.title : null,\n  url: pick ? pick.url : null,\n  embedUrl: pick ? (pick.embedUrl || (pick.tiktokId ? ('https://www.tiktok.com/player/v1/' + pick.tiktokId) : null)) : null,\n  durationSec: pick ? (pick.durationSec || 30) : 0,\n  username: \"@aka989._\",\n  pool: { active: active.length, queueLeft: sd.queue.length, recent: sd.recent.length, reshuffled },\n  reshuffled, queueLeft: sd.queue.length,\n} }];\n"
+      },
+      "id": "17c901c3-993d-4de6-977d-4d0475088248",
+      "name": "คิวสุ่ม + กันซ้ำ 10 รายการ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/videos/played",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ videoId: $('คิวสุ่ม + กันซ้ำ 10 รายการ').first().json.id, sid: $('คิวสุ่ม + กันซ้ำ 10 รายการ').first().json.sid, seconds: 0, completed: false }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "ae8dfde0-02c5-4697-a8ce-3a722316d52a",
+      "name": "บันทึกว่าเริ่มเล่น (/api/videos/played)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// อ้างผลจาก node คิวสุ่มโดยตรง (ไม่ใช้ $json เพราะ node ก่อนหน้าคือคำตอบของ /api/videos/played)\nconst p = $('คิวสุ่ม + กันซ้ำ 10 รายการ').first().json;\nif (!p.success) return [{ json: { success: false, error: 'no_active_videos', allowAdd: true,\n  hint: 'ยังไม่มีวิดีโอในคลัง — เพิ่มได้ที่ POST /webhook/add-video' } }];\n\nreturn [{ json: { success: true, username: p.username,\n  video: { id: p.id, username: p.username, tiktok_url: p.url, url: p.url, embed_url: p.embedUrl,\n           title: p.title, durationSec: p.durationSec },\n  pool: p.pool } }];\n"
+      },
+      "id": "1515883d-b3f5-43d8-9821-88180abd0740",
+      "name": "ประกอบคำตอบ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "e3245ddb-1bc7-437e-9891-3d7368e63971",
+      "name": "ตอบกลับวิดีโอ",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook รับคำขอ": {
+      "main": [
+        [
+          {
+            "node": "ดึงคลังวิดีโอ (/api/videos/list)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ดึงคลังวิดีโอ (/api/videos/list)": {
+      "main": [
+        [
+          {
+            "node": "คิวสุ่ม + กันซ้ำ 10 รายการ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "คิวสุ่ม + กันซ้ำ 10 รายการ": {
+      "main": [
+        [
+          {
+            "node": "บันทึกว่าเริ่มเล่น (/api/videos/played)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "บันทึกว่าเริ่มเล่น (/api/videos/played)": {
+      "main": [
+        [
+          {
+            "node": "ประกอบคำตอบ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ประกอบคำตอบ": {
+      "main": [
+        [
+          {
+            "node": "ตอบกลับวิดีโอ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "a7d8069f-ac7a-4919-b0ff-d4d6e51a263b"
+  },
+  "active": true,
+  "versionId": "3da87e58-115e-4316-b357-dd80ea1e8764"
+}

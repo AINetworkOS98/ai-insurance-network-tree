@@ -1,0 +1,152 @@
+{
+  "name": "TikTok Video 04 · Video Analytics (04_VIDEO_ANALYTICS)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "video-played",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "d844f1bb-15e2-4392-b54a-d3a8cdb6783b",
+      "name": "Webhook รับคำขอ",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "c7cf47e0-3076-480a-a646-f9978b204209"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// บันทึกการดูจาก player: { video_id, duration, completed, session_id }\nconst body = ($json.body && typeof $json.body === 'object') ? $json.body : ($json || {});\nconst id = String(body.video_id || body.videoId || body.id || '').trim();\nconst duration = Math.max(0, Math.min(3600, Number(body.duration || body.seconds || 0) || 0));\nconst sid = String(body.session_id || body.sid || 'anon').slice(0, 64);\nreturn [{ json: { id, duration, sid, completed: body.completed === true, valid: id.length > 0,\n  hint: id ? null : 'ต้องส่ง video_id' } }];\n"
+      },
+      "id": "6b7c5618-8f02-44d1-a7ba-091c76daee25",
+      "name": "ตรวจข้อมูลการดู",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/videos/played",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ videoId: $('ตรวจข้อมูลการดู').first().json.id, sid: $('ตรวจข้อมูลการดู').first().json.sid, seconds: $('ตรวจข้อมูลการดู').first().json.duration, completed: $('ตรวจข้อมูลการดู').first().json.completed }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "93d4dfd1-e753-4044-94d2-3d7fed2a31d2",
+      "name": "บันทึกผลการดู (/api/videos/played)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// อ้างค่าจาก node ที่ถือข้อมูลจริงทั้งสองฝั่ง\nconst ask = $('ตรวจข้อมูลการดู').first().json;\nconst res = $json || {};\nif (!ask.valid) return [{ json: { success: false, error: 'video_id_required', hint: ask.hint } }];\nreturn [{ json: { success: res.ok === true, video_id: ask.id, seconds: res.seconds || ask.duration,\n  completionPct: res.completionPct || 0, completed: ask.completed, session_id: ask.sid } }];\n"
+      },
+      "id": "7914325a-2fa7-4342-859b-2ec33f189dcd",
+      "name": "สรุปผลการบันทึก",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "6b543f1e-16cb-418d-818c-a9975f455729",
+      "name": "ตอบกลับผลการบันทึก",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        960,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook รับคำขอ": {
+      "main": [
+        [
+          {
+            "node": "ตรวจข้อมูลการดู",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ตรวจข้อมูลการดู": {
+      "main": [
+        [
+          {
+            "node": "บันทึกผลการดู (/api/videos/played)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "บันทึกผลการดู (/api/videos/played)": {
+      "main": [
+        [
+          {
+            "node": "สรุปผลการบันทึก",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สรุปผลการบันทึก": {
+      "main": [
+        [
+          {
+            "node": "ตอบกลับผลการบันทึก",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "a7d8069f-ac7a-4919-b0ff-d4d6e51a263b"
+  },
+  "active": true,
+  "versionId": "04a07922-1238-4bf7-acb0-b33e12d43c63"
+}

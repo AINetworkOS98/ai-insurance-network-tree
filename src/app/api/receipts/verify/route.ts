@@ -1,0 +1,142 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { verifyToken } from '@/lib/auth';
+import { isAdminFromPayload } from '@/lib/admin';
+import { mirrorToFirestore } from '@/lib/firestoreMirror';
+
+// POST /api/receipts/verify — ส่งตรวจ / อนุมัติ / ปฏิเสธ (ต้องมี document.verify)
+// สเปค: 7 ขั้น — Uploaded→Extracted→PendingVerification→Verified/Rejected/Duplicate (+ Reversed)
+// แยก "ยอดรับชำระเบี้ย" ออกจาก "ค่าบำเหน็จ" — ใบเสร็จเบี้ยไม่ใช่หลักฐานค่าบำเหน็จ
+export async function POST(req: NextRequest){
+  try{
+    const token = req.cookies.get('token')?.value || req.headers.get('authorization')?.replace('Bearer ','') || '';
+    const payload = token ? verifyToken(token) : null;
+    if(!payload) return NextResponse.json({ ok:false, error:'กรุณาเข้าสู่ระบบ' }, { status:401 });
+    const actorId = (payload as any).sub;
+
+    const { receiptId, action, reason, creditedPeriod, ledgerType } = await req.json();
+    // action: submit | verify | reject | duplicate | reverse
+    if(!receiptId || !action) return NextResponse.json({ ok:false, error:'กรุณาระบุ receiptId และ action' }, { status:400 });
+
+    const receipt = await prisma.receiptFile.findUnique({ where:{ id: receiptId }, include:{ extractions:{ orderBy:{ createdAt:'desc' }, take:1 } } });
+    if(!receipt) return NextResponse.json({ ok:false, error:'ไม่พบใบเสร็จ' }, { status:404 });
+
+    const ext = receipt.extractions[0] as any;
+
+    // ค่าตั้งค่าใบเสร็จจากระบบ (admin ตั้งในเมนูตั้งค่าใบเสร็จ)
+    let cfg: any = { maxAmount:500000, autoVerifyLimit:0, requirePolicyNo:false, defaultLedgerType:'premium', allowedTypes:['premium','commission'] };
+    try{
+      const srow: any = await (prisma as any).receiptSettings.findUnique({ where:{ id:'default' } }).catch(()=>null);
+      if(srow?.settings) cfg = { ...cfg, ...srow.settings };
+    }catch{}
+
+    if(action === 'submit'){
+      // ผู้ส่งตรวจ — ต้องเป็นเจ้าของใบเสร็จเท่านั้น (เดิมใครล็อกอินก็ส่งใบของคนอื่นได้)
+      if(String(receipt.userId) !== String(actorId)) return NextResponse.json({ ok:false, error:'ส่งตรวจได้เฉพาะใบเสร็จของตนเอง' }, { status:403 });
+      // ต้องตรวจทานข้อมูล OCR ก่อน
+      if(receipt.status !== 'Extracted') return NextResponse.json({ ok:false, error:'สถานะต้องเป็น Extracted ก่อนส่งตรวจ' }, { status:400 });
+      // ตรวจว่าข้อมูลสำคัญครบ
+      if(!ext?.amount || !ext?.paidAt) return NextResponse.json({ ok:false, error:'กรุณาตรวจทานจำนวนเงินและวันที่ชำระให้ครบก่อนส่ง' }, { status:400 });
+      if(cfg.requirePolicyNo && !ext?.policyNo) return NextResponse.json({ ok:false, error:'ระบบบังคับเลขกรมธรรม์ — กรุณากรอกก่อนส่ง' }, { status:400 });
+      // รับรองอัตโนมัติตามค่าที่ admin ตั้ง (ยอดไม่เกิน + OCR มั่นใจ + premium)
+      const conf = Number(ext?.confidence?.overall ?? 0);
+      const amt = Number(ext.amount);
+      const ltype = String(ext?.type || cfg.defaultLedgerType);
+      if(cfg.autoVerifyLimit > 0 && amt > 0 && amt <= Number(cfg.autoVerifyLimit) && conf >= 0.8 && ltype === 'premium'){
+        // ไม่กลืน error ของการเขียน ledger: ถ้าล้มต้องไม่ตอบว่าสำเร็จ (ไม่งั้นข้อมูลหายเงียบ)
+        await prisma.$transaction(async (tx:any)=>{
+          await tx.receiptFile.update({ where:{ id: receiptId }, data:{ status:'Verified', verifiedAt: new Date(), creditedPeriod: new Date().toISOString().slice(0,7) } });
+          await tx.receiptVerification.create({ data:{ receiptId, result:'Verified', reason:'รับรองอัตโนมัติตามค่าที่ตั้งไว้ (ยอดไม่เกินเพดาน + OCR มั่นใจ)', verifiedBy: actorId, source:'auto_rule' } });
+          await tx.performanceLedger.create({ data:{ userId: receipt.userId, receiptId, type:'premium', amount: String(ext.amount), period: new Date().toISOString().slice(0,7) } });
+        });
+        await prisma.auditLog.create({ data:{ userId: actorId, action:'receipt.auto_verify', entity:'ReceiptFile', entityId: receiptId } }).catch(()=>null);
+        return NextResponse.json({ ok:true, status:'Verified', message:'รับรองอัตโนมัติตามค่าที่ตั้งไว้ — สร้างรายการผลงานแล้ว' });
+      }
+      await prisma.receiptFile.update({ where:{ id: receiptId }, data:{ status:'PendingVerification' } });
+      await prisma.auditLog.create({ data:{ userId: actorId, action:'receipt.submit', entity:'ReceiptFile', entityId: receiptId } });
+      return NextResponse.json({ ok:true, status:'PendingVerification', message:'ส่งตรวจสอบแล้ว — รอเจ้าหน้าที่ตรวจกับแหล่งรับเงินจริง' });
+    }
+
+    // verify/reject/duplicate/reverse ต้องมีสิทธิ document.verify
+    // roles ในโทเคน / อีเมล Admin / role ใน DB
+    const isAdminUser = await isAdminFromPayload(payload);
+    let hasPerm = isAdminUser;
+    if(!hasPerm){
+      const actorRoles = await prisma.userRole.findMany({ where:{ userId: actorId }, include:{ role:{ include:{ permissions:true } } } }).catch(()=>[]);
+      const permKeys = actorRoles.flatMap((ur:any)=> ur.role.permissions.map((rp:any)=> rp.permission.key));
+      hasPerm = permKeys.includes('document.verify') || permKeys.includes('permission.manage');
+    }
+    if(!hasPerm) return NextResponse.json({ ok:false, error:'ไม่มีสิทธิตรวจหลักฐาน — ต้องมี document.verify' }, { status:403 });
+
+    if(action === 'verify'){
+      if(!['PendingVerification','Extracted'].includes(receipt.status)) return NextResponse.json({ ok:false, error:'สถานะไม่ถูกต้องสำหรับรับรอง' }, { status:400 });
+      // เพดานยอดต่อใบตามค่าที่ตั้งไว้
+      if(Number(ext?.amount || 0) > Number(cfg.maxAmount || 500000)) return NextResponse.json({ ok:false, error:`ยอดเกินเพดานที่ตั้งไว้ (${Number(cfg.maxAmount).toLocaleString()} บาท) — แยกใบหรือติดต่อผู้บริหารระบบ` }, { status:400 });
+      // ต้องมีแหล่งยืนยัน: ถ้าไม่มี API ให้เข้าคิวตรวจจากรายงานรับเงินจริง — บันทึก source
+      const source = String(req.headers.get('x-verify-source') || 'manual_report');
+      await prisma.$transaction(async (tx:any)=>{
+              await tx.receiptFile.update({ where:{ id: receiptId }, data:{ status:'Verified', verifiedAt: new Date(), creditedPeriod: creditedPeriod || new Date().toISOString().slice(0,7) } });
+              await tx.receiptVerification.create({ data:{ receiptId, result:'Verified', reason: reason || 'ตรวจสอบกับแหล่งรับเงินจริงแล้ว', verifiedBy: actorId, source } });
+
+              // สร้าง PerformanceLedger "แถวเดียวต่อใบเสร็จ" (ตารางมี unique(receiptId))
+              // เดิมโค้ดสร้าง 2 แถวด้วย receiptId เดียวกัน (แถวที่สองเป็นคอมมิชชัน 20,000 คงที่)
+              // → ชน unique ในทรานแซกชันเดียว ทำให้ Postgres abort ทั้งทรานแซกชัน แล้ว rollback เงียบ ๆ
+              //   (API ตอบ 200 แต่ข้อมูลไม่ถูกบันทึก) และเป็นการสร้างรายได้ที่ไม่มีอยู่จริง
+              const type = ledgerType || ext?.type || 'premium';
+              const ledgerTypeFinal = type.includes('commission') || type.includes('com') ? 'commission' : 'premium';
+              const amount = ext?.amount ? String(ext.amount) : '0';
+              const period = creditedPeriod || new Date().toISOString().slice(0,7);
+
+              await tx.performanceLedger.create({
+                data:{
+                  userId: receipt.userId,
+                  receiptId,
+                  type: ledgerTypeFinal,
+                  amount,
+                  period,
+                }
+              });
+            });
+      await prisma.auditLog.create({ data:{ userId: actorId, action:'receipt.verify', entity:'ReceiptFile', entityId: receiptId, newValue:{ creditedPeriod } } });
+      return NextResponse.json({ ok:true, status:'Verified', message:'รับรองยอดสำเร็จ — สร้างรายการผลงานแล้ว', creditedPeriod });
+    }
+
+    if(action === 'reject'){
+      await prisma.receiptFile.update({ where:{ id: receiptId }, data:{ status:'Rejected' } });
+      await prisma.receiptVerification.create({ data:{ receiptId, result:'Rejected', reason: reason || 'ไม่ผ่านการตรวจสอบ', verifiedBy: actorId } });
+      return NextResponse.json({ ok:true, status:'Rejected' });
+    }
+
+    if(action === 'duplicate'){
+      await prisma.receiptFile.update({ where:{ id: receiptId }, data:{ status:'Duplicate' } });
+      await prisma.receiptVerification.create({ data:{ receiptId, result:'Duplicate', reason: reason || 'เอกสารซ้ำ' } });
+      return NextResponse.json({ ok:true, status:'Duplicate' });
+    }
+
+    if(action === 'reverse'){
+      // รายการคืนเงิน/ยกเลิกภายหลัง — สร้าง Reversed + ปรับปรุง ledger
+      await prisma.receiptFile.update({ where:{ id: receiptId }, data:{ status:'Reversed' } });
+      await prisma.receiptVerification.create({ data:{ receiptId, result:'Reversed' as any, reason: reason || 'คืนเงิน/ยกเลิก' } });
+      const ledger = await prisma.performanceLedger.findUnique({ where:{ receiptId } }).catch(()=>null);
+      if(ledger){
+        await prisma.performanceLedger.update({ where:{ id: ledger.id }, data:{ status:'reversed' } });
+        await prisma.performanceLedger.create({
+          data:{
+            userId: ledger.userId,
+            type: ledger.type,
+            amount: `-${ledger.amount}`,
+            period: ledger.period,
+            status:'reversed',
+            reversalOfId: ledger.id,
+          } as any
+        }).catch(()=>null);
+      }
+      return NextResponse.json({ ok:true, status:'Reversed', message:'สร้างรายการปรับปรุงผลงานแล้ว — ตรวจสอบย้อนหลังได้' });
+    }
+
+    return NextResponse.json({ ok:false, error:'action ไม่ถูกต้อง' }, { status:400 });
+  }catch(e:any){
+    console.error('receipt verify', e);
+    return NextResponse.json({ ok:false, error:'เกิดข้อผิดพลาด' }, { status:500 });
+  }
+}

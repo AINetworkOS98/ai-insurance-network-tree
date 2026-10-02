@@ -1,0 +1,28 @@
+import type { Metadata } from "next";
+import "./globals.css";
+import Script from "next/script";
+import VisitorCounter from "@/components/VisitorCounter";
+import UtmCapture from "@/components/UtmCapture";
+
+export const metadata: Metadata = {
+  title: "AI Insurance Network Tree — ระบบบริหารเครือข่ายตัวแทน",
+  description: "บริหารผู้สนใจ ผู้สมัคร สมาชิก ต้นไม้ฐานกว้าง 5 คน ผลงาน รายได้ และเอกสารทางการเงินอย่างโปร่งใส",
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="th" className="h-full">
+      <head>
+        <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Noto+Sans+Thai:wght@400;600&display=swap" rel="stylesheet" />
+      </head>
+      <body className="min-h-full flex flex-col bg-soft-white text-slate-medium font-sans antialiased" style={{fontFamily:"'Sarabun','Noto Sans Thai',sans-serif"}}>
+        {children}
+        <VisitorCounter />
+        {/* เก็บที่มาแคมเปญ (UTM / ttclid) ไว้ทั้ง session เพื่อแนบไปกับฟอร์มลีด */}
+        <UtmCapture />
+        {/* สคริปต์เก็บข้อมูลผู้เข้าชม — ทำงานเฉพาะเมื่อผู้ใช้กด "ยินยอม" เท่านั้น */}
+        <Script src="/track.js" strategy="afterInteractive" />
+      </body>
+    </html>
+  );
+}

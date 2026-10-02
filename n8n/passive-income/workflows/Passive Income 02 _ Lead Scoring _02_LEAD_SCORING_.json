@@ -1,0 +1,378 @@
+{
+  "name": "Passive Income 02 · Lead Scoring (02_LEAD_SCORING)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pi-lead-score",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "e1d4e3c3-9e9f-48f7-ac0d-6a55b57a59ff",
+      "name": "Webhook รับ Events (ให้คะแนน)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "f0a66f09-9945-4dff-987b-7182ffd48cec"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// §19 WF02 — คำนวณคะแนนความสนใจจากพฤติกรรม (กติกาเดียวกับแผนหมวด 4)\nconst body = ($json.body && typeof $json.body === 'object') ? $json.body : ($json || {});\nconst prospectId = body.prospectId || body.prospect_id || body.visitorId || null;\nconst events = Array.isArray(body.events) ? body.events : [];\nconst W = { page_view: 5, scroll_depth: 3, video_view: 12, video_complete: 18, form_submit: 20,\n  callback_request: 30, topic_select: 10, email_open: 8, email_click: 14, reply: 25, appointment: 40, share: 8 };\nconst breakdown = {};\nlet topicPoints = 0;\nconst topics = [];\nfor (const e of events) {\n  const t = String(e.type || e.event || e.name || '').toLowerCase();\n  const hits = Math.max(1, Math.min(20, Number(e.count || 1)));\n  const w = W[t] || 0;\n  if (!w) continue;\n  breakdown[t] = (breakdown[t] || 0) + w * hits;\n  if (t === 'topic_select') { topicPoints += w * hits; }\n  if (e.topic) topics.push({ topic: String(e.topic).slice(0, 80), weight: Math.min(100, w * 5) });\n}\nif (topicPoints > 30) breakdown.topic_cap = 30 - topicPoints;   // เพดาน +30 ต่อรอบ\nlet ruleScore = 0;\nfor (const k of Object.keys(breakdown)) ruleScore += breakdown[k];\nruleScore = Math.max(0, Math.round(ruleScore));\nconst level = ruleScore >= 70 ? 'HIGH_INTENT' : ruleScore >= 40 ? 'INTERESTED' : ruleScore >= 20 ? 'WARM' : 'LOW';\nreturn [{ json: { prospectId, events: events.length, breakdown, topics,\n  ruleScore, level, source: body.source || 'n8n-pi-02', consentMarketing: !!(body.consent && body.consent.marketing),\n  name: body.name || null, channel: body.channel || null } }];\n"
+      },
+      "id": "805be4df-c47a-4b4d-a83a-6a1ded217360",
+      "name": "คำนวณคะแนนจากพฤติกรรม",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify({ prospectId: $json.prospectId, ruleScore: $json.ruleScore, level: $json.level, breakdown: $json.breakdown, events: $json.events }) }}",
+        "options": {
+          "systemMessage": "คุณเป็นนักวิเคราะห์พฤติกรรมผู้สนใจซื้อประกันของบริษัท AI Insurance Network Tree (ตัวแทนประกันในประเทศไทย)\nวิเคราะห์ข้อมูล event/คะแนนที่ให้มา แล้วตอบเป็น JSON เท่านั้น ตามรูปแบบ:\n{\"scoreBoost\": 0-15, \"summary\": \"สรุปสั้นไม่เกิน 2 ประโยค (ไทย)\", \"suggestedAction\": \"สิ่งที่ตัวแทนควรทำต่อ (ไทย ไม่เกิน 1 ประโยค)\", \"topics\": [{\"topic\": \"หัวข้อที่สนใจ\", \"weight\": 0-100}]}\nห้ามให้คำมั่นเรื่องผลตอบแทน ห้ามปิดการขายแทนตัวแทน — หน้าที่คือวิเคราะห์และเสนอแนะเท่านั้น"
+        }
+      },
+      "id": "af9d89c2-386d-4c04-9b05-62d86fad80cc",
+      "name": "AI วิเคราะห์ความสนใจ (Gemini)",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 10000
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gemini-3.5-flash-lite"
+        },
+        "options": {}
+      },
+      "id": "16dc4b52-86cf-4f6f-9258-8528e195c3a1",
+      "name": "Gemini Chat Model (Score)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        240
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "openrouter-workflow-1790828913760",
+          "name": "Google Gemini API (OpenAI-compatible)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// รวมคะแนนกติกา + ข้อวิเคราะห์จาก AI\nconst rule = $('คำนวณคะแนนจากพฤติกรรม').first().json;\nconst out = ($json && typeof $json.output === 'string') ? $json.output : '';\nlet ai = {};\ntry {\n  const m = out.match(/\\{[\\s\\S]*\\}/);\n  ai = m ? JSON.parse(m[0]) : {};\n} catch (e) { ai = {}; }\nconst aiTopics = Array.isArray(ai.topics) ? ai.topics.slice(0, 6).map(t => ({\n  topic: String(t.topic || t.name || t).slice(0, 80),\n  weight: Math.max(0, Math.min(100, Number(t.weight || 50))),\n})) : [];\nconst topics = aiTopics.length ? aiTopics : rule.topics.slice(0, 6);\nconst boost = Math.max(0, Math.min(15, Number(ai.scoreBoost || 0)));\nconst score = Math.max(0, Math.round(rule.ruleScore + boost));\nconst level = score >= 70 ? 'HIGH_INTENT' : score >= 40 ? 'INTERESTED' : score >= 20 ? 'WARM' : 'LOW';\nreturn [{ json: { prospectId: rule.prospectId, score, level, scoreMode: 'set', breakdown: rule.breakdown, topics,\n  aiOk: !!out, aiSummary: String(ai.summary || out).slice(0, 400),\n  aiSuggestedAction: String(ai.suggestedAction || ai.action || '').slice(0, 200),\n  hot: score >= 70, name: rule.name, channel: rule.channel } }];\n"
+      },
+      "id": "c14f50f2-ac02-48e1-909e-51cfb04d6793",
+      "name": "รวมคะแนน + ข้อเสนอแนะ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/lead/score",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ prospectId: $json.prospectId, score: $json.score, scoreMode: 'set', level: $json.level, breakdown: $json.breakdown, topics: $json.topics, aiOk: $json.aiOk, aiSummary: $json.aiSummary, aiSuggestedAction: $json.aiSuggestedAction, source: 'n8n-pi-02' }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "84cf9792-dde9-434e-8ba6-1cd6f4a45905",
+      "name": "บันทึกคะแนน (/api/lead/score)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "4c536279-dd05-49bb-ae10-95de3bbfc64e",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $('รวมคะแนน + ข้อเสนอแนะ').first().json.level }}",
+              "rightValue": "HIGH_INTENT"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4fdbe0c6-4a06-4d65-b817-aa5f0d245662",
+      "name": "HIGH_INTENT หรือไม่",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/agent-tasks",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ prospectId: $('รวมคะแนน + ข้อเสนอแนะ').first().json.prospectId, type: 'high_intent_lead', priority: 'high', stage: 'HIGH_INTENT', status: 'open', score: $('รวมคะแนน + ข้อเสนอแนะ').first().json.score, level: $('รวมคะแนน + ข้อเสนอแนะ').first().json.level, dedupeKey: 'pi02:high:' + $('รวมคะแนน + ข้อเสนอแนะ').first().json.prospectId, note: 'คะแนนพฤติกรรมถึงเกณฑ์ HOT\\n' + ($('รวมคะแนน + ข้อเสนอแนะ').first().json.aiSummary || '') + '\\nข้อเสนอแนะ: ' + ($('รวมคะแนน + ข้อเสนอแนะ').first().json.aiSuggestedAction || ''), source: 'n8n-pi-02' }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "c8c98321-0549-4d53-bf42-23ea7d7d75d9",
+      "name": "สร้างงานให้ตัวแทน (/api/agent-tasks)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        -160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/agent-log",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: 'PI 02 Lead Scoring', ok: true, stage: 'high-intent', detail: 'Lead คะแนน ' + $('รวมคะแนน + ข้อเสนอแนะ').first().json.score + ' (' + $('รวมคะแนน + ข้อเสนอแนะ').first().json.level + ') — ' + ($('รวมคะแนน + ข้อเสนอแนะ').first().json.aiSummary || '') + ' | แนะนำ: ' + ($('รวมคะแนน + ข้อเสนอแนะ').first().json.aiSuggestedAction || '-') + ' | taskId ' + ($json.taskId || '-'), prospectId: $('รวมคะแนน + ข้อเสนอแนะ').first().json.prospectId, leadScore: $('รวมคะแนน + ข้อเสนอแนะ').first().json.score }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "f2252367-b0a9-42e4-a2fe-b997adf751f4",
+      "name": "แจ้งเตือนทันที (/api/agent-log)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        -160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "0f49eea2-fdc8-41fa-8a47-ba9b5dc22cc6",
+      "name": "ตอบกลับ (HOT)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1780,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "9501c48d-e14b-435e-a1b2-b477f02af735",
+      "name": "ตอบกลับ (ปกติ)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1340,
+        80
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook รับ Events (ให้คะแนน)": {
+      "main": [
+        [
+          {
+            "node": "คำนวณคะแนนจากพฤติกรรม",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "คำนวณคะแนนจากพฤติกรรม": {
+      "main": [
+        [
+          {
+            "node": "AI วิเคราะห์ความสนใจ (Gemini)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI วิเคราะห์ความสนใจ (Gemini)": {
+      "main": [
+        [
+          {
+            "node": "รวมคะแนน + ข้อเสนอแนะ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "รวมคะแนน + ข้อเสนอแนะ": {
+      "main": [
+        [
+          {
+            "node": "บันทึกคะแนน (/api/lead/score)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "บันทึกคะแนน (/api/lead/score)": {
+      "main": [
+        [
+          {
+            "node": "HIGH_INTENT หรือไม่",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Chat Model (Score)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI วิเคราะห์ความสนใจ (Gemini)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HIGH_INTENT หรือไม่": {
+      "main": [
+        [
+          {
+            "node": "สร้างงานให้ตัวแทน (/api/agent-tasks)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ตอบกลับ (ปกติ)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สร้างงานให้ตัวแทน (/api/agent-tasks)": {
+      "main": [
+        [
+          {
+            "node": "แจ้งเตือนทันที (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "แจ้งเตือนทันที (/api/agent-log)": {
+      "main": [
+        [
+          {
+            "node": "ตอบกลับ (HOT)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "a7d8069f-ac7a-4919-b0ff-d4d6e51a263b"
+  },
+  "active": true,
+  "versionId": "421b9012-0ec0-4246-9eb5-7c06c0e5e8fe"
+}

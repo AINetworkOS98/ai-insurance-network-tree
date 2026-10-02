@@ -1,0 +1,128 @@
+{
+  "name": "Network Sim 06 · Event Log & Network Update",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "network-update",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "2abc3b67-c697-47a1-bedf-fc780ebaaa56",
+      "name": "Webhook รับเหตุการณ์",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "c4dc2716-6967-47e7-bc41-84f5c162b157"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/sim/state?id={{ encodeURIComponent($json.query.id || '') }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "136806c8-ef94-48c3-a385-625b455e5536",
+      "name": "ดึงสถานะเครือข่าย (/api/sim/state)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// สรุปผลลัพธ์ของ \"Network Sim 06 · Event Log & Network Update\"\n// รับข้อมูลจาก HTTP Request node (โหนดก่อนหน้า)\nconst res = $json || {};\nconst ok = res.success !== false && res.error === undefined;\nconst base = {\n  workflow: \"Network Sim 06 · Event Log & Network Update\",\n  ok: ok,\n  receivedAt: new Date().toISOString(),\n};\n  base.simId = res.simId || res.id || null;\n  base.memberCount = res.memberCount !== undefined ? res.memberCount : null;\n  base.events = Array.isArray(res.events) ? res.events.length : null;\nreturn [{ json: Object.assign(base, { result: res }) }];\n"
+      },
+      "id": "b1838596-44fb-4c36-908c-94c8dcc269a4",
+      "name": "สรุปผล",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "ededae89-e85e-4105-9593-25aacb55aef4",
+      "name": "ตอบกลับ",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        780,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook รับเหตุการณ์": {
+      "main": [
+        [
+          {
+            "node": "ดึงสถานะเครือข่าย (/api/sim/state)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ดึงสถานะเครือข่าย (/api/sim/state)": {
+      "main": [
+        [
+          {
+            "node": "สรุปผล",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สรุปผล": {
+      "main": [
+        [
+          {
+            "node": "ตอบกลับ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "",
+    "saveExecutionProgress": true
+  },
+  "active": false,
+  "pinData": {},
+  "versionId": "c8d573d0-29b0-41dd-8737-c065dfc55be9",
+  "meta": {},
+  "tags": []
+}

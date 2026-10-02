@@ -1,0 +1,37 @@
+// Support Center — Ticket System
+// Models สำหรับจัดการตั๋วสอบถามจากสมาชิก → Admin
+
+model SupportTicket {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  name        String
+  phone       String?
+  lineId      String?
+  subject     String
+  message     String    @db.Text
+  status      String    @default("NEW") // NEW | IN_PROGRESS | REPLIED | CLOSED
+  adminNote   String?   @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  closedAt    DateTime?
+
+  messages SupportMessage[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model SupportMessage {
+  id         String   @id @default(uuid())
+  ticketId   String
+  ticket     SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  senderType String   // USER | ADMIN
+  senderId   String
+  message    String   @db.Text
+  createdAt  DateTime @default(now())
+
+  @@index([ticketId])
+  @@index([createdAt])
+}

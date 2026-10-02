@@ -1,0 +1,173 @@
+{
+  "name": "Passive Income 05 · Team Network Report (05_TEAM_NETWORK)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        },
+        "options": {
+          "timezone": "Asia/Bangkok"
+        }
+      },
+      "id": "b29b33c8-a0e6-42ad-86b3-92a0d0c0a02d",
+      "name": "ทุกวัน 08:00 (Asia/Bangkok)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/members/count",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "e5e9f3d3-f98b-4b0a-817b-f7ba9d1f84ee",
+      "name": "นับสมาชิก (/api/members/count)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// §19 WF05 — สรุปเครือข่าย/ทีม จากตัวเลขที่นับได้จริงผ่าน API สำหรับระบบอัตโนมัติ\n// ⚠️ /api/members (รายชื่อสมาชิก) บังคับคุกกี้ session → n8n (Bearer CRON_SECRET) เรียกไม่ได้\n//    จึงใช้ /api/members/count ที่เปิดให้ระบบอัตโนมัติ และคืน { total, active, withRank }\nconst res = $json || {};\nconst total = Number(res.total || 0);\nconst active = Number(res.active || 0);\nconst withRank = Number(res.withRank || 0);\nconst sd = $getWorkflowStaticData('global');\nsd.history = Array.isArray(sd.history) ? sd.history : [];\nconst prev = sd.history.length ? sd.history[sd.history.length - 1] : null;\nconst snap = { date: new Date().toISOString().slice(0, 10), total, active, withRank };\nconst growth = prev ? { total: total - prev.total, active: active - prev.active, withRank: withRank - prev.withRank } : null;\nconst g = (k) => growth ? ((growth[k] > 0 ? '+' : '') + growth[k]) : 'ไม่มีข้อมูลรอบก่อน';\nsd.history.push(snap);\nif (sd.history.length > 180) sd.history = sd.history.slice(-180);\nreturn [{ json: { total, active, withRank, growth, prevDate: prev ? prev.date : null, dataReady: total > 0,\n  headline: 'สมาชิกทั้งหมด ' + total + ' คน · active ' + active + ' · มีระดับ (rank) ' + withRank\n    + ' · เทียบรอบก่อน: ทั้งหมด ' + g('total') + ' / active ' + g('active') + ' / มีระดับ ' + g('withRank'),\n  note: 'ตัวเลขจาก /api/members/count — รายชื่อรายคนและความลึก/ความกว้างของผังต้องใช้ endpoint ที่ต้องล็อกอิน (ยังไม่เปิดให้ n8n)',\n  at: new Date().toISOString() } }];\n"
+      },
+      "id": "2ba6ca49-f42b-44ce-92e5-b8b1a292b34a",
+      "name": "สรุปเครือข่าย + KPI ทีม",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/agent-log",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: 'PI 05 Team Network', ok: true, stage: 'network-report', detail: $json.headline + ' | ' + $json.note }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "4b67f5d7-05fc-4db8-a3d0-541fd39c11cd",
+      "name": "ส่งรายงานเครือข่าย (/api/agent-log)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst log = $json || {};\nconst t = $('สรุปเครือข่าย + KPI ทีม').first().json;\nreturn [{ json: { ok: log.ok === true, emailed: log.email || 'skipped', total: t.total, active: t.active,\n  withRank: t.withRank, growth: t.growth, note: t.note } }];\n"
+      },
+      "id": "5a6f33ea-907a-4f1a-9996-bd766f2c855f",
+      "name": "สรุปผลรายงานเครือข่าย",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "ทุกวัน 08:00 (Asia/Bangkok)": {
+      "main": [
+        [
+          {
+            "node": "นับสมาชิก (/api/members/count)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "นับสมาชิก (/api/members/count)": {
+      "main": [
+        [
+          {
+            "node": "สรุปเครือข่าย + KPI ทีม",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สรุปเครือข่าย + KPI ทีม": {
+      "main": [
+        [
+          {
+            "node": "ส่งรายงานเครือข่าย (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ส่งรายงานเครือข่าย (/api/agent-log)": {
+      "main": [
+        [
+          {
+            "node": "สรุปผลรายงานเครือข่าย",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "a7d8069f-ac7a-4919-b0ff-d4d6e51a263b"
+  },
+  "active": true,
+  "versionId": "b4fef47d-16e0-446e-92e2-9f5cabc225e7"
+}

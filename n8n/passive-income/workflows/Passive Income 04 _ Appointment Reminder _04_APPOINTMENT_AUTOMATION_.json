@@ -1,0 +1,304 @@
+{
+  "name": "Passive Income 04 · Appointment Reminder (04_APPOINTMENT_AUTOMATION)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pi-appointment",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "82abbf1f-6245-494f-8cb6-a4051d103295",
+      "name": "Webhook รับนัดหมายใหม่",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        -120
+      ],
+      "webhookId": "bb643b78-0f11-4ca5-a02f-afeb83ef3790"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// §19 WF04 — บันทึกนัดหมาย + คำนวณเวลาเตือน (T-24h, T-2h) ใน static data ของ workflow\nconst body = ($json.body && typeof $json.body === 'object') ? $json.body : ($json || {});\nconst sd = $getWorkflowStaticData('global');\nsd.appointments = Array.isArray(sd.appointments) ? sd.appointments : [];\nconst s = (v, m) => (v === null || v === undefined) ? '' : String(v).trim().slice(0, m);\nconst startRaw = body.startAt || body.start_at || body.datetime;\nconst startAt = startRaw ? new Date(startRaw) : null;\nif (!startAt || isNaN(startAt.getTime())) {\n  return [{ json: { ok: false, error: 'ต้องระบุ startAt (ISO date) หรือ datetime', saved: false } }];\n}\nconst id = s(body.appointmentId || body.id, 64) || ('apt-' + startAt.getTime());\nconst rec = { id, title: s(body.title, 160) || 'นัดหมายลูกค้า', prospectId: body.prospectId || null,\n  name: s(body.name, 120) || null, phone: s(body.phone, 30) || null, agent: s(body.agent || body.assignee, 80) || null,\n  channel: s(body.channel, 30) || 'onsite', startAt: startAt.toISOString(),\n  reminders: [ { kind: 'T-24h', at: new Date(startAt.getTime() - 24 * 3600e3).toISOString(), sent: false },\n               { kind: 'T-2h', at: new Date(startAt.getTime() - 2 * 3600e3).toISOString(), sent: false } ],\n  status: 'scheduled', note: s(body.note, 500) || null, createdAt: new Date().toISOString() };\nconst i = sd.appointments.findIndex(a => a.id === id);\nif (i >= 0) sd.appointments[i] = rec; else sd.appointments.push(rec);\nif (sd.appointments.length > 200) sd.appointments = sd.appointments.slice(-200);\nreturn [{ json: { ok: true, saved: true, action: i >= 0 ? 'updated' : 'created', appointment: rec,\n  pendingReminders: rec.reminders.length, total: sd.appointments.length } }];\n"
+      },
+      "id": "775e4e34-4529-476a-bdb5-7794b52810cd",
+      "name": "บันทึกนัดหมาย + ตั้งเวลาเตือน",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "23070acf-0dbf-4116-b0df-73bc725a7d7e",
+      "name": "ตอบรับนัดหมาย",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "50c863e5-07b6-41a3-8d06-de9cdd808dfe",
+      "name": "ทุก 15 นาที (เช็คเวลาเตือน)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// หานัดที่ถึงเวลาเตือนแล้ว (และยังไม่เคยเตือน)\nconst sd = $getWorkflowStaticData('global');\nsd.appointments = Array.isArray(sd.appointments) ? sd.appointments : [];\nconst now = Date.now();\nconst due = [];\nfor (const a of sd.appointments) {\n  if (a.status === 'done' || a.status === 'cancelled') continue;\n  for (const r of (a.reminders || [])) {\n    if (r.sent) continue;\n    const t = new Date(r.at).getTime();\n    if (t <= now) { due.push({ appointmentId: a.id, kind: r.kind, title: a.title, name: a.name, phone: a.phone,\n      agent: a.agent, startAt: a.startAt, prospectId: a.prospectId, channel: a.channel, note: a.note }); r.sent = true; }\n  }\n}\nreturn [{ json: { dueCount: due.length, due, total: sd.appointments.length, at: new Date().toISOString() } }];\n"
+      },
+      "id": "4f3558c8-47a8-4989-b0e0-60e48537eb96",
+      "name": "หานัดที่ถึงเวลาเตือน",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c76c0d58-23aa-41a6-a55b-692ebe6153b3",
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              },
+              "leftValue": "={{ $json.dueCount }}",
+              "rightValue": 1
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e6cbc558-48ae-4274-bb74-6c0c3274b9b5",
+      "name": "มีนัดต้องเตือนหรือไม่",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        160
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "8e63b1a9-ada0-49a8-80a2-ec87abda4faf",
+      "name": "ไม่มีนัดต้องเตือน",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/agent-log",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: 'PI 04 Appointment', ok: true, stage: 'appointment-reminder', detail: 'เตือนนัด ' + $json.kind + ' · ' + $json.title + ' · ลูกค้า ' + ($json.name || '-') + ' · โทร ' + ($json.phone || '-') + ' · เวลา ' + new Date($json.startAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }) + ' · ตัวแทน ' + ($json.agent || '-'), prospectId: $json.prospectId }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "7187c281-70bf-4f20-b40d-4c0f68022341",
+      "name": "แจ้งเตือนตัวแทน (/api/agent-log)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/agent-tasks",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ prospectId: $json.prospectId, type: 'follow_up_call', priority: $json.kind === 'T-2h' ? 'urgent' : 'high', status: 'open', title: 'ยืนยันนัด ' + $json.kind + ' · ' + $json.title + ' · ' + ($json.name || ''), note: 'นัดเวลา ' + new Date($json.startAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }) + ' (' + $json.channel + ')' + ($json.note ? '\\n' + $json.note : ''), contact: { phone: $json.phone, channel: $json.channel }, dedupeKey: 'pi04:' + $json.appointmentId + ':' + $json.kind, source: 'n8n-pi-04' }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        }
+      },
+      "id": "3f3c2cac-febd-409d-b1a9-813f9608f105",
+      "name": "สร้างงานยืนยันนัด (/api/agent-tasks)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst log = $json || {};\nconst src = $('หานัดที่ถึงเวลาเตือน').first().json;\nreturn [{ json: { ok: true, remindersSent: src.dueCount, taskId: log.taskId || null, email: log.email || null,\n  at: new Date().toISOString() } }];\n"
+      },
+      "id": "d39f945b-a262-49cd-b1ea-3e7985f60127",
+      "name": "สรุปการเตือน",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        160
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook รับนัดหมายใหม่": {
+      "main": [
+        [
+          {
+            "node": "บันทึกนัดหมาย + ตั้งเวลาเตือน",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "บันทึกนัดหมาย + ตั้งเวลาเตือน": {
+      "main": [
+        [
+          {
+            "node": "ตอบรับนัดหมาย",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ทุก 15 นาที (เช็คเวลาเตือน)": {
+      "main": [
+        [
+          {
+            "node": "หานัดที่ถึงเวลาเตือน",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "หานัดที่ถึงเวลาเตือน": {
+      "main": [
+        [
+          {
+            "node": "มีนัดต้องเตือนหรือไม่",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "มีนัดต้องเตือนหรือไม่": {
+      "main": [
+        [
+          {
+            "node": "แจ้งเตือนตัวแทน (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ไม่มีนัดต้องเตือน",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "แจ้งเตือนตัวแทน (/api/agent-log)": {
+      "main": [
+        [
+          {
+            "node": "สร้างงานยืนยันนัด (/api/agent-tasks)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สร้างงานยืนยันนัด (/api/agent-tasks)": {
+      "main": [
+        [
+          {
+            "node": "สรุปการเตือน",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "a7d8069f-ac7a-4919-b0ff-d4d6e51a263b"
+  },
+  "active": true,
+  "versionId": "e66e07b9-8fd6-4c44-91bc-e417bf6db74a"
+}
