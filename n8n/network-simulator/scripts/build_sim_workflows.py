@@ -57,7 +57,7 @@ ERROR_WORKFLOW_STEMS = {"sim-01", "sim-02", "sim-03", "sim-04", "sim-05"}
 
 # path ของสคริปต์ import (เทียบจาก root ของ repo)
 REPO_ROOT = Path(__file__).resolve().parents[3]
-IMPORT_SCRIPT = REPO_ROOT / "n8n" / "passive-income" / "scripts" / "import-workflows.py"
+IMPORT_SCRIPT = REPO_ROOT / "n8n" / "network-simulator" / "scripts" / "import_sim_workflows.py"
 
 # โฟลเดอร์ปลายทางของ workflow JSON (script อยู่ที่ n8n/network-simulator/scripts/)
 SCRIPT_DIR = Path(__file__).resolve().parent

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 const DISCLAIMER =
   'ตัวเลขทั้งหมดในส่วนนี้เป็นการจำลอง/สมมติเพื่อวางแผนเท่านั้น ไม่ใช่การรับประกันรายได้ ผลตอบแทน หรือผลลัพธ์จริง และไม่ใช่ข้อมูลสมาชิกจริงในระบบ';
@@ -13,6 +13,14 @@ const DISCLAIMER =
 export default function FutureNetworkTeaser() {
   const [branch, setBranch] = useState(5);
   const [layers, setLayers] = useState(6);
+  const [allowed, setAllowed] = useState<boolean | null>(null);
+
+  // ส่วนนี้เปิดให้เฉพาะสมาชิกที่เข้าสู่ระบบ — ผู้ที่ยังไม่ล็อกอินจะไม่เห็นเลย
+  useEffect(() => {
+    fetch('/api/sim/stats', { cache: 'no-store' })
+      .then((r) => setAllowed(r.ok))
+      .catch(() => setAllowed(false));
+  }, []);
 
   const plan = useMemo(() => {
     const rows: { level: number; count: number; cumulative: number }[] = [];
@@ -26,6 +34,8 @@ export default function FutureNetworkTeaser() {
     }
     return rows;
   }, [branch, layers]);
+
+  if (allowed !== true) return null;
 
   return (
     <section className="border-t border-slate-800 bg-slate-950 py-12 text-slate-100">
@@ -82,7 +92,7 @@ export default function FutureNetworkTeaser() {
           <a href="/network-simulator" className="rounded-xl bg-sky-500 px-5 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-sky-400">
             🌌 เปิด Future Network Simulator (จักรวาล 3D)
           </a>
-          <span className="text-xs text-slate-500">ทดลองสร้างสมาชิกทีละคน ดูการขยายตัว ตรวจเงื่อนไขเลื่อนตำแหน่ง และ Timeline เหตุการณ์</span>
+          <span className="text-xs text-slate-500">🔒 สำหรับสมาชิกที่เข้าสู่ระบบ — ทดลองสร้างสมาชิกทีละคน ดูการขยายตัว ตรวจเงื่อนไขเลื่อนตำแหน่ง และ Timeline เหตุการณ์</span>
         </div>
 
         <p className="mt-4 rounded-xl border border-slate-800 bg-slate-900/40 p-3 text-[11px] leading-relaxed text-slate-400">

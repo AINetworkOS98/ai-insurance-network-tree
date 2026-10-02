@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { logEvent } from '@/lib/sim';
+import { logEvent, requireSimAccess, simDenied } from '@/lib/sim';
 
 export const dynamic = 'force-dynamic';
 
 /** POST /api/sim/events — บันทึก event (ใช้โดย n8n) ; GET — ดู timeline */
 export async function POST(req: Request) {
   try {
+    const access = await requireSimAccess(req);
+    if (!access.ok) return simDenied(access);
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const eventType = String(body.eventType || body.event_type || '').trim();
     if (!eventType) return NextResponse.json({ ok: false, error: 'eventType_required' }, { status: 400 });
@@ -25,6 +27,8 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   try {
+    const access = await requireSimAccess(req);
+    if (!access.ok) return simDenied(access);
     const url = new URL(req.url);
     const simId = url.searchParams.get('id') || url.searchParams.get('simId') || '';
     const limit = Math.max(1, Math.min(200, Number(url.searchParams.get('limit') || 40)));

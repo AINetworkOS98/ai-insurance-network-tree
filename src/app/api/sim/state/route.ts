@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { DISCLAIMER } from '@/lib/sim';
+import { requireSimAccess, simDenied, DISCLAIMER } from '@/lib/sim';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +11,8 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(req: Request) {
   try {
+    const access = await requireSimAccess(req);
+    if (!access.ok) return simDenied(access);
     const url = new URL(req.url);
     const id = url.searchParams.get('id') || '';
     const limit = Math.max(1, Math.min(6000, Number(url.searchParams.get('limit') || 3000)));

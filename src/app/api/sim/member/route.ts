@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { DISCLAIMER, evaluatePromotion, logEvent } from '@/lib/sim';
+import { evaluatePromotion, logEvent, requireSimAccess, simDenied, DISCLAIMER } from '@/lib/sim';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +12,8 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(req: Request) {
   try {
+    const access = await requireSimAccess(req);
+    if (!access.ok) return simDenied(access);
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const simId = String(body.simId || '');
     const sim = simId

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { DISCLAIMER } from '@/lib/sim';
+import { DISCLAIMER, requireSimAccess, simDenied } from '@/lib/sim';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,7 +8,9 @@ export const dynamic = 'force-dynamic';
  * GET /api/sim/stats — สถิติสำหรับ Dashboard
  * แยก REAL DATA กับ SIMULATION DATA อย่างชัดเจน (ห้ามนำตัวเลขจำลองไปรวมกับตัวเลขจริง)
  */
-export async function GET() {
+export async function GET(req: Request) {
+  const access = await requireSimAccess(req);
+  if (!access.ok) return simDenied(access);
   const safe = async <T>(fn: () => Promise<T>): Promise<T | null> => {
     try {
       return await fn();

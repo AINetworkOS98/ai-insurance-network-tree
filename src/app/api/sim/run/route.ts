@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { DISCLAIMER, MAX_NODES_PER_RUN, logEvent, normalizeConfig, planLayers, positionFor } from '@/lib/sim';
+import { logEvent, normalizeConfig, planLayers, positionFor, requireSimAccess, simDenied, DISCLAIMER, MAX_NODES_PER_RUN } from '@/lib/sim';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -12,6 +12,8 @@ export const maxDuration = 60;
  */
 export async function POST(req: Request) {
   try {
+    const access = await requireSimAccess(req);
+    if (!access.ok) return simDenied(access);
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
 
     // ── รีเซ็ต (ล้างข้อมูลจำลองของ run นั้น) ──
@@ -119,8 +121,10 @@ export async function POST(req: Request) {
 }
 
 /** GET /api/sim/run — รายการการจำลองล่าสุด */
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const access = await requireSimAccess(req);
+    if (!access.ok) return simDenied(access);
     const sims = await prisma.networkSim.findMany({
       orderBy: { createdAt: 'desc' },
       take: 20,

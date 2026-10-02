@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { DISCLAIMER, SIM_WATERMARK, isAuthorized, logEvent } from '@/lib/sim';
+import { isAuthorized, logEvent, requireSimAccess, simDenied, DISCLAIMER, SIM_WATERMARK } from '@/lib/sim';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +16,8 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(req: Request) {
   try {
+    const access = await requireSimAccess(req);
+    if (!access.ok) return simDenied(access);
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const mode = String(body.mode || 'demo') === 'live' ? 'live' : 'demo';
     const paymentRef = String(body.paymentRef || body.paymentId || `PAY-${Date.now().toString(36)}`).slice(0, 64);
@@ -111,8 +113,10 @@ export async function POST(req: Request) {
 }
 
 /** GET /api/sim/payment — รายการใบเสร็จจำลองล่าสุด (ไม่ส่งข้อมูลลูกค้าจริง) */
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const access = await requireSimAccess(req);
+    if (!access.ok) return simDenied(access);
     const rows = await prisma.simPayment.findMany({ orderBy: { createdAt: 'desc' }, take: 30 });
     return NextResponse.json(
       { ok: true, payments: rows.map((r) => ({ paymentRef: r.paymentRef, memberCode: r.memberCode, amount: Number(r.amount), status: r.status, mode: r.mode, receiptId: r.receiptId, watermark: r.watermark, createdAt: r.createdAt })), disclaimer: DISCLAIMER },

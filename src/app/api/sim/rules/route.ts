@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { DISCLAIMER, isAuthorized } from '@/lib/sim';
+import { isAuthorized, requireSimAccess, simDenied, DISCLAIMER } from '@/lib/sim';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,8 +9,10 @@ export const dynamic = 'force-dynamic';
  * POST /api/sim/rules — สร้าง/แก้กฎ (ต้องมี Bearer CRON_SECRET) เพราะกฎนี้คุมตรรกะของระบบ
  * หลักการ: สูตร/เงื่อนไขทั้งหมดอยู่ในฐานข้อมูล ไม่ฝังในโค้ดหรือ frontend
  */
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const access = await requireSimAccess(req);
+    if (!access.ok) return simDenied(access);
     const rules = await prisma.promotionRule.findMany({ orderBy: [{ active: 'desc' }, { createdAt: 'asc' }] });
     return NextResponse.json(
       {

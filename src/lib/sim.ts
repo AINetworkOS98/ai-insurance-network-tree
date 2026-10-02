@@ -1,3 +1,4 @@
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 /**
@@ -176,4 +177,44 @@ export function isAuthorized(req: Request) {
   const secret = process.env.CRON_SECRET || '';
   const got = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
   return secret.length > 0 && got.length > 0 && got === secret;
+}
+
+export type SimAccess = { ok: true; via: 'bearer' | 'session' } | { ok: false; status: number; error: string };
+
+/**
+ * ระบบจำลองเครือข่ายเปิดให้ "เฉพาะสมาชิกที่เข้าสู่ระบบ" เท่านั้น
+ *  - n8n / งานระบบ: ส่ง Authorization: Bearer <CRON_SECRET>
+ *  - สมาชิกในเว็บ: ใช้คุกกี้ token (JWT) เหมือนหน้าอื่นของระบบ
+ */
+export async function requireSimAccess(req: Request): Promise<SimAccess> {
+  if (isAuthorized(req)) return { ok: true, via: 'bearer' };
+
+  const { cookies } = await import('next/headers');
+  const cookieToken = (await cookies()).get('token')?.value || '';
+  const headerToken = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  const token = cookieToken || headerToken;
+  if (!token) return { ok: false, status: 401, error: 'members_only' };
+
+  const { verifyToken } = await import('@/lib/auth');
+  const payload = verifyToken(token) as { status?: string } | null;
+  if (!payload) return { ok: false, status: 401, error: 'session_invalid' };
+  const status = String(payload.status || '');
+  if (['SUSPENDED', 'RESIGNED', 'INACTIVE'].includes(status)) {
+    return { ok: false, status: 403, error: 'account_suspended' };
+  }
+  return { ok: true, via: 'session' };
+}
+
+export function simDenied(access: Extract<SimAccess, { ok: false }>) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: access.error,
+      message:
+        access.status === 403
+          ? 'บัญชีถูกระงับสิทธิ กรุณาติดต่อผู้ดูแลระบบ'
+          : 'เครื่องมือจำลองเครือข่ายเปิดให้เฉพาะสมาชิกที่เข้าสู่ระบบแล้วเท่านั้น',
+    },
+    { status: access.status },
+  );
 }
