@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { UniverseAudio } from '@/lib/universeAudio';
 
 const NetworkUniverse3D = dynamic(() => import('./NetworkUniverse3D'), {
   ssr: false,
@@ -106,7 +107,10 @@ export default function NetworkSimulator() {
   const [mode, setMode] = useState<'simulation' | 'real'>('simulation');
   const [msg, setMsg] = useState<string>('');
   const [total, setTotal] = useState(0);
+  const [soundOn, setSoundOn] = useState(false);
+  const [volume, setVolume] = useState(0.25);
   const playRef = useRef<number | null>(null);
+  const audioRef = useRef<UniverseAudio | null>(null);
 
   const refresh = useCallback(async (simId?: string) => {
     const q = simId ? `?id=${encodeURIComponent(simId)}` : '';
@@ -137,6 +141,43 @@ export default function NetworkSimulator() {
     }
     setRunning(false);
   }, []);
+
+  /** เปิด/ปิดเสียงจักรวาล (สังเคราะห์เองด้วย Web Audio — ต้องกดปุ่มก่อนเสมอ) */
+  const toggleSound = useCallback(async () => {
+    if (!audioRef.current) audioRef.current = new UniverseAudio();
+    const audio = audioRef.current;
+    if (soundOn) {
+      audio.stop();
+      setSoundOn(false);
+      setMsg('ปิดเสียงจักรวาลแล้ว');
+      return;
+    }
+    const started = await audio.start();
+    if (started) {
+      audio.setVolume(volume);
+      setSoundOn(true);
+      setMsg('เปิดเสียงจักรวาลแล้ว 🎧 (ปรับความดังได้ที่แถบด้านล่าง)');
+    } else {
+      setMsg('เปิดเสียงไม่สำเร็จ — เบราว์เซอร์นี้ไม่รองรับเสียง');
+    }
+  }, [soundOn, volume]);
+
+  const changeVolume = useCallback(
+    (v: number) => {
+      setVolume(v);
+      audioRef.current?.setVolume(v);
+    },
+    [],
+  );
+
+  // ปิดเสียงอัตโนมัติเมื่อออกจากหน้า
+  useEffect(
+    () => () => {
+      audioRef.current?.stop();
+      audioRef.current = null;
+    },
+    [],
+  );
 
   const startSim = async () => {
     setBusy('start');
@@ -175,6 +216,7 @@ export default function NetworkSimulator() {
     }).then((r) => r.json());
     if (res?.ok) {
       setSelected(res.created?.[0] || parent.code);
+      audioRef.current?.ping(0.09);
       if (res.levelCompleted) setMsg(`${parent.code} ครบ ${res.threshold} คน → สร้าง event LEVEL_COMPLETED`);
       await refresh(sim?.id);
     }
@@ -332,6 +374,19 @@ export default function NetworkSimulator() {
               <button onClick={() => void demoReceipt()} disabled={busy === 'pay'} className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-200 hover:border-sky-500">🧾 ใบเสร็จ DEMO</button>
               <button onClick={() => void resetSim()} disabled={busy === 'reset'} className="rounded-lg border border-rose-900/60 bg-rose-950/40 px-3 py-2 text-rose-200 hover:border-rose-500">🧹 ล้าง Simulation</button>
             </div>
+
+            {/* ── เสียงจักรวาล (สังเคราะห์เอง ต้องกดเองจึงดัง — ไม่มีไฟล์เสียงจากภายนอก) ── */}
+            <div className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950 p-2">
+              <button
+                onClick={() => void toggleSound()}
+                className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-bold transition ${soundOn ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-100 hover:bg-slate-700'}`}
+              >
+                {soundOn ? '🔇 ปิดเสียงจักรวาล' : '🔊 เปิดเสียงจักรวาล'}
+              </button>
+              <input type="range" min={0} max={1} step={0.05} value={volume} onChange={(e) => changeVolume(Number(e.target.value))} className="w-full accent-sky-400" aria-label="ความดังเสียงจักรวาล" />
+              <span className="w-9 text-right text-[11px] text-slate-400">{Math.round(volume * 100)}%</span>
+            </div>
+            <p className="text-[11px] leading-snug text-slate-500">เสียงจักรวาลสังเคราะห์สดในเบราว์เซอร์ (ไม่โหลดไฟล์จากภายนอก) — จะมีเสียงติ๊งเบา ๆ เมื่อเกิดสมาชิกใหม่</p>
             {msg && <p className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-[11px] text-sky-200">{msg}</p>}
             <p className="text-xs leading-relaxed text-slate-400">ปุ่ม &quot;เติบโตทีละคน&quot; จะสร้างสมาชิกจำลองใต้โหนดที่มีที่ว่าง แล้วสร้าง event MEMBER_CREATED / LEVEL_COMPLETED ให้เห็นใน Timeline</p>
           </div>
