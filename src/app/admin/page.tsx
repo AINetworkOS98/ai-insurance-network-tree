@@ -58,6 +58,18 @@ interface TreeNode {
   personalFYC?: number;
 }
 
+interface AuditLogRow {
+  id: string;
+  action: string;
+  entity: string;
+  entityId?: string | null;
+  reason?: string | null;
+  createdAt: string;
+  userId?: string | null;
+  newValue?: any;
+  user?: { displayName?: string | null; email?: string | null; memberCode?: string | null } | null;
+}
+
 function AdminContent() {
   const [activeTab, setActiveTab] = useState<'members' | 'income' | 'positions' | 'audit'>('members');
   const [loading, setLoading] = useState(true);
@@ -70,6 +82,10 @@ function AdminContent() {
   const [pendingMsgCount, setPendingMsgCount] = useState(0);
   // เครื่องมือผู้บริหารระบบ (ตอบสมาชิก / Support / รายงาน) — แสดงเฉพาะ Admin หรืออีเมล akarapol.pro798@gmail.com
   const [canAdminTools, setCanAdminTools] = useState(false);
+  // แท็บ Log บันทึก — ดึง AuditLog จริงจากฐานข้อมูล (เดิมแสดงข้อความตัวอย่างที่ hardcode)
+  const [auditLogs, setAuditLogs] = useState<AuditLogRow[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditError, setAuditError] = useState<string | null>(null);
   // แยกสาเหตุที่โหลดไม่ได้: 'auth' = ยังไม่ล็อกอิน (ให้ไปหน้าเข้าสู่ระบบ) / 'perm' = ล็อกอินแล้วแต่ไม่มีสิทธิ์ (ไม่ต้องล็อกอินใหม่)
   const [errorHint, setErrorHint] = useState<'auth'|'perm'|null>(null);
 
@@ -79,6 +95,35 @@ function AdminContent() {
     const data = await res.json().catch(() => ({}));
     return { status: res.status, data: data as any };
   };
+
+  const fetchAuditLogs = async () => {
+    setAuditLoading(true);
+    try {
+      const { status, data } = await callApi('/admin/audit-logs?limit=100');
+      if (data.ok) {
+        setAuditLogs(data.logs || []);
+        setAuditError(null);
+      } else if (status === 401) {
+        setAuditError('ยังไม่ได้เข้าสู่ระบบ หรือเซสชันหมดอายุ');
+      } else if (status === 403) {
+        setAuditError('บัญชีที่ล็อกอินอยู่ไม่มีสิทธิ์ผู้ดูแลระบบ');
+      } else {
+        setAuditError(data.error || `ดึงบันทึกไม่สำเร็จ (HTTP ${status})`);
+      }
+    } catch (err) {
+      setAuditError(err instanceof Error ? err.message : 'เชื่อมต่อไม่สำเร็จ');
+    } finally {
+      setAuditLoading(false);
+    }
+  };
+
+  // โหลดบันทึกจริงเมื่อเปิดแท็บ Log บันทึก (ครั้งแรกที่เปิด)
+  useEffect(() => {
+    if (activeTab === 'audit' && !auditLogs.length && !auditLoading && !auditError) {
+      void fetchAuditLogs();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const fetchMembers = async () => {
       try {
@@ -709,16 +754,51 @@ function AdminContent() {
             </div>
           )}
 
-          {/* Audit Tab */}
+          {/* Audit Tab — ดึง AuditLog จริงจากฐานข้อมูล (ไม่ใช้ข้อความตัวอย่าง) */}
           {activeTab === 'audit' && (
             <div>
               <div className="card p-5">
-                <h2 className="text-lg font-bold text-slate-800">Log บันทึก (Audit Log)</h2>
-                <div className="mt-4 text-xs font-mono bg-[#f0f7ff] border border-blue-100 text-slate-600 rounded-xl p-3" style={{ maxHeight: '400px', overflow: 'auto' }}>
-                  2026-09-05 09:12 — admin@ — member.approve — P-1003 → M-000004 — reason: เอกสารครบ<br/>
-                  2026-09-05 09:15 — system — tree.place — M-000004 → parent A01 slot 2 — BFS<br/>
-                  2026-09-05 09:20 — finance@ — income.approve — TX-9001 — v2.1
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-bold text-slate-800">Log บันทึก (Audit Log)</h2>
+                  <button
+                    onClick={() => { setAuditError(null); void fetchAuditLogs(); }}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-full border border-blue-200 text-sky-700 hover:bg-blue-50"
+                  >
+                    ↻ รีเฟรช
+                  </button>
                 </div>
+                <p className="mt-1 text-xs text-slate-500">
+                  บันทึกจริงจากฐานข้อมูล — แสดง {auditLogs.length} รายการล่าสุด
+                </p>
+
+                {auditLoading && <div className="mt-4 text-xs text-slate-500">กำลังโหลดบันทึก…</div>}
+
+                {!auditLoading && auditError && (
+                  <div className="mt-4 text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-xl p-3">{auditError}</div>
+                )}
+
+                {!auditLoading && !auditError && auditLogs.length === 0 && (
+                  <div className="mt-4 text-xs text-slate-500 bg-[#f0f7ff] border border-blue-100 rounded-xl p-3">
+                    ยังไม่มีบันทึกการใช้งานในระบบ
+                  </div>
+                )}
+
+                {!auditLoading && !auditError && auditLogs.length > 0 && (
+                  <div className="mt-4 text-xs font-mono bg-[#f0f7ff] border border-blue-100 text-slate-600 rounded-xl p-3" style={{ maxHeight: '400px', overflow: 'auto' }}>
+                    {auditLogs.map((l) => {
+                      const who = l.user?.displayName || l.user?.memberCode || l.user?.email
+                        || (l.userId ? String(l.userId).slice(0, 8) : 'system');
+                      const when = new Date(l.createdAt).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' });
+                      const target = l.entityId ? ` ${l.entity}#${String(l.entityId).slice(0, 12)}` : ` ${l.entity}`;
+                      const extra = l.reason ? ` — reason: ${l.reason}` : '';
+                      return (
+                        <div key={l.id} className="py-0.5 border-b border-blue-50 last:border-0">
+                          {when} — {who} — {l.action}{target}{extra}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           )}
