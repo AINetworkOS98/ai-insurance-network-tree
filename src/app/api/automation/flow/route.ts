@@ -89,7 +89,7 @@ export async function GET() {
     safe(db.visitor.count(), 0),
     safe(db.engagementScore.count(), 0),
     safe(prisma.prospect.count({ where: { leadScore: { gte: 60 } } }), 0),
-    safe(prisma.user.count(), 0),
+    safe(prisma.user.count({ where: { status: { notIn: ['RESIGNED'] } } }), 0),
     safe(prisma.placementRun.count(), 0),
     safe(prisma.auditLog.count(), 0),
     safe(prisma.treePlacement.count(), 0),

@@ -276,7 +276,9 @@ function AdminContent() {
     );
   }
 
-  const visibleMembers = members.filter((m: any) => (memberFilter === 'all' ? true : m.adminStatus === memberFilter));
+  // "ทั้งหมด" = เฉพาะสมาชิกที่ยังไม่ถูกลบ · คนที่ลบแล้วดูได้ที่แท็บ "ลบออกแล้ว" (ไว้กดคืนค่า)
+  const notDeletedCount = members.filter((m: any) => !m.deleted).length;
+  const visibleMembers = members.filter((m: any) => (memberFilter === 'all' ? !m.deleted : m.adminStatus === memberFilter));
 
   return (
     <div>
@@ -451,7 +453,7 @@ function AdminContent() {
                 {/* ตัวกรองตามสถานะ */}
                 <div className="mt-3 flex flex-wrap gap-2">
                   {([
-                    ['all', 'ทั้งหมด', summary?.total],
+                    ['all', 'ทั้งหมด', notDeletedCount],
                     ['pending', 'รออนุมัติ', summary?.pending],
                     ['approved', 'อนุมัติแล้ว', summary?.approved],
                     ['rejected', 'ไม่อนุมัติ', summary?.rejected],

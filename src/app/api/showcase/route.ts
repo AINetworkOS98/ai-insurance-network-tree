@@ -136,9 +136,9 @@ export async function GET() {
     aptUpcoming,
     notifCount,
   ] = await Promise.all([
-    safe(prisma.user.count(), 0),
+    safe(prisma.user.count({ where: { status: { notIn: ['RESIGNED'] } } }), 0),
     safe(prisma.user.count({ where: { status: 'ACTIVE' } }), 0),
-    safe(prisma.user.count({ where: { rankLevel: { gte: 1 } } }), 0),
+    safe(prisma.user.count({ where: { status: { notIn: ['RESIGNED'] }, rankLevel: { gte: 1 } } }), 0),
     safe(prisma.prospect.count(), 0),
     safe(prisma.prospect.count({ where: { leadScore: { gte: 80 } } }), 0),
     safe(prisma.prospect.count({ where: { createdAt: { gte: startOfToday } } }), 0),

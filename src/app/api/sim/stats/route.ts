@@ -20,8 +20,9 @@ export async function GET(req: Request) {
   };
 
   const [realUsers, realTree, realProspects, sims, simMembers, simEvents, simPayments, eligible, approved, rules] = await Promise.all([
-    safe(() => prisma.user.count()),
-    safe(() => prisma.treeNode.count()),
+    // ตัดสมาชิกที่ลบออกแล้ว (RESIGNED) ออก — ลบแล้วต้องหายจากตัวเลขจริงทันที
+    safe(() => prisma.user.count({ where: { status: { notIn: ['RESIGNED'] } } })),
+    safe(() => prisma.treeNode.count({ where: { user: { status: { notIn: ['RESIGNED'] } } } })),
     safe(() => prisma.prospect.count()),
     safe(() => prisma.networkSim.count()),
     safe(() => prisma.simMember.count()),
