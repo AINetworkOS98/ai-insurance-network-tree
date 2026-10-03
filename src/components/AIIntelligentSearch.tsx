@@ -509,8 +509,8 @@ function linkify(text: string){
       // เริ่มต้น — ช่องค้นหาอยู่กลางจอ พิมพ์แล้วจะลงล่างอัตโนมัติเมื่อมีข้อความ
       return (
         <div data-ai-search className="w-full flex flex-col h-full">
-          <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-6 py-8">
-            <div className="w-full max-w-[760px]">
+          <div className="flex-1 flex flex-col items-center overflow-y-auto px-4 md:px-6 py-8">
+            <div className="w-full max-w-[760px] my-auto">
               {topContent && <div className="mb-4">{topContent}</div>}
               {ModeSwitch}
               <div className="mt-4">{InputCard}</div>
@@ -544,8 +544,8 @@ function linkify(text: string){
         // เริ่มต้น — ช่องค้นหาอยู่กลางจอ
         return (
           <div data-ai-search className="w-full flex flex-col h-full">
-            <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-6 py-8">
-              <div className="w-full max-w-[760px]">
+            <div className="flex-1 flex flex-col items-center overflow-y-auto px-4 md:px-6 py-8">
+              <div className="w-full max-w-[760px] my-auto">
                 {topContent && <div className="mb-4">{topContent}</div>}
                 {ModeSwitch}
                 <div className="mt-4">{InputCard}</div>
