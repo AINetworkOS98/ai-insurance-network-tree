@@ -1368,12 +1368,15 @@ function CameraRig({
     }
 
     // โหมดชมภาพยนตร์: ไม่มีปฏิสัมพันธ์นาน ๆ → ค่อย ๆ ถอยออกไปเห็นทั้งจักรวาล
+    // ระยะถอยอิงขนาดเครือข่ายจริง (fitDist × 4, เพดาน 290 เท่าเดิม) — เครือข่ายจริงที่มีสมาชิกไม่กี่คน
+    // จะไม่หดเหลือจุดเล็ก ๆ กลางจอเหมือนใช้ระยะคงที่ 290 (ซึ่งพอดีกับชุดตัวอย่าง 781 โหนด)
     if (!pausedRef.current && introDone.current && now - lastInteract.current > 45000 && c) {
+      const farDist = THREE.MathUtils.clamp(fitDist * 4, 90, 290);
       const dist = camera.position.distanceTo(c.target);
-      if (dist < 250) {
+      if (dist < farDist * 0.9) {
         lastInteract.current = now;
         const dir = camera.position.clone().sub(c.target).normalize();
-        anim.current = { from: camera.position.clone(), to: c.target.clone().addScaledVector(dir, 290), tFrom: c.target.clone(), tTo: c.target.clone(), t: 0, dur: 26 };
+        anim.current = { from: camera.position.clone(), to: c.target.clone().addScaledVector(dir, farDist), tFrom: c.target.clone(), tTo: c.target.clone(), t: 0, dur: 26 };
       }
     }
   });
