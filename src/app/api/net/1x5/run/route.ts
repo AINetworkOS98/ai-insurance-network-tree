@@ -3,7 +3,7 @@ import { runCycle, loadRules, requireNetAccess, netDenied, netAdminRequired, mas
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 /**
  * POST /api/net/1x5/run

@@ -1497,6 +1497,15 @@ model Visitor {
   events     VisitorEvent[]
   videoViews VideoView[]
 
+  // ── Video Intelligence — สรุปที่ AI วิเคราะห์ไว้ต่อผู้ชมรายคน ──────────────
+  // เป็น "ระดับความสนใจเชิงพฤติกรรม" (Behavioral Interest Level) ไม่ใช่การยืนยันตัวตน
+  engagementScore     Int       @default(0) @map("engagement_score")
+  interestLevel       String    @default("COLD") @map("interest_level")
+  totalWatchSeconds   Int       @default(0) @map("total_watch_seconds")
+  averageWatchPercent Float     @default(0) @map("average_watch_percent")
+  totalVideoViews     Int       @default(0) @map("total_video_views")
+  lastAnalyzedAt      DateTime? @map("last_analyzed_at") @db.Timestamptz
+
   @@index([lastVisit])
   @@index([prospectId])
   @@index([consentStatus])
@@ -1534,6 +1543,8 @@ model VisitorEvent {
   ipHash       String?  @map("ip_hash")
   at           DateTime @default(now()) @db.Timestamptz // เวลาที่ event เกิด (client ส่งมาได้)
   createdAt    DateTime @default(now()) @db.Timestamptz
+  // ── Video Intelligence: n8n ประมวลผล event นี้แล้วหรือยัง (กันประมวลผลซ้ำเมื่อ push+pull ชนกัน)
+  processedAt  DateTime? @map("processed_at") @db.Timestamptz
 
   @@index([visitorId, at])
   @@index([prospectId, at])
@@ -1601,6 +1612,37 @@ model VideoView {
   @@index([videoId])
   @@index([startedAt])
   @@map("video_views")
+}
+
+// ── 4.1) VideoAiAnalysis — ผลวิเคราะห์ของ AI ต่อผู้ชม 1 ครั้ง (AI เป็นสมองกลาง) ──
+// เก็บ JSON ที่ AI ตอบ (structured output) + ผลจัดระดับ เพื่อทำรายงานย้อนหลังและกันแจ้งเตือนซ้ำ
+// ไม่มี FK ไป Visitor โดยเจตนา: visitor_id เป็น uuid ไม่ระบุตัวตน และต้องลบได้โดยไม่กระทบผู้ใช้
+model VideoAiAnalysis {
+  id               String   @id @default(uuid()) @db.Uuid
+  analysisId       String   @unique @map("analysis_id") // idempotency: n8n ยิงซ้ำไม่สร้างแถวใหม่
+  visitorId        String?  @map("visitor_id") // anonymous visitor uuid (ไม่ใช่ตัวตนบุคคล)
+  sessionId        String?  @map("session_id")
+  page             String?
+  videoId          String?  @map("video_id")
+  engagementScore  Int      @default(0) @map("engagement_score") // 0-100
+  interestLevel    String   @default("COLD") @map("interest_level") // COLD | WARM | HOT | VERY_HOT
+  watchProbability String?  @map("watch_probability") // low | medium | high
+  returningVisitor Boolean  @default(false) @map("returning_visitor")
+  videoCompletion  Float    @default(0) @map("video_completion") // 0-1
+  aiSummary        String?  @map("ai_summary") @db.Text
+  recommendedAction String? @map("recommended_action") @db.Text
+  reason           Json? // string[] เหตุผลประกอบ (ต้องอ้างจาก event จริงเท่านั้น)
+  raw              Json? // คำตอบดิบจากโมเดล (ตรวจสอบย้อนหลัง)
+  model            String?
+  sendAlert        Boolean  @default(false) @map("send_alert")
+  alertSent        Boolean  @default(false) @map("alert_sent")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([visitorId, createdAt])
+  @@index([interestLevel, createdAt])
+  @@index([engagementScore])
+  @@index([createdAt])
+  @@map("video_ai_analysis")
 }
 
 // ── 5) Recommendation — คลิปที่ AI/ตัวแทนเสนอให้ lead 1 ครั้ง ────────────────

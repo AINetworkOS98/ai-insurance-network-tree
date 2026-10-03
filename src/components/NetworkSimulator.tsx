@@ -108,7 +108,7 @@ export default function NetworkSimulator() {
   const [msg, setMsg] = useState<string>('');
   const [total, setTotal] = useState(0);
   const [soundOn, setSoundOn] = useState(false);
-  const [volume, setVolume] = useState(0.25);
+  const [volume, setVolume] = useState(0.32);
   const playRef = useRef<number | null>(null);
   const audioRef = useRef<UniverseAudio | null>(null);
 
@@ -191,6 +191,7 @@ export default function NetworkSimulator() {
       }).then((r) => r.json());
       if (res?.ok) {
         setMsg(`สร้างการจำลองแล้ว: ${fmtNum(res.totalMembers)} โหนด ใน ${config.layers} ชั้น`);
+        audioRef.current?.chime();
         await refresh(res.simId);
       } else {
         setMsg(res?.error || 'เริ่มการจำลองไม่สำเร็จ');
@@ -252,7 +253,10 @@ export default function NetworkSimulator() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ simId: sim?.id, approve, code: approve && selected ? selected : undefined }),
       }).then((r) => r.json());
-      if (res?.ok) setMsg(approve ? `อนุมัติการเลื่อนตำแหน่ง (จำลอง) ${res.approved} รายการ` : `ประเมิน ${res.checked} โหนด · เข้าเงื่อนไข ${res.eligible}`);
+      if (res?.ok) {
+        setMsg(approve ? `อนุมัติการเลื่อนตำแหน่ง (จำลอง) ${res.approved} รายการ` : `ประเมิน ${res.checked} โหนด · เข้าเงื่อนไข ${res.eligible}`);
+        if ((approve ? res.approved : res.eligible) > 0) audioRef.current?.chime();
+      }
       await refresh(sim?.id);
     } finally {
       setBusy('');

@@ -1,0 +1,304 @@
+{
+  "name": "Member Interest 01 · กิจกรรมสมาชิก → คะแนนความสนใจ → รายงาน + อีเมล (ทุก 10 นาที)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      },
+      "id": "mi-01-sched",
+      "name": "Schedule ทุก 10 นาที",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/activity/radar",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "minutes",
+              "value": "30"
+            },
+            {
+              "name": "minScore",
+              "value": "40"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 20000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "mi-02-radar",
+      "name": "เรดาร์กิจกรรมสมาชิก (/api/activity/radar)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// คัดเฉพาะรายที่ \"ถึงเกณฑ์\" (สนใจสูง 60+) และยังไม่ถูกรายงานภายใน 24 ชม.\n// ตัวเลข/คะแนนทั้งหมดมาจาก /api/activity/radar ซึ่งคำนวณจาก event จริงเท่านั้น\nconst payload = $input.first().json || {};\nconst body = (payload.body && typeof payload.body === 'object') ? payload.body : payload;\nconst list = Array.isArray(body.members) ? body.members : [];\nconst MIN = 60;                       // 60-79 = สนใจสูง, 80+ = สนใจสูงมาก\nconst scanned = body.scanned || {};\nconst picked = list.filter(function (m) {\n  return Number(m.interestScore || 0) >= MIN && m.reportedIn24h !== true;\n});\n\nif (!picked.length) {\n  return [{ json: {\n    none: true,\n    scannedVisitors: Number(scanned.visitors || 0),\n    scannedEvents: Number(scanned.events || 0),\n    min: MIN,\n    detail: 'รอบนี้ยังไม่มีรายที่ถึงเกณฑ์ ' + MIN + ' คะแนน (สแกน ' + Number(scanned.visitors || 0) + ' ผู้เข้าชม / ' + Number(scanned.events || 0) + ' event)',\n  } }];\n}\n\nreturn picked.map(function (m) {\n  return { json: {\n    none: false,\n    visitorKey: String(m.visitorKey || ''),\n    prospectId: m.prospectId ? String(m.prospectId) : null,\n    score: Number(m.interestScore || 0),\n    level: String(m.interestLevel || ''),\n    summary: String(m.aiSummary || ''),\n    behaviors: Array.isArray(m.keyBehaviors) ? m.keyBehaviors : [],\n    pagePath: String(m.pagePath || '/network/1x5-autopilot'),\n    durationSec: Number(m.durationSec || 0),\n    visits: Number(m.sessions || 1),\n    ctaClicks: Number(m.ctaClicks || 0),\n    emailEligible: m.emailEligible === true,\n  } };\n});"
+      },
+      "id": "mi-03-pick",
+      "name": "คัดรายที่ถึงเกณฑ์ + เตรียมรายงาน",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "mi-cond-1",
+              "leftValue": "={{ $json.none !== true }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "mi-04-if",
+      "name": "มีรายต้องรายงาน?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/activity/report",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ visitorKey: $json.visitorKey, prospectId: $json.prospectId, score: $json.score, level: $json.level, summary: $json.summary, behaviors: $json.behaviors, pagePath: $json.pagePath, durationSec: $json.durationSec, visits: $json.visits, ctaClicks: $json.ctaClicks, source: 'n8n-member-interest' }) }}",
+        "options": {
+          "timeout": 20000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "mi-05-report",
+      "name": "สร้างรายงาน + ส่งอีเมล (/api/activity/report)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// สรุปผลการสร้างรายงาน + ส่งอีเมล (ล้มเหลวได้โดยไม่ทำให้ระบบล้ม — บันทึกไว้ตรวจย้อนหลัง)\nconst raw = $('สร้างรายงาน + ส่งอีเมล (/api/activity/report)').all();\nlet reports = 0, sent = 0, skipped = 0, failed = 0, firstError = null;\nfor (const it of raw) {\n  const j = it.json || {};\n  const b = (j.body && typeof j.body === 'object') ? j.body : j;\n  if (b.reportId || b.deduped) reports++;\n  const st = String(b.email || '');\n  if (st === 'sent') sent++;\n  else if (st === 'failed') { failed++; if (!firstError) firstError = String(b.error || 'send failed').slice(0, 200); }\n  else skipped++;\n}\nreturn [{ json: {\n  ok: failed === 0,\n  workflow: 'member-interest-01',\n  stage: 'report_email',\n  detail: 'สร้างรายงาน ' + reports + ' ฉบับ · ส่งอีเมลสำเร็จ ' + sent + ' · ข้าม (ยังไม่ยืนยัน/ไม่ยินยอม) ' + skipped + ' · ล้มเหลว ' + failed,\n  at: new Date().toISOString(),\n  reports: reports, sent: sent, skipped: skipped, failed: failed, firstError: firstError,\n} }];"
+      },
+      "id": "mi-06-sum",
+      "name": "สรุปผลการส่ง + ตรวจข้อผิดพลาด",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/agent-log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: $json.workflow, ok: $json.ok, stage: $json.stage, detail: $json.detail, at: $json.at, reports: $json.reports, sent: $json.sent, skipped: $json.skipped, failed: $json.failed }) }}",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "mi-07-log",
+      "name": "บันทึก Log การทำงาน (/api/agent-log)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1000,
+        180
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "mi-08-noop",
+      "name": "จบรอบ — ยังไม่มีรายถึงเกณฑ์",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        560,
+        440
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule ทุก 10 นาที": {
+      "main": [
+        [
+          {
+            "node": "เรดาร์กิจกรรมสมาชิก (/api/activity/radar)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "เรดาร์กิจกรรมสมาชิก (/api/activity/radar)": {
+      "main": [
+        [
+          {
+            "node": "คัดรายที่ถึงเกณฑ์ + เตรียมรายงาน",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "คัดรายที่ถึงเกณฑ์ + เตรียมรายงาน": {
+      "main": [
+        [
+          {
+            "node": "มีรายต้องรายงาน?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "มีรายต้องรายงาน?": {
+      "main": [
+        [
+          {
+            "node": "สร้างรายงาน + ส่งอีเมล (/api/activity/report)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "จบรอบ — ยังไม่มีรายถึงเกณฑ์",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สร้างรายงาน + ส่งอีเมล (/api/activity/report)": {
+      "main": [
+        [
+          {
+            "node": "สรุปผลการส่ง + ตรวจข้อผิดพลาด",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สรุปผลการส่ง + ตรวจข้อผิดพลาด": {
+      "main": [
+        [
+          {
+            "node": "บันทึก Log การทำงาน (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "a7d8069f-ac7a-4919-b0ff-d4d6e51a263b",
+    "saveManualExecutions": true,
+    "timezone": "Asia/Bangkok"
+  },
+  "active": true
+}
