@@ -14,6 +14,8 @@ export interface OCRResult {
   bank: string | null;
   receiptNumber: string | null;
   companyName: string | null;
+  policyNo: string | null;
+  agentCode: string | null;
   confidence: number;
   provider: 'openai' | 'gemini';
   rawText?: string;
@@ -46,6 +48,8 @@ const PROMPT = [
   '  "receiverName": "<ชื่อผู้รับ/บริษัท>",',
   '  "bank": "<ธนาคาร เช่น SCB, KBANK, KTB, BBL, BAY>",',
   '  "receiptNumber": "<เลขใบเสร็จ>",',
+  '  "policyNo": "<เลขที่กรมธรรม์/เลขที่สัญญา ถ้ามี>",',
+  '  "agentCode": "<รหัสตัวแทน/รหัสผู้แนะนำ ถ้ามี>",',
   '  "companyName": "<ชื่อบริษัทที่ออกเอกสาร>",',
   '  "confidence": <0.0 ถึง 1.0 ความมั่นใจในการอ่านภาพรวม>',
   '}',
@@ -215,6 +219,8 @@ function buildResult(parsed: any, rawText: string, provider: 'openai' | 'gemini'
     bank: parsed.bank || null,
     receiptNumber: parsed.receiptNumber || null,
     companyName: parsed.companyName || null,
+    policyNo: parsed.policyNo || null,
+    agentCode: parsed.agentCode || null,
     confidence: finalConfidence,
     provider,
     rawText,
