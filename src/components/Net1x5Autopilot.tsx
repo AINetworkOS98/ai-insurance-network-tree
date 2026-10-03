@@ -186,9 +186,9 @@ export default function Net1x5Autopilot() {
 
         {/* ── KPI ── */}
         <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-          <Tile label="สมาชิกในโครงสร้าง" value={s.total ?? '—'} sub={`ใช้งาน ${s.active ?? 0} · ปิดจุด ${s.nonActive ?? 0}`} />
+          <Tile label="สมาชิกในโครงสร้าง" value={s.total ?? '—'} sub={`ใช้งาน ${s.active ?? 0} · ปิดจุด ${s.nonActive ?? 0}${s.outOfTree ? ` · นอกผัง ${s.outOfTree}` : ''}`} />
           <Tile label="ผ่านเงื่อนไข" value={s.passed ?? '—'} sub="พร้อมขึ้นตำแหน่ง" tone="bg-emerald-50 border-emerald-200" />
-          <Tile label="ไม่ผ่านเงื่อนไข" value={s.failed ?? '—'} sub={`รอตรวจใบเสร็จ ${s.pendingReview ?? 0}`} tone="bg-amber-50 border-amber-200" />
+          <Tile label="ไม่ผ่านเงื่อนไข" value={s.failed ?? '—'} sub={`ต้องดำเนินการ ${s.failedActionable ?? 0} · ออกจากผังแล้ว ${s.alreadyOut ?? 0} · รอตรวจใบเสร็จ ${s.pendingReview ?? 0}`} tone="bg-amber-50 border-amber-200" />
           <Tile label="ตำแหน่งว่าง" value={s.vacancies ?? '—'} sub={`ช่อง 1:5 ว่าง ${s.emptySlots ?? 0}`} tone="bg-sky-50 border-sky-200" />
           <Tile label="ผู้มีสิทธิ์เลื่อน" value={s.readyCandidates ?? '—'} sub={`เข้าข่ายทั้งหมด ${s.candidates ?? 0}`} />
           <Tile label="รันล่าสุด" value={state?.lastRun ? `${state.lastRun.promoted}⬆ / ${state.lastRun.cut}⛔` : 'ยังไม่รัน'} sub={state?.lastRun ? new Date(state.lastRun.startedAt).toLocaleString('th-TH') : 'กด "รันจริง" เพื่อเริ่ม'} />

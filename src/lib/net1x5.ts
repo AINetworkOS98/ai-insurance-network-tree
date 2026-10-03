@@ -159,6 +159,8 @@ export interface NetMember {
   emptySlots: number[];      // ช่องว่างใน 1..5
   isTest: boolean;
   isAdminAccount: boolean;   // บัญชีผู้ดูแลระบบ — ยกเว้นจากการประเมิน/คัดออกโดยอัตโนมัติเสมอ
+  inTree: boolean;           // อยู่ในผังจริง (มี TreeNode) — ใช้คำนวณโครงสร้างให้ตรงฐานข้อมูล
+  nodeLevel: number | null;  // ระดับจริงจาก TreeNode (แหล่งความจริงเดียวกับหน้าอื่นของระบบ)
   verifiedAmount: number;    // ยอดรับรองในรอบ (PerformanceLedger active)
   receiptCount: number;      // ใบเสร็จที่ยืนยันแล้วในรอบ
   pendingReceipts: number;   // ใบเสร็จรอตรวจ (ห้ามคัดเพราะ OCR/ผู้ตรวจล่าช้า)
@@ -211,6 +213,7 @@ export interface EngineState {
   deadline: { iso: string; daysLeft: number; passed: boolean; label: string };
   summary: {
     total: number; active: number; nonActive: number; passed: number; failed: number;
+    failedActionable: number; alreadyOut: number; outOfTree: number;
     pendingReview: number; vacancies: number; emptySlots: number; candidates: number; readyCandidates: number;
     promotedLast: number; cutLast: number;
   };
@@ -321,6 +324,8 @@ export async function collectNetwork(): Promise<{ members: NetMember[]; nodeByUs
       positionName: positionName(POSITIONS[rl]?.code || 'general'),
       status: String(u.status),
       isActive: node ? node.isActive !== false : false,
+      inTree: !!node,
+      nodeLevel: node ? Number(node.level ?? 0) : null,
       nodeId: node?.id || null,
       level: place?.level ?? node?.level ?? 0,
       slot: place?.slot ?? null,
@@ -775,7 +780,9 @@ function isGrace(members: NetMember[], userId: string, rules: Net1x5Rules, now: 
 function isAlreadyCut(members: NetMember[], userId: string) {
   const m = members.find((x) => x.userId === userId);
   if (!m) return true;
-  return ['SUSPENDED', 'RESIGNED'].includes(m.status);
+  // ออกจากผังแล้ว (ไม่มีจุดในผัง) หรือสถานะที่ถูกนำออกแล้ว ต้องไม่ถูกนับ/คัดซ้ำ
+  // — ใช้ชุดสถานะเดียวกับ middleware + หน้าอื่นของระบบ (ตรงกับ UserStatus ในฐานข้อมูล)
+  return !m.inTree || ['SUSPENDED', 'RESIGNED', 'INACTIVE'].includes(m.status);
 }
 
 /** คัดออกจริง: ตั้งสถานะไม่ผ่านเงื่อนไข + ปิดจุดในผัง + ประวัติ + Log + แจ้งเตือน */
@@ -1059,12 +1066,19 @@ export async function getState(): Promise<EngineState> {
   const now = new Date();
   const { members } = await collectNetwork();
   const checks = members.map((m) => evaluateMember(m, rules, now));
-  const failed = checks.filter((c) => !c.pass);
+  const failedAll = checks.filter((c) => !c.pass);
+  // แสดงเฉพาะคนที่ยังอยู่ในผังและยังต้องดำเนินการ — คนที่ออกจากผังแล้ว (INACTIVE/SUSPENDED/RESIGNED)
+  // ไม่นับเป็น "รอคัดออก" (ให้ตรงกับสถานะจริงในฐานข้อมูล ไม่ชวนคัดซ้ำ)
+  const failed = failedAll.filter((c) => !isAlreadyCut(members, c.userId));
+  const alreadyOut = failedAll.length - failed.length;
   const vacancies = await findVacancies(members, []);
   const candidates = rankCandidates(checks, members, vacancies[0] || null, rules.priority);
 
+  // โครงสร้างนับจาก "จุดในผังจริง" (TreeNode) เท่านั้น — ให้ตรงกับตาราง TreeNode/TreePlacement
+  // บัญชีที่ยังไม่มีจุดในผัง (เช่นบัญชีผู้ดูแลระบบ) ไม่ถูกนับเป็นสมาชิกในโครงสร้าง
+  const inTreeMembers = members.filter((m) => m.inTree);
   const perLevel = new Map<number, number>();
-  members.forEach((m) => perLevel.set(m.level, (perLevel.get(m.level) || 0) + 1));
+  inTreeMembers.forEach((m) => { const lv = m.nodeLevel ?? m.level; perLevel.set(lv, (perLevel.get(lv) || 0) + 1); });
   const perLevelArr = [...perLevel.entries()].map(([level, count]) => ({ level, count, capacity: Math.pow(5, Math.min(level, 12)) })).sort((a, b) => a.level - b.level);
 
   const runs: any[] = await (prisma.placementRun as any).findMany({ orderBy: { startedAt: 'desc' }, take: 10 }).catch(() => []);
@@ -1078,11 +1092,14 @@ export async function getState(): Promise<EngineState> {
   return {
     rules, period: rules.period, now: now.toISOString(), deadline: computeDeadline(rules, now),
     summary: {
-      total: members.length,
-      active: members.filter((m) => m.isActive && m.status === 'ACTIVE').length,
-      nonActive: members.filter((m) => !m.isActive).length,
-      passed: checks.length - failed.length,
-      failed: failed.length,
+      total: inTreeMembers.length,
+      active: inTreeMembers.filter((m) => m.isActive && m.status === 'ACTIVE').length,
+      nonActive: inTreeMembers.filter((m) => !m.isActive).length,
+      passed: checks.length - failedAll.length,
+      failed: failedAll.length,
+      failedActionable: failed.length,
+      alreadyOut,
+      outOfTree: members.length - inTreeMembers.length,
       pendingReview: checks.filter((c) => c.pendingReview).length,
       vacancies: vacancies.length,
       emptySlots: vacancies.filter((v) => v.kind === 'slot').length,
@@ -1092,7 +1109,7 @@ export async function getState(): Promise<EngineState> {
       cutLast: Number(lastNet5Run?.totalFailed || 0),
     },
     members, checks, failed, vacancies, candidates,
-    tree: { roots: members.filter((m) => !m.parentUserId).map((m) => ({ userId: m.userId, code: m.code, name: m.name })), perLevel: perLevelArr, branchLimit: 5 },
+    tree: { roots: inTreeMembers.filter((m) => m.parentUserId == null).map((m) => ({ userId: m.userId, code: m.code, name: m.name })), perLevel: perLevelArr, branchLimit: 5 },
     lastRun: lastNet5Run ? {
       id: lastNet5Run.id, jobId: lastNet5Run.jobId, status: lastNet5Run.status, startedAt: lastNet5Run.startedAt,
       finishedAt: lastNet5Run.finishedAt, cut: lastNet5Run.totalFailed, promoted: lastNet5Run.totalSuccess,
