@@ -131,49 +131,67 @@ async function extractWithOpenAI(imageBase64: string, mime: string): Promise<OCR
 }
 
 // ── Gemini ───────────────────────────────────────────────────────
+// โมเดลสำหรับ OCR — เรียงตามลำดับที่ลอง และถอยไปตัวถัดไปเมื่อโควตาหมด/ผู้ให้บริการล่ม
+// ⚠ gemini-3.6-flash เป็น thinking model และโควตาหมด → OCR เคยล้มทั้งระบบด้วย 429
+const ENV_OCR_MODELS = (process.env.OCR_GEMINI_MODELS || '').split(',').map((s) => s.trim()).filter(Boolean);
+const GEMINI_OCR_MODELS = ENV_OCR_MODELS.length
+  ? ENV_OCR_MODELS
+  : ['gemini-3.5-flash-lite', 'gemini-flash-lite-latest', 'gemini-3.1-flash-lite'];
+
 async function extractWithGemini(imageBase64: string, mime: string): Promise<OCRResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || apiKey === 'MY_GEMINI_API_KEY' || apiKey.includes('placeholder')) {
     throw new OCRError(500, 'MISSING_KEY', 'GEMINI_API_KEY is not configured');
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 45000);
+  let lastError: any = null;
+  for (const model of GEMINI_OCR_MODELS) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 45000);
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: PROMPT }, { inline_data: { mime_type: mime, data: imageBase64 } }] }],
+            generationConfig: { responseMimeType: 'application/json', temperature: 0 },
+          }),
+          signal: controller.signal,
+        }
+      );
+      clearTimeout(timeout);
 
-  try {
-    const response = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: PROMPT }, { inline_data: { mime_type: mime, data: imageBase64 } }] }],
-          generationConfig: { responseMimeType: 'application/json', temperature: 0 },
-        }),
-        signal: controller.signal,
+      if (!response.ok) {
+        const body = await response.text();
+        // คีย์ผิด = หยุดทันที (ลองโมเดลอื่นก็ไม่ช่วย)
+        if (response.status === 401) throw new OCRError(401, 'INVALID_KEY', 'API Key ไม่ถูกต้อง (ตรวจสอบ GEMINI_API_KEY)');
+        lastError = response.status === 429
+          ? new OCRError(429, 'QUOTA_EXCEEDED', 'โควตา Gemini หมด กรุณาลองใหม่ภายหลัง')
+          : new OCRError(response.status >= 500 ? 502 : response.status, response.status >= 500 ? 'PROVIDER_DOWN' : 'OCR_FAILED',
+              response.status >= 500 ? 'ไม่สามารถเชื่อมต่อ Gemini ได้ กรุณาลองใหม่' : 'อ่านเอกสารไม่สำเร็จ กรุณาลองใหม่');
+        console.warn(`[ocr] ${model} ตอบ ${response.status} — ลองโมเดลถัดไป: ${body.slice(0, 160)}`);
+        continue;
       }
-    );
 
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      const body = await response.text();
-      if (response.status === 401) throw new OCRError(401, 'INVALID_KEY', 'API Key ไม่ถูกต้อง (ตรวจสอบ GEMINI_API_KEY)');
-      if (response.status === 429) throw new OCRError(429, 'QUOTA_EXCEEDED', 'โควตา Gemini หมด กรุณาลองใหม่ภายหลัง');
-      if (response.status >= 500) throw new OCRError(502, 'PROVIDER_DOWN', 'ไม่สามารถเชื่อมต่อ Gemini ได้ กรุณาลองใหม่');
-      throw new OCRError(response.status, 'OCR_FAILED', 'อ่านเอกสารไม่สำเร็จ กรุณาลองใหม่');
+      const data = await response.json();
+      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const parsed = parseResponse(rawText);
+      return buildResult(parsed, rawText, 'gemini');
+    } catch (e: any) {
+      clearTimeout(timeout);
+      if (e instanceof OCRError && e.code === 'INVALID_KEY') throw e;
+      lastError = e?.name === 'AbortError'
+        ? new OCRError(504, 'TIMEOUT', 'Gemini ใช้เวลานานเกินไป กรุณาลองใหม่')
+        : e;
+      console.warn(`[ocr] ${model} ล้มเหลว — ลองโมเดลถัดไป: ${e?.message || e}`);
+      continue;
     }
-
-    const data = await response.json();
-    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const parsed = parseResponse(rawText);
-    return buildResult(parsed, rawText, 'gemini');
-  } catch (e: any) {
-    clearTimeout(timeout);
-    if (e instanceof OCRError) throw e;
-    if (e.name === 'AbortError') throw new OCRError(504, 'TIMEOUT', 'Gemini ใช้เวลานานเกินไป กรุณาลองใหม่');
-    throw new OCRError(500, 'OCR_FAILED', 'เกิดข้อผิดพลาดในการอ่านเอกสาร กรุณาลองใหม่');
   }
+
+  if (lastError instanceof OCRError) throw lastError;
+  throw new OCRError(500, 'OCR_FAILED', 'เกิดข้อผิดพลาดในการอ่านเอกสาร กรุณาลองใหม่');
 }
 
 function buildResult(parsed: any, rawText: string, provider: 'openai' | 'gemini'): OCRResult {
