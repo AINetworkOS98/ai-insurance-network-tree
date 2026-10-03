@@ -64,8 +64,8 @@ export const NAV_ENTRIES: NavEntry[] = [
 
   // ── สมาชิกทั่วไป (rank 0) ────────────────────────────────────────────────
   { href: '/financial-freedom', section: 'general', label: 'อิสรภาพทางการเงิน', key: 'sb_financial_freedom', icon: '🌟', minRank: 0 },
-  // ต่อจาก "อิสรภาพทางการเงิน" ตามคำสั่ง — เปิดให้ทุกระดับ (สมาชิกทั่วไป 0 → ผู้จัดการภาค 4)
-  { href: '/network/1x5-autopilot', section: 'general', label: 'ระบบ 1 แตก 5 อัตโนมัติ', key: 'nav_1x5', icon: '🧬', minRank: 0 },
+  // หมายเหตุ: เมนู "ระบบ 1 แตก 5 อัตโนมัติ" (/network/1x5-autopilot) ไม่ใส่ในเมนูด้านซ้าย
+  //          เพราะมีอยู่ในเมนูด้านบน (Header) แล้ว — ใส่ซ้ำจะซ้ำซ้อนกัน
   { href: '/notifications', section: 'general', label: 'ศูนย์แจ้งเตือน', key: 'nav_notif', icon: '🔔', minRank: 0 },
   { href: '/settings', section: 'general', label: 'ตั้งค่าโปรไฟล์', key: 'sb_settings', icon: '⚙', minRank: 0 },
 
