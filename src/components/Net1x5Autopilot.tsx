@@ -10,7 +10,7 @@ type State = {
   summary: any;
   tree: { roots: any[]; perLevel: { level: number; count: number; capacity: number }[]; branchLimit: number };
   members: any[]; checks: any[]; failed: any[]; vacancies: any[]; candidates: any[];
-  lastRun: any | null; logs: any[]; testAccounts: number; disclaimer?: string; error?: string; message?: string;
+  lastRun: any | null; logs: any[]; testAccounts: number; steps?: any[]; disclaimer?: string; error?: string; message?: string;
 };
 
 const PIPELINE = [
@@ -135,7 +135,8 @@ export default function Net1x5Autopilot() {
     finally { setBusy(''); }
   }
 
-  const steps: Step[] | null = run?.steps || null;
+  const steps: Step[] | null = run?.steps || (state as any)?.steps || null;
+  const stepsAreLive = !run && !!state?.steps;
   const s = state?.summary || {};
   const deadline = state?.deadline;
   const levelRows = useMemo(() => state?.tree?.perLevel || [], [state]);
@@ -214,12 +215,18 @@ export default function Net1x5Autopilot() {
           <Tile label="ไม่ผ่านเงื่อนไข" value={s.failed ?? '—'} sub={`ต้องดำเนินการ ${s.failedActionable ?? 0} · ออกจากผังแล้ว ${s.alreadyOut ?? 0} · รอตรวจใบเสร็จ ${s.pendingReview ?? 0}`} tone="bg-amber-50 border-amber-200" />
           <Tile label="ตำแหน่งว่าง" value={s.vacancies ?? '—'} sub={`ช่อง 1:5 ว่าง ${s.emptySlots ?? 0}`} tone="bg-sky-50 border-sky-200" />
           <Tile label="ผู้มีสิทธิ์เลื่อน" value={s.readyCandidates ?? '—'} sub={`เข้าข่ายทั้งหมด ${s.candidates ?? 0}`} />
-          <Tile label="รันล่าสุด" value={state?.lastRun ? `${state.lastRun.promoted}⬆ / ${state.lastRun.cut}⛔` : 'ยังไม่รัน'} sub={state?.lastRun ? new Date(state.lastRun.startedAt).toLocaleString('th-TH') : 'กด "รันจริง" เพื่อเริ่ม'} />
+          <Tile label="รันล่าสุด (อัตโนมัติ)" value={state?.lastRun ? `${state.lastRun.promoted}⬆ / ${state.lastRun.cut}⛔` : 'ยังไม่รัน'} sub={state?.lastRun ? `${new Date(state.lastRun.startedAt).toLocaleString('th-TH', { hour12: false })} · ${Math.max(0, Math.round((Date.now() - new Date(state.lastRun.startedAt).getTime()) / 60000))} นาทีที่แล้ว` : 'ตัวเฝ้ารันให้เองทุก 5 นาที'} />
         </div>
 
         {/* ── ลำดับการทำงาน 7 ขั้น ── */}
         <div className="mt-4 rounded-2xl border border-[#f3e8d3] bg-white p-3">
           <div className="text-sm font-semibold text-[#475569] mb-2">ลำดับการทำงานอัตโนมัติ (ตรวจสอบเงื่อนไข → ระบุผู้ไม่ผ่าน → นำออกจากตำแหน่ง → หาผู้มีคุณสมบัติครบ → เลื่อนขึ้นแทน → ปรับสายงาน → อัปเดตโครงสร้างทุกระดับ)</div>
+          {stepsAreLive && (
+            <div className="mb-2 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] text-emerald-800">
+              ✅ ผลนี้ประเมินสดจากฐานข้อมูล ณ เวลา {state?.now ? new Date(state.now).toLocaleTimeString('th-TH', { hour12: false }) : '—'}
+              {' · '}ตัวเฝ้าฝั่งคลาวด์รันวงจรเองทุก 5 นาที (ไม่ต้องกดปุ่ม) — กดปุ่มด้านบนเมื่อต้องการดูรายละเอียดของรอบที่สั่งเอง
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-2">
             {PIPELINE.map((p, i) => {
               const st = steps?.find((x) => x.key === p.key);

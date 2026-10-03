@@ -211,6 +211,7 @@ export interface EngineState {
   period: string;
   now: string;
   deadline: { iso: string; daysLeft: number; passed: boolean; label: string };
+  steps: StepResult[];   // ประเมินสดจากฐานข้อมูล (แสดงทันทีที่เปิดหน้า ไม่ต้องกดปุ่ม)
   summary: {
     total: number; active: number; nonActive: number; passed: number; failed: number;
     failedActionable: number; alreadyOut: number; outOfTree: number;
@@ -1093,8 +1094,56 @@ export async function getState(): Promise<EngineState> {
 
   const lastNet5Run = runs.find((r) => String(r.jobId || '').startsWith('net1x5-')) || null;
 
+  // ── ผลการทำงาน "ณ ปัจจุบัน" — ประเมินสดจากฐานข้อมูลทุกครั้งที่เปิด/รีเฟรชหน้า ──
+  // เดิมหน้าจอจะโชว์ผลเฉพาะเมื่อกดปุ่ม "ตรวจสอบ/รันจริง" ในเบราว์เซอร์รอบนั้น
+  // ทำให้ทั้ง 7 ขั้นขึ้น "ยังไม่ได้รันในรอบนี้" ทั้งที่ตัวเฝ้าฝั่งคลาวด์รันอัตโนมัติอยู่แล้ว
+  const lastRunAt: Date | null = lastNet5Run?.startedAt ? new Date(lastNet5Run.startedAt) : null;
+  // เวลาไทย (Asia/Bangkok) เสมอ — เซิร์ฟเวอร์ Vercel รันเป็น UTC จึงต้องกำหนด timeZone ให้ชัด
+  const thTime = (d: Date | null) => (d ? d.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', hour12: false }) : '—');
+  const liveSteps: StepResult[] = [
+    {
+      step: 1, key: 'verify', label: 'ตรวจสอบเงื่อนไขสมาชิก', status: failedAll.length ? 'warn' : 'ok',
+      count: checks.length,
+      detail: `ประเมินสด ณ ${thTime(now)} — ตรวจ ${checks.length} คน · ผ่าน ${checks.length - failedAll.length} · ไม่ผ่าน ${failedAll.length}${checks.filter((c) => c.pendingReview).length ? ` · รอตรวจใบเสร็จ (กันการคัด) ${checks.filter((c) => c.pendingReview).length}` : ''}`,
+      items: checks.map((c) => ({ code: c.code, name: c.name, pass: c.pass, reasons: c.reasons })),
+    },
+    {
+      step: 2, key: 'identify', label: 'ระบุสมาชิกที่ไม่ผ่านเงื่อนไข', status: failed.length ? 'warn' : 'ok',
+      count: failed.length,
+      detail: failed.length
+        ? `ต้องดำเนินการ ${failed.length} คน: ${failed.slice(0, 8).map((c) => c.code).join(', ')}${failed.length > 8 ? '…' : ''}${alreadyOut ? ` · ออกจากผังแล้วอีก ${alreadyOut} คน (ไม่ถูกนับซ้ำ)` : ''}`
+        : 'ไม่มีสมาชิกที่ไม่ผ่านเงื่อนไขในรอบนี้',
+      items: failed.map((c) => ({ code: c.code, name: c.name, reasons: c.reasons })),
+    },
+    {
+      step: 3, key: 'cut', label: 'นำออกจากตำแหน่ง', status: rules.enforceCut ? 'ok' : 'warn', count: 0,
+      detail: rules.enforceCut
+        ? 'เปิดคัดออกอัตโนมัติอยู่ — รอบถัดไปจะนำคนที่ไม่ผ่านเงื่อนไขออกจากตำแหน่ง'
+        : `กติกายังไม่เปิด "คัดออกอัตโนมัติ" — ตรวจพบ ${failed.length} คนไม่ผ่านเงื่อนไข แต่ยังไม่ตัดออก (รอผู้ดูแลยืนยัน)`,
+    },
+    {
+      step: 4, key: 'search', label: 'ค้นหาสมาชิกที่มีคุณสมบัติครบ', status: candidates.filter((c) => c.ready).length ? 'ok' : 'warn',
+      count: candidates.length,
+      detail: `ผู้เข้าข่าย ${candidates.length} คน · ผ่านเกณฑ์พร้อมเลื่อน ${candidates.filter((c) => c.ready).length} คน`,
+    },
+    {
+      step: 5, key: 'promote', label: 'เลื่อนขึ้นแทนตำแหน่งว่าง', status: lastNet5Run ? 'ok' : 'skipped',
+      count: Number(lastNet5Run?.totalSuccess || 0),
+      detail: lastNet5Run ? `รอบอัตโนมัติล่าสุด ${thTime(lastRunAt)} — เลื่อนขึ้นแทน ${Number(lastNet5Run.totalSuccess || 0)} คน · คัดออก ${Number(lastNet5Run.totalFailed || 0)} คน` : 'ยังไม่มีรอบอัตโนมัติ (ตัวเฝ้าจะรันให้เองภายใน 5 นาที)',
+    },
+    {
+      step: 6, key: 'relink', label: 'จัดสายงาน 1:5', status: 'ok', count: vacancies.filter((v) => v.kind === 'slot').length,
+      detail: `ช่อง 1:5 ที่ว่างและต้องเติม ${vacancies.filter((v) => v.kind === 'slot').length} ช่อง · ตำแหน่งจากการคัดออก ${vacancies.filter((v) => v.kind === 'position').length} ตำแหน่ง`,
+    },
+    {
+      step: 7, key: 'recalc', label: 'อัปเดตโครงสร้างทุกระดับ + Log', status: 'ok', count: logs.length,
+      detail: `โครงสร้างทุกระดับถูกคำนวณใหม่ทุกครั้งที่เปลี่ยนตำแหน่ง · รันอัตโนมัติล่าสุด ${thTime(lastRunAt)} · Log ล่าสุด ${thTime(logs[0]?.createdAt ? new Date(logs[0].createdAt) : null)}`,
+    },
+  ];
+
   return {
     rules, period: rules.period, now: now.toISOString(), deadline: computeDeadline(rules, now),
+    steps: liveSteps,
     summary: {
       total: inTreeMembers.length,
       active: inTreeMembers.filter((m) => m.isActive && m.status === 'ACTIVE').length,

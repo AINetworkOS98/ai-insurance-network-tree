@@ -28,6 +28,11 @@ export async function GET(req: Request) {
       period: state.period,
       now: state.now,
       deadline: state.deadline,
+      // ผลการทำงาน ณ ปัจจุบัน (ประเมินสดจากฐานข้อมูล) — ชื่อสมาชิกถูกปกปิดสำหรับผู้ที่ไม่ใช่ผู้ดูแล
+      steps: state.steps.map((s) => ({
+        ...s,
+        items: s.items ? maskIfNotAdmin(s.items.map((i: any) => ({ code: i.code || '', name: i.name || i.parentName || '', ...i })), isAdmin) : undefined,
+      })),
       summary: state.summary,
       tree: state.tree,
       members: maskIfNotAdmin(state.members.map((m) => ({ ...m, name: m.name })), isAdmin).slice(0, 600),
