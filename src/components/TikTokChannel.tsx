@@ -34,9 +34,10 @@ type NextResp = { ok: boolean; video: Video | null; reason?: string; pool?: Pool
 const NET_TOPIC = 'เครือข่าย';
 const NET_RATIO = 0.9;
 const PLAYER_PARAMS =
-  'autoplay=1&loop=0&controls=1&progress_bar=1&play_button=1&volume_control=1&fullscreen_button=1&timestamp=1&music_info=0&description=1&rel=0&native_context_menu=0&closed_caption=1';
+  'autoplay=1&loop=0&controls=1&progress_bar=1&play_button=1&volume_control=1&fullscreen_button=1&timestamp=1&music_info=0&description=1&rel=0&native_context_menu=0&closed_caption=1&muted=0';
 const FALLBACK_SEC = 60;
 const INTEREST_THRESHOLD = 60;
+const AUDIO_THRESHOLD = 45; // เปิดเสียงให้เองตั้งแต่คะแนนนี้ (เร็วกว่าการส่งลิงก์ เพื่อให้ได้ยินต่อเนื่อง)
 const MIN_WATCH_SEC = 8;
 const TRIGGER_COOLDOWN_MS = 90_000;
 
@@ -113,6 +114,7 @@ export default function TikTokChannel() {
   const [lastEnd, setLastEnd] = useState<{ at: number; waited: number } | null>(null);
   const [auto, setAuto] = useState(true);
   const [soundOn, setSoundOn] = useState(false);
+  const [playerMuted, setPlayerMuted] = useState(true); // สถานะเสียง "จริง" ที่เครื่องเล่นรายงานมา (onMute)
   const [ai, setAi] = useState<{ score: number; parts: Part[] }>({ score: 0, parts: [] });
   const [aiHits, setAiHits] = useState(0);
   const [aiMsg, setAiMsg] = useState('');
@@ -136,6 +138,9 @@ export default function TikTokChannel() {
   const gestureAt = useRef(0);
   const soundOnRef = useRef(false);
   const userMutedRef = useRef(false);
+  const playerMutedRef = useRef(true);   // true = เครื่องเล่นยังปิดเสียงอยู่
+  const lastUnmuteAt = useRef(0);        // กันยิงคำสั่งถี่เกิน
+  const readyRef = useRef(false);        // เครื่องเล่นพร้อมหรือยัง (คำสั่งก่อนพร้อมจะถูกทิ้ง)
   const videoRef = useRef<Video | null>(null);
   const stateRef = useRef<string>('loading');
   const armedUrl = useRef<string | null>(null);
@@ -151,21 +156,37 @@ export default function TikTokChannel() {
     }
   }, []);
 
-  /** เปิด/ปิดเสียง + ตรึงสถานะ (ยิงซ้ำ กันคำสั่งหลุดหลัง iframe โหลดใหม่) */
+  /** สั่งเครื่องเล่นเปิด/ปิดเสียง — ชื่อคำสั่งตามสเปก TikTok: 'unMute' (M ใหญ่) / 'mute' */
+  const sendSound = useCallback((on: boolean) => {
+    try {
+      frameRef.current?.contentWindow?.postMessage(JSON.stringify({ type: on ? 'unMute' : 'mute', 'x-tiktok-player': true }), '*');
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  /** เปิด/ปิดเสียง + ส่งซ้ำหลายจังหวะ (เครื่องเล่น TikTok ทิ้งคำสั่งที่ส่งก่อนเริ่มเล่นจริง) */
   const applySound = useCallback(
     (on: boolean) => {
       soundOnRef.current = on;
       setSoundOn(on);
-      const send = () => cmd(on ? 'unmute' : 'mute');
-      send();
-      [250, 1000, 2500].forEach((t) =>
+      sendSound(on);
+      [200, 700, 1500, 3000, 6000].forEach((t) =>
         setTimeout(() => {
-          if (soundOnRef.current === on) send();
+          if (soundOnRef.current === on) sendSound(on);
         }, t),
       );
     },
-    [cmd],
+    [sendSound],
   );
+
+  /** ตั้งใจเปิดเสียงแต่เครื่องเล่นยังปิดอยู่ → ส่งคำสั่งซ้ำ (เว้นช่วง 2.5 วิ) ใช้ตอน onPlayerReady/กำลังเล่น/ผู้ชมแตะจอ */
+  const maybeUnmute = useCallback(() => {
+    if (!soundOnRef.current || userMutedRef.current || !playerMutedRef.current) return;
+    if (Date.now() - lastUnmuteAt.current < 2500) return;
+    lastUnmuteAt.current = Date.now();
+    sendSound(true);
+  }, [sendSound]);
 
   const report = useCallback((completed: boolean, durOverride = 0) => {
     const v = videoRef.current;
@@ -291,6 +312,7 @@ export default function TikTokChannel() {
     const bump = () => {
       activity.current += 1;
       gestureAt.current = Date.now();
+      maybeUnmute(); // ผู้ชมแตะ = เบราว์เซอร์อนุญาตให้เล่นเสียงแล้ว → ขอเปิดเสียงทันที (ในจังหวะ gesture)
       const url = armedUrl.current;
       if (url) {
         armedUrl.current = null;
@@ -314,7 +336,7 @@ export default function TikTokChannel() {
       window.removeEventListener('mousemove', bump);
       window.removeEventListener('keydown', bump);
     };
-  }, []);
+  }, [maybeUnmute]);
 
   // AI วัดผลทุก 1 วินาที + ตัดสินว่าผู้ชม "สนใจ"
   useEffect(() => {
@@ -353,12 +375,14 @@ export default function TikTokChannel() {
       setAi({ score, parts });
 
       const ready = visibleSec.current >= MIN_WATCH_SEC || sessionSec.current >= 20;
+      // เสียง: เปิดให้เองตั้งแต่คะแนน 45 (เร็วกว่าการส่งลิงก์) — ตั้งใจเปิดไว้แล้วจะพยายามซ้ำเองทุกจังหวะ
+      if (ready && score >= AUDIO_THRESHOLD && !userMutedRef.current && !soundOnRef.current) applySound(true);
       if (ready && score >= INTEREST_THRESHOLD && Date.now() - triggeredAt.current > TRIGGER_COOLDOWN_MS) {
         onInterest(score, parts);
       }
     }, 1000);
     return () => clearInterval(t);
-  }, [onInterest]);
+  }, [onInterest, applySound]);
 
   // ฟังเหตุการณ์จากเครื่องเล่น TikTok (จบคลิป / เวลาปัจจุบัน + ความยาวจริง)
   useEffect(() => {
@@ -380,21 +404,39 @@ export default function TikTokChannel() {
       const type = String(d.type || '');
       const value = d.value;
 
+      // ── สถานะเสียงจริงจากเครื่องเล่น (onMute/onVolumeChange) ──
+      if (type === 'onMute') {
+        const m = value === true || value === 'true';
+        playerMutedRef.current = m;
+        setPlayerMuted(m);
+        if (m) maybeUnmute(); // เพิ่งถูกปิดเสียง (มักเกิดตอนคลิปใหม่เริ่ม) → ขอเปิดต่อทันที
+        return;
+      }
+      if (type === 'onPlayerReady') {
+        readyRef.current = true;
+        maybeUnmute();
+        return;
+      }
+
       if (type === 'onCurrentTime' && value && typeof value === 'object') {
         const ct = Number((value as Record<string, unknown>).currentTime || 0);
         const du = Number((value as Record<string, unknown>).duration || 0);
         if (du > 0) {
           durRef.current = du;
           setRealDur((prev) => (Math.abs(prev - du) > 0.2 ? du : prev));
+          maybeUnmute();
           if (auto && ct > 0 && ct >= du - 0.35) advance('ended');
         }
         return;
       }
-      if (type === 'onStateChange' && value === 0 && auto) advance('ended');
+      if (type === 'onStateChange') {
+        if (value === 1) maybeUnmute(); // เริ่มเล่นแล้ว = คำสั่งเสียงมีผลแล้ว
+        else if (value === 0 && auto) advance('ended');
+      }
     };
     window.addEventListener('message', onMsg);
     return () => window.removeEventListener('message', onMsg);
-  }, [advance, auto]);
+  }, [advance, auto, maybeUnmute]);
 
   // เวลาสำรอง: ไม่ได้เหตุการณ์ "จบ" → ต่อคลิปใหม่หลัง (ความยาวจริง + 5 วิ)
   useEffect(() => {
@@ -492,6 +534,17 @@ export default function TikTokChannel() {
                   </p>
                 </div>
               )}
+              {soundOn && playerMuted && embedSrc ? (
+                <button
+                  onClick={() => {
+                    userMutedRef.current = false;
+                    applySound(true);
+                  }}
+                  className="absolute inset-x-3 bottom-3 z-10 rounded-full bg-pink-500/95 text-white text-[12px] font-bold py-2.5 shadow-lg animate-pulse"
+                >
+                  🔊 แตะเพื่อเปิดเสียงต่อเนื่องทันที
+                </button>
+              ) : null}
             </div>
 
             <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
@@ -529,9 +582,19 @@ export default function TikTokChannel() {
                 ) : null}
                 <button
                   onClick={toggleSound}
-                  className={`px-2.5 py-1 rounded-full border transition ${soundOn ? 'bg-emerald-400/20 text-emerald-200 border-emerald-400/40' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'}`}
+                  className={`px-2.5 py-1 rounded-full border transition ${
+                    soundOn && !playerMuted
+                      ? 'bg-emerald-400/20 text-emerald-200 border-emerald-400/40'
+                      : soundOn
+                        ? 'bg-amber-400/20 text-amber-100 border-amber-400/40'
+                        : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'
+                  }`}
                 >
-                  {soundOn ? '🔊 เสียงเปิดต่อเนื่อง (กดเพื่อปิด)' : '🔇 เปิดเสียง'}
+                  {soundOn
+                    ? playerMuted
+                      ? '🔊 เปิดเสียงอัตโนมัติ · รอเบราว์เซอร์อนุญาต (แตะจอ 1 ครั้ง)'
+                      : '🔊 เสียงเปิดต่อเนื่อง (กดเพื่อปิด)'
+                    : '🔇 เปิดเสียง'}
                 </button>
                 <button
                   onClick={() => setAuto((a) => !a)}
@@ -591,6 +654,12 @@ export default function TikTokChannel() {
                 ระบบส่งลิงก์ไป TikTok และเปิดเสียงให้ต่อเนื่องเองทันทีเมื่อผู้ชมดูต่อเนื่องจริง · ถ้าผู้ชมกดปิดเสียงเอง ระบบจะไม่เปิดซ้ำ ·
                 เหตุการณ์ถูกบันทึกไว้ตรวจย้อนหลัง (ระดับบุคคลเฉพาะเมื่อผู้ชมยินยอม)
               </div>
+              {soundOn && playerMuted ? (
+                <div className="mt-2 text-[10.5px] text-amber-200/90 leading-relaxed">
+                  ⚠️ เครื่องเล่นยังถูกปิดเสียงโดยเบราว์เซอร์ (นโยบาย autoplay ของ Chrome/มือถือ) — ระบบส่งคำสั่งเปิดเสียงซ้ำเองทุกจังหวะที่เครื่องเล่นพร้อม
+                  และผู้ชมแตะหน้าจอ 1 ครั้ง = ปลดล็อกเสียงทันที
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
