@@ -748,11 +748,15 @@ export async function runCycle(opts: {
   });
 
   const summary = {
-    total: members.length,
-    active: members.filter((m) => m.isActive && m.status === 'ACTIVE').length,
-    nonActive: members.filter((m) => !m.isActive).length,
+    // โครงสร้างนับจากจุดในผังจริง (TreeNode) — ให้ตรงกับตารางจริงและตรงกับหน้าแดชบอร์ด
+    total: members.filter((m) => m.inTree).length,
+    active: members.filter((m) => m.inTree && m.isActive && m.status === 'ACTIVE').length,
+    nonActive: members.filter((m) => m.inTree && !m.isActive).length,
     passed: checks.length - failed.length,
     failed: failed.length,
+    failedActionable: failed.filter((c) => !isAlreadyCut(members, c.userId)).length,
+    alreadyOut: failed.filter((c) => isAlreadyCut(members, c.userId)).length,
+    outOfTree: members.filter((m) => !m.inTree).length,
     pendingReview: checks.filter((c) => c.pendingReview).length,
     vacancies: vacancies.length,
     emptySlots: vacancies.filter((v) => v.kind === 'slot').length,

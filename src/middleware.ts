@@ -41,6 +41,7 @@ const PUBLIC_API = [
   '/api/cron/renewal',
   '/api/cron/registration-sync',
   '/api/cron/email-sync',
+  '/api/cron/net-1x5', // ตัวเฝ้าให้ข้อมูลระบบ 1 แตก 5 เป็นปัจจุบันเสมอ (Bearer CRON_SECRET / ผู้ดูแลที่ล็อกอิน)
   '/api/read-file',
   '/api/fetch-url',
   '/api/search',
@@ -51,6 +52,8 @@ const PUBLIC_API = [
   // เส้นทางสำหรับระบบอัตโนมัติ: route ตรวจสิทธิ์เอง (ผู้ดูแล หรือ Bearer CRON_SECRET) — ถ้าไม่มีสิทธิ์ตอบ 401
   '/api/line',
   '/api/net/1x5', // ระบบบริหารเครือข่าย 1 แตก 5 (ข้อมูลจริง) — route ตรวจสิทธิ์เอง (สมาชิก/ผู้ดูแล/Bearer CRON_SECRET สำหรับ n8n)
+  '/api/automation', // สถานะระบบอัตโนมัติ n8n ที่แสดงบนหน้าเว็บ — อ่านอย่างเดียว ไม่มีข้อมูลส่วนบุคคล (route ไม่แตะข้อมูลสำคัญ)
+  '/api/activity', // เรดาร์กิจกรรม/รายงานสมาชิก — route ตรวจสิทธิ์เอง (สมาชิก หรือ Bearer CRON_SECRET สำหรับ n8n)
 ];
 
 const PUBLIC_PAGES = [

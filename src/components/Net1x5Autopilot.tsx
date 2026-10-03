@@ -23,6 +23,9 @@ const PIPELINE = [
   { key: 'recalc', label: 'อัปเดตทุกระดับ + Log', icon: '🔄' },
 ];
 
+// ข้อมูลถือว่า "เก่า" เมื่อรันล่าสุดเกินกำหนดนี้ (นาที) — หน้าเว็บจะสั่งรันวงจรให้เองเพื่อให้เป็นปัจจุบันเสมอ
+const AUTO_TICK_MINUTES = 5;
+
 const statusStyle: Record<string, string> = {
   ok: 'bg-emerald-50 border-emerald-200 text-emerald-800',
   warn: 'bg-amber-50 border-amber-200 text-amber-900',
@@ -66,6 +69,21 @@ export default function Net1x5Autopilot() {
     timer.current = setInterval(load, 8000);
     return () => clearInterval(timer.current);
   }, [auto, load]);
+
+  // ทำให้ข้อมูล "ณ เวลานี้" เสมอ — ถ้าข้อมูลเก่าเกินกำหนด ตัวหน้าจะสั่งรันวงจรให้เอง (เฉพาะผู้ดูแลระบบ)
+  // ฝั่งเซิร์ฟเวอร์ยังตรวจซ้ำว่าข้อมูลเก่าจริง และเคารพกติกาในฐานข้อมูล (enforceCut=false = ไม่คัดใครออกอัตโนมัติ)
+  const autoTicked = useRef(false);
+  useEffect(() => {
+    if (!state?.canAdmin || autoTicked.current) return;
+    const lastAt = state.lastRun?.startedAt ? new Date(state.lastRun.startedAt).getTime() : 0;
+    if (lastAt && Date.now() - lastAt < AUTO_TICK_MINUTES * 60000) return; // ข้อมูลยังใหม่ — ไม่ต้องรันซ้ำ
+    autoTicked.current = true;
+    fetch('/api/cron/net-1x5', { method: 'POST', credentials: 'include' })
+      .then((r) => r.json())
+      .then((j) => { if (j?.ran) setMsg(`อัปเดตข้อมูลให้เป็นปัจจุบันแล้ว (run ${String(j.runId || '').slice(0, 8)}…)`); })
+      .then(() => load())
+      .catch(() => {});
+  }, [state, load]);
 
   async function callRun(mode: 'preview' | 'apply') {
     if (mode === 'apply' && !confirm('ยืนยันรันจริง? ระบบจะคัดสมาชิกที่ไม่ผ่านเงื่อนไขออกจากตำแหน่ง และเลื่อนผู้ผ่านเงื่อนไขขึ้นแทนทันที (ทุกอย่างถูกบันทึก Log)')) return;
@@ -129,6 +147,11 @@ export default function Net1x5Autopilot() {
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
             <div className="text-[11px] font-semibold text-[#c8a84e] tracking-wide">SYSTEM 1×5 AUTOPILOT · ข้อมูลจริงในฐานข้อมูล</div>
+            <div className="text-[11px] text-[#57534e] mt-0.5">
+              🕒 ข้อมูล ณ เวลา <b>{state?.now ? new Date(state.now).toLocaleString('th-TH', { hour12: false }) : '—'}</b>
+              {' · '}รันล่าสุด {state?.lastRun ? new Date(state.lastRun.startedAt).toLocaleString('th-TH', { hour12: false }) : 'ยังไม่รัน'}
+              {auto ? ' · อัปเดตอัตโนมัติทุก 8 วินาที' : ''}
+            </div>
             <h1 className="text-xl sm:text-2xl font-bold text-[#475569] leading-tight">ระบบบริหารเครือข่าย 1 แตก 5 — เชื่อมต่อสายงานทุกระดับอัตโนมัติ</h1>
             <p className="text-xs text-[#57534e] mt-1 max-w-3xl">
               ตรวจใบเสร็จ → คัดสมาชิกที่ไม่ผ่านเงื่อนไข → เลื่อนผู้มีคุณสมบัติขึ้นแทน → จัดสายงาน 1:5 → แจ้งเตือนอัตโนมัติ

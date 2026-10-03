@@ -1,0 +1,40 @@
+name: net-1x5 keep-alive
+
+# ทำให้ข้อมูลระบบ 1 แตก 5 เป็น "ปัจจุบันเสมอ" โดยไม่ต้องพึ่งเครื่องของผู้ใช้
+# (เดิมวงจรถูกสั่งรันจาก n8n บนเครื่องผู้ใช้ → ปิดเครื่อง = ข้อมูลหยุดอัปเดต)
+# ตัวนี้ยิงไปที่ /api/cron/net-1x5 ของ production ทุก 5 นาที (ขั้นต่ำของ GitHub Actions)
+# ฝั่งเซิร์ฟเวอร์จะรันจริงเฉพาะเมื่อข้อมูลเก่าเกิน 5 นาที และเคารพกติกาใน DB (enforceCut=false = ไม่คัดใครออกอัตโนมัติ)
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: net-1x5-keepalive
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: ยิงวงจร 1 แตก 5 (ให้ข้อมูลเป็นปัจจุบัน)
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::ยังไม่ได้ตั้ง repo secret ชื่อ CRON_SECRET"; exit 1
+          fi
+          code=$(curl -s -o out.json -w "%{http_code}" --max-time 90 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "https://ai-insurance-network-tree.vercel.app/api/cron/net-1x5?min=5")
+          echo "HTTP $code"
+          cat out.json
+          echo
+          if [ "$code" != "200" ]; then echo "::error::เรียกไม่สำเร็จ (HTTP $code)"; exit 1; fi
+          python3 - <<'PY'
+          import json
+          d = json.load(open('out.json'))
+          print('ran =', d.get('ran'), '| skipped =', d.get('skipped'), '| lastRunAt =', d.get('lastRunAt'))
+          PY
