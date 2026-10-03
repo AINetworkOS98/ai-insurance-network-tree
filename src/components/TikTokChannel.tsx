@@ -141,6 +141,7 @@ export default function TikTokChannel() {
   const playerMutedRef = useRef(true);   // true = เครื่องเล่นยังปิดเสียงอยู่
   const lastUnmuteAt = useRef(0);        // กันยิงคำสั่งถี่เกิน
   const readyRef = useRef(false);        // เครื่องเล่นพร้อมหรือยัง (คำสั่งก่อนพร้อมจะถูกทิ้ง)
+  const lastPlayerEventAt = useRef(0);   // เวลาล่าสุดที่ได้ event จากเครื่องเล่น (ใช้ยืนยันว่าเครื่องเล่น "มีชีวิต")
   const videoRef = useRef<Video | null>(null);
   const stateRef = useRef<string>('loading');
   const armedUrl = useRef<string | null>(null);
@@ -148,22 +149,23 @@ export default function TikTokChannel() {
   videoRef.current = video;
   stateRef.current = state;
 
-  const cmd = useCallback((type: string) => {
+  /**
+   * ส่งคำสั่งไปเครื่องเล่น TikTok — **ต้องส่งเป็น object เท่านั้น**
+   * (วัดจากเครื่องเล่นจริง: ส่ง JSON.stringify(...) เป็นสตริง เครื่องเล่นทิ้งคำสั่งทั้งหมด →
+   *  unMute/pause/play ไม่มีผลเลย แม้ iframe จะมี user activation ครบ)
+   */
+  const postToPlayer = useCallback((msg: Record<string, unknown>) => {
     try {
-      frameRef.current?.contentWindow?.postMessage(JSON.stringify({ type, 'x-tiktok-player': true }), '*');
+      frameRef.current?.contentWindow?.postMessage({ ...msg, 'x-tiktok-player': true }, '*');
     } catch {
       /* ignore */
     }
   }, []);
 
+  const cmd = useCallback((type: string) => postToPlayer({ type }), [postToPlayer]);
+
   /** สั่งเครื่องเล่นเปิด/ปิดเสียง — ชื่อคำสั่งตามสเปก TikTok: 'unMute' (M ใหญ่) / 'mute' */
-  const sendSound = useCallback((on: boolean) => {
-    try {
-      frameRef.current?.contentWindow?.postMessage(JSON.stringify({ type: on ? 'unMute' : 'mute', 'x-tiktok-player': true }), '*');
-    } catch {
-      /* ignore */
-    }
-  }, []);
+  const sendSound = useCallback((on: boolean) => postToPlayer({ type: on ? 'unMute' : 'mute' }), [postToPlayer]);
 
   /** เปิด/ปิดเสียง + ส่งซ้ำหลายจังหวะ (เครื่องเล่น TikTok ทิ้งคำสั่งที่ส่งก่อนเริ่มเล่นจริง) */
   const applySound = useCallback(
@@ -176,6 +178,21 @@ export default function TikTokChannel() {
           if (soundOnRef.current === on) sendSound(on);
         }, t),
       );
+      if (!on) {
+        playerMutedRef.current = true;
+        setPlayerMuted(true);
+        return;
+      }
+      // เครื่องเล่น TikTok ไม่ส่ง onMute/onPlayerReady กลับมา (วัดจริง: ส่งแค่ onCurrentTime)
+      // → ยืนยันด้วยสัญญาณที่มีจริง: ถ้าเครื่องเล่นยัง "มีชีวิต" (มี onCurrentTime ล่าสุด)
+      //   คำสั่ง unMute (รูปแบบ object) มีผลแน่นอน = เสียงเปิดจริง
+      setTimeout(() => {
+        if (!soundOnRef.current) return;
+        if (Date.now() - lastPlayerEventAt.current < 5000) {
+          playerMutedRef.current = false;
+          setPlayerMuted(false);
+        }
+      }, 900);
     },
     [sendSound],
   );
@@ -280,6 +297,11 @@ export default function TikTokChannel() {
       scrolledAwaySec.current = 0;
       clipsSeen.current += 1;
       setState('playing');
+      // คลิปใหม่ = เครื่องเล่นตัวใหม่ (เริ่มแบบปิดเสียงเสมอ) → บอกสถานะตามจริงก่อน แล้วค่อยเปิดให้ที่ onFrameLoad
+      if (soundOnRef.current && !userMutedRef.current) {
+        playerMutedRef.current = true;
+        setPlayerMuted(true);
+      }
     } catch {
       setState('error');
     }
@@ -400,6 +422,7 @@ export default function TikTokChannel() {
         }
       }
       if (!d || d['x-tiktok-player'] !== true) return;
+      lastPlayerEventAt.current = Date.now();
 
       const type = String(d.type || '');
       const value = d.value;
@@ -656,8 +679,8 @@ export default function TikTokChannel() {
               </div>
               {soundOn && playerMuted ? (
                 <div className="mt-2 text-[10.5px] text-amber-200/90 leading-relaxed">
-                  ⚠️ เครื่องเล่นยังถูกปิดเสียงโดยเบราว์เซอร์ (นโยบาย autoplay ของ Chrome/มือถือ) — ระบบส่งคำสั่งเปิดเสียงซ้ำเองทุกจังหวะที่เครื่องเล่นพร้อม
-                  และผู้ชมแตะหน้าจอ 1 ครั้ง = ปลดล็อกเสียงทันที
+                  ⏳ กำลังเปิดเสียงให้อัตโนมัติ — เครื่องเล่น TikTok เริ่มต้นแบบปิดเสียงเสมอ ระบบจึงส่งคำสั่งเปิดเสียงซ้ำทุกจังหวะ
+                  (และส่งใหม่ทุกครั้งที่ขึ้นคลิปใหม่) · แตะหน้าจอ 1 ครั้ง = ให้ระบบเปิดเสียงทันที
                 </div>
               ) : null}
             </div>
