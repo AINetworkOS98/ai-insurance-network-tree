@@ -27,17 +27,20 @@ export async function POST(req: Request) {
     const patch: any = {};
     const bools = ['requireReceipt', 'enforceCut', 'autoPromote', 'fillVacancy', 'notify'];
     for (const k of bools) if (typeof body[k] === 'boolean') patch[k] = body[k];
-    const nums = ['receiptDeadlineDays', 'deadlineDayOfMonth', 'deadlineHour', 'minVerifiedAmount', 'graceDays'];
+    const nums = ['receiptDeadlineDays', 'deadlineDayOfMonth', 'deadlineHour', 'minVerifiedAmount', 'graceDays', 'maxCutPerRun', 'maxPromotePerRun'];
     for (const k of nums) if (body[k] !== undefined && Number.isFinite(Number(body[k]))) patch[k] = Number(body[k]);
     if (typeof body.priority === 'string') patch.priority = body.priority;
     if (typeof body.period === 'string' && /^\d{4}-\d{2}$/.test(body.period)) patch.period = body.period;
 
     if (!Object.keys(patch).length) {
-      return NextResponse.json({ ok: false, error: 'no_changes', message: 'ไม่พบค่าที่จะแก้ไข' }, { status: 400 });
+      // ไม่มีค่าที่เปลี่ยน = ไม่ใช่ error (n8n ยิงซ้ำทุกวันต้องไม่ขึ้น error) → ตอบ 200 + changed:false
+      const current = await loadRules();
+      return NextResponse.json({ ok: true, changed: false, rules: current, message: 'ไม่มีการเปลี่ยนแปลง — ค่ากติกายังเป็นชุดเดิม' });
     }
     const saved = await saveRules(patch, access.userId);
     return NextResponse.json({
       ok: true,
+      changed: true,
       rules: saved,
       message: saved.enforceCut
         ? 'บันทึกแล้ว — เปิด "คัดออกอัตโนมัติ" ระบบจะตัดสมาชิกที่ไม่ผ่านเงื่อนไขจริงทันทีในรอบถัดไป'
