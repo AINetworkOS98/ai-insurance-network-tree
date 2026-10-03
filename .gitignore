@@ -16,3 +16,8 @@ __pycache__/
 
 # ไม่ push GitHub Actions workflow (token ไม่มี scope workflow) — ไฟล์ยังอยู่ในเครื่อง
 .github/workflows/
+
+# ไฟล์ที่มีความลับ — ห้าม commit
+tmp/.auth_secret
+tmp/hostinger-env.json
+tmp/hpanel-env-full.mjs

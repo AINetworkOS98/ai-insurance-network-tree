@@ -1,0 +1,17 @@
+const PORT = 9223;
+const list = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json();
+const pages = list.filter((t) => t.type === 'page' && t.url.includes('hpanel.hostinger.com'));
+console.log('hpanel tabs:'); pages.forEach((p, i) => console.log(' ', i, p.url.slice(0, 120)));
+const page = pages.find((p) => p.url.includes('/node/')) || pages[0];
+console.log('using tab:', page.url.slice(0, 120));
+const ws = new WebSocket(page.webSocketDebuggerUrl);
+await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
+let id = 0; const pending = new Map();
+ws.onmessage = (e) => { const m = JSON.parse(e.data); if (m.id && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id); } };
+const send = (method, params = {}) => new Promise((res) => { const mid = ++id; pending.set(mid, res); ws.send(JSON.stringify({ id: mid, method, params })); });
+await send('Runtime.enable');
+const ev = async (expr) => { const r = await send('Runtime.evaluate', { expression: expr, returnByValue: true, awaitPromise: true }); if (r.result?.exceptionDetails) return 'EXC ' + String(r.result.exceptionDetails.exception?.description || '').slice(0, 200); return r.result?.result?.value; };
+console.log('URL:', await ev('location.href'));
+console.log('TEXT:', String(await ev(`(document.body.innerText||'').replace(/\\s+/g,' ').slice(0,1200)`)));
+console.log('LINKS:', await ev(`JSON.stringify([...document.querySelectorAll('a')].map(a=>({t:(a.innerText||'').trim().slice(0,40),h:a.getAttribute('href')})).filter(x=>x.h&&/node|app|deploy|env/i.test(x.h)),null,0).slice(0,2500)`));
+ws.close(); process.exit(0);

@@ -7,6 +7,7 @@ import AutomationShowcase from '@/components/AutomationShowcase';
 import SuccessPath from '@/components/SuccessPath';
 import TikTokChannel from '@/components/TikTokChannel';
 import FinancialFreedomVideo from '@/components/FinancialFreedomVideo';
+import CosmicNetwork from '@/components/CosmicNetwork';
 
 export default function FinancialFreedom() {
   return (
@@ -121,6 +122,37 @@ export default function FinancialFreedom() {
             <TikTokChannel />
 
             {/* ── (นำออกแล้ว) ส่วน 1 แตก 5 – Future Network Simulator — ซ้ำซ้อนกับระบบ 1 แตก 5 อัตโนมัติที่ /network/1x5-autopilot ── */}
+
+            {/* ── ต่อลงมาล่างสุด: จักรวาลเครือข่าย 3 มิติ (Interactive Cosmic Network) ── */}
+            <div className="mt-14 mb-5">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sky-50 text-sky-700 text-sm font-semibold border border-sky-200">
+                <span>🌌</span> จักรวาลของเครือข่าย
+              </div>
+              <h2 className="mt-4 text-2xl font-bold text-slate-900">
+                หนึ่งคนเชื่อม 5 คน · 5 ขยายเป็น 25 · 25 ขยายเป็น 125 · 125 ขยายเป็น 625
+              </h2>
+              <p className="mt-2 text-slate-600 leading-relaxed">
+                นี่ไม่ใช่แผนผังแบบเดิม — แต่เป็น <strong>จักรวาลของเครือข่าย</strong> ที่สมาชิกแต่ละคนเป็นทรงกลมพลังงาน
+                เชื่อมกันด้วยเส้นแสงที่มีพลังงานไหลจากผู้แนะนำไปยังสมาชิกใหม่ ฉากนี้เป็น
+                <strong> แบบจำลองเพื่อสาธิตโครงสร้าง 1 แตก 5</strong> (ข้อมูลตัวอย่าง ไม่ใช่ข้อมูลสมาชิกจริง และไม่สื่อถึงรายได้หรือผลตอบแทนใด ๆ)
+                — ลากเพื่อหมุนจักรวาล ซูมเข้า-ออก คลิกสมาชิกเพื่อดูข้อมูล และกด “เพิ่มสมาชิกใหม่” เพื่อเห็นเครือข่ายขยายอีกหนึ่งระดับ
+              </p>
+            </div>
+            <div className="-mx-6 md:-mx-10 mb-10">
+              <CosmicNetwork />
+              <p className="mt-3 px-3 text-center text-[11px] text-slate-500">
+                ภาพจำลอง 781 โหนดเริ่มต้น (1 → 5 → 25 → 125 → 625) · ชื่อและตัวเลขทั้งหมดเป็นข้อมูลตัวอย่างเพื่อสาธิตโครงสร้างเครือข่าย
+                ไม่ใช่สมาชิกจริง ไม่ใช่การรับประกันรายได้ ค่าคอมมิชชั่น หรือผลตอบแทน · ชื่อที่แสดงถูกสร้างขึ้นเพื่อการสาธิตเท่านั้น
+              </p>
+            </div>
+
+            {/* ── คำขวัญปิดท้าย ── */}
+            <div className="text-center mb-10">
+              <p className="text-[11px] font-semibold tracking-[0.28em] text-sky-700">ONE PERSON</p>
+              <p className="text-[11px] font-semibold tracking-[0.28em] text-sky-700 mt-1">ONE CONNECTION</p>
+              <p className="text-[11px] font-semibold tracking-[0.28em] text-sky-700 mt-1">ONE NETWORK</p>
+              <p className="mt-2 text-lg font-bold tracking-[0.14em] text-slate-900">INFINITE POSSIBILITY</p>
+            </div>
 
             {/* ข้อความสุดท้าย */}
             <div className="text-center mt-10 p-6 bg-[#475569]/5 rounded-2xl border border-[#475569]/10">

@@ -334,6 +334,75 @@ export class UniverseAudio {
     this.timers.push(t);
   }
 
+  /** พลังงานวิ่งผ่านโหนด — เสียงสั้น เบา ไม่รบกวน (ความถี่สูงขึ้นตามชั้นที่สว่าง) */
+  energyPulse(intensity = 0.045, note?: number) {
+    const ctx = this.ctx;
+    if (!ctx || !this.master || !this.audible) return;
+    const now = ctx.currentTime;
+    const f = note ?? 720 + Math.random() * 900;
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(f, now);
+    osc.frequency.exponentialRampToValueAtTime(f * 1.7, now + 0.18);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(intensity, now + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.46);
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 4600;
+    const p = ctx.createStereoPanner();
+    p.pan.value = (Math.random() * 2 - 1) * 0.7;
+    osc.connect(lp).connect(g).connect(p).connect(this.master);
+    if (this.send) p.connect(this.send);
+    osc.start(now);
+    osc.stop(now + 0.5);
+  }
+
+  /** ดาวหางพุ่งผ่าน — เสียงวูบกวาดความถี่ (deep space whoosh) */
+  whoosh(intensity = 0.12) {
+    const ctx = this.ctx;
+    if (!ctx || !this.master || !this.audible) return;
+    const now = ctx.currentTime;
+    const dur = 1.7;
+    const len = Math.floor(ctx.sampleRate * dur);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) {
+      const t = i / len;
+      const env = Math.sin(Math.PI * t); // ขึ้น-ลง นุ่ม ๆ
+      d[i] = (Math.random() * 2 - 1) * env;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.Q.value = 1.1;
+    bp.frequency.setValueAtTime(220, now);
+    bp.frequency.exponentialRampToValueAtTime(2400, now + dur * 0.45);
+    bp.frequency.exponentialRampToValueAtTime(150, now + dur);
+    const g = ctx.createGain();
+    g.gain.value = intensity;
+    const p = ctx.createStereoPanner();
+    const from = Math.random() < 0.5 ? -0.95 : 0.95;
+    p.pan.setValueAtTime(from, now);
+    p.pan.linearRampToValueAtTime(-from, now + dur);
+    src.connect(bp).connect(g).connect(p).connect(this.master);
+    if (this.send) p.connect(this.send);
+    src.start(now);
+    src.stop(now + dur);
+  }
+
+  /** สมาชิกใหม่เข้ามาในเครือข่าย — สองโน้ตไล่ขึ้น + ประกายพลังงาน */
+  activation() {
+    if (!this.ctx || !this.audible) return;
+    this.ping(0.085, 392.0);
+    const t1 = window.setTimeout(() => this.ping(0.08, 587.33), 220);
+    const t2 = window.setTimeout(() => this.ping(0.07, 880.0), 430);
+    const t3 = window.setTimeout(() => this.crackle(0.035), 520);
+    this.timers.push(t1, t2, t3);
+  }
+
   /** ประกายดาว: เสียงแคร็กสั้นมาก ๆ ผ่านตัวกรองสูง (ทำให้จักรวาลมีชีวิต) */
   crackle(gainAmount = 0.02) {
     const ctx = this.ctx;
