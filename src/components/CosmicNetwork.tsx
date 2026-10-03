@@ -102,7 +102,9 @@ export default function CosmicNetwork({
   const [stats, setStats] = useState<SceneStats>({ activeEnergy: 62, fps: 60, quality: 'high' });
   const [toast, setToast] = useState<{ msg: string; tone: 'ok' | 'warn' } | null>(null);
   const [hintOpen, setHintOpen] = useState(true);
+  const [full, setFull] = useState(false);
 
+  const wrapRef = useRef<HTMLDivElement | null>(null);
   const apiRef = useRef<SceneApi | null>(null);
   const labelRef = useRef<LabelState>({ root: { x: 0, y: 0, visible: false }, sel: { x: 0, y: 0, visible: false }, ready: false });
   const rootLabelDom = useRef<HTMLDivElement>(null);
@@ -278,11 +280,54 @@ export default function CosmicNetwork({
     say('รีเซ็ตจักรวาลกลับสู่ 781 โหนดเริ่มต้น');
   }, [say]);
 
-  const wrapperClass = ['relative w-full overflow-hidden rounded-3xl border border-sky-500/20 bg-slate-950', className].filter(Boolean).join(' ');
+  /* ── ขยายเต็มจอ (Fullscreen) ── */
+  const toggleFull = useCallback(() => {
+    const next = !full;
+    setFull(next);
+    const el = wrapRef.current;
+    try {
+      if (next) {
+        const p = el?.requestFullscreen?.();
+        if (p && typeof (p as Promise<void>).catch === 'function') (p as Promise<void>).catch(() => {});
+      } else if (document.fullscreenElement) {
+        const p = document.exitFullscreen?.();
+        if (p && typeof (p as Promise<void>).catch === 'function') (p as Promise<void>).catch(() => {});
+      }
+    } catch {
+      /* เบราว์เซอร์ไม่อนุญาต fullscreen — ใช้โหมด fixed เต็มจอแทน */
+    }
+  }, [full]);
+
+  /* ปุ่ม Esc / ออกจาก fullscreen ของเบราว์เซอร์ → ย่อกลับให้ตรงกัน */
+  useEffect(() => {
+    const onFsChange = () => {
+      if (!document.fullscreenElement) setFull(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !document.fullscreenElement) setFull(false);
+    };
+    document.addEventListener('fullscreenchange', onFsChange);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFsChange);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, []);
+
+  const wrapperClass = [
+    'relative w-full overflow-hidden rounded-3xl border border-sky-500/20 bg-slate-950',
+    full ? 'fixed inset-0 z-[2147483647] rounded-none border-0' : '',
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  /** ความสูงฉาก — โหมดเต็มจอใช้เต็มพื้นที่หน้าจอจริง */
+  const sceneHeight = full ? 'h-[100dvh] min-h-[320px]' : heightClass;
 
   return (
-    <div className={wrapperClass}>
-      <div className={`relative w-full ${heightClass}`}>
+    <div className={wrapperClass} ref={wrapRef}>
+      <div className={`relative w-full ${sceneHeight}`}>
         {glOk === false ? (
           <div className="flex h-full w-full flex-col items-center justify-center gap-3 p-8 text-center">
             <p className="text-sm font-semibold text-sky-200">อุปกรณ์นี้ไม่รองรับ WebGL</p>
@@ -329,6 +374,15 @@ export default function CosmicNetwork({
           <div className="rounded-md border border-slate-600/40 bg-slate-950/60 px-2.5 py-1 text-[10px] text-slate-300 backdrop-blur-sm">
             คุณภาพ {quality === 'high' ? 'สูง' : 'ลดอัตโนมัติ'} · {stats.fps.toFixed(0)} fps
           </div>
+          <button
+            type="button"
+            onClick={toggleFull}
+            title={full ? 'ย่อกลับขนาดปกติ (Esc)' : 'ขยายจักรวาลเต็มจอ'}
+            aria-label={full ? 'ย่อกลับขนาดปกติ' : 'ขยายจักรวาลเต็มจอ'}
+            className="pointer-events-auto rounded-md border border-sky-400/45 bg-slate-950/75 px-3 py-1.5 text-[11px] font-semibold text-sky-100 backdrop-blur-sm transition hover:border-sky-300/70 hover:bg-sky-500/25 hover:text-white"
+          >
+            {full ? '⤡ ย่อกลับ' : '⛶ ขยายเต็มจอ'}
+          </button>
         </div>
 
         {/* ── ป้าย 3D: ROOT ── */}
@@ -351,7 +405,7 @@ export default function CosmicNetwork({
 
         {/* ── แผงข้อมูลสมาชิก (ด้านขวา) ── */}
         {selected ? (
-          <div className="absolute right-3 top-24 w-[248px] max-w-[72vw] rounded-2xl border border-sky-400/25 bg-slate-950/70 p-3.5 backdrop-blur-md">
+          <div className="absolute right-3 top-28 w-[248px] max-w-[72vw] rounded-2xl border border-sky-400/25 bg-slate-950/70 p-3.5 backdrop-blur-md">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <div className="text-[9px] font-semibold uppercase tracking-[0.2em] text-sky-300/80">Member</div>
@@ -457,6 +511,9 @@ export default function CosmicNetwork({
 
         {/* ── แถบควบคุม ── */}
         <div className="absolute bottom-3 left-3 right-3 flex flex-wrap items-center justify-center gap-1.5">
+          <GlassButton active={full} onClick={toggleFull} title={full ? 'ย่อกลับขนาดปกติ (Esc)' : 'ขยายจักรวาลเต็มจอ'}>
+            {full ? '⤡ ย่อกลับ' : '⛶ เต็มจอ'}
+          </GlassButton>
           <GlassButton onClick={() => apiRef.current?.resetView()} title="กลับมุมมองมาตรฐาน">
             รีเซ็ตมุมมอง
           </GlassButton>

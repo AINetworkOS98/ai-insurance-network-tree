@@ -15,7 +15,36 @@ export default function FinancialFreedom() {
       <Header />
       <div className="flex flex-1 min-h-0">
         <Sidebar />
-        <div className="flex-1 overflow-y-auto p-6 md:p-10">
+        <div className="flex-1 overflow-y-auto overscroll-contain p-6 md:p-10 pb-24">
+          {/* ── บนสุดของหน้า: จักรวาลของเครือข่าย 3 มิติ (Interactive Cosmic Network) ──
+              ปุ่ม ⛶ “ขยายเต็มจอ” อยู่ในจักรวาลเอง (มุมขวาบนของฉาก) กด Esc เพื่อย่อกลับ */}
+          <div className="mb-14">
+            <div className="max-w-4xl mx-auto">
+              <div className="text-center">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sky-50 text-sky-700 text-sm font-semibold border border-sky-200">
+                  <span>🌌</span> จักรวาลของเครือข่าย
+                </div>
+              </div>
+              <h2 className="mt-4 text-center text-2xl md:text-3xl font-bold text-slate-900">
+                หนึ่งคนเชื่อม 5 คน · 5 ขยายเป็น 25 · 25 ขยายเป็น 125 · 125 ขยายเป็น 625
+              </h2>
+              <p className="mt-2 text-center text-slate-600 leading-relaxed">
+                นี่ไม่ใช่แผนผังแบบเดิม — แต่เป็น <strong>จักรวาลของเครือข่าย</strong> ที่สมาชิกแต่ละคนเป็นทรงกลมพลังงาน
+                เชื่อมกันด้วยเส้นแสงที่มีพลังงานไหลจากผู้แนะนำไปยังสมาชิกใหม่ ฉากนี้เป็น
+                <strong> แบบจำลองเพื่อสาธิตโครงสร้าง 1 แตก 5</strong> (ข้อมูลตัวอย่าง ไม่ใช่ข้อมูลสมาชิกจริง และไม่สื่อถึงรายได้หรือผลตอบแทนใด ๆ)
+                — ลากเพื่อหมุนจักรวาล ซูมเข้า-ออก คลิกสมาชิกเพื่อดูข้อมูล กด <strong>⛶ ขยายเต็มจอ</strong> เพื่อดูแบบเต็มหน้าจอ (Esc เพื่อย่อกลับ)
+                และกด “เพิ่มสมาชิกใหม่” เพื่อเห็นเครือข่ายขยายอีกหนึ่งระดับ
+              </p>
+            </div>
+            <div className="-mx-6 md:-mx-10 mt-5">
+              <CosmicNetwork />
+              <p className="mt-3 px-3 text-center text-[11px] text-slate-500">
+                ภาพจำลอง 781 โหนดเริ่มต้น (1 → 5 → 25 → 125 → 625) · ชื่อและตัวเลขทั้งหมดเป็นข้อมูลตัวอย่างเพื่อสาธิตโครงสร้างเครือข่าย
+                ไม่ใช่สมาชิกจริง ไม่ใช่การรับประกันรายได้ ค่าคอมมิชชั่น หรือผลตอบแทน · ชื่อที่แสดงถูกสร้างขึ้นเพื่อการสาธิตเท่านั้น
+              </p>
+            </div>
+          </div>
+
           {/* Hero Section */}
           <div className="max-w-4xl mx-auto mb-12">
             <div className="text-center mb-8">
@@ -123,28 +152,7 @@ export default function FinancialFreedom() {
 
             {/* ── (นำออกแล้ว) ส่วน 1 แตก 5 – Future Network Simulator — ซ้ำซ้อนกับระบบ 1 แตก 5 อัตโนมัติที่ /network/1x5-autopilot ── */}
 
-            {/* ── ต่อลงมาล่างสุด: จักรวาลเครือข่าย 3 มิติ (Interactive Cosmic Network) ── */}
-            <div className="mt-14 mb-5">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sky-50 text-sky-700 text-sm font-semibold border border-sky-200">
-                <span>🌌</span> จักรวาลของเครือข่าย
-              </div>
-              <h2 className="mt-4 text-2xl font-bold text-slate-900">
-                หนึ่งคนเชื่อม 5 คน · 5 ขยายเป็น 25 · 25 ขยายเป็น 125 · 125 ขยายเป็น 625
-              </h2>
-              <p className="mt-2 text-slate-600 leading-relaxed">
-                นี่ไม่ใช่แผนผังแบบเดิม — แต่เป็น <strong>จักรวาลของเครือข่าย</strong> ที่สมาชิกแต่ละคนเป็นทรงกลมพลังงาน
-                เชื่อมกันด้วยเส้นแสงที่มีพลังงานไหลจากผู้แนะนำไปยังสมาชิกใหม่ ฉากนี้เป็น
-                <strong> แบบจำลองเพื่อสาธิตโครงสร้าง 1 แตก 5</strong> (ข้อมูลตัวอย่าง ไม่ใช่ข้อมูลสมาชิกจริง และไม่สื่อถึงรายได้หรือผลตอบแทนใด ๆ)
-                — ลากเพื่อหมุนจักรวาล ซูมเข้า-ออก คลิกสมาชิกเพื่อดูข้อมูล และกด “เพิ่มสมาชิกใหม่” เพื่อเห็นเครือข่ายขยายอีกหนึ่งระดับ
-              </p>
-            </div>
-            <div className="-mx-6 md:-mx-10 mb-10">
-              <CosmicNetwork />
-              <p className="mt-3 px-3 text-center text-[11px] text-slate-500">
-                ภาพจำลอง 781 โหนดเริ่มต้น (1 → 5 → 25 → 125 → 625) · ชื่อและตัวเลขทั้งหมดเป็นข้อมูลตัวอย่างเพื่อสาธิตโครงสร้างเครือข่าย
-                ไม่ใช่สมาชิกจริง ไม่ใช่การรับประกันรายได้ ค่าคอมมิชชั่น หรือผลตอบแทน · ชื่อที่แสดงถูกสร้างขึ้นเพื่อการสาธิตเท่านั้น
-              </p>
-            </div>
+            {/* ── (ย้ายขึ้นบนสุดของหน้าแล้ว) จักรวาลของเครือข่าย 3 มิติ + ปุ่มขยายเต็มจอ ── */}
 
             {/* ── คำขวัญปิดท้าย ── */}
             <div className="text-center mb-10">

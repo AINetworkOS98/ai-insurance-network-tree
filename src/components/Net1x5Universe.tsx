@@ -201,7 +201,8 @@ export default function Net1x5Universe() {
 
   return (
     <section className="min-h-screen bg-[#020617] text-sky-50">
-      <div className="max-w-[1400px] mx-auto px-3 sm:px-5 py-5">
+      {/* pb-24: เว้นที่ให้แถบล่างติดจอ (VisitorCounter, fixed bottom-0 z-50) — ไม่งั้นข้อความท้ายหน้าถูกบัง */}
+      <div className="max-w-[1400px] mx-auto px-3 sm:px-5 pt-5 pb-24">
         {/* ── หัวเรื่อง ── */}
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
