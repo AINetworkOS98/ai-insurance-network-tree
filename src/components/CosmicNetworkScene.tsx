@@ -53,7 +53,7 @@ export type CosmicSceneProps = {
 
 /* ─────────────────────────── Constants ─────────────────────────── */
 
-const DEFAULT_DIST = 108;
+const DEFAULT_DIST = 76;
 const DEFAULT_PHI = 1.15;
 const DEFAULT_THETA = 0.6;
 const MAX_DIST = 1400;
@@ -126,6 +126,7 @@ uniform float uTime;
 uniform float uScale;
 uniform float uHover;
 uniform float uSel;
+uniform float uBoost;
 varying vec3 vColor;
 varying float vPulse;
 varying float vHi;
@@ -138,7 +139,7 @@ void main() {
   float isSel = step(abs(aId - uSel), 0.5);
   float pulse = 0.86 + 0.14 * sin(uTime * 1.7 + aPhase);
   float grow = 1.0 + 1.25 * isSel + 0.45 * isHi;
-  gl_PointSize = clamp(aSize * pulse * appear * grow * uScale / max(-mv.z, 0.001), 1.6, 130.0);
+  gl_PointSize = clamp(aSize * uBoost * pulse * appear * grow * uScale / max(-mv.z, 0.001), 2.4, 170.0);
   gl_Position = projectionMatrix * mv;
   vColor = aColor * (1.0 + 1.35 * isSel + 0.55 * isHi);
   vPulse = pulse;
@@ -698,7 +699,7 @@ function SpaceLayers({ uTime, uScale, quality }: { uTime: THREE.IUniform<number>
 
   const far = useMemo(
     () =>
-      buildStarGeometry(Math.round(9000 * k), 900, 2100, 1.4, 4.2, [
+      buildStarGeometry(Math.round(6200 * k), 900, 2100, 1.5, 4.4, [
         [0.72, 0.84, 1.0],
         [0.9, 0.94, 1.0],
         [0.78, 0.72, 1.0],
@@ -708,15 +709,15 @@ function SpaceLayers({ uTime, uScale, quality }: { uTime: THREE.IUniform<number>
   );
   const mid = useMemo(
     () =>
-      buildStarGeometry(Math.round(4200 * k), 420, 900, 1.8, 5.0, [
+      buildStarGeometry(Math.round(3000 * k), 420, 900, 1.9, 5.2, [
         [0.68, 0.86, 1.0],
         [0.95, 0.97, 1.0],
         [0.8, 0.74, 1.0],
       ], 9911),
     [k],
   );
-  const dust = useMemo(() => buildDustGeometry(Math.round(2400 * k), 5150), [k]);
-  const galaxy = useMemo(() => buildGalaxyGeometry(Math.round(7000 * k), 77123), [k]);
+  const dust = useMemo(() => buildDustGeometry(Math.round(1800 * k), 5150), [k]);
+  const galaxy = useMemo(() => buildGalaxyGeometry(Math.round(5200 * k), 77123), [k]);
 
   const nebula: Array<[number, number, number, number]> = [
     [-760, 300, -1180, 1500],
@@ -746,7 +747,7 @@ function SpaceLayers({ uTime, uScale, quality }: { uTime: THREE.IUniform<number>
 /** ทรงกลมพลังงานของสมาชิกทุกคน */
 function NodeField({ model, epochMs, uTime, uScale, uHover, uSel }: { model: CosmicNetworkModel; epochMs: number; uTime: THREE.IUniform<number>; uScale: THREE.IUniform<number>; uHover: THREE.IUniform<number>; uSel: THREE.IUniform<number> }) {
   const geom = useMemo(() => buildNodeGeometry(model, epochMs), [model, epochMs]);
-  const mat = useMemo(() => pointMaterial(NODE_VERT, NODE_FRAG, { uTime, uScale, uHover, uSel }), [uTime, uScale, uHover, uSel]);
+  const mat = useMemo(() => pointMaterial(NODE_VERT, NODE_FRAG, { uTime, uScale, uHover, uSel, uBoost: { value: 2.05 } }), [uTime, uScale, uHover, uSel]);
   useEffect(() => () => geom.dispose(), [geom]);
   return <points geometry={geom} material={mat} frustumCulled={false} />;
 }
@@ -754,7 +755,7 @@ function NodeField({ model, epochMs, uTime, uScale, uHover, uSel }: { model: Cos
 /** เส้นพลังงานเชื่อมสมาชิก + ไฮไลต์เส้นทางจาก ROOT ถึงโหนดที่เลือก */
 function EdgeField({ model, epochMs, uTime, highlight }: { model: CosmicNetworkModel; epochMs: number; uTime: THREE.IUniform<number>; highlight: Set<number> }) {
   const geom = useMemo(() => buildEdgeGeometry(model, epochMs), [model, epochMs]);
-  const mat = useMemo(() => pointMaterial(EDGE_VERT, EDGE_FRAG, { uTime, uFlowSpeed: { value: 0.16 }, uIntensity: { value: 1 } }), [uTime]);
+  const mat = useMemo(() => pointMaterial(EDGE_VERT, EDGE_FRAG, { uTime, uFlowSpeed: { value: 0.16 }, uIntensity: { value: 1.4 } }), [uTime]);
   useEffect(() => {
     const attr = geom.getAttribute('aHi') as THREE.BufferAttribute;
     const arr = attr.array as Float32Array;
@@ -1305,7 +1306,7 @@ function CameraRig({
       },
       focusRoot: () => {
         lastInteract.current = performance.now();
-        startAnim(spherical(34, 1.05, 0.7), new THREE.Vector3(0, 0, 0), 1.9);
+        startAnim(spherical(24, 1.05, 0.7), new THREE.Vector3(0, 0, 0), 1.9);
       },
       focusNode: (id: number) => {
         const n = model.nodes[id];
@@ -1672,7 +1673,7 @@ export default function CosmicNetworkScene(props: CosmicSceneProps) {
     <Canvas
       camera={{ fov: 55, near: 0.1, far: 9000, position: [0, 130, 280] }}
       gl={{ antialias: true, alpha: false, powerPreference: 'high-performance', stencil: false }}
-      dpr={[1, quality === 'high' ? 1.75 : 1]}
+      dpr={[1, quality === 'high' ? 1.6 : 1]}
       onCreated={({ gl }) => {
         gl.setClearColor(new THREE.Color('#01030a'), 1);
       }}
