@@ -19,9 +19,14 @@ export async function GET(req: Request) {
     const wanted = Math.max(1, Math.min(20, Number(url.searchParams.get('limit') || 1)));
     // กรองตามหมวด (เช่น topic=เครือข่าย) — ไม่ส่งมา = ใช้ทุกคลิปที่ active
     const topic = (url.searchParams.get('topic') || '').slice(0, 80).trim();
+    // net = สัดส่วนคลิป "หมวดเครือข่าย" ที่ต้องได้ (0–1) — ค่าเริ่มต้น 0.9 = เน้นเครือข่าย 90%
+    const netParam = url.searchParams.get('net');
+    const net = netParam === null ? null : Math.max(0, Math.min(1, Number(netParam) || 0));
+    const NET_TOPIC = topic || 'เครือข่าย';
+    const isNet = (t: string | null) => !!t && (t.includes(NET_TOPIC) || NET_TOPIC.includes(t));
 
     const vids = await prisma.video.findMany({
-      where: { status: 'active', ...(topic ? { topic } : {}) },
+      where: { status: 'active', ...(topic && net === null ? { topic } : {}) },
       select: { id: true, videoId: true, title: true, url: true, tiktokId: true, durationSec: true, topic: true, cta: true, ctaUrl: true, priority: true },
       orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }],
       take: 500,
@@ -37,8 +42,21 @@ export async function GET(req: Request) {
       .catch(() => [] as Array<{ videoId: string }>);
     const recentIds = new Set(recent.map((r) => r.videoId));
 
-    let pool = vids.filter((v) => !recentIds.has(v.id));
-    if (!pool.length) pool = vids; // คลังมีน้อยกว่าที่กันซ้ำ → อนุญาตให้วนซ้ำได้
+    // ── ถ่วงน้ำหนัก: เน้นคลิปหมวดเครือข่าย net (ค่าเริ่มต้น 90%) ที่เหลือเป็นคลิปหมวดอื่น ──
+    const netPool = net === null ? vids : vids.filter((v) => isNet(v.topic));
+    const otherPool = net === null ? [] : vids.filter((v) => !isNet(v.topic));
+    let chosen = vids;
+    let lane: 'network' | 'other' = 'network';
+    if (net !== null) {
+      const wantNet = Math.random() < net;
+      const first = wantNet ? netPool : otherPool;
+      const second = wantNet ? otherPool : netPool;
+      chosen = first.length > 0 ? first : second;
+      lane = chosen === netPool ? 'network' : 'other';
+    }
+    // กันเล่นซ้ำ: ตัด 10 รายการล่าสุดของ session นี้ออกจาก "เลน" ที่เลือกไว้
+    let pool = chosen.filter((v) => !recentIds.has(v.id));
+    if (!pool.length) pool = chosen.length ? chosen : vids;
     if (wanted > 1) pool = pool.slice(0, wanted);
 
     const pick = pool.length === 1 ? pool[0] : pool[Math.floor(Math.random() * pool.length)];
@@ -65,7 +83,14 @@ export async function GET(req: Request) {
           cta: pick.cta || null,
           ctaUrl: pick.ctaUrl || null,
         },
-        pool: { active: vids.length, skippedRecent: vids.length - pool.length },
+        pool: {
+          active: vids.length,
+          network: netPool.length,
+          other: otherPool.length,
+          ratio: net,
+          lane,
+          skippedRecent: Math.max(0, chosen.length - pool.length),
+        },
         queue: 'shuffle',
         topic: topic || null,
         session: sid,

@@ -5,12 +5,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 /**
  * TikTokChannel — ช่องดูวีดีโอ TikTok แบบสุ่มต่อเนื่อง (@aka989._)
  *
- * ทำงานแบบ "เปิดเว็บ → สุ่มคลิป → เล่นจนจบ → สุ่มคลิปใหม่ทันที → วนตลอดเวลา"
- *  - เรียก /api/videos/next?topic=เครือข่าย (คิวสุ่ม + กันเล่นซ้ำ 10 รายการล่าสุด + เฉพาะคลิปเครือข่าย)
- *  - ตรวจจับ "คลิปจบ" จากเหตุการณ์จริงของ TikTok Player (onStateChange value=0 / onCurrentTime ถึงท้ายคลิป)
- *    → ไม่ตัดคลิปกลางคัน และต่อคลิปใหม่ทันทีที่จบ
- *  - มีเวลาสำรอง (ความยาวจริง + 5 วิ) กันกรณีเหตุการณ์ไม่มา → รับประกันว่าวนต่อแน่นอน
- *  - บันทึกผลการดูด้วย /api/videos/played (n8n: POST /webhook/video-played)
+ * ตามสเปกที่สั่ง:
+ *  1) เน้นวีดีโอเครือข่าย 90% — เรียก /api/videos/next?net=0.9 (ถ่วงน้ำหนักฝั่งเซิร์ฟเวอร์:
+ *     เลน "เครือข่าย" 90% / คลิปหมวดอื่น 10% · ถ้าคลังไม่มีหมวดอื่นจะเล่นเครือข่าย 100% โดยไม่ล้ม)
+ *  2) AI ตรวจจับการเข้าชม (คำนวณในเบราว์เซอร์) — ให้คะแนน 0-100 จากสัญญาณจริง:
+ *     ดูต่อเนื่อง · ดูจนจบ · แท็บโฟกัสอยู่ · มีปฏิสัมพันธ์กับหน้า · ดูหลายคลิป · เวลาดูรวม · ไม่เลื่อนหนี
+ *     ถึงเกณฑ์ = "ตรวจพบว่าตั้งใจสนใจ" แล้วระบบทำงานต่อเองทันที
+ *  3) เมื่อตรวจพบ: (ก) ส่งลิงก์คลิปไปที่ TikTok ทันที (เปิดแท็บใหม่ · ถ้าเบราว์เซอร์บล็อก popup
+ *     จะติดอาวุธไว้ให้เปิดทันทีที่ผู้ชมแตะหน้าจอครั้งถัดไป ไม่เงียบหาย)
+ *     (ข) เปิดเสียงให้เองและตรึงให้เสียงต่อเนื่องทุคคลิป — ถ้าผู้ชมกดปิดเสียงเอง ระบบจะไม่เปิดซ้ำ
+ *     (ค) บันทึกเหตุการณ์ไว้ตรวจย้อนหลังที่ /api/videos/interest
  */
 
 type Video = {
@@ -24,18 +28,17 @@ type Video = {
   cta: string | null;
   ctaUrl: string | null;
 };
-type NextResp = {
-  ok: boolean;
-  video: Video | null;
-  reason?: string;
-  pool?: { active: number };
-};
+type Pool = { active: number; network?: number; other?: number; ratio?: number | null; lane?: string };
+type NextResp = { ok: boolean; video: Video | null; reason?: string; pool?: Pool };
 
-/** แสดงเฉพาะคลิปหมวดนี้ (ผู้ดูแลตั้งผ่าน /api/videos/add ด้วย field topic) */
-const TOPIC = 'เครือข่าย';
+const NET_TOPIC = 'เครือข่าย';
+const NET_RATIO = 0.9;
 const PLAYER_PARAMS =
   'autoplay=1&loop=0&controls=1&progress_bar=1&play_button=1&volume_control=1&fullscreen_button=1&timestamp=1&music_info=0&description=1&rel=0&native_context_menu=0&closed_caption=1';
 const FALLBACK_SEC = 60;
+const INTEREST_THRESHOLD = 60;
+const MIN_WATCH_SEC = 8;
+const TRIGGER_COOLDOWN_MS = 90_000;
 
 function sid() {
   try {
@@ -51,15 +54,70 @@ function sid() {
   }
 }
 
+/** ตัวตนผู้เข้าชมตัวเดียวกับ public/track.js → event ผูกกับ Visitor เดิม (ต้องยินยอมก่อน) */
+function visitorId(): string {
+  try {
+    const k = 'ain_visitor_id';
+    let v = localStorage.getItem(k);
+    if (!v) {
+      v = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+      });
+      localStorage.setItem(k, v);
+    }
+    return v;
+  } catch {
+    return '';
+  }
+}
+
+type Snapshot = {
+  watchRatio: number;
+  completed: boolean;
+  visibleRatio: number;
+  activity: number;
+  clips: number;
+  sessionSec: number;
+  scrolledAway: boolean;
+};
+type Part = { label: string; pts: number };
+
+/** AI ให้คะแนนความสนใจ — กติกาโปร่งใส ตรวจย้อนหลังได้ (ไม่ใช่กล่องดำ) */
+function scoreInterest(s: Snapshot): { score: number; parts: Part[] } {
+  const parts: Part[] = [];
+  const add = (label: string, pts: number) => {
+    if (pts > 0) parts.push({ label, pts });
+  };
+
+  const w = s.watchRatio;
+  add('ดูต่อเนื่องเกิน 60% ของคลิป', w >= 0.6 ? 22 : 0);
+  add('ดูเกือบครบทั้งคลิป', w >= 0.85 ? 8 : 0);
+  add('ดูจนจบคลิป', s.completed ? 18 : 0);
+  add('อยู่กับคลิป ไม่สลับแท็บ', s.visibleRatio >= 0.9 ? 14 : s.visibleRatio >= 0.6 ? 7 : 0);
+  add('มีปฏิสัมพันธ์กับหน้าเว็บ', s.activity >= 3 ? 8 : 0);
+  add('ดูหลายคลิปต่อเนื่อง', s.clips >= 4 ? 10 : s.clips >= 2 ? 6 : 0);
+  add('เวลาดูรวมเกิน 1 นาที', s.sessionSec >= 60 ? 8 : 0);
+  add('ไม่เลื่อนหนีจากคลิป', s.scrolledAway ? 0 : 10);
+
+  const score = Math.max(0, Math.min(100, parts.reduce((a, p) => a + p.pts, 0)));
+  return { score, parts };
+}
+
 export default function TikTokChannel() {
   const [video, setVideo] = useState<Video | null>(null);
   const [state, setState] = useState<'loading' | 'playing' | 'empty' | 'error'>('loading');
-  const [pool, setPool] = useState(0);
+  const [pool, setPool] = useState<Pool>({ active: 0 });
   const [count, setCount] = useState(0);
   const [realDur, setRealDur] = useState(0);
   const [lastEnd, setLastEnd] = useState<{ at: number; waited: number } | null>(null);
   const [auto, setAuto] = useState(true);
-  const [muted, setMuted] = useState(true);
+  const [soundOn, setSoundOn] = useState(false);
+  const [ai, setAi] = useState<{ score: number; parts: Part[] }>({ score: 0, parts: [] });
+  const [aiHits, setAiHits] = useState(0);
+  const [aiMsg, setAiMsg] = useState('');
+  const [armed, setArmed] = useState(false);
+
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const frameRef = useRef<HTMLIFrameElement | null>(null);
   const startedAt = useRef<number>(Date.now());
@@ -67,54 +125,148 @@ export default function TikTokChannel() {
   const advancing = useRef(false);
   const durRef = useRef<number>(0);
 
-  const report = useCallback(
-    (completed: boolean, durOverride = 0) => {
-      const v = video;
-      if (!v) return;
-      const seconds = Math.round((Date.now() - startedAt.current) / 1000);
-      const dur = Math.round(durOverride || durRef.current || v.durationSec || 0);
-      const body = JSON.stringify({ videoId: v.id, sid: sid(), seconds, durationSec: dur, completed });
+  // ตัวนับของ AI
+  const clipSec = useRef(0);
+  const visibleSec = useRef(0);
+  const activity = useRef(0);
+  const clipsSeen = useRef(0);
+  const sessionSec = useRef(0);
+  const scrolledAwaySec = useRef(0);
+  const triggeredAt = useRef(0);
+  const gestureAt = useRef(0);
+  const soundOnRef = useRef(false);
+  const userMutedRef = useRef(false);
+  const videoRef = useRef<Video | null>(null);
+  const stateRef = useRef<string>('loading');
+  const armedUrl = useRef<string | null>(null);
+
+  videoRef.current = video;
+  stateRef.current = state;
+
+  const cmd = useCallback((type: string) => {
+    try {
+      frameRef.current?.contentWindow?.postMessage(JSON.stringify({ type, 'x-tiktok-player': true }), '*');
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  /** เปิด/ปิดเสียง + ตรึงสถานะ (ยิงซ้ำ กันคำสั่งหลุดหลัง iframe โหลดใหม่) */
+  const applySound = useCallback(
+    (on: boolean) => {
+      soundOnRef.current = on;
+      setSoundOn(on);
+      const send = () => cmd(on ? 'unmute' : 'mute');
+      send();
+      [250, 1000, 2500].forEach((t) =>
+        setTimeout(() => {
+          if (soundOnRef.current === on) send();
+        }, t),
+      );
+    },
+    [cmd],
+  );
+
+  const report = useCallback((completed: boolean, durOverride = 0) => {
+    const v = videoRef.current;
+    if (!v) return;
+    const seconds = Math.round((Date.now() - startedAt.current) / 1000);
+    const dur = Math.round(durOverride || durRef.current || v.durationSec || 0);
+    const body = JSON.stringify({ videoId: v.id, sid: sid(), seconds, durationSec: dur, completed });
+    try {
+      navigator.sendBeacon?.('/api/videos/played', new Blob([body], { type: 'application/json' })) ||
+        fetch('/api/videos/played', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true });
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  /** AI ตรวจพบความสนใจ → ส่งลิงก์ไป TikTok + เปิดเสียงต่อเนื่อง + บันทึกเหตุการณ์ */
+  const onInterest = useCallback(
+    (score: number, parts: Part[]) => {
+      const v = videoRef.current;
+      triggeredAt.current = Date.now();
+      setAiHits((n) => n + 1);
+
+      if (!userMutedRef.current) applySound(true);
+
+      if (v?.url) {
+        let opened = false;
+        if (Date.now() - gestureAt.current < 5000) {
+          try {
+            opened = !!window.open(v.url, '_blank', 'noopener,noreferrer');
+          } catch {
+            opened = false;
+          }
+        }
+        if (opened) {
+          setArmed(false);
+          setAiMsg('🎯 AI ตรวจพบความสนใจ — ส่งลิงก์คลิปไปที่ TikTok แล้ว (เปิดแท็บใหม่) + เปิดเสียงต่อเนื่อง');
+        } else {
+          armedUrl.current = v.url;
+          setArmed(true);
+          setAiMsg('🎯 AI ตรวจพบความสนใจ — แตะหน้าจอครั้งถัดไป ระบบจะเปิดคลิปบน TikTok ให้ทันที + เปิดเสียงต่อเนื่อง');
+        }
+      } else {
+        setAiMsg('🎯 AI ตรวจพบความสนใจ — เปิดเสียงให้ต่อเนื่องแล้ว');
+      }
+
       try {
-        navigator.sendBeacon?.('/api/videos/played', new Blob([body], { type: 'application/json' })) ||
-          fetch('/api/videos/played', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true });
+        const payload = JSON.stringify({
+          vid: visitorId(),
+          sid: sid(),
+          videoCode: v?.id || '',
+          score,
+          signals: Object.fromEntries(parts.map((p) => [p.label, p.pts])),
+          action: 'handoff+unmute',
+          seconds: Math.round(visibleSec.current),
+          durationSec: Math.round(durRef.current || v?.durationSec || 0),
+          eventKey: `${sid()}-${v?.id || 'na'}-${Math.floor(Date.now() / 60000)}`,
+        });
+        navigator.sendBeacon?.('/api/videos/interest', new Blob([payload], { type: 'application/json' })) ||
+          fetch('/api/videos/interest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload, keepalive: true });
       } catch {
         /* ignore */
       }
     },
-    [video],
+    [applySound],
   );
 
   const fetchNext = useCallback(async (random = false) => {
     setState('loading');
     try {
       const r = await fetch(
-        `/api/videos/next?topic=${encodeURIComponent(TOPIC)}&sid=${encodeURIComponent(sid())}${random ? '&r=' + Math.random() : ''}`,
+        `/api/videos/next?topic=${encodeURIComponent(NET_TOPIC)}&net=${NET_RATIO}&sid=${encodeURIComponent(sid())}${random ? '&r=' + Math.random() : ''}`,
         { cache: 'no-store' },
       );
       const j: NextResp = await r.json();
       if (!j.ok || !j.video) {
         setVideo(null);
-        setPool(Number(j.pool?.active || 0));
+        setPool(j.pool || { active: 0 });
         setState('empty');
         return;
       }
       durRef.current = Number(j.video.durationSec || 0) > 0 ? Number(j.video.durationSec) : 0;
       setRealDur(durRef.current);
       setVideo(j.video);
-      setPool(Number(j.pool?.active || 0));
+      setPool(j.pool || { active: 0 });
       setCount((c) => c + 1);
       setLastEnd({ at: Date.now(), waited: 0 });
       startedAt.current = Date.now();
+      clipSec.current = 0;
+      visibleSec.current = 0;
+      activity.current = 0;
+      scrolledAwaySec.current = 0;
+      clipsSeen.current += 1;
       setState('playing');
     } catch {
       setState('error');
     }
   }, []);
 
-  // ── ไปคลิปถัดไป: เล่นจบ → สุ่มใหม่ทันที ──
   const advance = useCallback(
     (reason: 'ended' | 'manual' | 'timeout') => {
-      if (advancing.current) return; // กันเรียกซ้ำ (เหตุการณ์มักมาหลายรอบ)
+      if (advancing.current) return;
       advancing.current = true;
       if (timer.current) clearTimeout(timer.current);
       if (reason === 'ended') {
@@ -134,11 +286,85 @@ export default function TikTokChannel() {
     void fetchNext();
   }, [fetchNext]);
 
-  // ── ฟังเหตุการณ์จากเครื่องเล่น TikTok (จบคลิป / เวลาปัจจุบัน + ความยาวจริง) ──
+  // ผู้ใช้แตะ/ขยับ → นับปฏิสัมพันธ์ + ใช้สิทธิ์เปิดแท็บ TikTok ที่ติดอาวุธไว้
+  useEffect(() => {
+    const bump = () => {
+      activity.current += 1;
+      gestureAt.current = Date.now();
+      const url = armedUrl.current;
+      if (url) {
+        armedUrl.current = null;
+        try {
+          if (window.open(url, '_blank', 'noopener,noreferrer')) {
+            setArmed(false);
+            setAiMsg('🎯 ส่งลิงก์คลิปไปที่ TikTok แล้ว (เปิดแท็บใหม่)');
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+    };
+    window.addEventListener('pointerdown', bump, { passive: true });
+    window.addEventListener('touchstart', bump, { passive: true });
+    window.addEventListener('mousemove', bump, { passive: true });
+    window.addEventListener('keydown', bump);
+    return () => {
+      window.removeEventListener('pointerdown', bump);
+      window.removeEventListener('touchstart', bump);
+      window.removeEventListener('mousemove', bump);
+      window.removeEventListener('keydown', bump);
+    };
+  }, []);
+
+  // AI วัดผลทุก 1 วินาที + ตัดสินว่าผู้ชม "สนใจ"
+  useEffect(() => {
+    const t = setInterval(() => {
+      if (stateRef.current !== 'playing') return;
+      const el = wrapRef.current;
+      if (el) {
+        const r = el.getBoundingClientRect();
+        const visiblePx = Math.max(0, Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0));
+        const ratio = r.height > 0 ? visiblePx / r.height : 1;
+        if (ratio < 0.5) scrolledAwaySec.current += 1;
+        else {
+          scrolledAwaySec.current = 0;
+          if (document.hidden) return;
+          visibleSec.current += 1;
+        }
+      } else {
+        if (document.hidden) return;
+        visibleSec.current += 1;
+      }
+
+      clipSec.current += 1;
+      if (scrolledAwaySec.current === 0) sessionSec.current += 1;
+
+      const dur = durRef.current || videoRef.current?.durationSec || 0;
+      const snap: Snapshot = {
+        watchRatio: dur > 0 ? Math.min(1, visibleSec.current / dur) : 0,
+        completed: dur > 0 && visibleSec.current >= dur - 1.5,
+        visibleRatio: clipSec.current > 0 ? Math.min(1, visibleSec.current / clipSec.current) : 0,
+        activity: activity.current,
+        clips: clipsSeen.current,
+        sessionSec: sessionSec.current,
+        scrolledAway: scrolledAwaySec.current >= 4,
+      };
+      const { score, parts } = scoreInterest(snap);
+      setAi({ score, parts });
+
+      const ready = visibleSec.current >= MIN_WATCH_SEC || sessionSec.current >= 20;
+      if (ready && score >= INTEREST_THRESHOLD && Date.now() - triggeredAt.current > TRIGGER_COOLDOWN_MS) {
+        onInterest(score, parts);
+      }
+    }, 1000);
+    return () => clearInterval(t);
+  }, [onInterest]);
+
+  // ฟังเหตุการณ์จากเครื่องเล่น TikTok (จบคลิป / เวลาปัจจุบัน + ความยาวจริง)
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
       const from = frameRef.current?.contentWindow;
-      if (from && e.source && e.source !== from) return; // รับเฉพาะข้อความจากกรอบของเรา
+      if (from && e.source && e.source !== from) return;
       const raw = e.data as unknown;
       let d: Record<string, unknown> | null = null;
       if (raw && typeof raw === 'object') d = raw as Record<string, unknown>;
@@ -160,20 +386,17 @@ export default function TikTokChannel() {
         if (du > 0) {
           durRef.current = du;
           setRealDur((prev) => (Math.abs(prev - du) > 0.2 ? du : prev));
-          if (auto && ct > 0 && ct >= du - 0.35) advance('ended'); // ถึงท้ายคลิปจริง
+          if (auto && ct > 0 && ct >= du - 0.35) advance('ended');
         }
         return;
       }
-
-      if (type === 'onStateChange' && value === 0 && auto) {
-        advance('ended'); // 0 = จบคลิป → สุ่มคลิปใหม่ทันที
-      }
+      if (type === 'onStateChange' && value === 0 && auto) advance('ended');
     };
     window.addEventListener('message', onMsg);
     return () => window.removeEventListener('message', onMsg);
   }, [advance, auto]);
 
-  // ── เวลาสำรอง: ถ้าไม่ได้เหตุการณ์ "จบ" → ต่อคลิปใหม่หลัง (ความยาวจริง + 5 วิ) ──
+  // เวลาสำรอง: ไม่ได้เหตุการณ์ "จบ" → ต่อคลิปใหม่หลัง (ความยาวจริง + 5 วิ)
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
     if (!auto || state !== 'playing' || !video) return;
@@ -185,19 +408,22 @@ export default function TikTokChannel() {
     };
   }, [auto, state, video, realDur, advance]);
 
-  // บันทึกตอนปิด/ซ่อนหน้า
   useEffect(() => {
     const onHide = () => report(false);
     window.addEventListener('pagehide', onHide);
     return () => window.removeEventListener('pagehide', onHide);
   }, [report]);
 
-  const cmd = (type: string) => {
-    try {
-      frameRef.current?.contentWindow?.postMessage(JSON.stringify({ type, 'x-tiktok-player': true }), '*');
-    } catch {
-      /* ignore */
-    }
+  /** คลิปใหม่โหลดเสร็จ: ถ้าโหมดเสียงต่อเนื่องเปิดอยู่ → สั่งเปิดเสียงซ้ำอัตโนมัติ */
+  const onFrameLoad = useCallback(() => {
+    if (soundOnRef.current && !userMutedRef.current) applySound(true);
+  }, [applySound]);
+
+  const toggleSound = () => {
+    const next = !soundOnRef.current;
+    userMutedRef.current = !next;
+    applySound(next);
+    setAiMsg(next ? '🔊 เปิดเสียงต่อเนื่องแล้ว (ระบบคงเสียงไว้ทุคคลิป)' : '🔇 ปิดเสียงแล้ว — ระบบจะไม่เปิดเสียงเองอีกในรอบนี้');
   };
 
   const toggleFullscreen = () => {
@@ -207,20 +433,37 @@ export default function TikTokChannel() {
     else el.requestFullscreen?.();
   };
 
+  const openOnTikTok = () => {
+    const v = video;
+    if (!v?.url) return;
+    gestureAt.current = Date.now();
+    armedUrl.current = null;
+    const w = window.open(v.url, '_blank', 'noopener,noreferrer');
+    setArmed(false);
+    setAiMsg(w ? 'ส่งลิงก์คลิปไปที่ TikTok แล้ว (เปิดแท็บใหม่)' : 'เบราว์เซอร์บล็อกแท็บใหม่ — ใช้ลิงก์ "ดูบน TikTok" ด้านล่างแทน');
+  };
+
   const embedSrc = video?.embedUrl ? `${video.embedUrl}?${PLAYER_PARAMS}` : null;
   const shownDur = realDur > 0 ? Math.round(realDur) : video?.durationSec || 0;
+  const detected = ai.score >= INTEREST_THRESHOLD;
+  const netPct = Math.round(NET_RATIO * 100);
 
   return (
     <div className="mb-8">
-      <div className="mb-3">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 text-pink-300 text-sm font-semibold border border-slate-800">
           <span>🎬</span> ช่องดูวีดีโอ · สุ่มต่อเนื่อง
+        </div>
+        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-900/40 text-emerald-200 text-[12px] font-semibold border border-emerald-700/50">
+          🎯 เน้นวีดีโอเครือข่าย {netPct}%
+        </div>
+        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-sky-900/40 text-sky-200 text-[12px] font-semibold border border-sky-700/50">
+          🤖 ตรวจจับการเข้าชมด้วย AI อัตโนมัติ
         </div>
       </div>
 
       <div className="rounded-3xl border border-slate-800 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 p-4 md:p-6 shadow-[0_24px_60px_-30px_rgba(2,6,23,0.85)]">
         <div className="grid md:grid-cols-[320px_1fr] gap-5">
-          {/* กรอบ 9:16 */}
           <div ref={wrapRef} className="mx-auto w-full max-w-[320px]">
             <div className="relative rounded-[26px] border border-white/15 bg-black shadow-2xl overflow-hidden" style={{ aspectRatio: '9 / 16' }}>
               {embedSrc ? (
@@ -228,6 +471,7 @@ export default function TikTokChannel() {
                   ref={frameRef}
                   key={video?.id}
                   src={embedSrc}
+                  onLoad={onFrameLoad}
                   className="absolute inset-0 w-full h-full"
                   allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
                   allowFullScreen
@@ -237,7 +481,7 @@ export default function TikTokChannel() {
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
                   <div className="text-4xl mb-3">{state === 'loading' ? '⏳' : state === 'error' ? '⚠️' : '📼'}</div>
                   <div className="text-slate-200 text-sm font-semibold">
-                    {state === 'loading' ? 'กำลังสุ่มคลิป…' : state === 'error' ? 'เชื่อมต่อระบบไม่ได้' : `ยังไม่มีคลิปหมวด ${TOPIC} ในคลัง`}
+                    {state === 'loading' ? 'กำลังสุ่มคลิป…' : state === 'error' ? 'เชื่อมต่อระบบไม่ได้' : `ยังไม่มีคลิปหมวด ${NET_TOPIC} ในคลัง`}
                   </div>
                   <p className="mt-2 text-[11px] text-slate-400 leading-relaxed">
                     {state === 'empty'
@@ -250,7 +494,6 @@ export default function TikTokChannel() {
               )}
             </div>
 
-            {/* ปุ่มควบคุม */}
             <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
               <button onClick={() => cmd('play')} className="px-3 py-2 rounded-full bg-white/10 text-slate-100 text-xs font-semibold border border-white/15 hover:bg-white/20 transition" title="เล่น">▶ Play</button>
               <button onClick={() => { cmd('pause'); report(false); }} className="px-3 py-2 rounded-full bg-white/10 text-slate-100 text-xs font-semibold border border-white/15 hover:bg-white/20 transition" title="หยุดชั่วคราว">⏸ Pause</button>
@@ -260,7 +503,6 @@ export default function TikTokChannel() {
             </div>
           </div>
 
-          {/* ข้อมูล + สถานะระบบ */}
           <div className="flex flex-col gap-3">
             <div className="rounded-2xl bg-white/[0.04] border border-white/10 p-4">
               <div className="flex items-center gap-2 text-[11px] text-pink-300 font-semibold">
@@ -268,12 +510,14 @@ export default function TikTokChannel() {
                   <span className="absolute inline-flex w-full h-full rounded-full bg-pink-400 opacity-70 animate-ping" />
                   <span className="relative inline-flex w-2 h-2 rounded-full bg-pink-400" />
                 </span>
-                กำลังเล่นคลิปที่ {count || 0} ของรอบนี้ · หมวด {TOPIC}
+                กำลังเล่นคลิปที่ {count || 0} ของรอบนี้ · หมวด {video?.topic || NET_TOPIC}
+                {pool.lane ? <span className="text-slate-400"> ({pool.lane === 'network' ? 'เลนเครือข่าย' : 'เลนอื่น ๆ'})</span> : null}
               </div>
               <div className="mt-2 text-[15px] font-bold text-white leading-snug">{video?.title || 'รอคลิปแรก…'}</div>
-              {video?.topic ? <div className="mt-1 text-[12px] text-slate-400">หมวด: {video.topic}</div> : null}
               <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
-                <span className="px-2.5 py-1 rounded-full bg-white/5 text-slate-300 border border-white/10">คลิปหมวดนี้ {pool} รายการ</span>
+                <span className="px-2.5 py-1 rounded-full bg-white/5 text-slate-300 border border-white/10">
+                  คลังคลิป {pool.active} รายการ · เครือข่าย {pool.network ?? 0} / อื่น ๆ {pool.other ?? 0}
+                </span>
                 <span className="px-2.5 py-1 rounded-full bg-white/5 text-slate-300 border border-white/10">
                   ความยาว {shownDur > 0 ? `${shownDur} วิ` : 'กำลังวัด…'}
                 </span>
@@ -283,8 +527,11 @@ export default function TikTokChannel() {
                 {lastEnd && lastEnd.waited > 0 ? (
                   <span className="px-2.5 py-1 rounded-full bg-white/5 text-slate-300 border border-white/10">ต่อคลิปใหม่ใน {(lastEnd.waited / 1000).toFixed(1)} วิ</span>
                 ) : null}
-                <button onClick={() => setMuted((m) => { cmd(m ? 'unmute' : 'mute'); return !m; })} className="px-2.5 py-1 rounded-full bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10 transition">
-                  {muted ? '🔇 เปิดเสียง' : '🔊 ปิดเสียง'}
+                <button
+                  onClick={toggleSound}
+                  className={`px-2.5 py-1 rounded-full border transition ${soundOn ? 'bg-emerald-400/20 text-emerald-200 border-emerald-400/40' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'}`}
+                >
+                  {soundOn ? '🔊 เสียงเปิดต่อเนื่อง (กดเพื่อปิด)' : '🔇 เปิดเสียง'}
                 </button>
                 <button
                   onClick={() => setAuto((a) => !a)}
@@ -293,11 +540,57 @@ export default function TikTokChannel() {
                   {auto ? 'หยุดสลับชั่วคราว' : 'เปิดสลับอัตโนมัติ'}
                 </button>
               </div>
-              {video?.url ? (
-                <a href={video.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 mt-3 text-[12px] text-sky-300 hover:text-sky-200">
-                  ดูคลิปนี้บน TikTok ↗
-                </a>
+            </div>
+
+            <div className={`rounded-2xl border p-4 transition ${detected ? 'bg-emerald-500/10 border-emerald-400/50' : 'bg-white/[0.04] border-white/10'}`}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-[12px] font-semibold text-sky-200">
+                  <span>🤖</span> AI ตรวจจับความสนใจผู้ชม
+                  {aiHits > 0 ? (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-400/20 text-emerald-100 border border-emerald-400/40 text-[10px]">ตรวจพบแล้ว {aiHits} ครั้ง</span>
+                  ) : null}
+                </div>
+                <div className="text-[13px] font-bold text-white">
+                  {ai.score}
+                  <span className="text-slate-400 text-[11px]">/100</span>
+                </div>
+              </div>
+              <div className="mt-2 h-2 rounded-full bg-white/10 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ${detected ? 'bg-emerald-400' : ai.score >= 35 ? 'bg-sky-400' : 'bg-slate-500'}`}
+                  style={{ width: `${Math.max(3, ai.score)}%` }}
+                />
+              </div>
+              <div className="mt-2 text-[11px] text-slate-300">
+                {ai.parts.length
+                  ? `${detected ? 'ตรวจพบความสนใจ (เกณฑ์ ' + INTEREST_THRESHOLD + ')' : 'กำลังจับสัญญาณ…'} — ${ai.parts.map((p) => p.label).join(' · ')}`
+                  : 'รอสัญญาณการดู (เวลาดู · ความโฟกัส · ปฏิสัมพันธ์)'}
+              </div>
+              {aiMsg ? (
+                <div className={`mt-3 text-[11.5px] rounded-xl px-3 py-2 border ${armed ? 'bg-amber-400/10 border-amber-400/40 text-amber-100' : 'bg-emerald-400/10 border-emerald-400/30 text-emerald-100'}`}>
+                  {aiMsg}
+                </div>
               ) : null}
+              <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+                <span className="px-2.5 py-1 rounded-full bg-white/5 text-slate-300 border border-white/10">ดูไปแล้ว {clipsSeen.current} คลิปในรอบนี้</span>
+                <span className="px-2.5 py-1 rounded-full bg-white/5 text-slate-300 border border-white/10">เวลาดูรวม {sessionSec.current} วิ</span>
+                <button
+                  onClick={openOnTikTok}
+                  disabled={!video?.url}
+                  className={`px-3 py-1 rounded-full border font-semibold transition ${detected ? 'bg-pink-500 text-white border-pink-400 hover:bg-pink-400' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'} disabled:opacity-40`}
+                >
+                  📤 ส่งคลิปนี้ไป TikTok ทันที
+                </button>
+                {video?.url ? (
+                  <a href={video.url} target="_blank" rel="noopener noreferrer" className="px-3 py-1 rounded-full bg-white/5 text-sky-300 border border-white/10 hover:bg-white/10 transition">
+                    ดูบน TikTok ↗
+                  </a>
+                ) : null}
+              </div>
+              <div className="mt-2 text-[10.5px] text-slate-500 leading-relaxed">
+                ระบบส่งลิงก์ไป TikTok และเปิดเสียงให้ต่อเนื่องเองทันทีเมื่อผู้ชมดูต่อเนื่องจริง · ถ้าผู้ชมกดปิดเสียงเอง ระบบจะไม่เปิดซ้ำ ·
+                เหตุการณ์ถูกบันทึกไว้ตรวจย้อนหลัง (ระดับบุคคลเฉพาะเมื่อผู้ชมยินยอม)
+              </div>
             </div>
           </div>
         </div>
