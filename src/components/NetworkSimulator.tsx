@@ -394,13 +394,14 @@ export default function NetworkSimulator() {
       }
     >
       <div className={fullMode ? 'h-full w-full' : 'mx-auto max-w-7xl px-4'}>
-        {/* ── Header ── (ซ่อนในโหมดเต็มจอ) */}
-        {!fullMode && (
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        {/* ── Header ── (ในโหมดเต็มจอย่อขนาดลง แต่ยังเห็นข้อมูลครบ) */}
+        <div className={fullMode ? 'mb-2 flex flex-wrap items-start justify-between gap-3' : 'mb-6 flex flex-wrap items-start justify-between gap-4'}>
           <div>
             <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-sky-400">Future Network Simulator</p>
-            <h2 className="text-2xl font-bold sm:text-3xl">1 แตก {config.branchFactor} – Future Network Simulator</h2>
+            <h2 className={fullMode ? 'text-lg font-bold' : 'text-2xl font-bold sm:text-3xl'}>1 แตก {config.branchFactor} – Future Network Simulator</h2>
+            {!fullMode && (
             <p className="mt-1 max-w-2xl text-sm text-slate-400">ทดลองโครงสร้างเครือข่ายและแผนรายได้แบบไม่มีจำนวนชั้นตายตัว — ทุกอย่างที่เห็นเป็น <span className="font-semibold text-sky-300">ข้อมูลจำลอง (SIMULATION)</span> แยกจากข้อมูลจริงเสมอ</p>
+            )}
           </div>
           <div className="flex flex-col items-start gap-2 sm:items-end">
             <div className="flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900 p-1 text-xs font-semibold">
@@ -417,16 +418,14 @@ export default function NetworkSimulator() {
                 {autoTick ? '⟳ อัปเดตอัตโนมัติทุก 30 วิ' : '⏸ หยุดอัปเดตอัตโนมัติ'}
               </button>
               <button onClick={() => void refresh()} className="rounded-full border border-sky-600/60 bg-sky-950/40 px-3 py-1 font-semibold text-sky-300 hover:border-sky-400">⟳ ดึงใหม่</button>
-              <button onClick={toggleFull} title="เปิดจักรวาลเต็มจอ (กด Esc เพื่อออก)" className="rounded-full border border-amber-500/60 bg-amber-950/40 px-3 py-1 font-semibold text-amber-200 hover:border-amber-400">⛶ เต็มจอ</button>
+              <button onClick={toggleFull} title="เปิดจักรวาลเต็มจอ (กด Esc เพื่อออก)" className="rounded-full border border-amber-500/60 bg-amber-950/40 px-3 py-1 font-semibold text-amber-200 hover:border-amber-400">{fullMode ? '⛶ ออกเต็มจอ (Esc)' : '⛶ เต็มจอ'}</button>
               <button onClick={() => void copyFullLink()} title="คัดลอกลิงก์ที่เปิดแล้วเข้าจักรวาลเต็มจอทันที" className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 font-semibold text-slate-300 hover:border-sky-500">🔗 คัดลอกลิงก์เต็มจอ</button>
             </div>
           </div>
         </div>
-        )}
 
-        {/* ── Stats bar ── (ซ่อนในโหมดเต็มจอ) */}
-        {!fullMode && (
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {/* ── Stats bar ── (ในโหมดเต็มจอแสดงแบบแถวเดียวกระชับ) */}
+        <div className={fullMode ? 'mb-2 grid grid-cols-3 gap-2 lg:grid-cols-6' : 'mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6'}>
           {statCards.map((c) => (
             <div key={c.label} className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
               <p className="text-[11px] leading-tight text-slate-400">{c.label}</p>
@@ -434,12 +433,10 @@ export default function NetworkSimulator() {
             </div>
           ))}
         </div>
-        )}
 
-        <div className={fullMode ? 'grid gap-3' : 'grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)_320px]'}>
-          {/* ── ซ้าย: Simulation Controls ── (ซ่อนในโหมดเต็มจอ ใช้แถบลอยแทน) */}
-          {!fullMode && (
-          <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+        <div className={fullMode ? 'grid gap-3 lg:grid-cols-[280px_minmax(0,1fr)_250px]' : 'grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)_320px]'}>
+          {/* ── ซ้าย: Simulation Controls ── (แสดงครบในโหมดเต็มจอด้วย) */}
+          <div className={`space-y-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 ${fullMode ? 'max-h-[calc(100vh-330px)] overflow-auto' : ''}`}>
             <h3 className="text-sm font-bold text-slate-200">🎛 Simulation Controls</h3>
             <div className="grid grid-cols-2 gap-2 text-xs">
               {([
@@ -501,7 +498,6 @@ export default function NetworkSimulator() {
             {msg && <p className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-[11px] text-sky-200">{msg}</p>}
             <p className="text-xs leading-relaxed text-slate-400">ปุ่ม &quot;เติบโตทีละคน&quot; จะสร้างสมาชิกจำลองใต้โหนดที่มีที่ว่าง แล้วสร้าง event MEMBER_CREATED / LEVEL_COMPLETED ให้เห็นใน Timeline</p>
           </div>
-          )}
 
           {/* ── กลาง: จักรวาล 3D ── */}
           <div className="relative flex flex-col overflow-hidden rounded-2xl border border-slate-800 bg-black">
@@ -512,7 +508,7 @@ export default function NetworkSimulator() {
               </span>
               <span className="hidden truncate text-[10px] text-slate-500 sm:block">ข้อมูลจำลอง (SIMULATION) แยกจากข้อมูลจริงเสมอ</span>
             </div>
-            <div className={`relative w-full ${fullMode ? 'h-[calc(100vh-104px)]' : 'h-[420px] sm:h-[560px]'}`}>
+            <div className={`relative w-full ${fullMode ? 'h-[calc(100vh-420px)] min-h-[340px]' : 'h-[420px] sm:h-[560px]'}`}>
               {mode === 'simulation' ? (
                 <NetworkUniverse3D nodes={renderNodes} selected={selected} onSelect={(c) => setSelected(c)} simulation maxNodes={2500} />
               ) : (
@@ -534,9 +530,8 @@ export default function NetworkSimulator() {
             </div>
           </div>
 
-          {/* ── ขวา: Member Details ── (ซ่อนในโหมดเต็มจอ ใช้การ์ดลอยแทน) */}
-          {!fullMode && (
-          <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+          {/* ── ขวา: Member Details ── (แสดงครบในโหมดเต็มจอด้วย) */}
+          <div className={`space-y-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 ${fullMode ? 'max-h-[calc(100vh-330px)] overflow-auto' : ''}`}>
             <h3 className="text-sm font-bold text-slate-200">👤 Member Details</h3>
             {selectedNode ? (
               <dl className="space-y-1.5 text-xs">
@@ -571,15 +566,13 @@ export default function NetworkSimulator() {
             )}
 
           </div>
-          )}
         </div>
 
-        {/* ── ล่าง: Event Timeline + Layer breakdown ── (ซ่อนในโหมดเต็มจอ) */}
-        {!fullMode && (
-        <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        {/* ── ล่าง: Event Timeline + Layer breakdown ── */}
+        <div className={`grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] ${fullMode ? 'mt-3' : 'mt-4'}`}>
           <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
             <h3 className="mb-3 text-sm font-bold text-slate-200">🕒 Event Timeline</h3>
-            <ul className="max-h-72 space-y-1.5 overflow-auto pr-1 text-xs">
+            <ul className={`space-y-1.5 overflow-auto pr-1 text-xs ${fullMode ? 'max-h-[16vh]' : 'max-h-72'}`}>
               {events.length === 0 && <li className="text-slate-500">ยังไม่มี event — เริ่ม Simulation เพื่อดูเหตุการณ์</li>}
               {[...events].reverse().map((e) => (
                 <li key={e.eventId} className="flex items-start gap-2 rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2">
@@ -592,7 +585,7 @@ export default function NetworkSimulator() {
           </div>
           <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
             <h3 className="mb-3 text-sm font-bold text-slate-200">🌌 Layer Breakdown (จำลอง)</h3>
-            <ul className="max-h-72 space-y-1.5 overflow-auto text-xs">
+            <ul className={`space-y-1.5 overflow-auto text-xs ${fullMode ? 'max-h-[16vh]' : 'max-h-72'}`}>
               {perLayer.filter((p) => p.level > 0).map((p) => (
                 <li key={p.level} className="flex items-center justify-between rounded-lg border border-slate-800 px-3 py-1.5">
                   <span className="text-slate-300">Layer {p.level}</span>
@@ -604,53 +597,11 @@ export default function NetworkSimulator() {
             <p className="mt-3 text-[10px] leading-relaxed text-slate-500">{DISCLAIMER}</p>
           </div>
         </div>
-        )}
 
         <p className={fullMode ? 'mt-3 rounded-xl border border-slate-800 bg-slate-900/40 p-2 text-[10px] leading-relaxed text-slate-400' : 'mt-4 rounded-xl border border-slate-800 bg-slate-900/40 p-3 text-[11px] leading-relaxed text-slate-400'}>
           <strong className="text-slate-300">ข้อกำหนดสำคัญ:</strong> {DISCLAIMER} · ข้อมูลจำลองถูกเก็บแยกในตาราง <code className="text-sky-300">sim_*</code> และติด <code className="text-sky-300">simulation = true</code> ทุกแถว · ไม่มีการสร้างธุรกรรมเงินจริง ใบเสร็จจริง ค่าคอมมิชชั่นจริง หรือเปลี่ยนสถานะสมาชิกจริงจากโหมดนี้ · เงื่อนไขการเลื่อนตำแหน่งอ่านจากตาราง <code className="text-sky-300">promotion_rules</code> (แก้ไขได้โดยไม่ต้องแก้โค้ด)
         </p>
 
-        {/* ── แถบลอยทั้งหมดนี้แสดงเฉพาะโหมดเต็มจอ ── */}
-        {fullMode && (
-          <>
-            <div className="fixed right-4 top-4 z-[70] flex flex-wrap items-center gap-2 rounded-2xl border border-slate-700 bg-slate-900/95 px-3 py-2 text-[11px] shadow-2xl backdrop-blur">
-              <div className="flex items-center gap-1 rounded-full border border-slate-700 bg-slate-950 p-0.5 font-semibold">
-                <button onClick={() => setMode('simulation')} className={`rounded-full px-3 py-1 ${mode === 'simulation' ? 'bg-sky-500 text-slate-950' : 'text-slate-300'}`}>SIMULATION</button>
-                <button onClick={() => setMode('real')} className={`rounded-full px-3 py-1 ${mode === 'real' ? 'bg-emerald-500 text-slate-950' : 'text-slate-300'}`}>REAL DATA</button>
-              </div>
-              <span className="hidden text-slate-400 sm:inline">🕒 {lastUpdated ? lastUpdated.toLocaleTimeString('th-TH') : '…'} น.</span>
-              <button onClick={toggleFull} className="rounded-full border border-amber-500/60 bg-amber-950/40 px-3 py-1 font-semibold text-amber-200 hover:border-amber-400">⛶ ออกเต็มจอ (Esc)</button>
-            </div>
-
-            {/* การ์ดรายละเอียดสมาชิกที่เลือก (ทดแทนแผงด้านขวา) */}
-            {selectedNode && (
-              <div className="fixed left-4 top-4 z-[70] w-64 rounded-2xl border border-slate-700 bg-slate-900/95 p-3 text-[11px] shadow-2xl backdrop-blur">
-                <p className="mb-1 font-bold text-slate-200">👤 {selectedNode.code}</p>
-                <p className="text-slate-400">Level {selectedNode.level} · Parent {selectedNode.parentCode || '—'} · ลูก {selectedNode.childrenCount}/{sim?.branchFactor ?? 5}</p>
-                <p className="mt-1 text-slate-400">Qualification: {selectedNode.qualified ? 'ผ่าน' : 'ยังไม่ผ่าน'} · Promotion: {selectedNode.promotionStatus}</p>
-                <p className="mt-1 text-slate-500">Payment: {selectedNode.paymentVerified ? 'ยืนยันแล้ว (จริง)' : selectedNode.receiptId ? 'มีใบเสร็จ DEMO' : 'ยังไม่มี'}</p>
-              </div>
-            )}
-
-            {/* แถบควบคุมลอย (ทดแทนแผงด้านซ้าย) */}
-            <div className="fixed bottom-4 left-1/2 z-[70] flex -translate-x-1/2 flex-wrap items-center justify-center gap-2 rounded-2xl border border-slate-700 bg-slate-900/95 px-3 py-2 text-xs shadow-2xl backdrop-blur">
-              <button onClick={() => void startSim()} disabled={busy === 'start'} className="rounded-lg bg-sky-500 px-3 py-2 font-bold text-slate-950 hover:bg-sky-400 disabled:opacity-50">
-                {busy === 'start' ? '⏳ กำลังสร้าง…' : '▶ เริ่ม Simulation'}
-              </button>
-              <button onClick={running ? stopPlay : startPlay} className={`rounded-lg px-3 py-2 font-semibold ${running ? 'bg-amber-500 text-slate-950' : 'bg-emerald-500 text-slate-950'}`}>
-                {running ? '⏸ หยุด' : '⏵ เติบโตทีละคน'}
-              </button>
-              <button onClick={() => void addMember()} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-semibold text-slate-200 hover:border-sky-500">＋ เพิ่ม 1 คน</button>
-              <button onClick={() => void promote(false)} disabled={busy === 'check'} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-semibold text-slate-200 hover:border-sky-500">🔍 ตรวจเงื่อนไข</button>
-              <button onClick={() => void toggleSound()} className={`rounded-lg px-3 py-2 font-semibold ${soundOn ? 'bg-emerald-500 text-slate-950' : 'border border-slate-700 bg-slate-950 text-slate-100 hover:border-sky-500'}`}>
-                {soundOn ? '🔇 ปิดเสียงจักรวาล' : '🔊 เปิดเสียงจักรวาล'}
-              </button>
-              <input type="range" min={0} max={1} step={0.05} value={volume} onChange={(e) => changeVolume(Number(e.target.value))} className="w-24 accent-sky-400" aria-label="ความดังเสียงจักรวาล" />
-              <span className="rounded-md bg-black/60 px-2 py-1 text-[10px] text-slate-300">คลิกโหนด = ดูรายละเอียด · ลาก = หมุน · สกอลล์ = ซูม</span>
-              {msg && <span className="rounded-md bg-black/60 px-2 py-1 text-[10px] text-sky-200">{msg}</span>}
-            </div>
-          </>
-        )}
       </div>
     </section>
   );
