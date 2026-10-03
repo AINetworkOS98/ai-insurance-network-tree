@@ -1055,11 +1055,11 @@ export default function NetworkUniverse3D({
       {/* ── Badge ซ้ายบน: จำนวนโหนด ── */}
       <div className="pointer-events-none absolute left-3 top-3 flex flex-col gap-1">
         <div className="rounded-md border border-sky-500/30 bg-slate-950/70 px-3 py-1.5 text-xs text-sky-100 backdrop-blur">
-          แสดง {placed.length.toLocaleString('th-TH')} / {total.toLocaleString('th-TH')} โหนด
+          แสดง {placed.length.toLocaleString('th-TH')} / {total.toLocaleString('th-TH')} {simulation ? 'โหนด' : 'สมาชิกในผัง'}
         </div>
         {truncated && (
           <div className="rounded-md border border-amber-500/30 bg-slate-950/70 px-3 py-1.5 text-[11px] text-amber-200 backdrop-blur">
-            แสดงไม่ครบเพื่อประสิทธิภาพ (จำลอง)
+            {simulation ? 'แสดงไม่ครบเพื่อประสิทธิภาพ (จำลอง)' : 'แสดงไม่ครบเพื่อประสิทธิภาพ — เลือกดูเป็นรอบชั้น'}
           </div>
         )}
       </div>
@@ -1096,7 +1096,7 @@ export default function NetworkUniverse3D({
           style={{ left: hover.x, top: hover.y - 12 }}
         >
           <div className="font-mono">{hover.code}</div>
-          <div className="text-sky-300/80">ชั้น (level) {hover.level} · ข้อมูลจำลอง</div>
+          <div className="text-sky-300/80">ชั้นที่ {hover.level} {simulation ? '· ข้อมูลจำลอง' : '· สมาชิกจริงในผัง 1 แตก 5'}</div>
         </div>
       )}
 
