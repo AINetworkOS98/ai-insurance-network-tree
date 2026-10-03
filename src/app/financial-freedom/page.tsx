@@ -6,7 +6,6 @@ import Sidebar from '@/components/Sidebar';
 import AutomationShowcase from '@/components/AutomationShowcase';
 import SuccessPath from '@/components/SuccessPath';
 import TikTokChannel from '@/components/TikTokChannel';
-import FutureNetworkTeaser from '@/components/FutureNetworkTeaser';
 
 export default function FinancialFreedom() {
   return (
@@ -118,8 +117,7 @@ export default function FinancialFreedom() {
             {/* ── ต่อลงมา: ช่องดูวีดีโอ TikTok @aka989._ แบบสุ่มต่อเนื่อง ── */}
             <TikTokChannel />
 
-            {/* ── ต่อลงมา: 1 แตก 5 – Future Network Simulator (ทดลองจำลองโครงสร้างเครือข่าย) ── */}
-            <FutureNetworkTeaser />
+            {/* ── (นำออกแล้ว) ส่วน 1 แตก 5 – Future Network Simulator — ซ้ำซ้อนกับระบบ 1 แตก 5 อัตโนมัติที่ /network/1x5-autopilot ── */}
 
             {/* ข้อความสุดท้าย */}
             <div className="text-center mt-10 p-6 bg-[#475569]/5 rounded-2xl border border-[#475569]/10">
