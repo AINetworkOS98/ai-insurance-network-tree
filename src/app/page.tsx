@@ -4,11 +4,20 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import AIIntelligentSearch from '@/components/AIIntelligentSearch';
+import CosmicNetwork from '@/components/CosmicNetwork';
 
 export const dynamic = 'force-dynamic';
 
+type HomePanel = 'cosmic' | 'shortcuts';
+
+const PANEL_TABS: { id: HomePanel; label: string; icon: string }[] = [
+  { id: 'cosmic',    label: 'จักรวาลของเครือข่าย', icon: '🌌' },
+  { id: 'shortcuts', label: 'ทางลัดเข้าระบบ',      icon: '🧭' },
+];
+
 export default function Home() {
-  const [showShortcuts, setShowShortcuts] = useState(true);
+  // ค่าเริ่มต้น = จักรวาลของเครือข่าย (รันก่อน) · กดปุ่มเพื่อสลับไปทางลัดเข้าระบบ
+  const [panel, setPanel] = useState<HomePanel>('cosmic');
 
   const shortcuts = [
     { href: '/tree',       title: 'ผังเครือข่าย 1 แตก 5',   desc: 'ดูผังสายงานกว้าง 5 คน',                  icon: '🌳' },
@@ -35,11 +44,51 @@ export default function Home() {
                     พิมพ์คำถาม · ค้นหาเว็บ/YouTube · วางตาราง CSV/JSON · แนบไฟล์ PDF/รูป แล้ว AI ช่วยวิเคราะห์ให้ทันที
                   </p>
                 </div>
-                {showShortcuts && (
-                  <div className="mt-4">
+                {/* ── ปุ่มสลับ: จักรวาลของเครือข่าย ⇄ ทางลัดเข้าระบบ (จักรวาลรันก่อน) ── */}
+                <div className="mt-4 flex items-center justify-center gap-2 max-w-[760px] mx-auto">
+                  {PANEL_TABS.map((tab) => {
+                    const active = panel === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setPanel(tab.id)}
+                        aria-pressed={active}
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-semibold transition ${
+                          active
+                            ? 'border-sky-500 bg-sky-500 text-white shadow-sm'
+                            : 'border-slate-200 bg-white text-slate-600 hover:border-sky-300 hover:text-sky-700'
+                        }`}
+                      >
+                        <span>{tab.icon}</span>
+                        {tab.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {panel === 'cosmic' ? (
+                  <div className="mt-3">
+                    <p className="mx-auto max-w-[760px] text-center text-[11px] font-semibold tracking-wide text-sky-700">
+                      หนึ่งคนเชื่อม 5 คน · 5 ขยายเป็น 25 · 25 ขยายเป็น 125 · 125 ขยายเป็น 625
+                    </p>
+                    <div className="mt-2">
+                      <CosmicNetwork heightClass="h-[44vh] min-h-[300px]" />
+                    </div>
+                    <p className="mx-auto mt-2 max-w-[760px] text-center text-[10px] leading-relaxed text-slate-500">
+                      ภาพจำลองโครงสร้างเครือข่าย 1 แตก 5 (781 โหนดตัวอย่าง) — ลากเพื่อหมุนจักรวาล ซูมเข้า-ออก
+                      คลิกสมาชิกเพื่อดูข้อมูล · ชื่อและตัวเลขทั้งหมดเป็นข้อมูลตัวอย่าง ไม่ใช่สมาชิกจริง
+                      ไม่ใช่การรับประกันรายได้ ค่าคอมมิชชั่น หรือผลตอบแทน · ดูเวอร์ชันเต็มได้ที่หน้า
+                      <Link href="/financial-freedom" className="ml-1 text-sky-700 underline underline-offset-2">
+                        อิสรภาพทางการเงิน
+                      </Link>
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mt-3">
                     <div className="flex items-center justify-between max-w-[760px] mx-auto">
                       <span className="text-xs font-semibold text-slate-500">ทางลัดเข้าระบบ</span>
-                      <button onClick={() => setShowShortcuts(false)} className="text-[11px] text-slate-400 hover:text-slate-600">ซ่อน</button>
+                      <button onClick={() => setPanel('cosmic')} className="text-[11px] text-slate-400 hover:text-slate-600">กลับไปจักรวาล</button>
                     </div>
                     <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-2 max-w-[760px] mx-auto">
                       {shortcuts.map(s => (
@@ -50,11 +99,6 @@ export default function Home() {
                         </Link>
                       ))}
                     </div>
-                  </div>
-                )}
-                {!showShortcuts && (
-                  <div className="mt-2 text-center">
-                    <button onClick={() => setShowShortcuts(true)} className="text-xs text-slate-400 hover:text-slate-600 underline underline-offset-4">แสดงทางลัด</button>
                   </div>
                 )}
               </div>

@@ -82,7 +82,14 @@ function GlassButton({
   );
 }
 
-export default function CosmicNetwork({ className = '' }: { className?: string }) {
+export default function CosmicNetwork({
+  className = '',
+  heightClass = 'h-[78vh] min-h-[540px]',
+}: {
+  className?: string;
+  /** ความสูงของฉาก 3 มิติ — หน้าแรกใช้เวอร์ชันเตี้ยกว่าเพื่อไม่ให้ล้นจอ */
+  heightClass?: string;
+}) {
   const [model, setModel] = useState<CosmicNetworkModel>(() => buildInitialNetwork());
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [paused, setPaused] = useState(false);
@@ -275,7 +282,7 @@ export default function CosmicNetwork({ className = '' }: { className?: string }
 
   return (
     <div className={wrapperClass}>
-      <div className="relative h-[78vh] min-h-[540px] w-full">
+      <div className={`relative w-full ${heightClass}`}>
         {glOk === false ? (
           <div className="flex h-full w-full flex-col items-center justify-center gap-3 p-8 text-center">
             <p className="text-sm font-semibold text-sky-200">อุปกรณ์นี้ไม่รองรับ WebGL</p>
