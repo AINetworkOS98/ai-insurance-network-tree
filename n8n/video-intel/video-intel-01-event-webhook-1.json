@@ -1,0 +1,320 @@
+{
+  "name": "Video Intel 01 · รับ Event วิดีโอ + คิวประมวลผล (Webhook + ทุก 1 นาที)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Video Intel 01 · รับ Event + คิวประมวลผล\n**หน้าที่**: รับ event การรับชมวิดีโอจากหน้า /financial-freedom 2 ทาง\n1) Webhook (push จากแอปทันทีเมื่อผู้ชมมี interaction)\n2) ดึงคิวทุก 1 นาที (สำรอง — ทำงานแม้ท่อส่งภายนอกล่ม)\n\nคัดเฉพาะ event ที่ควรวิเคราะห์ (play / ended / exit / กลับมาเยี่ยม / ดูถึง 50%+)\nแล้วส่งต่อให้ **Video Intel 02** วิเคราะห์ด้วย AI",
+        "height": 300,
+        "width": 460,
+        "color": 4
+      },
+      "id": "5dd327a8-1465-438f-a6a4-53a0b6ca0b51",
+      "name": "คำอธิบาย",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "video-intel-event",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "e4ead7a2-2231-4b16-9067-3ba4c728674e",
+      "name": "รับ Event จากเว็บ (Webhook /video-intel-event)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        220,
+        -160
+      ],
+      "webhookId": "9bfcab4d-eda3-4ed1-b4eb-d19965496fd3"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// คัดเฉพาะ event ที่ \"ควรวิเคราะห์\" (play / ended / exit / กลับมาเยี่ยม / ดูถึง 50%+)\nconst WORTHY = { video_play: 1, video_ended: 1, video_exit: 1, return_visit: 1 };\nconst out = [];\nfor (const item of $input.all()) {\n  const raw = item.json || {};\n  const body = (raw.body && typeof raw.body === 'object') ? raw.body : raw;\n  const list = Array.isArray(body.events) ? body.events : [body];\n  for (const ev of list) {\n    const event = String(ev.event || ev.type || '').toLowerCase();\n    const pct = Number(ev.progress_percent || ev.progressPercent || 0);\n    const worthy = WORTHY[event] === 1 || (event === 'video_progress' && pct >= 50);\n    if (!worthy) continue;\n    out.push({ json: {\n      visitor_id: String(body.visitor_id || ev.visitor_id || ''),\n      session_id: String(body.session_id || ev.session_id || ''),\n      event: event,\n      progress_percent: pct,\n      event_id: ev.event_id || body.event_id || null,\n      page: body.page || '/financial-freedom',\n      video_id: body.video_id || 'financial-freedom-video',\n      at: body.timestamp || ev.timestamp || new Date().toISOString(),\n      from: 'push',\n    }});\n  }\n}\nreturn out;\n"
+      },
+      "id": "162d94c0-874e-499e-8b08-81921f2d40aa",
+      "name": "คัด event ที่ควรวิเคราะห์ (จาก Webhook)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        -160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "3bb287ed-8192-43d8-a1e4-023fbdfb0231",
+      "name": "ทุก 1 นาที (ดึงคิวสำรอง)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        220,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/video-intel/queue",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "40"
+            },
+            {
+              "name": "minutes",
+              "value": "720"
+            }
+          ]
+        }
+      },
+      "id": "81ced4de-6328-42a0-aa9f-bf640805785c",
+      "name": "ดึงคิวรอประมวลผล (/api/video-intel/queue)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        60
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// แปลงคิวจาก /api/video-intel/queue ให้เป็น item เดียวกันกับฝั่ง webhook\nconst out = [];\nfor (const item of $input.all()) {\n  const raw = item.json || {};\n  const body = (raw.body && typeof raw.body === 'object') ? raw.body : raw;\n  const events = Array.isArray(body.events) ? body.events : [];\n  for (const ev of events) {\n    out.push({ json: {\n      visitor_id: String(ev.visitorId || ev.visitor_id || ''),\n      session_id: String(ev.sessionId || ev.session_id || ''),\n      event: String(ev.event || ''),\n      progress_percent: Number(ev.watchPercent || ev.progressPercent || 0),\n      event_id: ev.eventId || null,\n      page: ev.page || '/financial-freedom',\n      video_id: ev.videoId || 'financial-freedom-video',\n      at: ev.at || new Date().toISOString(),\n      from: 'queue',\n    }});\n  }\n}\nreturn out;\n"
+      },
+      "id": "36332983-f73e-472b-b306-b85f72ee47b7",
+      "name": "แปลงคิวเป็นงานวิเคราะห์",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        740,
+        60
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// รวม event ทุกแหล่งเป็น \"งานวิเคราะห์\" ต่อ (visitor + session) — สูงสุด 5 งานต่อรอบ\nconst groups = new Map();\nfor (const item of $input.all()) {\n  const j = item.json || {};\n  if (!j.visitor_id) continue;\n  const key = j.visitor_id + '|' + (j.session_id || 'nosession');\n  let g = groups.get(key);\n  if (!g) {\n    g = { visitor_id: j.visitor_id, session_id: j.session_id || '', event_ids: [],\n          trigger_event: null, page: j.page || '/financial-freedom',\n          video_id: j.video_id || 'financial-freedom-video', marks: [], at: j.at };\n  }\n  if (j.event_id && g.event_ids.indexOf(j.event_id) === -1) g.event_ids.push(j.event_id);\n  if (j.event === 'video_progress' && j.progress_percent) g.marks.push(Number(j.progress_percent));\n  if (['video_ended', 'video_exit', 'return_visit', 'video_play'].indexOf(j.event) >= 0 && !g.trigger_event) {\n    g.trigger_event = j.event;\n  }\n  if (j.event === 'video_progress' && !g.trigger_event) g.trigger_event = 'video_progress';\n  groups.set(key, g);\n}\nconst sessions = Array.from(groups.values()).slice(0, 5);\nreturn sessions.map(function (s) {\n  s.marks = s.marks.sort(function (a, b) { return a - b; });\n  s.max_mark = s.marks.length ? s.marks[s.marks.length - 1] : 0;\n  s.source = 'vi01';\n  return { json: s };\n});\n"
+      },
+      "id": "c709f6a2-2fa6-4f04-a8b6-0d15ea8cfdef",
+      "name": "รวมงานเป็นรายเซสชัน",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        -50
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c8dd3850-38a3-4fc4-b043-8b54ffd99b32",
+              "leftValue": "={{ $json.visitor_id !== undefined && $json.visitor_id !== '' }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "7ad0a392-4625-4cad-8952-2916a7269835",
+      "name": "มีงานต้องวิเคราะห์?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1260,
+        -50
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5679/webhook/video-intel-analyze",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 180000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ visitor_id: $json.visitor_id, session_id: $json.session_id, event_ids: $json.event_ids, trigger_event: $json.trigger_event, max_mark: $json.max_mark, source: 'n8n-vi01' }) }}"
+      },
+      "id": "26023bdb-4cfc-4121-8038-7793f6d7575d",
+      "name": "ส่งเข้า AI วิเคราะห์ (VI02)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1520,
+        -160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {},
+      "id": "45293040-fd5b-43c9-8f85-514cd59e32b8",
+      "name": "จบรอบ — ไม่มีงานใหม่",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1520,
+        40
+      ]
+    }
+  ],
+  "connections": {
+    "รับ Event จากเว็บ (Webhook /video-intel-event)": {
+      "main": [
+        [
+          {
+            "node": "คัด event ที่ควรวิเคราะห์ (จาก Webhook)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ทุก 1 นาที (ดึงคิวสำรอง)": {
+      "main": [
+        [
+          {
+            "node": "ดึงคิวรอประมวลผล (/api/video-intel/queue)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ดึงคิวรอประมวลผล (/api/video-intel/queue)": {
+      "main": [
+        [
+          {
+            "node": "แปลงคิวเป็นงานวิเคราะห์",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "คัด event ที่ควรวิเคราะห์ (จาก Webhook)": {
+      "main": [
+        [
+          {
+            "node": "รวมงานเป็นรายเซสชัน",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "แปลงคิวเป็นงานวิเคราะห์": {
+      "main": [
+        [
+          {
+            "node": "รวมงานเป็นรายเซสชัน",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "รวมงานเป็นรายเซสชัน": {
+      "main": [
+        [
+          {
+            "node": "มีงานต้องวิเคราะห์?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "มีงานต้องวิเคราะห์?": {
+      "main": [
+        [
+          {
+            "node": "ส่งเข้า AI วิเคราะห์ (VI02)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "จบรอบ — ไม่มีงานใหม่",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Bangkok"
+  }
+}

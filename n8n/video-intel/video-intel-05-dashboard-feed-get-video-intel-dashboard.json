@@ -1,0 +1,155 @@
+{
+  "name": "Video Intel 05 · Dashboard Feed (GET /video-intel-dashboard)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Dashboard Feed\nAPI กลางของ n8n สำหรับดึงสถิติ Video Intelligence (ให้หน้า /admin/video-intelligence หรือระบบอื่นเรียกใช้)\nGET /video-intel-dashboard?window=1h|24h|7d",
+        "height": 200,
+        "width": 440,
+        "color": 4
+      },
+      "id": "2a30548e-6f85-4b04-8a85-2adf297b5f8c",
+      "name": "คำอธิบาย",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "video-intel-dashboard",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "bc463413-bf87-4c58-b02c-4268472d101b",
+      "name": "Webhook GET /video-intel-dashboard",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        220,
+        -120
+      ],
+      "webhookId": "46edc48d-9513-47a5-86f6-00056a6c33b6"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/video-intel/stats",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "window",
+              "value": "={{ $json.query.window || '24h' }}"
+            },
+            {
+              "name": "limit",
+              "value": "30"
+            }
+          ]
+        }
+      },
+      "id": "a02e3586-e8ee-4dd6-87ef-23d9b31b41e1",
+      "name": "ดึงสถิติจริง (/api/video-intel/stats)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        -120
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// จัดรูปข้อมูลสำหรับ dashboard (เรียกจากหน้า /admin/video-intelligence หรือระบบอื่น)\nconst raw = $input.first().json || {};\nconst st = (raw.body && typeof raw.body === 'object') ? raw.body : raw;\nif (st.ok === false) {\n  return [{ json: { ok: false, error: st.error || 'stats_unavailable', generatedAt: new Date().toISOString() } }];\n}\nconst eng = st.engagement || {};\nreturn [{ json: {\n  ok: true,\n  source: 'n8n/video-intel',\n  generatedAt: new Date().toISOString(),\n  window: st.window,\n  currentVisitors: st.currentVisitors || 0,\n  activeVideoSessions: st.activeVideoSessions || 0,\n  totals: {\n    visitors: st.totalVisitors || 0, sessions: st.totalSessions || 0, events: st.totalEvents || 0,\n    videoViews: st.totalVideoViews || 0, completes: st.videoCompletes || 0,\n    avgWatchSeconds: st.avgWatchSeconds || 0, avgWatchPercent: st.avgWatchPercent || 0,\n    completionRate: st.completionRate || 0, returningVisitors: st.returningVisitors || 0,\n    peakHour: st.peakHour || null,\n  },\n  engagement: { cold: eng.cold || 0, warm: eng.warm || 0, hot: eng.hot || 0, veryHot: eng.veryHot || 0 },\n  watchProgress: st.watchProgress || [],\n  hotVisitors: st.hotVisitors || [],\n  recentEvents: (st.recentEvents || []).slice(0, 20),\n  hourly: st.hourly || [],\n  aiInsight: st.aiInsight || null,\n} }];\n"
+      },
+      "id": "d0e6a4eb-6fd4-45a4-8eb6-1f7c3a5a7b99",
+      "name": "[VID] จัดรูปข้อมูล dashboard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        740,
+        -120
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "2955356d-77f3-4851-8fa4-e8dbbea25419",
+      "name": "ตอบกลับ (JSON)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1000,
+        -120
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook GET /video-intel-dashboard": {
+      "main": [
+        [
+          {
+            "node": "ดึงสถิติจริง (/api/video-intel/stats)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ดึงสถิติจริง (/api/video-intel/stats)": {
+      "main": [
+        [
+          {
+            "node": "[VID] จัดรูปข้อมูล dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[VID] จัดรูปข้อมูล dashboard": {
+      "main": [
+        [
+          {
+            "node": "ตอบกลับ (JSON)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Bangkok"
+  }
+}

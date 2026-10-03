@@ -1,0 +1,638 @@
+{
+  "name": "Video Intel 02 · AI วิเคราะห์พฤติกรรม → จัดระดับ → แจ้งเตือนทันที",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Video Intel 02 · AI วิเคราะห์ + จัดระดับ + แจ้งเตือนทันที\n**สมองกลาง**: อ่านพฤติกรรมจริงจาก /api/video-intel/aggregate → ให้ AI (Gemini) ประเมิน\nEngagement Score 0-100 และ Behavioral Interest Level → เก็บผล → ถ้าคะแนน ≥ 80 ส่งอีเมลทันที\nห้าม AI เดาข้อมูลส่วนบุคคล — ใช้ anonymous visitor id เท่านั้น",
+        "height": 320,
+        "width": 460,
+        "color": 4
+      },
+      "id": "c13dacd1-f633-4413-b4a3-4c56695c3b4d",
+      "name": "คำอธิบาย",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -280
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "video-intel-analyze",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "4bed032a-4737-4ccb-a56e-4cfe94c8994e",
+      "name": "Webhook /video-intel-analyze",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        220,
+        -160
+      ],
+      "webhookId": "abbf2c71-92ec-4f21-be07-99336216e535"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// อ่านคำขอจาก VI01 (หรือผู้เรียกอื่น) แล้วเตรียมค่าที่ต้องใช้ตลอดสาย\nconst raw = $input.first().json || {};\nconst body = (raw.body && typeof raw.body === 'object') ? raw.body : raw;\nconst visitorId = String(body.visitor_id || body.visitorId || '').trim();\nconst sessionId = String(body.session_id || body.sessionId || '').trim();\nconst eventIds = Array.isArray(body.event_ids) ? body.event_ids.slice(0, 200).map(String) : [];\nreturn [{ json: {\n  visitor_id: visitorId,\n  session_id: sessionId,\n  event_ids: eventIds,\n  trigger_event: body.trigger_event || null,\n  source: body.source || 'unknown',\n  ok: visitorId.length > 0,\n  error: visitorId.length ? null : 'ต้องระบุ visitor_id',\n} }];\n"
+      },
+      "id": "4a728a75-7de9-43cd-bc00-a7a2e6ea8f2d",
+      "name": "อ่านคำขอ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        -160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c631bb23-26f2-450b-b560-47972082ce37",
+              "leftValue": "={{ $json.ok }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "cfefa571-a754-4239-8ae4-2ff6b49efb57",
+      "name": "มี visitor_id?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        740,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/video-intel/aggregate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "visitor_id",
+              "value": "={{ $json.visitor_id }}"
+            },
+            {
+              "name": "session_id",
+              "value": "={{ $json.session_id }}"
+            },
+            {
+              "name": "minutes",
+              "value": "180"
+            }
+          ]
+        }
+      },
+      "id": "a6929398-a9a1-4c1a-87bc-30107c4d58dd",
+      "name": "[VI02] ดึงข้อมูลพฤติกรรม (aggregate)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1000,
+        -240
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// สร้างโจทย์ให้ AI จากข้อมูลพฤติกรรมจริง (aggregate) — ห้ามเดาข้อมูลส่วนบุคคล\nconst agg = $input.first().json || {};\nconst req = $('อ่านคำขอ').first().json || {};\nif (agg.ok === false) {\n  return [{ json: { skip: true, reason: agg.error || 'aggregate_failed', visitor_id: req.visitor_id, session_id: req.session_id } }];\n}\nconst v = agg.visitorProfile || {};\nconst s = agg.sessionProfile || {};\nconst payload = {\n  visitor: {\n    visitor_id: v.visitorId || req.visitor_id,\n    total_sessions: v.totalSessions || 1,\n    total_video_views: v.totalVideoViews || 0,\n    total_watch_seconds: v.totalWatchSeconds || 0,\n    average_watch_percent: v.averageWatchPercent || 0,\n    returning_visitor: v.returning === true,\n    device: v.device || null,\n    browser: v.browser || null,\n  },\n  session: {\n    session_id: s.sessionId || req.session_id,\n    page: s.page || '/financial-freedom',\n    video_id: s.videoId || 'financial-freedom-video',\n    video_duration: s.videoDuration || null,\n    max_progress_percent: s.maxProgressPercent || 0,\n    marks_reached: s.marksReached || [],\n    watch_seconds: s.watchSeconds || 0,\n    play_count: s.playCount || 0,\n    pause_count: s.pauseCount || 0,\n    resume_count: s.resumeCount || 0,\n    seek_count: s.seekCount || 0,\n    replay_count: s.replayCount || 0,\n    ended: s.completed === true,\n    session_duration_seconds: s.sessionDurationSeconds || null,\n    interactions: s.interactions || [],\n  },\n  trigger_event: req.trigger_event || null,\n  base_engagement_score: agg.baseEngagementScore || 0,\n};\nconst prompt = 'ข้อมูลพฤติกรรมการรับชมวิดีโอ (Anonymous Visitor ID — ห้ามอนุมานตัวตน):\\n'\n  + JSON.stringify(payload, null, 1)\n  + '\\n\\nจงวิเคราะห์และตอบเป็น JSON ตาม schema ที่กำหนดเท่านั้น';\nreturn [{ json: {\n  prompt: prompt,\n  visitor_id: payload.visitor.visitor_id,\n  session_id: payload.session.session_id,\n  event_ids: req.event_ids || [],\n  trigger_event: req.trigger_event || null,\n  max_progress: payload.session.max_progress_percent,\n  marks: payload.session.marks_reached,\n  base_score: payload.session.base_engagement_score || payload.base_engagement_score,\n  base_engagement_score: payload.base_engagement_score,\n  returning: payload.visitor.returning_visitor,\n  headless: agg.visitorProfile ? false : true,\n} }];\n"
+      },
+      "id": "99762ee8-28b7-4539-852c-946f2f741ea8",
+      "name": "สร้างโจทย์ให้ AI",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        -240
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.prompt }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a behavioral analyst for a Thai insurance-agency network website. You receive factual video-watching behaviour of ONE anonymous visitor (uuid, no identity).\nRULES (absolute):\n1. Use ONLY the numbers given. Never invent events, counts or durations.\n2. NEVER infer or mention name, age, gender, income, occupation, location, health or any personal attribute.\n3. NEVER claim the person is a customer or will buy. The label is a 'Behavioral Interest Level' only.\n4. Reply with ONE JSON object, no markdown, no explanation outside the JSON, in Thai text for ai_summary/recommended_action/reason.\n5. engagement_score is an integer 0-100 reflecting watching engagement (progress %, watch time, plays, replays, returning visitor, pauses/resumes, completion).\n6. Levels: COLD 0-24 (brief visit, <10%, no interaction) · WARM 25-49 (>25%, some interaction) · HOT 50-74 (>70%, completed/replay/returning) · VERY_HOT 75-100 (completed, multiple returns, very high engagement).\nJSON schema:\n{\"engagement_score\": 0, \"interest_level\": \"COLD|WARM|HOT|VERY_HOT\", \"watch_intent\": \"low|medium|high\", \"visitor_stage\": \"cold|warm|hot|very_hot\", \"returning_visitor\": false, \"video_completion\": 0.0, \"ai_summary\": \"สรุปภาษาไทย 1-2 ประโยค\", \"recommended_action\": \"ข้อเสนอถัดไปที่สุภาพ ไม่ล้ำเส้นความเป็นส่วนตัว\", \"reason\": [\"เหตุผลสั้น ๆ 1-4 ข้อ อ้างจากตัวเลขจริง\"], \"send_alert\": false}",
+          "maxIterations": 3
+        }
+      },
+      "id": "6b99bf15-cb96-491b-a632-f5c04428f30b",
+      "name": "AI วิเคราะห์พฤติกรรม",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1520,
+        -240
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 8000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// ตรวจคำตอบของ AI → บังคับ schema → ตัดสินใจแจ้งเตือน (ไม่เชื่อ AI 100% ถ้าตอบผิดรูป)\nconst ctx = $('สร้างโจทย์ให้ AI').first().json || {};\nconst raw = $input.first().json || {};\nlet ai = raw.output;\nif (typeof ai === 'string') { try { ai = JSON.parse(ai); } catch (e) { ai = null; } }\nif (!ai || typeof ai !== 'object') ai = {};\nconst clamp = function (n, a, b) { const v = Number(n); if (!isFinite(v)) return a; return Math.max(a, Math.min(b, v)); };\nconst levelOf = function (s) { return s >= 75 ? 'VERY_HOT' : s >= 50 ? 'HOT' : s >= 25 ? 'WARM' : 'COLD'; };\nconst scoreRaw = Number(ai.engagement_score);\nlet score = isFinite(scoreRaw) ? Math.round(clamp(scoreRaw, 0, 100)) : 0;\nif (!isFinite(scoreRaw)) {\n  // AI ตอบไม่ครบ → ใช้คะแนนฐานจากข้อมูลจริง (ไม่ปล่อยให้ระบบเงียบ)\n  const derived = Math.round(clamp((Number(ctx.max_progress) || 0) * 0.8 + (ctx.returning ? 12 : 0), 0, 100));\n  score = Math.max(score, Math.round(clamp(ctx.base_engagement_score, 0, 100)), derived);\n}\nlet level = String(ai.interest_level || ai.interestLevel || '').toUpperCase().replace(/[^A-Z_]/g, '');\nif (['COLD', 'WARM', 'HOT', 'VERY_HOT'].indexOf(level) === -1) level = levelOf(score);\nconst completion = isFinite(Number(ai.video_completion))\n  ? clamp(ai.video_completion, 0, 1)\n  : clamp((Number(ctx.max_progress) || 0) / 100, 0, 1);\nconst reasons = Array.isArray(ai.reason) ? ai.reason.map(String).slice(0, 8) : [];\nif (!reasons.length) reasons.push('รับชม ' + (ctx.max_progress || 0) + '% ของวิดีโอ');\nconst bucket = Math.min(100, Math.floor((Number(ctx.max_progress) || score) / 25) * 25);\nconst analysisId = [ctx.visitor_id || 'v', ctx.session_id || 's', 'p' + bucket].join(':');\nconst sendAlert = score >= 80 && ai.send_alert !== false;\nconst intent = String(ai.watch_intent || ai.watch_probability || '').toLowerCase();\nreturn [{ json: {\n  analysis_id: analysisId,\n  visitor_id: ctx.visitor_id || null,\n  session_id: ctx.session_id || null,\n  page: '/financial-freedom',\n  video_id: 'financial-freedom-video',\n  engagement_score: score,\n  interest_level: level,\n  watch_probability: ['low', 'medium', 'high'].indexOf(intent) >= 0 ? intent : (score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low'),\n  returning_visitor: ctx.returning === true,\n  video_completion: Number(completion.toFixed(3)),\n  ai_summary: String(ai.ai_summary || '').slice(0, 1200) || ('ผู้ชมรับชม ' + (ctx.max_progress || 0) + '% ของวิดีโอ · คะแนน Engagement ' + score + '/100'),\n  recommended_action: String(ai.recommended_action || '').slice(0, 800) || 'ตรวจสอบว่าผู้ชมมีช่องทางติดต่อที่ได้รับความยินยอมไว้หรือไม่ ก่อนดำเนินการติดตามผล',\n  reason: reasons,\n  model: 'gemini-3.5-flash-lite',\n  send_alert: sendAlert,\n  event_ids: ctx.event_ids || [],\n  ai_ok: isFinite(scoreRaw) ? true : false,\n  max_progress: Number(ctx.max_progress) || 0,\n  returning: ctx.returning === true,\n  watch_seconds: null,\n  trigger_event: ctx.trigger_event || null,\n} }];\n"
+      },
+      "id": "e0fc2583-de03-4bb7-99d0-75e3681d6506",
+      "name": "ตรวจคำตอบ AI + ตัดสินใจ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1780,
+        -240
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/video-intel/analysis",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ analysis_id: $json.analysis_id, visitor_id: $json.visitor_id, session_id: $json.session_id, page: $json.page, video_id: $json.video_id, engagement_score: $json.engagement_score, interest_level: $json.interest_level, watch_probability: $json.watch_probability, returning_visitor: $json.returning_visitor, video_completion: $json.video_completion, ai_summary: $json.ai_summary, recommended_action: $json.recommended_action, reason: $json.reason, model: $json.model, send_alert: $json.send_alert, event_ids: $json.event_ids }) }}"
+      },
+      "id": "0942866b-74d5-4750-991d-69e0315d6209",
+      "name": "บันทึกผลวิเคราะห์ (/api/video-intel/analysis)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2040,
+        -240
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1b2a83f8-7944-4173-b6c5-7cffe85483b7",
+              "leftValue": "={{ $('ตรวจคำตอบ AI + ตัดสินใจ').first().json.send_alert === true }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "b7acfac3-2610-4a43-8805-d7fd0f82f0e7",
+      "name": "ควรแจ้งเตือนทันที? (score ≥ 80)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2300,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// สร้างอีเมล HTML แจ้งเตือนแบบเรียลไทม์ (ตามสเปกข้อ 8)\nconst d = $('ตรวจคำตอบ AI + ตัดสินใจ').first().json || {};\nconst agg = $('[VI02] ดึงข้อมูลพฤติกรรม (aggregate)').first().json || {};\nconst s = agg.sessionProfile || {};\nconst fmt = function (sec) {\n  const n = Math.max(0, Math.round(Number(sec) || 0));\n  const m = Math.floor(n / 60), r = n % 60;\n  return String(m).padStart(2, '0') + ':' + String(r).padStart(2, '0');\n};\nconst esc = function (t) { return String(t == null ? '' : t).replace(/[<>&]/g, function (c) { return ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' })[c]; }); };\nconst levelColor = d.interest_level === 'VERY_HOT' ? '#e11d48' : d.interest_level === 'HOT' ? '#f59e0b' : d.interest_level === 'WARM' ? '#0ea5e9' : '#64748b';\nconst when = new Intl.DateTimeFormat('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'medium', timeStyle: 'medium' }).format(new Date());\nconst rows = [\n  ['เวลา', when],\n  ['หน้าเว็บ', esc(d.page)],\n  ['Visitor', 'Visitor #' + String(d.visitor_id || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 6).toUpperCase()],\n  ['Session', esc(d.session_id || '-')],\n  ['วิดีโอ', esc(d.video_id)],\n  ['Watch Progress', (d.max_progress || 0) + '%'],\n  ['Watch Duration', fmt(s.watchSeconds || 0)],\n  ['จำนวนครั้งที่เล่น', String(s.playCount || 0) + ' ครั้ง (Replay ' + String(s.replayCount || 0) + ')'],\n  ['คะแนน Engagement', d.engagement_score + '/100'],\n  ['ระดับความสนใจ', d.interest_level],\n  ['กลับมาดูซ้ำ', d.returning ? 'ใช่ (visitor เดิม)' : 'ไม่ใช่'],\n];\nconst html = ''\n  + '<div style=\"font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:640px;margin:0 auto;background:#f8fafc;padding:24px\">'\n  + '<div style=\"background:#0f172a;color:#fff;border-radius:14px 14px 0 0;padding:20px 24px\">'\n  + '<div style=\"font-size:13px;letter-spacing:.08em;color:#94a3b8\">AI VIDEO INTELLIGENCE</div>'\n  + '<h2 style=\"margin:6px 0 0;font-size:20px\">🔥 มีผู้ชมที่มี Engagement สูง</h2></div>'\n  + '<div style=\"background:#fff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 14px 14px;padding:20px 24px\">'\n  + '<div style=\"display:block;padding:14px;background:#f1f5f9;border-radius:10px;text-align:center\">'\n  + '<div style=\"font-size:34px;font-weight:700;color:' + levelColor + '\">' + d.engagement_score + '<span style=\"font-size:16px;color:#64748b\">/100</span></div>'\n  + '<div style=\"font-size:14px;font-weight:600;color:' + levelColor + '\">' + esc(d.interest_level) + ' · Behavioral Interest Level</div></div>'\n  + '<table style=\"width:100%;border-collapse:collapse;margin-top:16px;font-size:14px\">'\n  + rows.map(function (r) { return '<tr><td style=\"padding:7px 0;color:#64748b\">' + r[0] + '</td><td style=\"padding:7px 0;text-align:right;font-weight:600;color:#0f172a\">' + r[1] + '</td></tr>'; }).join('')\n  + '</table>'\n  + '<div style=\"margin-top:16px;padding:14px;border-left:4px solid ' + levelColor + ';background:#f8fafc\">'\n  + '<div style=\"font-size:12px;color:#64748b;font-weight:700\">AI ANALYSIS</div>'\n  + '<div style=\"margin-top:4px\">' + esc(d.ai_summary) + '</div>'\n  + '<ul style=\"margin:8px 0 0 18px;padding:0;color:#334155;font-size:13px\">'\n  + (d.reason || []).map(function (r) { return '<li>' + esc(r) + '</li>'; }).join('')\n  + '</ul></div>'\n  + '<div style=\"margin-top:12px;padding:14px;background:#ecfdf5;border-radius:10px\">'\n  + '<div style=\"font-size:12px;color:#047857;font-weight:700\">SUGGESTED ACTION</div>'\n  + '<div style=\"margin-top:4px;color:#065f46\">' + esc(d.recommended_action) + '</div></div>'\n  + '<p style=\"margin-top:16px;font-size:12px;color:#94a3b8;line-height:1.6\">ข้อมูลนี้มาจาก Anonymous Visitor ID และพฤติกรรมการรับชมเท่านั้น — ไม่มีการระบุตัวตน ไม่มีชื่อ/อีเมล/อายุ/เพศ/รายได้ และไม่มีการวิเคราะห์ใบหน้าหรือเสียง. '\n  + 'หากไม่ใช่เรื่องที่ต้องติดตาม สามารถเพิกเฉยได้เลย</p>'\n  + '</div></div>';\nreturn [{ json: {\n  subject: '🔥 AI Video Intelligence Alert — High Engagement (Score ' + d.engagement_score + '/100 · ' + d.interest_level + ')',\n  html: html,\n  kind: 'alert',\n  analysis_id: d.analysis_id,\n  visitor_id: d.visitor_id,\n  engagement_score: d.engagement_score,\n  interest_level: d.interest_level,\n} }];\n"
+      },
+      "id": "0c50b779-efed-4349-ae7c-2a425b5ad328",
+      "name": "สร้างอีเมล HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2560,
+        -340
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/video-intel/notify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ subject: $json.subject, html: $json.html, kind: $json.kind, analysis_id: $json.analysis_id }) }}"
+      },
+      "id": "fad03c76-8e2c-431f-909b-4bea575f4730",
+      "name": "ส่งอีเมลแจ้งเตือน (/api/video-intel/notify)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2820,
+        -340
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const j = $json || {};\nconst d = $('ตรวจคำตอบ AI + ตัดสินใจ').first().json || {};\nreturn [{ json: { source: 'n8n', workflow: 'Video Intel 02 · AI วิเคราะห์', ok: true, stage: 'alert_sent',\n  detail: 'visitor=' + String(d.visitor_id || '').slice(0, 8) + ' score=' + d.engagement_score + ' level=' + d.interest_level + ' email=' + (j.email || 'unknown'),\n  at: new Date().toISOString(),\n  payload: { analysis_id: d.analysis_id, email: j.email || null, provider: j.provider || null } } }];"
+      },
+      "id": "c44e7efc-5b38-4476-a44c-a0b55f42333a",
+      "name": "สรุปผลการแจ้งเตือน",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3080,
+        -340
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/agent-log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: $json.workflow, ok: $json.ok, stage: $json.stage, detail: $json.detail, at: $json.at, payload: $json.payload }) }}"
+      },
+      "id": "2c4f333e-0581-4549-aa09-0f73e4729fb0",
+      "name": "บันทึก Log (แจ้งเตือนแล้ว) (/api/agent-log)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3340,
+        -340
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "70a7c091-bc24-4de1-a235-686e60476a0e",
+      "name": "ตอบกลับ (แจ้งเตือนแล้ว)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        3600,
+        -340
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "ff9bf93d-898e-4b07-bcb5-87b60569d7d9",
+      "name": "ตอบกลับ (ไม่แจ้งเตือน)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2560,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "1b685a51-ea49-4fa3-b1bc-6f1745bcced3",
+      "name": "ตอบกลับ (ข้อมูลไม่พอ)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1000,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gemini-3.5-flash-lite"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "a994c376-32e9-49cf-b750-acd97d62aca8",
+      "name": "Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1520,
+        -60
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "openrouter-workflow-1790828913760",
+          "name": "Google Gemini API (OpenAI-compatible)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n \"engagement_score\": 87,\n \"interest_level\": \"VERY_HOT\",\n \"watch_intent\": \"high\",\n \"visitor_stage\": \"very_hot\",\n \"returning_visitor\": true,\n \"video_completion\": 0.91,\n \"ai_summary\": \"ผู้ชมดูเนื้อหาส่วนใหญ่ของวิดีโอและกลับมารับชมซ้ำ แสดงถึง Engagement สูงต่อเนื้อหา\",\n \"recommended_action\": \"ตรวจสอบว่าผู้ชมมีช่องทางติดต่อที่ได้รับความยินยอมไว้หรือไม่ ก่อนดำเนินการติดตามผล\",\n \"reason\": [\n  \"ดูวิดีโอเกิน 80%\",\n  \"กลับมาดูซ้ำ\",\n  \"ใช้เวลาอยู่บนหน้าเว็บนาน\"\n ],\n \"send_alert\": true\n}"
+      },
+      "id": "c18333c5-702a-46ed-96b4-49f332af0349",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        1520,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook /video-intel-analyze": {
+      "main": [
+        [
+          {
+            "node": "อ่านคำขอ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "อ่านคำขอ": {
+      "main": [
+        [
+          {
+            "node": "มี visitor_id?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "มี visitor_id?": {
+      "main": [
+        [
+          {
+            "node": "[VI02] ดึงข้อมูลพฤติกรรม (aggregate)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ตอบกลับ (ข้อมูลไม่พอ)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[VI02] ดึงข้อมูลพฤติกรรม (aggregate)": {
+      "main": [
+        [
+          {
+            "node": "สร้างโจทย์ให้ AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สร้างโจทย์ให้ AI": {
+      "main": [
+        [
+          {
+            "node": "AI วิเคราะห์พฤติกรรม",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI วิเคราะห์พฤติกรรม": {
+      "main": [
+        [
+          {
+            "node": "ตรวจคำตอบ AI + ตัดสินใจ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ตรวจคำตอบ AI + ตัดสินใจ": {
+      "main": [
+        [
+          {
+            "node": "บันทึกผลวิเคราะห์ (/api/video-intel/analysis)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "บันทึกผลวิเคราะห์ (/api/video-intel/analysis)": {
+      "main": [
+        [
+          {
+            "node": "ควรแจ้งเตือนทันที? (score ≥ 80)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ควรแจ้งเตือนทันที? (score ≥ 80)": {
+      "main": [
+        [
+          {
+            "node": "สร้างอีเมล HTML",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ตอบกลับ (ไม่แจ้งเตือน)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สร้างอีเมล HTML": {
+      "main": [
+        [
+          {
+            "node": "ส่งอีเมลแจ้งเตือน (/api/video-intel/notify)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ส่งอีเมลแจ้งเตือน (/api/video-intel/notify)": {
+      "main": [
+        [
+          {
+            "node": "สรุปผลการแจ้งเตือน",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สรุปผลการแจ้งเตือน": {
+      "main": [
+        [
+          {
+            "node": "บันทึก Log (แจ้งเตือนแล้ว) (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "บันทึก Log (แจ้งเตือนแล้ว) (/api/agent-log)": {
+      "main": [
+        [
+          {
+            "node": "ตอบกลับ (แจ้งเตือนแล้ว)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI วิเคราะห์พฤติกรรม",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI วิเคราะห์พฤติกรรม",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Bangkok"
+  }
+}

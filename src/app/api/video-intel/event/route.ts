@@ -205,7 +205,6 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
-
     const consent = readConsent(body);
     const visitorId = str(body?.visitor_id || body?.visitorId, 64) || randomUUID();
     const sessionId = str(body?.session_id || body?.sessionId, 64);
@@ -272,10 +271,13 @@ export async function POST(req: NextRequest) {
     const storedIds: string[] = [];
     const isFromN8n = String(body?.source || '') === 'n8n-video-intel';
 
+    if (!visitor?.id) {
+      return NextResponse.json({ ok: true, stored: 0, reason: 'visitor_unavailable', n8n: 'skipped' });
+    }
+
     for (const raw of rawList.slice(0, 25)) {
-      const name = String(raw?.event || raw?._synthetic ? (raw?._synthetic ? 'return_visit' : raw?.event) : '', 40)
-        .toLowerCase().trim();
-      const eventName = raw?._synthetic ? 'return_visit' : name;
+      let eventName = String(raw?.event || raw?.type || '').toLowerCase().trim();
+      if (raw?._synthetic) eventName = 'return_visit';
       if (eventName !== 'return_visit' && !KNOWN_EVENTS.has(eventName)) continue;
 
       const atRaw = raw?.timestamp || raw?.at || now;
@@ -309,11 +311,11 @@ export async function POST(req: NextRequest) {
         await db.visitorEvent.create({
           data: {
             eventId,
-            visitorId: visitor?.id || null,
+            visitorId: visitor.id,
             sessionId,
             type: eventName === 'video_interaction' && interaction ? `video_${interaction}` : eventName,
             pagePath: page,
-            pageUrl: page.startsWith('http') ? page : `https://ai-insurance-network-tree.vercel.app${page}`,
+            pageUrl: page.startsWith('http') ? page : `${originClean}${page}`,
             referrer,
             videoCode: videoId,
             watchPct,

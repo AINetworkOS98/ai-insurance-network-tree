@@ -1,0 +1,112 @@
+{
+  "name": "Video Intel 09 · Error Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Error Handler\nรับ error จาก workflow Video Intel ทุกตัว → บันทึก log + แจ้งเตือนผ่านแอป",
+        "height": 180,
+        "width": 420,
+        "color": 4
+      },
+      "id": "dcfe5a88-be7b-495e-bf6f-643b0d9952a9",
+      "name": "คำอธิบาย",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -200
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "0b160f9d-0bc5-478f-83d0-2b42aece281e",
+      "name": "รับ error จาก workflow อื่น",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        220,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// สรุป error จาก workflow อื่น (errorTrigger) — ไม่ส่งข้อมูลส่วนบุคคลออกไป\nconst j = $input.first().json || {};\nconst wf = (j.workflow && j.workflow.name) || j.workflowName || 'unknown';\nconst ex = j.execution || {};\nconst lastNode = ex.lastNodeExecuted || (j.execution && j.execution.lastNodeExecuted) || '-';\nconst msg = String((j.execution && j.execution.error && (j.execution.error.message || j.execution.error.description)) || j.error || 'unknown error');\nreturn [{ json: {\n  source: 'n8n',\n  workflow: 'Video Intel · Error Handler',\n  ok: false,\n  stage: 'error',\n  detail: 'workflow=' + wf + ' · node=' + lastNode + ' · ' + msg.slice(0, 400),\n  failed_workflow: wf,\n  failed_execution_id: ex.id || null,\n  at: new Date().toISOString(),\n} }];\n"
+      },
+      "id": "880bff2c-fc43-4fc1-9e79-fa5ad4677f8b",
+      "name": "สรุป error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        -80
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/agent-log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: $json.workflow, ok: false, stage: 'error', detail: $json.detail, at: $json.at, failed_workflow: $json.failed_workflow }) }}"
+      },
+      "id": "2231be6a-091d-4069-91a5-11fc5893a6e2",
+      "name": "บันทึก Log (/api/agent-log)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        740,
+        -80
+      ],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "รับ error จาก workflow อื่น": {
+      "main": [
+        [
+          {
+            "node": "สรุป error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สรุป error": {
+      "main": [
+        [
+          {
+            "node": "บันทึก Log (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Bangkok"
+  }
+}

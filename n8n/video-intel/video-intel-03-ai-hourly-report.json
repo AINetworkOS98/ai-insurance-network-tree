@@ -1,0 +1,440 @@
+{
+  "name": "Video Intel 03 · รายงานรายชั่วโมง (AI Hourly Report)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": [
+          "## รายงานรายชั่วโมง\nดึงตัวเลขจริงของ 1 ชั่วโมงล่าสุด → ให้ AI สรุปเป็นภาษาไทย → ส่งอีเมล"
+        ],
+        "height": 240,
+        "width": 460,
+        "color": 4
+      },
+      "id": "92289089-d09e-4f9b-ba94-bbe6d09ee2fc",
+      "name": "คำอธิบาย",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -280
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "6519ec35-2a58-4e2b-bb7e-81fa25720ea3",
+      "name": "ทุก 1 ชั่วโมง",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        220,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "video-intel-report-hourly",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "4429f46f-2d55-4c8e-b30a-4ad03e7ccfb0",
+      "name": "รันเดี๋ยวนี้ (Webhook /video-intel-report-hourly)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        220,
+        40
+      ],
+      "webhookId": "2a4b031f-479c-4abd-8ced-001efe6ef36c"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/video-intel/stats",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "window",
+              "value": "1h"
+            },
+            {
+              "name": "limit",
+              "value": "40"
+            }
+          ]
+        }
+      },
+      "id": "4db1d78e-b0b9-420a-b1aa-9cb59f8f7668",
+      "name": "ดึงสถิติจริง (/api/video-intel/stats)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        -160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// สร้างโจทย์ให้ AI สรุปภาพรวมจากตัวเลขจริงของ /api/video-intel/stats\nconst stats = $input.first().json || {};\nconst st = (stats.body && typeof stats.body === 'object') ? stats.body : stats;\nif (st.ok === false || !st.generatedAt) {\n  return [{ json: { skip: true, reason: 'stats_unavailable', window: st.window || null } }];\n}\nconst compact = {\n  window: st.window, current_visitors: st.currentVisitors, active_video_sessions: st.activeVideoSessions,\n  total_visitors: st.totalVisitors, total_sessions: st.totalSessions, total_events: st.totalEvents,\n  total_video_views: st.totalVideoViews, video_completes: st.videoCompletes,\n  avg_watch_seconds: st.avgWatchSeconds, avg_watch_percent: st.avgWatchPercent,\n  completion_rate_pct: st.completionRate, returning_visitors: st.returningVisitors, peak_hour: st.peakHour,\n  watch_progress_buckets: st.watchProgress || [], engagement: st.engagement || {},\n  hot_visitors: (st.hotVisitors || []).slice(0, 8),\n  hourly: (st.hourly || []).slice(-12),\n  recent_events: (st.recentEvents || []).slice(0, 12),\n};\nconst prompt = 'ข้อมูลสรุปการรับชมวิดีโอ (ตัวเลขจากฐานข้อมูลจริง):\\n' + JSON.stringify(compact, null, 1)\n  + '\\n\\nจงสรุปเป็นภาษาไทยสำหรับเจ้าของธุรกิจ และตอบเป็น JSON ตาม schema เท่านั้น';\nreturn [{ json: {\n  prompt: prompt,\n  window: st.window || '24h',\n  stats: compact,\n  headline: {\n    visitors: st.totalVisitors || 0, sessions: st.totalSessions || 0, views: st.totalVideoViews || 0,\n    avg_pct: st.avgWatchPercent || 0, completion_rate: st.completionRate || 0,\n    hot: (st.engagement || {}).hot || 0, very_hot: (st.engagement || {}).veryHot || 0,\n    returning: st.returningVisitors || 0, peak_hour: st.peakHour || '-',\n    avg_watch_seconds: st.avgWatchSeconds || 0,\n  },\n} }];\n"
+      },
+      "id": "156f65ce-c4f0-4b30-9170-aadd6f010e0e",
+      "name": "[VIRA] สร้างโจทย์รายงาน",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        740,
+        -160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// เติมค่า report_kind ให้ node สร้างอีเมลรู้ว่ากำลังทำรายงานแบบไหน\nconst j = $json || {};\nreturn [{ json: Object.assign({}, j, { report_kind: 'hourly' }) }];\n"
+      },
+      "id": "f33c4730-7b58-47f6-bf1d-c193249c5a29",
+      "name": "เติมชนิดรายงาน",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        -300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.prompt }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an analytics writer for a Thai insurance-agency network website owner. You receive real aggregate numbers of the video-intelligence dashboard for a time window.\nRULES: use ONLY the given numbers; never infer personal attributes of any visitor; write Thai; reply with ONE JSON object only.\n{\"summary\": \"ภาพรวม 2-3 ประโยคภาษาไทย\", \"insights\": [\"ข้อสังเกตจากตัวเลข 2-5 ข้อ\"], \"recommendedActions\": [\"สิ่งที่ควรทำต่อ 2-4 ข้อ (สุภาพ เคารพความเป็นส่วนตัว)\"], \"highlight\": \"จุดเด่นที่สุดของช่วงนี้ 1 ประโยค\"}",
+          "maxIterations": 3
+        }
+      },
+      "id": "d257c7f2-f69f-42e2-99a3-40d2d67b78af",
+      "name": "AI สรุปภาพรวม",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        -300
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 8000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\n// ประกอบอีเมลรายงาน (รายชั่วโมง/รายวัน) จากตัวเลขจริง + บทสรุปของ AI\nconst ctx = $('[VIRA] สร้างโจทย์รายงาน').first().json || {};\nconst raw = $input.first().json || {};\nlet ai = raw.output;\nif (typeof ai === 'string') { try { ai = JSON.parse(ai); } catch (e) { ai = null; } }\nif (!ai || typeof ai !== 'object') ai = {};\nconst isHourly = ctx.report_kind === 'hourly';\nconst h = ctx.headline || {};\nconst esc = function (t) { return String(t == null ? '' : t).replace(/[<>&]/g, function (c) { return ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' })[c]; }); };\nconst fmtSec = function (sec) { const n = Math.max(0, Math.round(Number(sec) || 0)); const m = Math.floor(n / 60); return m + ' นาที ' + (n % 60) + ' วินาที'; };\nconst when = new Intl.DateTimeFormat('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'medium', timeStyle: 'short' }).format(new Date());\nconst cards = [\n  ['ผู้ชม', h.visitors], ['Session', h.sessions], ['เปิดดูวิดีโอ', h.views],\n  ['ดูเฉลี่ย', h.avg_pct + '%'], ['ดูจนจบ', h.completion_rate + '%'], ['กลับมาซ้ำ', h.returning],\n  ['Hot', h.hot], ['Very Hot', h.very_hot], ['เวลาดูเฉลี่ย', fmtSec(h.avg_watch_seconds)], ['ช่วงพีค', h.peak_hour],\n];\nconst buckets = ctx.stats && ctx.stats.watch_progress_buckets ? ctx.stats.watch_progress_buckets : [];\nconst html = ''\n  + '<div style=\"font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:660px;margin:0 auto;background:#f8fafc;padding:24px\">'\n  + '<div style=\"background:#0f172a;color:#fff;border-radius:14px 14px 0 0;padding:20px 24px\">'\n  + '<div style=\"font-size:13px;letter-spacing:.08em;color:#94a3b8\">AI VIDEO INTELLIGENCE</div>'\n  + '<h2 style=\"margin:6px 0 0;font-size:20px\">' + (isHourly ? '📊 รายงานรายชั่วโมง' : '📈 รายงานรายวัน') + '</h2>'\n  + '<div style=\"font-size:13px;color:#cbd5e1;margin-top:4px\">' + when + ' · ช่วงข้อมูล ' + esc(ctx.window || '') + '</div></div>'\n  + '<div style=\"background:#fff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 14px 14px;padding:20px 24px\">'\n  + '<table style=\"width:100%;border-collapse:collapse;font-size:14px\"><tbody>'\n  + [0, 2, 4, 6, 8].map(function (i) {\n      const a = cards[i] || ['-', '-'], b = cards[i + 1] || ['-', '-'];\n      return '<tr>'\n        + '<td style=\"padding:8px 6px;color:#64748b;width:50%\">' + a[0] + ' <b style=\"color:#0f172a\">' + a[1] + '</b></td>'\n        + '<td style=\"padding:8px 6px;color:#64748b;width:50%\">' + b[0] + ' <b style=\"color:#0f172a\">' + b[1] + '</b></td></tr>';\n    }).join('')\n  + '</tbody></table>'\n  + '<div style=\"margin-top:16px;padding:14px;background:#f1f5f9;border-radius:10px\">'\n  + '<div style=\"font-size:12px;font-weight:700;color:#475569\">ขั้นบันไดการรับชม (จำนวนผู้ชมถึงเกณฑ์)</div>'\n  + '<div style=\"margin-top:8px;font-size:13px;color:#0f172a\">'\n  + buckets.map(function (b) { return esc(b.mark) + '%: <b>' + esc(b.count) + '</b>'; }).join(' &nbsp;·&nbsp; ')\n  + '</div></div>'\n  + '<div style=\"margin-top:14px;padding:14px;border-left:4px solid #0ea5e9;background:#f8fafc\">'\n  + '<div style=\"font-size:12px;font-weight:700;color:#0369a1\">AI INSIGHTS</div>'\n  + '<div style=\"margin-top:6px;color:#0f172a\">' + esc(ai.summary || ai.ai_summary || 'ยังไม่มีบทสรุปจาก AI ในรอบนี้') + '</div>'\n  + '<ul style=\"margin:8px 0 0 18px;padding:0;color:#334155;font-size:13px\">'\n  + (Array.isArray(ai.insights) ? ai.insights : []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('')\n  + '</ul></div>'\n  + '<div style=\"margin-top:12px;padding:14px;background:#ecfdf5;border-radius:10px\">'\n  + '<div style=\"font-size:12px;font-weight:700;color:#047857\">ข้อเสนอแนะ下一步</div>'\n  + '<ul style=\"margin:6px 0 0 18px;padding:0;color:#065f46;font-size:13px\">'\n  + (Array.isArray(ai.recommendedActions) ? ai.recommendedActions : (Array.isArray(ai.recommended_actions) ? ai.recommended_actions : [])).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('')\n  + '</ul></div>'\n  + '<p style=\"margin-top:16px;font-size:12px;color:#94a3b8;line-height:1.6\">ตัวเลขทั้งหมดคำนวณจาก event การรับชมจริงในฐานข้อมูล (Anonymous Visitor ID) — '\n  + 'ไม่มีการระบุตัวตนผู้ชม และไม่มีการเก็บข้อมูลส่วนบุคคล</p>'\n  + '</div></div>';\nreturn [{ json: {\n  subject: (isHourly ? '📊 AI Video Intelligence Report — Hourly' : '📈 Daily AI Video Intelligence Report'),\n  html: html,\n  kind: isHourly ? 'hourly' : 'daily',\n  window: ctx.window || null,\n  headline: h,\n} }];\n"
+      },
+      "id": "f8d4b5f3-17c9-4053-a79b-0dbbddaebc51",
+      "name": "ประกอบอีเมลรายงาน",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1520,
+        -300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/video-intel/notify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ subject: $json.subject, html: $json.html, kind: $json.kind }) }}"
+      },
+      "id": "0ee5660a-507e-47e5-8a19-7dbbd465481d",
+      "name": "ส่งอีเมลรายงาน (/api/video-intel/notify)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1780,
+        -300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const j = $json || {};\nconst h = $('ประกอบอีเมลรายงาน').first().json || {};\nconst head = h.headline || {};\nreturn [{ json: { source: 'n8n', workflow: 'Video Intel 03 · รายงานรายชั่วโมง',\n  ok: true, stage: 'report_sent',\n  detail: 'email=' + (j.email || 'unknown') + ' visitors=' + (head.visitors || 0) + ' veryHot=' + (head.very_hot || 0),\n  at: new Date().toISOString() } }];"
+      },
+      "id": "0a893081-2ebd-461b-a531-e3f8156843b2",
+      "name": "สรุปการส่ง",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2040,
+        -300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/agent-log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: $json.workflow, ok: $json.ok, stage: $json.stage, detail: $json.detail, at: $json.at }) }}"
+      },
+      "id": "18c917cb-3bde-41c7-8d51-e1af245e300e",
+      "name": "บันทึก Log (/api/agent-log)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2300,
+        -300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {},
+      "id": "40160a94-0b6d-400a-96f8-4b291d743b70",
+      "name": "จบรอบ",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1520,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gemini-3.5-flash-lite"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "1a50a079-3853-4364-911f-aa247166b8dc",
+      "name": "Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1260,
+        -100
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "openrouter-workflow-1790828913760",
+          "name": "Google Gemini API (OpenAI-compatible)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n \"summary\": \"มีผู้ชม 12 คน เปิดดูวิดีโอ 21 ครั้ง โดยเฉลี่ยดู 61% ของคลิป\",\n \"insights\": [\n  \"ผู้ชม 4 คนดูจนจบ\",\n  \"ช่วง 20:00 มีผู้ชมมากที่สุด\"\n ],\n \"recommendedActions\": [\n  \"ทดลองเปลี่ยนคลิปเปิดให้สั้นลงและมีคำชวนชัดเจนขึ้น\"\n ],\n \"highlight\": \"อัตราดูจนจบ 19% สูงกว่าค่าเฉลี่ยทั่วไปของหน้าแนะนำ\"\n}"
+      },
+      "id": "d9e22017-9125-477d-92a5-90ccc02d250c",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        1260,
+        60
+      ]
+    }
+  ],
+  "connections": {
+    "ทุก 1 ชั่วโมง": {
+      "main": [
+        [
+          {
+            "node": "ดึงสถิติจริง (/api/video-intel/stats)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "รันเดี๋ยวนี้ (Webhook /video-intel-report-hourly)": {
+      "main": [
+        [
+          {
+            "node": "ดึงสถิติจริง (/api/video-intel/stats)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ดึงสถิติจริง (/api/video-intel/stats)": {
+      "main": [
+        [
+          {
+            "node": "[VIRA] สร้างโจทย์รายงาน",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[VIRA] สร้างโจทย์รายงาน": {
+      "main": [
+        [
+          {
+            "node": "เติมชนิดรายงาน",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "เติมชนิดรายงาน": {
+      "main": [
+        [
+          {
+            "node": "AI สรุปภาพรวม",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI สรุปภาพรวม": {
+      "main": [
+        [
+          {
+            "node": "ประกอบอีเมลรายงาน",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ประกอบอีเมลรายงาน": {
+      "main": [
+        [
+          {
+            "node": "ส่งอีเมลรายงาน (/api/video-intel/notify)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ส่งอีเมลรายงาน (/api/video-intel/notify)": {
+      "main": [
+        [
+          {
+            "node": "สรุปการส่ง",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สรุปการส่ง": {
+      "main": [
+        [
+          {
+            "node": "บันทึก Log (/api/agent-log)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI สรุปภาพรวม",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI สรุปภาพรวม",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Bangkok"
+  }
+}

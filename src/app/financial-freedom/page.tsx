@@ -6,6 +6,7 @@ import Sidebar from '@/components/Sidebar';
 import AutomationShowcase from '@/components/AutomationShowcase';
 import SuccessPath from '@/components/SuccessPath';
 import TikTokChannel from '@/components/TikTokChannel';
+import FinancialFreedomVideo from '@/components/FinancialFreedomVideo';
 
 export default function FinancialFreedom() {
   return (
@@ -113,6 +114,8 @@ export default function FinancialFreedom() {
 
             {/* ── ต่อลงมา: เส้นทางก้าวสู่ความสำเร็จ (แผนที่ · หลักการในฟองสบู่ · แนะนำ · หลักการทำงาน 12 ข้อ) ── */}
             <SuccessPath />
+
+            <FinancialFreedomVideo />
 
             {/* ── ต่อลงมา: ช่องดูวีดีโอ TikTok @aka989._ แบบสุ่มต่อเนื่อง ── */}
             <TikTokChannel />

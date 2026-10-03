@@ -9,6 +9,8 @@ import { isAdminOnlyPage, canAccessAdminOnlyPage } from '@/lib/access-rules';
 const PUBLIC_API = [
   '/api/support', // ฟอร์มติดต่อสาธารณะ — เข้าถึงได้โดยไม่ต้องล็อกอิน (route ตรวจ rate-limit + เบอร์โทรเอง)
   '/api/track', // เก็บพฤติกรรมผู้เข้าชม — ต้องยินยอมก่อนเก็บ (route ตรวจ consent เอง)
+  // ระบบ AI Video Intelligence: /api/video-intel/event = สาธารณะ (consent-gated) · เส้นทางอื่นตรวจ Bearer/session เอง
+  '/api/video-intel',
   '/api/lead', // ลงทะเบียนลีดจากฟอร์มสาธารณะ (route ตรวจความยินยอม + กันสแปมเอง)
   '/api/maintenance', // งานดูแลระบบ — route บังคับ Authorization: Bearer $CRON_SECRET เอง
   // เส้นทางที่ n8n (และเว็บ) เรียก — route ตรวจสิทธิ์เอง (คุกกี้ token หรือ Bearer CRON_SECRET)
