@@ -56,8 +56,9 @@ export async function POST(req: Request) {
       for (let i = 0; i < count; i++) {
         const code = `M${String(seq).padStart(4, '0')}`;
         seq++;
-        const parents = level === 1 ? [] : byLevel[level - 2] || [];
-        const parent = level === 1 ? null : parents[Math.floor(i / Math.max(1, cfg.branchFactor))] || parents[0] || null;
+        // ชั้น 1 ต้องเป็นลูกของ ROOT เสมอ (เดิมปล่อยเป็น null ทำให้โครง 1 แตก 5 ขาดจากราก)
+        const parents = level === 1 ? ['ROOT'] : byLevel[level - 2] || [];
+        const parent = parents[Math.floor(i / Math.max(1, cfg.branchFactor))] || parents[0] || null;
         const pos = positionFor(level, i);
         rows.push({ simId: sim.id, memberCode: code, parentCode: parent, sponsorCode: parent, level, position: i + 1, status: 'simulated', simulation: true, posX: pos.x, posY: pos.y, posZ: pos.z });
         codes.push(code);

@@ -109,11 +109,15 @@ export default function NetworkSimulator() {
   const [total, setTotal] = useState(0);
   const [soundOn, setSoundOn] = useState(false);
   const [volume, setVolume] = useState(0.32);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [autoTick, setAutoTick] = useState(true);
   const playRef = useRef<number | null>(null);
   const audioRef = useRef<UniverseAudio | null>(null);
+  const simIdRef = useRef<string | null>(null);
 
   const refresh = useCallback(async (simId?: string) => {
-    const q = simId ? `?id=${encodeURIComponent(simId)}` : '';
+    const id = simId || simIdRef.current || '';
+    const q = id ? `?id=${encodeURIComponent(id)}` : '';
     const [st, ev, ss] = await Promise.all([
       fetch(`/api/sim/state${q}`, { cache: 'no-store' }).then((r) => r.json()).catch(() => null),
       fetch(`/api/sim/events${q}`, { cache: 'no-store' }).then((r) => r.json()).catch(() => null),
@@ -121,18 +125,44 @@ export default function NetworkSimulator() {
     ]);
     if (st?.ok) {
       setSim(st.sim);
+      if (st.sim?.id) simIdRef.current = st.sim.id;
       setNodes(st.nodes || []);
       setPerLayer(st.perLayer || []);
       setTotal(st.total || 0);
       setEvents(st.events || []);
+      setLastUpdated(new Date());
     }
-    if (ev?.events) setEvents(ev.events);
+    if (ev?.events) {
+      setEvents(ev.events);
+      setLastUpdated(new Date());
+    }
     if (ss?.ok) setStats(ss);
   }, []);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // ตัวเฝ้าให้ข้อมูลเป็นปัจจุบันเสมอ: ดึงใหม่ทุก 30 วิ + ทันทีเมื่อกลับเข้าหน้า/แท็บถูกเปิดใช้
+  // (ไม่ให้ตัวเลขค้างอยู่ที่ค่าเก่าจนต้องกดรีเฟรชเอง)
+  useEffect(() => {
+    if (!autoTick) return;
+    const t = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void refresh();
+    }, 30_000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void refresh();
+    };
+    const onFocus = () => void refresh();
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.clearInterval(t);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [autoTick, refresh]);
+
 
   const stopPlay = useCallback(() => {
     if (playRef.current !== null) {
@@ -285,13 +315,15 @@ export default function NetworkSimulator() {
 
   const selectedNode = useMemo(() => nodes.find((n) => n.code === selected) || null, [nodes, selected]);
   const renderNodes = useMemo(() => nodes.filter((n) => n.level > 0), [nodes]);
+  // นับจากชุดจำลองที่กำลังแสดงอยู่เท่านั้น (เดิมนับรวมทุกชุดจำลอง ทำให้การ์ดขัดกับ Timeline)
+  const qualifiedNow = useMemo(() => nodes.filter((n) => n.qualified || n.promotionStatus === 'eligible' || n.promotionStatus === 'approved').length, [nodes]);
 
   const statCards = mode === 'simulation'
     ? [
         { label: 'สมาชิกจำลองทั้งหมด', value: fmtNum(total), tone: 'text-sky-300' },
         { label: 'จำนวน Layer', value: fmtNum(perLayer.filter((p) => p.level > 0).length), tone: 'text-sky-300' },
         { label: 'สมาชิกใน Layer ปัจจุบัน', value: fmtNum(perLayer.filter((p) => p.level > 0).slice(-1)[0]?.count || 0), tone: 'text-sky-300' },
-        { label: 'ผ่าน Qualification (จำลอง)', value: fmtNum(stats?.simulation.promotionEligible ?? 0), tone: 'text-emerald-300' },
+        { label: 'ผ่าน Qualification (จำลอง)', value: fmtNum(qualifiedNow), tone: 'text-emerald-300' },
         { label: 'Promotion Events', value: fmtNum(events.filter((e) => e.eventType.startsWith('PROMOTION')).length), tone: 'text-amber-300' },
         { label: 'Commission Events', value: fmtNum(events.filter((e) => e.eventType === 'COMMISSION_CREATED').length), tone: 'text-amber-300' },
       ]
@@ -314,9 +346,22 @@ export default function NetworkSimulator() {
             <h2 className="text-2xl font-bold sm:text-3xl">1 แตก {config.branchFactor} – Future Network Simulator</h2>
             <p className="mt-1 max-w-2xl text-sm text-slate-400">ทดลองโครงสร้างเครือข่ายและแผนรายได้แบบไม่มีจำนวนชั้นตายตัว — ทุกอย่างที่เห็นเป็น <span className="font-semibold text-sky-300">ข้อมูลจำลอง (SIMULATION)</span> แยกจากข้อมูลจริงเสมอ</p>
           </div>
-          <div className="flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900 p-1 text-xs font-semibold">
-            <button onClick={() => setMode('simulation')} className={`rounded-full px-3 py-1.5 ${mode === 'simulation' ? 'bg-sky-500 text-slate-950' : 'text-slate-300'}`}>SIMULATION</button>
-            <button onClick={() => setMode('real')} className={`rounded-full px-3 py-1.5 ${mode === 'real' ? 'bg-emerald-500 text-slate-950' : 'text-slate-300'}`}>REAL DATA</button>
+          <div className="flex flex-col items-start gap-2 sm:items-end">
+            <div className="flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900 p-1 text-xs font-semibold">
+              <button onClick={() => setMode('simulation')} className={`rounded-full px-3 py-1.5 ${mode === 'simulation' ? 'bg-sky-500 text-slate-950' : 'text-slate-300'}`}>SIMULATION</button>
+              <button onClick={() => setMode('real')} className={`rounded-full px-3 py-1.5 ${mode === 'real' ? 'bg-emerald-500 text-slate-950' : 'text-slate-300'}`}>REAL DATA</button>
+            </div>
+            {/* ป้ายบอกความสดของข้อมูล — ให้รู้เสมอว่าตัวเลข ณ เวลาใด */}
+            <div className="flex flex-wrap items-center gap-2 text-[11px]">
+              <span className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-slate-300" title={lastUpdated ? lastUpdated.toLocaleString('th-TH') : ''}>
+                🕒 ข้อมูล ณ <span className="font-bold text-sky-300">{lastUpdated ? lastUpdated.toLocaleTimeString('th-TH') : '…'}</span>
+                {lastUpdated ? ` น. · ${lastUpdated.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}` : ''}
+              </span>
+              <button onClick={() => setAutoTick((v) => !v)} className={`rounded-full border px-3 py-1 font-semibold ${autoTick ? 'border-emerald-600/60 bg-emerald-950/40 text-emerald-300' : 'border-slate-700 bg-slate-900 text-slate-400'}`}>
+                {autoTick ? '⟳ อัปเดตอัตโนมัติทุก 30 วิ' : '⏸ หยุดอัปเดตอัตโนมัติ'}
+              </button>
+              <button onClick={() => void refresh()} className="rounded-full border border-sky-600/60 bg-sky-950/40 px-3 py-1 font-semibold text-sky-300 hover:border-sky-400">⟳ ดึงใหม่</button>
+            </div>
           </div>
         </div>
 
