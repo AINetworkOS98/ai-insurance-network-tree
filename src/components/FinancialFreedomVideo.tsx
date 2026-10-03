@@ -88,15 +88,19 @@ export default function FinancialFreedomVideo() {
 
       <div className="mb-3">
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-rose-50 text-rose-700 text-sm font-semibold border border-rose-200">
-          <span>🎥</span> วิดีโอสรุปเส้นทาง
+          <span>🎥</span> วิดีโอสรุปเส้นทาง · 30 SECONDS
         </div>
         <h2 className="mt-4 text-2xl font-bold text-slate-900">ดูภาพรวมก่อนตัดสินใจ</h2>
+        <p className="mt-1.5 text-[11px] font-semibold tracking-[0.24em] text-slate-400">
+          FOUR STEPS TO FINANCIAL FREEDOM · 1080P
+        </p>
         <p className="mt-2 text-slate-600 leading-relaxed">
-          คลิปสั้น 30 วินาทีสรุป 4 ขั้นตอนสู่อิสรภาพทางการเงิน — กดเล่นได้ทันที ไม่มีโหลดเพิ่มจากระบบ
+          คลิปสั้น 30 วินาทีสรุป 4 ขั้นตอนสู่อิสรภาพทางการเงิน — เล่าเป็นภาษาไทยพร้อมคำกำกับภาษาอังกฤษ
+          กดเล่นได้ทันที ไม่มีโหลดเพิ่มจากระบบ
         </p>
       </div>
 
-      <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-black">
+      <div className="relative rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-black">
         {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
         <video
           ref={videoRef}
@@ -104,8 +108,8 @@ export default function FinancialFreedomVideo() {
           controls
           playsInline
           preload="metadata"
-          poster="/logo.png"
-          className="w-full h-auto max-h-[70vh] bg-black"
+          poster="/financial-freedom-poster.jpg"
+          className="w-full aspect-video max-h-[70vh] bg-black object-contain"
           crossOrigin="anonymous"
         />
       </div>

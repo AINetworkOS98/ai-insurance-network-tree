@@ -21,3 +21,7 @@ __pycache__/
 tmp/.auth_secret
 tmp/hostinger-env.json
 tmp/hpanel-env-full.mjs
+
+# ── วิดีโอ: ไฟล์กลางที่สร้างใหม่ได้ (สคริปต์: video/financial-freedom/render.mjs) ──
+video/financial-freedom/out/
+video/financial-freedom/fonts/
