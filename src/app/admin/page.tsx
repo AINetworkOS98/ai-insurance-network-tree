@@ -367,7 +367,8 @@ function AdminContent() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h2 className="text-lg font-bold text-slate-800">สมาชิกทั้งหมด</h2>
                   <span className="text-sm text-slate-500">
-                    ทั้งหมด {members.length} รายการ · ใช้งาน {summary?.totalActiveMembers ?? totalActiveMembers} ราย
+                    ทั้งหมด {notDeletedCount} รายการ · ใช้งาน {summary?.totalActiveMembers ?? totalActiveMembers} ราย
+                    {summary?.deleted ? ` · ลบออกแล้ว ${summary.deleted}` : ''}
                     {summary?.sources ? ` · ทะเบียนหลัก ${summary.sources.postgres} · ข้อมูลเดิม ${summary.sources.legacy}` : ''}
                   </span>
                 </div>
