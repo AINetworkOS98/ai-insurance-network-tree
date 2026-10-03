@@ -15,7 +15,7 @@ import type { ComponentRef, MutableRefObject } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
-import { levelStyle, mulberry32, type CosmicNetworkModel, type CosmicNode, type Rng } from '@/lib/cosmicNetwork';
+import { levelStyle, mulberry32, nodeColor, nodeSizeScale, type CosmicNetworkModel, type CosmicNode, type Rng } from '@/lib/cosmicNetwork';
 
 /* ─────────────────────────── Types ─────────────────────────── */
 
@@ -449,11 +449,12 @@ function buildNodeGeometry(model: CosmicNetworkModel, epochMs: number): THREE.Bu
     pos[i * 3] = node.position[0];
     pos[i * 3 + 1] = node.position[1];
     pos[i * 3 + 2] = node.position[2];
-    const st = levelStyle(node.level);
-    col[i * 3] = st.color[0] / 255;
-    col[i * 3 + 1] = st.color[1] / 255;
-    col[i * 3 + 2] = st.color[2] / 255;
-    size[i] = node.size;
+    // สี/ขนาด: ใช้ nodeColor() เพื่อรองรับไฮไลต์สถานะจริง (ทอง/หม่น) นอกเหนือจากสีตามชั้น
+    const st = nodeColor(node);
+    col[i * 3] = st[0] / 255;
+    col[i * 3 + 1] = st[1] / 255;
+    col[i * 3 + 2] = st[2] / 255;
+    size[i] = node.size * nodeSizeScale(node);
     phase[i] = node.phase;
     birth[i] = node.bornAt > 0 ? (node.bornAt - epochMs) / 1000 : -1000;
     id[i] = node.id;
@@ -488,11 +489,11 @@ function buildEdgeGeometry(model: CosmicNetworkModel, epochMs: number): THREE.Bu
     pos[i * 6 + 5] = c.position[2];
     t[i * 2] = 0;
     t[i * 2 + 1] = 1;
-    const st = levelStyle(c.level);
+    const st = nodeColor(c);
     for (let k = 0; k < 2; k++) {
-      col[i * 6 + k * 3] = st.color[0] / 255;
-      col[i * 6 + k * 3 + 1] = st.color[1] / 255;
-      col[i * 6 + k * 3 + 2] = st.color[2] / 255;
+      col[i * 6 + k * 3] = st[0] / 255;
+      col[i * 6 + k * 3 + 1] = st[1] / 255;
+      col[i * 6 + k * 3 + 2] = st[2] / 255;
       phase[i * 2 + k] = ((c.id * 37 + k * 11) % 1000) / 1000;
       birth[i * 2 + k] = c.bornAt > 0 ? (c.bornAt - epochMs) / 1000 : -1000;
       level[i * 2 + k] = c.level;
@@ -523,7 +524,7 @@ function buildFlowGeometry(model: CosmicNetworkModel): THREE.BufferGeometry {
   model.edges.forEach((edge) => {
     const p = model.nodes[edge.parentId];
     const c = model.nodes[edge.childId];
-    const st = levelStyle(c.level);
+    const st = nodeColor(c);
     for (let j = 0; j < per; j++) {
       pos[k * 3] = p.position[0];
       pos[k * 3 + 1] = p.position[1];
@@ -531,9 +532,9 @@ function buildFlowGeometry(model: CosmicNetworkModel): THREE.BufferGeometry {
       end[k * 3] = c.position[0];
       end[k * 3 + 1] = c.position[1];
       end[k * 3 + 2] = c.position[2];
-      col[k * 3] = st.color[0] / 255;
-      col[k * 3 + 1] = st.color[1] / 255;
-      col[k * 3 + 2] = st.color[2] / 255;
+      col[k * 3] = st[0] / 255;
+      col[k * 3 + 1] = st[1] / 255;
+      col[k * 3 + 2] = st[2] / 255;
       off[k] = (j / per + ((c.id * 53) % 97) / 97) % 1;
       spd[k] = 0.1 + ((c.id * 29) % 13) / 60;
       hi[k] = 0;
@@ -797,10 +798,10 @@ function NodeCores({ model, uTime }: { model: CosmicNetworkModel; uTime: THREE.I
     const colArr = new Float32Array(list.length * 3);
     const phArr = new Float32Array(list.length);
     list.forEach((n, i) => {
-      const st = levelStyle(n.level);
-      colArr[i * 3] = st.color[0] / 255;
-      colArr[i * 3 + 1] = st.color[1] / 255;
-      colArr[i * 3 + 2] = st.color[2] / 255;
+      const st = nodeColor(n);
+      colArr[i * 3] = st[0] / 255;
+      colArr[i * 3 + 1] = st[1] / 255;
+      colArr[i * 3 + 2] = st[2] / 255;
       phArr[i] = n.phase;
     });
     g.setAttribute('aColor', new THREE.InstancedBufferAttribute(colArr, 3));
@@ -1282,6 +1283,17 @@ function CameraRig({
 
   const spherical = (dist: number, phi = DEFAULT_PHI, theta = DEFAULT_THETA) => new THREE.Vector3().setFromSphericalCoords(dist, phi, theta);
 
+  /** ระยะกล้องเริ่มต้น/รีเซ็ต = พอดีกับขนาดเครือข่ายจริง (781 โหนด ≈ 71 → ใกล้ค่าเดิม 76) */
+  const fitDist = useMemo(() => {
+    let r = 0;
+    for (const n of model.nodes) {
+      const d = Math.hypot(n.position[0], n.position[1], n.position[2]);
+      if (d > r) r = d;
+    }
+    if (r <= 0.01) return DEFAULT_DIST; // มีโหนดเดียว/ว่าง → ใช้ระยะมาตรฐาน
+    return THREE.MathUtils.clamp(r * 2.1 + 10, 22, 420);
+  }, [model]);
+
   const startAnim = (to: THREE.Vector3, target: THREE.Vector3, dur: number) => {
     const c = controlsRef.current;
     anim.current = { from: camera.position.clone(), to, tFrom: c ? c.target.clone() : new THREE.Vector3(), tTo: target.clone(), t: 0, dur };
@@ -1291,7 +1303,7 @@ function CameraRig({
     camera.position.copy(spherical(280, 1.3, 0.95));
     lastInteract.current = performance.now();
     const t = window.setTimeout(() => {
-      startAnim(spherical(DEFAULT_DIST), new THREE.Vector3(0, 0, 0), 5.6);
+      startAnim(spherical(fitDist), new THREE.Vector3(0, 0, 0), 5.6);
       introDone.current = true;
     }, 300);
     return () => window.clearTimeout(t);
@@ -1302,7 +1314,7 @@ function CameraRig({
     implRef.current = {
       resetView: () => {
         lastInteract.current = performance.now();
-        startAnim(spherical(DEFAULT_DIST), new THREE.Vector3(0, 0, 0), 1.7);
+        startAnim(spherical(fitDist), new THREE.Vector3(0, 0, 0), 1.7);
       },
       focusRoot: () => {
         lastInteract.current = performance.now();

@@ -3,27 +3,17 @@
 /**
  * Net1x5Universe — “จักรวาลการสร้างเครือข่าย 1 แตก 5” (ข้อมูลจริงเท่านั้น)
  *
- * ● ทุกจุดสว่าง = สมาชิกจริงที่อยู่ในผัง 1:5 (TreeNode/TreePlacement) — ไม่มีข้อมูลจำลองในส่วนนี้
- * ● ตัวเลขทุกตัวอ่านจาก /api/net/1x5/state ซึ่งประเมินสดจากฐานข้อมูล · อัปเดตเองทุก 8 วินาที
- * ● ชื่อสมาชิกที่แสดงเป็นค่าที่เซิร์ฟเวอร์ส่งมา (ผู้ที่ไม่ใช่ผู้ดูแลจะถูกปกปิดชื่อแล้ว) — ไม่มีอีเมล/เบอร์โทร
+ * ● ใช้ฉากจักรวาล 3 มิติตัวเดียวกับหน้า /financial-freedom (คอมโพเนนต์ CosmicNetwork)
+ *   แต่ป้อน “สมาชิกจริงในผัง 1:5” จาก /api/net/1x5/state — ไม่มีข้อมูลจำลองในส่วนนี้
+ * ● ดาวทอง = ผ่านเงื่อนไขรอบนี้ · ดาวหม่น = ยังไม่ยืนยันผลงาน/ปิดจุดในผัง · สีตามชั้นคือความลึกจริงในสายงาน
+ * ● ตัวเลขทุกตัวประเมินสดจากฐานข้อมูล · อัปเดตเองทุก 8 วินาที (ปรับได้)
+ * ● ชื่อสมาชิกเป็นค่าที่เซิร์ฟเวอร์ส่งมา (ผู้ที่ไม่ใช่ผู้ดูแลจะถูกปกปิดชื่อแล้ว) — ไม่มีอีเมล/เบอร์โทร
  * ● คอมโพเนนต์นี้ “อ่านเท่านั้น” ไม่เรียกคำสั่งที่เขียนข้อมูล และไม่สั่งรันวงจรเอง
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import dynamic from 'next/dynamic';
-import type { UniverseNode } from './NetworkUniverse3D';
-
-const NetworkUniverse3D = dynamic(() => import('./NetworkUniverse3D'), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-full w-full items-center justify-center">
-      <div className="text-center">
-        <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-2 border-sky-400/30 border-t-sky-400" />
-        <p className="text-sm text-slate-400">กำลังประกอบจักรวาลเครือข่าย…</p>
-      </div>
-    </div>
-  ),
-});
+import CosmicNetwork, { Chip } from './CosmicNetwork';
+import { buildNetworkFromMembers, type CosmicNetworkModel, type RealMemberInput } from '@/lib/cosmicNetwork';
 
 const REFRESH_MS = 8000;
 
@@ -45,7 +35,9 @@ type Member = {
   inTree: boolean;
   nodeLevel?: number | null;
   level?: number;
+  slot?: number | null;
   parentUserId?: string | null;
+  joinDate?: string | null;
   positionName?: string;
   childrenCount?: number;
   emptySlots?: number[];
@@ -62,17 +54,14 @@ type State = {
   canAdmin: boolean;
   period: string;
   now: string;
-  deadline?: { label: string; daysLeft: number; passed: boolean };
   summary: any;
   tree: { perLevel: Level[]; branchLimit: number; roots: any[] };
   members: Member[];
   checks: Check[];
-  failed: any[];
-  vacancies: any[];
-  candidates: any[];
   steps?: any[];
-  logs: any[];
   lastRun: any | null;
+  logs: any[];
+  testAccounts?: number;
   disclaimer?: string;
   error?: string;
   message?: string;
@@ -113,10 +102,63 @@ function relTime(iso?: string | null) {
 
 function Tile({ label, value, sub, tone }: { label: string; value: any; sub?: string; tone?: string }) {
   return (
-    <div className={`rounded-2xl border p-3 ${tone || 'bg-white/5 border-white/10'}`}>
+    <div className={`rounded-2xl border px-3 py-2.5 backdrop-blur-sm ${tone || 'bg-white/5 border-sky-400/20'}`}>
       <div className="text-[11px] text-sky-200/70">{label}</div>
-      <div className="text-lg font-bold text-sky-50 leading-tight">{value}</div>
+      <div className="text-lg font-bold text-sky-50 leading-tight tabular-nums">{value}</div>
       {sub && <div className="text-[11px] text-sky-200/60 mt-0.5 leading-snug">{sub}</div>}
+    </div>
+  );
+}
+
+/** การ์ดรายละเอียดสมาชิกที่ถูกคลิก (ค่าจริงจาก /api/net/1x5/state) */
+function MemberPanel({ member, check, onClose }: { member: Member; check: Check | null; onClose: () => void }) {
+  return (
+    <div className="text-xs">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-[9px] font-semibold uppercase tracking-[0.2em] text-sky-300/80">Member</div>
+          <div className="font-mono text-sky-100 truncate">{member.code}</div>
+          <div className="text-sky-200/80 truncate">{member.name}</div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="ปิดรายละเอียดสมาชิก"
+          className="shrink-0 rounded-md border border-slate-600/40 px-1.5 py-0.5 text-[10px] text-slate-300 hover:text-white"
+        >
+          ✕
+        </button>
+      </div>
+      <div className="mt-2.5 grid grid-cols-2 gap-1.5">
+        <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1">
+          <div className="text-[10px] text-sky-200/60">ชั้นในผัง</div>
+          <div className="font-semibold tabular-nums">{th(member.nodeLevel ?? member.level)}</div>
+        </div>
+        <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1">
+          <div className="text-[10px] text-sky-200/60">ตำแหน่ง</div>
+          <div className="font-semibold truncate">{member.positionName || '—'}</div>
+        </div>
+        <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1">
+          <div className="text-[10px] text-sky-200/60">สายตรง</div>
+          <div className="font-semibold tabular-nums">{th(member.childrenCount)} / 5</div>
+        </div>
+        <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1">
+          <div className="text-[10px] text-sky-200/60">ยอดรับรองรอบนี้</div>
+          <div className="font-semibold tabular-nums">฿{th(member.verifiedAmount)}</div>
+        </div>
+      </div>
+      <div className={check?.pass ? 'mt-2 text-emerald-300' : 'mt-2 text-amber-300'}>
+        {check
+          ? check.pass
+            ? '✅ ผ่านเงื่อนไขรอบนี้ (พร้อมขึ้นตำแหน่ง)'
+            : `⚠️ ยังไม่ผ่าน: ${(check.reasons || []).join(' · ')}`
+          : 'ยังไม่ถูกประเมินในรอบนี้'}
+      </div>
+      {check?.pendingReview && <div className="text-sky-300">🕒 มีใบเสร็จรอตรวจ — ยังไม่ถูกนำออกจากตำแหน่งระหว่างรอผล</div>}
+      <div className="mt-1 text-sky-200/70">
+        สถานะบัญชี: {member.status === 'ACTIVE' && member.isActive ? 'ใช้งานอยู่' : `${member.status}${member.isActive ? '' : ' · ปิดจุดในผัง'}`}
+      </div>
+      <div className="text-sky-200/60">เข้าร่วมเมื่อ {relTime(member.joinDate)}</div>
     </div>
   );
 }
@@ -173,24 +215,29 @@ export default function Net1x5Universe() {
 
   const inTree = useMemo(() => members.filter((m) => m.inTree), [members]);
 
-  const nodes = useMemo<UniverseNode[]>(() => {
+  /** สมาชิกในผัง → ข้อมูลที่ฉากจักรวาลใช้ (เฉพาะค่าที่เซิร์ฟเวอร์ปกปิดชื่อแล้ว) */
+  const realMembers = useMemo<RealMemberInput[]>(() => {
     const codeByUser = new Map<string, string>();
     for (const m of members) codeByUser.set(String(m.userId), m.code);
     return inTree.map((m) => {
       const c = checkByUser.get(String(m.userId));
       return {
         code: m.code,
-        level: Number(m.nodeLevel ?? m.level ?? 0),
+        name: m.name,
         parentCode: m.parentUserId ? codeByUser.get(String(m.parentUserId)) ?? null : null,
-        status: String(m.status || ''),
+        slot: m.slot ?? null,
         qualified: !!c?.pass,
         paymentVerified: Number(m.receiptCount || 0) > 0 || Number(m.verifiedAmount || 0) > 0,
-        promotionStatus: String(m.positionName || ''),
-        childrenCount: m.childrenCount,
-        simulation: false,
-      } as UniverseNode;
+        active: !!m.isActive,
+        joinedAt: m.joinDate ? Date.parse(m.joinDate) : null,
+      };
     });
   }, [inTree, members, checkByUser]);
+
+  const model = useMemo<CosmicNetworkModel>(
+    () => buildNetworkFromMembers(realMembers, { rootName: 'AI INSURANCE NETWORK' }),
+    [realMembers],
+  );
 
   const deepest = perLevel.length ? perLevel[perLevel.length - 1] : null;
   const deepPct = deepest ? Math.min(100, Math.round((deepest.count / Math.max(1, deepest.capacity)) * 100)) : 0;
@@ -198,6 +245,7 @@ export default function Net1x5Universe() {
   const openSlots = inTree.reduce((a, m) => a + (m.emptySlots?.length || 0), 0);
   const selectedMember = selected ? members.find((m) => m.code === selected) || null : null;
   const selectedCheck = selectedMember ? checkByUser.get(String(selectedMember.userId)) || null : null;
+  const realRoot = inTree.find((m) => !m.parentUserId) || null;
 
   return (
     <section className="min-h-screen bg-[#020617] text-sky-50">
@@ -209,9 +257,12 @@ export default function Net1x5Universe() {
             <div className="text-[11px] font-semibold tracking-wide text-sky-300/80">NETWORK UNIVERSE 1×5 · ข้อมูลจริงในฐานข้อมูล</div>
             <h2 className="text-xl sm:text-2xl font-bold leading-tight">🪐 จักรวาลการสร้างเครือข่าย — สถานะการขยายสายงานแบบเห็นทันที</h2>
             <p className="text-xs text-sky-200/70 mt-1 max-w-3xl leading-relaxed">
-              ดาวทุกดวงคือสมาชิกจริงที่อยู่ในผัง 1:5 · ดาวดวงใหม่จะบินออกจากผู้แนะนำทันทีที่ถูกจัดเข้าผัง ·
-              แหวนทองรอบดาวคือสมาชิกที่ผ่านเงื่อนไขของรอบนี้ · ดาวหม่นคือยังไม่มีการยืนยันผลงานในรอบ ·
-              ตัวเลขทั้งหมดประเมินสดจากฐานข้อมูลและอัปเดตเองทุก 8 วินาที (ส่วนนี้เป็นมุมมองอ่านเท่านั้น ไม่แก้ข้อมูล)
+              ทุกทรงกลมพลังงานคือสมาชิกจริงที่อยู่ในผัง 1:5 · เส้นแสงคือสายผู้แนะนำ → สมาชิกใหม่ ·
+              <span className="text-amber-200"> ทรงกลมทอง</span> = ผ่านเงื่อนไขรอบนี้ ·
+              <span className="text-slate-400"> ทรงกลมหม่น</span> = ยังไม่ยืนยันผลงานหรือปิดจุดในผัง ·
+              สีของทรงกลมเรียงตามชั้นจริงในสายงาน (ชั้นต้น → ชั้นลึก) — ลากเพื่อหมุน ซูมเข้า-ออก คลิกสมาชิกเพื่อดูข้อมูล
+              และกด ⛶ ขยายเต็มจอ (Esc เพื่อย่อกลับ) · ตัวเลขทั้งหมดประเมินสดจากฐานข้อมูลและอัปเดตเองทุก 8 วินาที
+              (ส่วนนี้เป็นมุมมองอ่านเท่านั้น ไม่แก้ข้อมูล)
             </p>
           </div>
           <label className="flex items-center gap-1.5 text-xs text-sky-200/80 shrink-0">
@@ -236,7 +287,7 @@ export default function Net1x5Universe() {
           />
           <Tile
             label="ช่อง 1:5 ที่ยังว่าง"
-            value={th(summary.emptySlots)}
+            value={th(summary.emptySlots ?? openSlots)}
             sub={`ตำแหน่งว่างที่ต้องเติม ${th(summary.vacancies)} ตำแหน่ง`}
             tone="bg-indigo-500/10 border-indigo-400/30"
           />
@@ -261,11 +312,38 @@ export default function Net1x5Universe() {
 
         {/* ── จักรวาล + แผงสถานะ ── */}
         <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-3">
-          <div className="lg:col-span-2 rounded-2xl border border-sky-400/20 bg-[#020617] overflow-hidden relative h-[420px] sm:h-[560px]">
-            {nodes.length ? (
-              <NetworkUniverse3D nodes={nodes} selected={selected} onSelect={(c) => setSelected(c)} simulation={false} maxNodes={3000} />
+          <div className="lg:col-span-2">
+            {inTree.length ? (
+              <CosmicNetwork
+                model={model}
+                heightClass="h-[68vh] min-h-[440px]"
+                rootLabel={realRoot ? `${realRoot.name} · ${realRoot.code}` : 'AI INSURANCE NETWORK'}
+                nodeLabel={(n) => `${n.name} · ${n.code}`}
+                onSelectCode={(code) => setSelected(code)}
+                badge={{
+                  label: `LIVE · ข้อมูลจริง ${th(inTree.length)} คนในผัง`,
+                  sub: state?.now ? `ประเมินล่าสุด ${new Date(state.now).toLocaleString('th-TH', { hour12: false })}` : undefined,
+                }}
+                chips={
+                  <>
+                    <Chip label="Members In Tree" value={th(inTree.length)} sub={`${model.byLevel.length} ชั้นในสายงาน`} />
+                    <Chip label="Sponsor Links" value={th(model.edges.length)} sub="เส้นพลังงานผู้แนะนำ" />
+                    <Chip label="Network Depth" value={`${model.depth + 1} ชั้น`} sub={`ลึกสุด ${model.depth} ต่อ`} tone="violet" />
+                    <Chip label="ผ่านเงื่อนไข" value={th(summary.passed)} sub="ทรงกลมทอง" tone="gold" />
+                    <Chip label="ช่องว่าง 1:5" value={th(summary.emptySlots ?? openSlots)} sub="ยังไม่มีสมาชิก" tone="emerald" />
+                    {Number(state?.testAccounts || 0) > 0 ? (
+                      <Chip label="Test Accounts" value={th(state?.testAccounts)} sub="บัญชีทดสอบในฐานข้อมูล" />
+                    ) : null}
+                  </>
+                }
+                panel={
+                  selectedMember ? (
+                    <MemberPanel member={selectedMember} check={selectedCheck} onClose={() => setSelected(null)} />
+                  ) : undefined
+                }
+              />
             ) : (
-              <div className="flex h-full w-full items-center justify-center px-6 text-center">
+              <div className="relative flex h-[68vh] min-h-[440px] w-full items-center justify-center overflow-hidden rounded-3xl border border-sky-500/20 bg-slate-950 px-6 text-center">
                 <div>
                   <div className="text-4xl mb-2">🌌</div>
                   <div className="text-sm font-semibold text-sky-100">จักรวาลยังว่าง — ยังไม่มีสมาชิกในผัง 1:5</div>
@@ -275,58 +353,14 @@ export default function Net1x5Universe() {
                 </div>
               </div>
             )}
-
-            {/* คำอธิบายสัญลักษณ์ */}
-            <div className="pointer-events-none absolute bottom-3 left-3 max-w-[280px] rounded-lg border border-sky-400/25 bg-slate-950/75 px-3 py-2 text-[11px] leading-relaxed text-sky-100 backdrop-blur">
-              <div className="font-semibold text-sky-200 mb-1">อ่านจักรวาล</div>
-              <div className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full bg-sky-400" /> ชั้นตื้น (ใกล้ผู้เริ่มต้น)</div>
-              <div className="flex items-center gap-1.5 mt-0.5"><span className="inline-block h-2.5 w-2.5 rounded-full bg-pink-400" /> ชั้นกลาง</div>
-              <div className="flex items-center gap-1.5 mt-0.5"><span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-400" /> ชั้นลึกสุดที่กำลังขยาย</div>
-              <div className="flex items-center gap-1.5 mt-0.5"><span className="inline-block h-2.5 w-2.5 rounded-full border border-amber-200 bg-amber-200/30" /> ผ่านเงื่อนไข (แหวนทอง)</div>
-              <div className="flex items-center gap-1.5 mt-0.5"><span className="inline-block h-2.5 w-2.5 rounded-full bg-slate-500" /> ยังไม่ยืนยันผลงานรอบนี้</div>
-            </div>
           </div>
 
           <div className="space-y-3">
-            {/* รายละเอียดดาวที่เลือก */}
+            {/* รายละเอียดดาวที่เลือก (แสดงคู่กับฉาก เพื่ออ่านบนจอเล็ก) */}
             <div className="rounded-2xl border border-sky-400/20 bg-white/5 p-3">
               <div className="text-sm font-semibold text-sky-100 mb-2">ดาวที่เลือก</div>
               {!selectedMember && <div className="text-xs text-sky-200/60">คลิกที่ดาวดวงใดก็ได้ในจักรวาล เพื่อดูสถานะจริงของสมาชิกคนนั้น</div>}
-              {selectedMember && (
-                <div className="text-xs space-y-1.5">
-                  <div className="font-mono text-sky-100">{selectedMember.code}</div>
-                  <div className="text-sky-200/80">{selectedMember.name}</div>
-                  <div className="grid grid-cols-2 gap-1.5 pt-1">
-                    <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1">
-                      <div className="text-[10px] text-sky-200/60">ชั้นในผัง</div>
-                      <div className="font-semibold">{th(selectedMember.nodeLevel ?? selectedMember.level)}</div>
-                    </div>
-                    <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1">
-                      <div className="text-[10px] text-sky-200/60">ตำแหน่ง</div>
-                      <div className="font-semibold">{selectedMember.positionName || '—'}</div>
-                    </div>
-                    <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1">
-                      <div className="text-[10px] text-sky-200/60">สายตรง</div>
-                      <div className="font-semibold">{th(selectedMember.childrenCount)} / 5</div>
-                    </div>
-                    <div className="rounded-lg border border-white/10 bg-white/5 px-2 py-1">
-                      <div className="text-[10px] text-sky-200/60">ยอดรับรองรอบนี้</div>
-                      <div className="font-semibold">฿{th(selectedMember.verifiedAmount)}</div>
-                    </div>
-                  </div>
-                  <div className={selectedCheck?.pass ? 'text-emerald-300' : 'text-amber-300'}>
-                    {selectedCheck
-                      ? selectedCheck.pass
-                        ? '✅ ผ่านเงื่อนไขรอบนี้ (พร้อมขึ้นตำแหน่ง)'
-                        : `⚠️ ยังไม่ผ่าน: ${(selectedCheck.reasons || []).join(' · ')}`
-                      : 'ยังไม่ถูกประเมินในรอบนี้'}
-                  </div>
-                  {selectedCheck?.pendingReview && <div className="text-sky-300">🕒 มีใบเสร็จรอตรวจ — ยังไม่ถูกนำออกจากตำแหน่งระหว่างรอผล</div>}
-                  <div className="text-sky-200/70">
-                    สถานะบัญชี: {selectedMember.status === 'ACTIVE' && selectedMember.isActive ? 'ใช้งานอยู่' : `${selectedMember.status}${selectedMember.isActive ? '' : ' · ปิดจุดในผัง'}`}
-                  </div>
-                </div>
-              )}
+              {selectedMember && <MemberPanel member={selectedMember} check={selectedCheck} onClose={() => setSelected(null)} />}
             </div>
 
             {/* ขั้นตอนการสร้างเครือข่าย */}

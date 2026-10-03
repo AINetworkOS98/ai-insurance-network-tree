@@ -43,7 +43,15 @@ export type CosmicNode = {
   joinedAt: number;
   /** 0 = มีอยู่ตั้งแต่ฉากเริ่มต้น · > 0 = เพิ่มเข้ามาใหม่ (epoch ms) */
   bornAt: number;
+  /**
+   * ไฮไลต์สถานะ (ใช้เฉพาะโหมดข้อมูลจริง) — undefined = ใช้สีตามชั้นปกติ
+   * ● 'gold' = ผ่านเงื่อนไขรอบนี้ · 'dim' = ยังไม่ยืนยันผลงาน/ปิดจุดในผัง
+   */
+  accent?: NodeAccent;
 };
+
+/** ไฮไลต์สถานะจริงของโหนด (โหมดข้อมูลจริงเท่านั้น) */
+export type NodeAccent = 'gold' | 'dim';
 
 export type CosmicEdge = {
   id: number;
@@ -79,6 +87,29 @@ export const LEVEL_STYLE: LevelStyle[] = [
 
 export function levelStyle(level: number): LevelStyle {
   return LEVEL_STYLE[Math.min(level, LEVEL_STYLE.length - 1)];
+}
+
+/** สีทองของโหนดที่ผ่านเงื่อนไข (แหวนทอง) */
+export const GOLD_COLOR: Vec3 = [255, 214, 130];
+/** ตัวคูณความสว่างของโหนดที่ยังไม่ยืนยันผลงาน */
+const DIM_FACTOR = 0.34;
+
+/**
+ * สีของโหนด — ปกติใช้สีตามชั้น แต่ถ้าเป็นโหมดข้อมูลจริงจะไฮไลต์:
+ * ทอง = ผ่านเงื่อนไขรอบนี้ · หม่น = ยังไม่ยืนยันผลงาน/ปิดจุดในผัง
+ */
+export function nodeColor(node: CosmicNode): Vec3 {
+  const base = levelStyle(node.level).color;
+  if (node.accent === 'gold') return GOLD_COLOR;
+  if (node.accent === 'dim') return [base[0] * DIM_FACTOR, base[1] * DIM_FACTOR, base[2] * DIM_FACTOR];
+  return base;
+}
+
+/** ขนาดทรงกลมของโหนด — โหนดทองใหญ่ขึ้นเล็กน้อย โหนดหม่นเล็กลง */
+export function nodeSizeScale(node: CosmicNode): number {
+  if (node.accent === 'gold') return 1.35;
+  if (node.accent === 'dim') return 0.82;
+  return 1;
 }
 
 /** จำนวนโหนดสูงสุดที่สร้าง/แสดง (เกินกว่านี้ตัดเพื่อประสิทธิภาพ) */
@@ -309,6 +340,182 @@ export function addChildNode(model: CosmicNetworkModel, parentId: number, nowMs:
   const next: CosmicNetworkModel = { ...model, nodes, edges, edgeOfChild };
   refreshMeta(next);
   return { model: next, nodeId: id };
+}
+
+/**
+ * ── โหมดข้อมูลจริง ──────────────────────────────────────────────────────────────
+ * สร้างโมเดลจักรวาลจาก **สมาชิกจริงในผัง 1:5** (โค้ด/ชื่อผู้แนะนำ/ชั้น/สถานะ)
+ * ● ตำแหน่งคำนวณแบบ deterministic จากลำดับช่อง (slot) → ไม่กระโดดเมื่อรีเฟรช
+ * ● ชั้นของโหนดในฉาก = ความลึกจริงในผัง (0 = ราก) เพื่อให้สีเรียงตามสายงานถูกต้อง
+ * ● ชื่อ/รหัสที่ส่งเข้ามาต้องเป็นค่าที่เซิร์ฟเวอร์ปกปิดแล้ว (ห้ามส่งอีเมล/เบอร์/ชื่อเต็ม)
+ */
+export type RealMemberInput = {
+  code: string;
+  name?: string;
+  /** รหัสผู้แนะนำ (null = อยู่บนสุดของผัง) */
+  parentCode?: string | null;
+  /** ช่องที่ 1-5 ในสายของผู้แนะนำ (ใช้เรียงตำแหน่งให้ตรงผังจริง) */
+  slot?: number | null;
+  /** ผ่านเงื่อนไขรอบนี้ → ไฮไลต์ทอง */
+  qualified?: boolean;
+  /** มียอดรับรอง/ใบเสร็จยืนยัน → ไม่นับเป็น "ยังไม่ยืนยันผลงาน" */
+  paymentVerified?: boolean;
+  /** สถานะบัญชี/จุดในผัง (false = ปิดจุด → หม่น) */
+  active?: boolean;
+  joinedAt?: number | null;
+};
+
+export function buildNetworkFromMembers(
+  list: RealMemberInput[],
+  opts: { maxNodes?: number; rootName?: string; seed?: number } = {},
+): CosmicNetworkModel {
+  const maxNodes = Math.max(1, Math.floor(opts.maxNodes ?? MAX_NODES));
+  const rng = mulberry32(opts.seed ?? 515151);
+  const clean = (list || []).filter((m) => m && m.code);
+  const byCode = new Map<string, RealMemberInput>();
+  for (const m of clean) byCode.set(String(m.code).toUpperCase(), m);
+
+  const parentKeyOf = (m: RealMemberInput): string | null => {
+    const pc = m.parentCode ? String(m.parentCode).toUpperCase() : '';
+    if (!pc || pc === String(m.code).toUpperCase() || !byCode.has(pc)) return null;
+    return pc;
+  };
+
+  const childrenOf = new Map<string, RealMemberInput[]>();
+  const top: RealMemberInput[] = [];
+  for (const m of clean) {
+    const pk = parentKeyOf(m);
+    if (!pk) {
+      top.push(m);
+      continue;
+    }
+    const arr = childrenOf.get(pk) ?? [];
+    arr.push(m);
+    childrenOf.set(pk, arr);
+  }
+  const bySlot = (a: RealMemberInput, b: RealMemberInput) =>
+    Number(a.slot ?? 99) - Number(b.slot ?? 99) || String(a.code).localeCompare(String(b.code));
+  for (const [k, arr] of childrenOf) childrenOf.set(k, arr.slice().sort(bySlot));
+  top.sort(bySlot);
+
+  const accentOf = (m: RealMemberInput): NodeAccent | undefined =>
+    m.qualified ? 'gold' : m.active === false || m.paymentVerified === false ? 'dim' : undefined;
+
+  const nodes: CosmicNode[] = [];
+  const edges: CosmicEdge[] = [];
+  const edgeOfChild: number[] = [];
+  const seen = new Set<string>();
+  let truncated = false;
+
+  // ราก: ถ้ามีผู้แนะนำบนสุดเพียงคนเดียว → ใช้สมาชิกคนนั้นเป็นรากจริง
+  // ถ้ามีหลายคน/ไม่มีเลย → สร้างรากเสมือนเพื่อให้เห็นภาพรวมทั้งเครือข่าย
+  const useVirtualRoot = top.length !== 1;
+  const only = useVirtualRoot ? null : top[0];
+  const rootStyle = levelStyle(0);
+  nodes.push({
+    id: 0,
+    code: only ? String(only.code) : 'ROOT',
+    name: only ? String(only.name || only.code) : opts.rootName ?? 'AI INSURANCE NETWORK',
+    level: 0,
+    parentId: null,
+    childIds: [],
+    childCount: 0,
+    subtreeSize: 1,
+    depthBelow: 0,
+    position: [0, 0, 0],
+    dir: [0, 1, 0],
+    size: rootStyle.size,
+    phase: 0,
+    joinedAt: only ? Number(only.joinedAt || 0) : 0,
+    bornAt: 0,
+    accent: only ? accentOf(only) : undefined,
+  });
+  edgeOfChild.push(-1);
+  if (only) seen.add(String(only.code).toUpperCase());
+
+  const attach = (m: RealMemberInput, parentId: number, idx: number, total: number): CosmicNode | null => {
+    if (nodes.length >= maxNodes) {
+      truncated = true;
+      return null;
+    }
+    const parent = nodes[parentId];
+    const level = parent.level + 1;
+    const style = levelStyle(level);
+    const dir = childDirection(parent.dir, parent.parentId === null, parent.level, idx, Math.max(1, total), nodes.length);
+    const len = style.edge * (0.9 + rng() * 0.2);
+    const node: CosmicNode = {
+      id: nodes.length,
+      code: String(m.code),
+      name: String(m.name || m.code),
+      level,
+      parentId,
+      childIds: [],
+      childCount: 0,
+      subtreeSize: 1,
+      depthBelow: 0,
+      position: [
+        parent.position[0] + dir[0] * len,
+        parent.position[1] + dir[1] * len,
+        parent.position[2] + dir[2] * len,
+      ],
+      dir,
+      size: style.size,
+      phase: rng() * Math.PI * 2,
+      joinedAt: Number(m.joinedAt || 0),
+      bornAt: 0,
+      accent: accentOf(m),
+    };
+    nodes.push(node);
+    parent.childIds.push(node.id);
+    parent.childCount = parent.childIds.length;
+    const eid = edges.length;
+    edges.push({ id: eid, parentId, childId: node.id });
+    edgeOfChild.push(eid);
+    seen.add(String(m.code).toUpperCase());
+    return node;
+  };
+
+  const queue: number[] = [];
+  top.forEach((m, i) => {
+    const n = attach(m, 0, i, top.length);
+    if (n) queue.push(n.id);
+  });
+
+  for (let head = 0; head < queue.length; head++) {
+    const parentId = queue[head];
+    const parent = nodes[parentId];
+    if (parent.level >= 64) continue;
+    const kids = childrenOf.get(parent.code.toUpperCase()) ?? [];
+    kids.forEach((m, i) => {
+      if (seen.has(String(m.code).toUpperCase())) return; // กันวงจร/ซ้ำ
+      const n = attach(m, parentId, i, kids.length);
+      if (n) queue.push(n.id);
+    });
+    if (truncated) break;
+  }
+
+  // กันข้อมูลที่วนกลับมาถึงรากไม่ได้ (ไม่ควรเกิด แต่ต้องไม่ทำให้สมาชิกหายจากฉาก)
+  const leftovers = clean.filter((m) => !seen.has(String(m.code).toUpperCase()));
+  if (leftovers.length) {
+    leftovers.forEach((m, i) => {
+      attach(m, 0, top.length + i, top.length + leftovers.length);
+    });
+  }
+
+  recomputeTotals(nodes);
+  const model: CosmicNetworkModel = {
+    nodes,
+    edges,
+    edgeOfChild,
+    rootId: 0,
+    byLevel: [],
+    total: nodes.length,
+    depth: 0,
+    truncated,
+    branchFactor: BRANCH_FACTOR,
+  };
+  refreshMeta(model);
+  return model;
 }
 
 /** รหัสโหนดจากรากลงมาถึงโหนดนี้ (รวมโหนดปลายทาง) */
