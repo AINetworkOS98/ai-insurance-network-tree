@@ -11,6 +11,7 @@
 // การเปลี่ยนสถานะใน Postgres ต้องยังสำเร็จ — ห้ามให้ทั้ง endpoint เป็น 500
 
 import { prisma } from '@/lib/prisma';
+import { isAdminEmail, isSystemAdmin } from '@/lib/admin';
 
 export type MemberAction = 'approve' | 'reject' | 'delete' | 'restore' | 'autoRenew' | 'autoRenewGlobal' | 'previewRenewal' | 'runRenewal';
 
@@ -226,6 +227,24 @@ export async function applyMemberAction(input: ActionInput): Promise<ActionResul
   // ── สมาชิกในทะเบียนจริงเท่านั้นที่เปลี่ยนสถานะได้ ────────────────
   if (!user && action !== 'autoRenew') {
     return { ok: false, error: 'ไม่พบสมาชิกคนนี้ในทะเบียนจริง (Postgres) — จัดการได้เฉพาะสมาชิกที่มีบัญชีในระบบ' };
+  }
+
+  // ── กันการล็อกตัวเองออกจากระบบ (เคสจริง: ลบทั้งเครือข่ายรวมบัญชีผู้ดูแลตัวเอง) ──
+  // บัญชีผู้ดูแล/ผู้มีสิทธิ์ system.manage และสมาชิกที่ใช้งานได้คนสุดท้าย ลบหรือระงับไม่ได้
+  if (user && (action === 'delete' || action === 'reject')) {
+    if (isAdminEmail(user.email)) {
+      return { ok: false, error: 'บัญชีผู้ดูแลระบบลบ/ระงับไม่ได้ — กันการล็อกตัวเองออกจากระบบ' };
+    }
+    const adm = await isSystemAdmin(id).catch(() => ({ ok: false }));
+    if (adm.ok) {
+      return { ok: false, error: 'บัญชีนี้มีสิทธิ์ผู้ดูแลระบบ (super_admin/admin) — ลบ/ระงับไม่ได้' };
+    }
+    if (String(user.status) === 'ACTIVE') {
+      const activeCount = await prisma.user.count({ where: { status: 'ACTIVE' } }).catch(() => 0);
+      if (activeCount <= 1) {
+        return { ok: false, error: 'เหลือสมาชิกที่ใช้งานได้คนสุดท้าย — ลบไม่ได้ (ระบบจะไม่เหลือคนเข้าใช้งาน)' };
+      }
+    }
   }
 
   const nowIso = new Date().toISOString();

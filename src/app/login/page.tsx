@@ -38,7 +38,7 @@ function LoginInner(){
 
   useEffect(()=>{
     if(errorParam==='suspended'){
-      setMsg('บัญชีถูกระงับสิทธิ กรุณาติดต่อผู้ดูแลระบบ');
+      setMsg('บัญชีนี้ถูกลบออกจากระบบ (soft delete) หรือถูกระงับสิทธิ จึงเข้าสู่ระบบใหม่ไม่ได้ — แถวข้อมูลยังอยู่ กด "คืนค่า" ได้ที่หน้า /admin → แท็บ "ลบออกแล้ว" (จากเซสชันผู้ดูแลที่ยังล็อกอินอยู่) หรือติดต่อผู้ดูแลระบบ');
       setMsgType('err');
     } else if(errorParam){
       const m = String(errorParam);
