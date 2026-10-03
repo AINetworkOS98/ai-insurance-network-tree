@@ -35,8 +35,10 @@ const TOOL_MAP: Record<string, string[]> = {
 
 export function detectIntent(q: string): Intent {
   const s = q.toLowerCase();
+  // "1 แตก 5" / "1x5" = ผังเครือข่าย (ไม่ใช่การคูณ) — ต้องเช็คก่อนด่านคำนวณ
+  if (/1\s*(?:x|×|แตก)\s*5/.test(s)) return 'SEARCH_NETWORK';
   // math expression like 1234*56, 2+2, 100/5 — catch before other intents
-  if (/\d+\s*[\+\-\*\/\%x×÷]\s*\d+/.test(q) || /\d+\s*[\+\-\*\/]/.test(q)) return 'CALCULATE';
+  if (/\d+\s*[\+\-\*\/\%×÷]\s*\d+/.test(q) || /\d+\s*[\+\-\*\/]/.test(q)) return 'CALCULATE';
   if (/(คำนวณ|คิดเลข|คิดคำนวณ|ยอดรวม|รวม.*บาท|sum|total|เฉลี่ย|หัก|บวก|ลบ|คูณ|หาร|\b\d+\s*[\+\-\*\/]\s*\d+)/.test(s)) return 'CALCULATE';
   if (/(เปรียบเทียบ|compare|เทียบ|ต่างกัน)/.test(s)) return 'COMPARE';
   if (/(สรุป|summarize|ย่อ|สรุปให้)/.test(s)) return 'SUMMARIZE';
@@ -102,7 +104,7 @@ export async function orchestrate(params: {
         ? `Context Dataset: type=${params.datasetType} rows=${params.datasetRows}\nPreview (chunked):\n${chunkData(params.datasetRaw, 2500)[0]?.slice(0,2500)}`
         : 'ไม่มี dataset แนบมา';
       const userContent = `ถาม: ${params.query || '(ให้วิเคราะห์ข้อมูลที่วาง)'}\n${contextInfo}\nตอบไทย กระชับ มีประโยชน์`;
-            const answer = await provider.chat([{ role: 'user', content: userContent }], { temperature: 0.4, maxTokens: params.mode === 'DEEP' ? 400 : 200 });
+            const answer = await provider.chat([{ role: 'user', content: userContent }], { temperature: 0.4, maxTokens: params.mode === 'DEEP' ? 2000 : 900 });
       return { intent, tools, via: 'hermes', answer };
     } catch (e: any) {
       // fallback แบบไม่เปิดเผย error ของ provider

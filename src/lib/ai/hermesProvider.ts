@@ -9,6 +9,18 @@ function getEnv(key: string): string | undefined {
   return process.env[key];
 }
 
+// โมเดล Gemini ที่ใช้จริง — รุ่น lite ให้คำตอบครบถ้วนและเร็ว
+// (gemini-3.6-flash ขึ้นไปเป็น "thinking model" — กิน token ประมาณการจนคำตอบถูกตัดกลางคำ)
+const GEMINI_DEFAULT_MODEL = 'gemini-3.5-flash-lite';
+// รุ่นที่เป็น thinking model — ต้องปิด reasoning ไม่เช่นนั้น token หมดไปกับการคิดแล้วคำตอบขาด
+const isThinkingModel = (m: string) => /gemini-3\.(6|7|8|9)|thinking|2\.5-pro|-pro\b/i.test(m);
+
+/** ปิด reasoning สำหรับ thinking model (Gemini OpenAI-compat) เพื่อไม่ให้คำตอบถูกตัด */
+function applyReasoningGuard(payload: any, provider: string, model: string) {
+  if (provider === 'gemini' && isThinkingModel(model)) payload.reasoning_effort = 'none';
+  return payload;
+}
+
 function resolveConfig() {
   const rawProvider = (getEnv('AI_PROVIDER') || getEnv('HERMES_PROVIDER') || (getEnv('DEEPSEEK_API_KEY') ? 'deepseek' : getEnv('GEMINI_API_KEY') ? 'gemini' : '')).toLowerCase();
   const modelEnv = getEnv('HERMES_MODEL') || getEnv('AI_MODEL') || getEnv('DEEPSEEK_MODEL') || '';
@@ -26,9 +38,9 @@ function resolveConfig() {
 
   const baseUrl = getEnv('HERMES_BASE_URL') || getEnv('AI_BASE_URL') || (provider === 'deepseek' ? getEnv('DEEPSEEK_BASE_URL') : undefined) || (provider === 'gemini' ? 'https://generativelanguage.googleapis.com/v1beta/openai' : undefined);
   let model = modelEnv;
-  if (!model) model = provider === 'gemini' ? 'gemini-3.6-flash' : provider === 'deepseek' ? 'deepseek-chat' : 'muse-spark-1.2-contributor-free';
+  if (!model) model = provider === 'gemini' ? GEMINI_DEFAULT_MODEL : provider === 'deepseek' ? 'deepseek-chat' : 'muse-spark-1.2-contributor-free';
   // ถ้า provider เป็น gemini แต่ model ยังเป็น muse-spark ให้แก้เป็น gemini
-  if (provider === 'gemini' && /muse-spark/i.test(model)) model = 'gemini-3.6-flash';
+  if (provider === 'gemini' && /muse-spark/i.test(model)) model = GEMINI_DEFAULT_MODEL;
   return { apiKey, baseUrl, provider, model };
 }
 
@@ -150,12 +162,12 @@ export class HermesProvider implements AIProvider {
           ? 'https://api.deepseek.com/chat/completions'
           : 'https://api.openai.com/v1/chat/completions';
 
-    const payload = {
+    const payload: any = applyReasoningGuard({
       model,
       messages: [{ role: 'system' as const, content: HERMES_SYSTEM_PROMPT }, ...messages],
       temperature: opts?.temperature ?? 0.4,
       max_tokens: opts?.maxTokens ?? 1200,
-    };
+    }, this.provider, model);
 
     const res = await fetch(url, {
       method: 'POST',
@@ -243,7 +255,7 @@ export class HermesProvider implements AIProvider {
     // Providers ปกติ — OpenAI / DeepSeek / Gemini streaming
     if(!this.isConfigured()) throw new Error('AI provider not configured');
     const url = this.baseUrl ? `${this.baseUrl.replace(/\/+$/,'')}/chat/completions` : this.provider==='gemini' ? 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions' : this.provider==='deepseek' ? 'https://api.deepseek.com/chat/completions' : 'https://api.openai.com/v1/chat/completions';
-    const payload:any = { model, messages:[{role:'system',content:HERMES_SYSTEM_PROMPT},...messages], temperature: opts?.temperature??0.4, max_tokens: opts?.maxTokens??1200, stream:true };
+    const payload:any = applyReasoningGuard({ model, messages:[{role:'system',content:HERMES_SYSTEM_PROMPT},...messages], temperature: opts?.temperature??0.4, max_tokens: opts?.maxTokens??1200, stream:true }, this.provider, model);
     const res = await fetch(url, { method:'POST', headers:{ 'Content-Type':'application/json','Accept':'text/event-stream','Authorization':`Bearer ${this.apiKey}` }, body: JSON.stringify(payload) });
     if(!res.ok || !res.body) throw new Error(`AI stream ${res.status}`);
     const reader=res.body.getReader(); const dec=new TextDecoder(); let buf='';

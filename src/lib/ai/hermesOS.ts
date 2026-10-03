@@ -111,7 +111,7 @@ export async function hermesExecute(params:{
         } else {
           userContent = `ถาม: ${params.query}\nตอบไทย กระชับ`;
         }
-        const answer = await provider.chat([{ role:"user", content: userContent }], { temperature: 0.4, maxTokens: params.mode==="DEEP"?400:200 });
+        const answer = await provider.chat([{ role:"user", content: userContent }], { temperature: 0.4, maxTokens: params.mode==="DEEP"?2000:900 });
       llmCache.set(cacheKey, answer);
       if (llmCache.size > 200){ const k = llmCache.keys().next().value; if(k) llmCache.delete(k); }
       params.onStep?.({ step:"llm", label:"สังเคราะห์คำตอบ", detail:"เสร็จ", status:"done" });
@@ -146,7 +146,7 @@ function tryDirectAnswer(q: string, intent: string, toolResults: any[], skills: 
   if (hits?.length) return `พบ ${hits.length} รายการ:\n${hits.slice(0,5).map((h:any)=> `• ${h.type}: ${h.firstName ?? h.name ?? h.email ?? h.memberCode ?? JSON.stringify(h).slice(0,60)}`).join("\n")}`;
   // ทักทายสั้น — ตอบทันทีไม่เรียก LLM
   const ql = q.toLowerCase().trim();
-  if (/^(สวัสดี|หวัดดี|hello|hi|hey)\b/.test(ql)) return `สวัสดีครับ 👋 — ถามได้เลย เช่น "คำนวณ 1234*56" / "ค้นหา M-000123" / วางข้อมูลแล้วบอก "วิเคราะห์"`;
+  if (/^(สวัสดี|หวัดดี|hello|hi|hey)(\s|$|[ก-๙])/.test(ql)) return `สวัสดีครับ 👋 — ถามได้เลย เช่น "คำนวณ 1234*56" / "ค้นหา M-000123" / วางข้อมูลแล้วบอก "วิเคราะห์"`;
   return null;
 }
 
@@ -198,7 +198,7 @@ function buildFallback(q:string, intent:string, mode:SearchMode, hasDataset:bool
     }
     return `บอกได้เลยว่าอยากให้เขียนโค้ดอะไร เช่น "กล่องรับข้อมูล", "ตาราง", "กราฟ" — จะส่งโค้ดพร้อมก็อปให้ทันที`;
   }
-  if (/สวัสดี|หวัดดี|hello|hi\b/i.test(ql)) return `สวัสดีครับ 👋 — ถามได้เลย เช่น "AI คืออะไร" / "คำนวณ 1234*56" / วางข้อมูลแล้วบอก "วิเคราะห์"`;
+  if (/สวัสดี|หวัดดี|hello|hi(\s|$|[ก-๙])/.test(ql)) return `สวัสดีครับ 👋 — ถามได้เลย เช่น "AI คืออะไร" / "คำนวณ 1234*56" / วางข้อมูลแล้วบอก "วิเคราะห์"`;
   if (/อาว|อ้าว|ห๊ะ|งง/i.test(ql)) return `ว่าไงครับ 😊 — พิมพ์คำถามมาได้เลย หรือวางข้อมูลแล้วบอกว่าอยากให้ทำอะไร`;
   if (ql.length <= 8) return `"${q}" — หมายถึงอะไรครับ? ลองพิมพ์เต็มๆ เช่น "สรุปยอด" / "ค้นหา M-000123" / "คำนวณ 100*5"`;
   // default: ไม่วนลูป — ตอบสั้น ตรง
