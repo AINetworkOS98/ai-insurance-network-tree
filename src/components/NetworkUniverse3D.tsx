@@ -1100,10 +1100,7 @@ export default function NetworkUniverse3D({
         </div>
       )}
 
-      {/* ── หมายเหตุท้าย ── */}
-      <div className="pointer-events-none absolute bottom-2 left-3 text-[11px] text-slate-400">
-        ภาพเครือข่ายจำลองเพื่อสาธิต — ไม่ใช่ตัวเลขรายได้จริง
-      </div>
+      {/* ── หมายเหตุท้าย: ย้ายไปรวมในแถบข้อจำกัดของกรอบแม่ (เดิมลอยทับแถบของ NetworkSimulator) ── */}
     </div>
   );
 }

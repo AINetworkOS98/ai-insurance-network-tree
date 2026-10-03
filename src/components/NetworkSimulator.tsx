@@ -441,8 +441,15 @@ export default function NetworkSimulator() {
           </div>
 
           {/* ── กลาง: จักรวาล 3D ── */}
-          <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-black">
-            <div className="h-[420px] w-full sm:h-[560px]">
+          <div className="relative flex flex-col overflow-hidden rounded-2xl border border-slate-800 bg-black">
+            {/* แถบหัวกรอบ — อยู่ในลำดับปกติ (ไม่ลอยทับป้าย “แสดง x/y โหนด” ของฉาก 3D) */}
+            <div className="flex items-center justify-between gap-2 border-b border-slate-800 bg-slate-950/80 px-3 py-2">
+              <span className="rounded-full border border-sky-500/40 bg-sky-500/10 px-3 py-0.5 text-[11px] font-bold text-sky-300">
+                {mode === 'simulation' ? 'SIMULATION MODE — ข้อมูลจำลอง' : 'REAL DATA'}
+              </span>
+              <span className="hidden truncate text-[10px] text-slate-500 sm:block">ข้อมูลจำลอง (SIMULATION) แยกจากข้อมูลจริงเสมอ</span>
+            </div>
+            <div className="relative h-[420px] w-full sm:h-[560px]">
               {mode === 'simulation' ? (
                 <NetworkUniverse3D nodes={renderNodes} selected={selected} onSelect={(c) => setSelected(c)} simulation maxNodes={2500} />
               ) : (
@@ -452,12 +459,16 @@ export default function NetworkSimulator() {
                   <p className="text-xs text-slate-500">สมาชิกจริง {fmtNum(stats?.real.members ?? null)} คน · โหนดสายงานจริง {fmtNum(stats?.real.treeNodes ?? null)} โหนด</p>
                 </div>
               )}
+
+              {/* แถบช่วยใช้งาน + ข้อจำกัด — กองเป็นคอลัมน์เดียว (เดิมลอยทับกันเอง)
+                  และยึดกับ "พื้นที่ 3D" (ไม่ใช่ขอบกรอบดำที่ถูก grid ยืดให้สูงกว่า) จึงไม่ทับปุ่มควบคุมมุมขวาล่าง */}
+              <div className="pointer-events-none absolute bottom-16 left-3 right-3 flex flex-col gap-1">
+                <div className="w-fit rounded-md bg-black/70 px-3 py-1.5 text-[11px] leading-snug text-slate-300">🔒 ลาก = หมุน · สกอลล์ = ซูม · คลิกโหนด = ดูรายละเอียด</div>
+                <div className="rounded-md bg-black/70 px-3 py-1.5 text-[10px] leading-snug text-slate-400">
+                  Animation สื่อ &quot;การขยายตัวของเครือข่าย&quot; — ไม่ได้หมายถึงเงินที่ไหลเข้าบัญชี · ภาพเครือข่ายจำลองเพื่อสาธิต ไม่ใช่ตัวเลขรายได้จริง
+                </div>
+              </div>
             </div>
-            <div className="pointer-events-none absolute left-3 top-3 rounded-full border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-[11px] font-bold text-sky-300">
-              {mode === 'simulation' ? 'SIMULATION MODE — ข้อมูลจำลอง' : 'REAL DATA'}
-            </div>
-            <div className="pointer-events-none absolute bottom-3 left-3 right-3 rounded-lg bg-black/60 px-3 py-2 text-[11px] leading-snug text-slate-300">🔒 ลาก = หมุน · สกอลล์ = ซูม · คลิกโหนด = ดูรายละเอียด</div>
-            <div className="pointer-events-none absolute bottom-14 left-3 right-3 rounded-lg bg-black/60 px-3 py-2 text-[10px] leading-snug text-slate-400">Animation สื่อ &quot;การขยายตัวของเครือข่าย&quot; — ไม่ได้หมายถึงเงินที่ไหลเข้าบัญชี</div>
           </div>
 
           {/* ── ขวา: Member Details ── */}
@@ -478,8 +489,8 @@ export default function NetworkSimulator() {
                   ['Simulation', 'true'],
                 ] as const).map(([k, v]) => (
                   <div key={k} className="flex justify-between gap-3 border-b border-slate-800/70 pb-1">
-                    <dt className="text-slate-400">{k}</dt>
-                    <dd className="text-right font-medium text-slate-100">{v}</dd>
+                    <dt className="shrink-0 text-slate-400">{k}</dt>
+                    <dd className="min-w-0 break-words text-right font-medium text-slate-100">{v}</dd>
                   </div>
                 ))}
               </dl>
@@ -506,8 +517,8 @@ export default function NetworkSimulator() {
               {events.length === 0 && <li className="text-slate-500">ยังไม่มี event — เริ่ม Simulation เพื่อดูเหตุการณ์</li>}
               {[...events].reverse().map((e) => (
                 <li key={e.eventId} className="flex items-start gap-2 rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2">
-                  <span className="mt-0.5 rounded bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-bold text-sky-300">{e.eventType}</span>
-                  <span className="flex-1 text-slate-300">{EVENT_LABEL[e.eventType] || e.eventType}{e.memberCode ? ` · ${e.memberCode}` : ''}</span>
+                  <span className="mt-0.5 shrink-0 whitespace-nowrap rounded bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-bold text-sky-300">{e.eventType}</span>
+                  <span className="min-w-0 flex-1 break-words text-slate-300">{EVENT_LABEL[e.eventType] || e.eventType}{e.memberCode ? ` · ${e.memberCode}` : ''}</span>
                   <span className="whitespace-nowrap text-[10px] text-slate-500">{new Date(e.createdAt).toLocaleTimeString('th-TH')}</span>
                 </li>
               ))}
