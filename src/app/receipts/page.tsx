@@ -171,6 +171,18 @@ export default function ReceiptsPage(){
     load();
   }
 
+  // ลบใบเสร็จออกจากระบบ (เจ้าของลบได้เอง / ผู้ดูแลลบได้ทุกใบ) — ต้องยืนยันก่อนลบ
+  async function removeReceipt(receiptId:string, name?:string){
+    if(!window.confirm(`ลบใบเสร็จ "${name || receiptId}" ออกจากระบบ?\n\nการลบย้อนกลับไม่ได้`)) return;
+    setLoading(receiptId);
+    try{
+      const res = await fetch(`/api/receipts/${receiptId}`, { method:'DELETE' });
+      const j = await res.json().catch(()=>({}));
+      setMsg(j.ok ? 'ลบใบเสร็จออกจากระบบแล้ว' : (j.error || 'ลบไม่สำเร็จ'));
+    }catch{ setMsg('ลบไม่สำเร็จ'); }
+    setLoading(''); load();
+  }
+
   async function verify(receiptId:string, action:'verify'|'reject'){
     const res = await fetch('/api/receipts/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ receiptId, action, reason: action==='verify' ? 'ตรวจสอบกับรายงานรับเงินจริงแล้ว' : 'เอกสารไม่ชัดเจน', creditedPeriod: new Date().toISOString().slice(0,7), ledgerType:'premium' }) });
     const j = await res.json();
@@ -241,6 +253,7 @@ export default function ReceiptsPage(){
                     <span className="ml-auto flex gap-1">
                       {r.status==='Uploaded' && <button onClick={()=> readRealOcr(r.id, file)} disabled={loading===r.id} className="px-3 py-1 rounded-full border bg-white">อ่าน OCR</button>}
                       {r.status==='Extracted' && <button onClick={()=> submitVerify(r.id)} className="px-3 py-1 rounded-full bg-amber-500 text-white">ตรวจทานแล้ว — ส่งตรวจสอบ</button>}
+                      <button onClick={()=> removeReceipt(r.id, r.originalName)} disabled={loading===r.id} title="ลบใบเสร็จออกจากระบบ" className="px-3 py-1 rounded-full border border-red-200 text-red-600 hover:bg-red-50">ลบ</button>
                     </span>
                   </div>
                 ))}
@@ -297,6 +310,7 @@ export default function ReceiptsPage(){
                       {r.extractions?.[0] && <button onClick={()=> openManual(r.id, r.extractions[0])} className="px-3 py-1 rounded-full border bg-white text-xs">แก้ไขค่า</button>}
                       <button onClick={()=> verify(r.id,'verify')} className="px-3 py-1 rounded-full bg-emerald-600 text-white text-xs">รับรองยอด</button>
                       <button onClick={()=> verify(r.id,'reject')} className="px-3 py-1 rounded-full border text-xs">ปฏิเสธ</button>
+                      <button onClick={()=> removeReceipt(r.id, r.originalName)} disabled={loading===r.id} title="ลบใบเสร็จออกจากระบบ" className="px-3 py-1 rounded-full border border-red-200 text-red-600 text-xs hover:bg-red-50">ลบ</button>
                     </div>
                     <div className="text-[11px] text-slate-500 mt-1">ต้องเทียบกับแหล่งรับเงินจริงหรือรายงานผู้ออกเอกสาร — หากไม่มี API ให้เข้าคิวตรวจ manual</div>
                   </div>
@@ -313,8 +327,9 @@ export default function ReceiptsPage(){
                   <div key={r.id} className="p-2 rounded-xl border text-xs">
                     <div className="flex gap-2">
                       <span className="font-mono">{r.originalName}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-[11px] ${r.status==='Verified'?'bg-emerald-100': r.status==='Duplicate'?'bg-slate-200':'bg-red-100'}`}>{r.status}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[11px] ${r.status==='Verified'?'bg-emerald-100 text-emerald-700': r.status==='Duplicate'?'bg-slate-200':'bg-red-100'}`}>{r.status}</span>
                       <span className="ml-auto">{r.verifiedAt ? new Date(r.verifiedAt).toLocaleString('th-TH') : ''}</span>
+                      <button onClick={()=> removeReceipt(r.id, r.originalName)} disabled={loading===r.id} title="ลบใบเสร็จออกจากระบบ" className="px-2.5 py-1 rounded-full border border-red-200 text-red-600 hover:bg-red-50">ลบ</button>
                     </div>
                     {r.extractions?.[0] && <div className="mt-1 text-[11px] text-slate-600">ยอด ฿{r.extractions[0].amount || '-'} • ใบเสร็จ {r.extractions[0].receiptNo || '-'} • งวด {r.creditedPeriod || '-'}</div>}
                     {r.verifications?.[0] && <div className="mt-1 text-[11px] text-slate-500">โดย {r.verifications[0].verifiedBy ? 'เจ้าหน้าที่' : '-'} • {r.verifications[0].reason || ''} • {r.verifications[0].source || ''}</div>}

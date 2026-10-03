@@ -46,6 +46,8 @@ export const NAV_SECTIONS: NavSection[] = [
   { id: 'unit',    label: 'หัวหน้าหน่วยขึ้นไป',       key: 'menu_unit',    minRank: 2 },
   { id: 'center',  label: 'ผู้จัดการศูนย์ขึ้นไป',      key: 'menu_center',  minRank: 3 },
   { id: 'region',  label: 'ผู้จัดการภาค (สูงสุด)',     key: 'menu_region',  minRank: 4 },
+  // หัวข้อ "n8n Workflow Automation" — เห็นได้ทุกสมาชิกที่ล็อกอิน (ใช้ศึกษากระบวนการทำงานแล้วนำไปสร้างระบบเอง)
+  { id: 'workflow',label: 'n8n Workflow Automation',                     minRank: 0 },
   { id: 'system',  label: 'ระบบอัตโนมัติ',           key: 'menu_system',  minRank: 0, adminOnly: true },
 ];
 
@@ -98,6 +100,10 @@ export const NAV_ENTRIES: NavEntry[] = [
 
   // ── ผู้จัดการศูนย์ขึ้นไป (rank 3) ──────────────────────────────────────────
   { href: '/receipts/settings', section: 'center', label: 'ตั้งค่าการรับเงิน (ระดับศูนย์)', key: 'sb_receipt_settings', icon: '⚙', minRank: 3 },
+
+  // ── n8n Workflow Automation (ทุกสมาชิกที่ล็อกอิน) ─────────────────────────
+  // สั่งโดยเจ้าของระบบ: "สร้าง 3D เพื่อบอกกระบวนการทำงาน ให้สมาชิกนำไปสร้างระบบต่อไป"
+  { href: '/n8n/workflow-3d', section: 'workflow', label: 'กระบวนการทำงาน 3D', icon: '🧊', minRank: 0 },
 
   // ── ระบบอัตโนมัติ (Admin เท่านั้น) ────────────────────────────────────────
   { href: 'http://localhost:5679/', section: 'system', label: 'n8n · สร้าง Workflow', key: 'sb_n8n_editor', icon: '⚡', minRank: 0, adminOnly: true, external: true },

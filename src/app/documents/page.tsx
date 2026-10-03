@@ -96,6 +96,23 @@ export default function DocumentsPage() {
     loadReceipts();
   }, [loadReceipts]);
 
+  // ลบใบเสร็จออกจากระบบ — ยืนยันก่อนลบทุกครั้ง และบันทึก audit ฝั่งเซิร์ฟเวอร์
+  const removeReceipt = async (receiptId: string, filename?: string) => {
+    if (!window.confirm(`ลบใบเสร็จ "${filename || receiptId}" ออกจากระบบ?\n\nการลบย้อนกลับไม่ได้`)) return;
+    try {
+      const res = await fetch('/api/documents', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ receiptId }),
+      });
+      const j = await res.json().catch(() => ({} as any));
+      if (j.ok) { setNotice('ลบใบเสร็จออกจากระบบแล้ว'); setError(null); loadReceipts(); }
+      else setError(j.error || 'ลบใบเสร็จไม่สำเร็จ');
+    } catch {
+      setError('ลบใบเสร็จไม่สำเร็จ');
+    }
+  };
+
   const reset = () => {
     setFile(null);
     setPreviewUrl(null);
@@ -542,6 +559,7 @@ export default function DocumentsPage() {
                     <th className="text-left p-2">เลขอ้างอิง</th>
                     <th className="text-left p-2">ไฟล์</th>
                     <th className="p-2">เวลา</th>
+                    <th className="p-2">จัดการ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -554,6 +572,16 @@ export default function DocumentsPage() {
                         <a href={r.storageUrl} target="_blank" rel="noreferrer" className="text-[#475569] underline">{r.filename}</a>
                       </td>
                       <td className="p-2 text-center">{new Date(r.createdAt).toLocaleString('th-TH')}</td>
+                      <td className="p-2 text-center">
+                        <button
+                          type="button"
+                          onClick={() => removeReceipt(r.id, r.filename)}
+                          title="ลบใบเสร็จออกจากระบบ"
+                          className="px-2.5 py-1 rounded-full border border-red-200 text-red-600 hover:bg-red-50"
+                        >
+                          ลบ
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

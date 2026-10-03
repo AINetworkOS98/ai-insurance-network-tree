@@ -3,6 +3,9 @@ import { db, storage, STORAGE_BUCKET } from '@/lib/firebase-admin';
 import { checkPositionEligibility, type PositionCode } from '@/lib/positions';
 import { randomUUID } from 'crypto';
 import { emitNotification } from '@/lib/notify';
+import { prisma } from '@/lib/prisma';
+import { verifyToken } from '@/lib/auth';
+import { isAdminFromPayload } from '@/lib/admin';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -29,6 +32,62 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: true, receipts });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e.message || 'โหลดรายการใบเสร็จไม่สำเร็จ' }, { status: 500 });
+  }
+}
+
+// ── DELETE: ลบใบเสร็จออกจากระบบ (คลัง Firestore + ไฟล์ใน Storage) ──────────
+// สิทธิ์: เจ้าของ (memberId ตรงกับบัญชีที่ล็อกอิน) หรือผู้ดูแลระบบเท่านั้น
+export async function DELETE(request: NextRequest) {
+  try {
+    const token = request.cookies.get('token')?.value
+      || request.cookies.get('auth_token')?.value
+      || (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+    if (!token) return NextResponse.json({ ok: false, error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
+
+    let payload: any;
+    try { payload = verifyToken(token); } catch { return NextResponse.json({ ok: false, error: 'โทเค็นไม่ถูกต้อง' }, { status: 401 }); }
+    const userId = String(payload?.sub || '');
+
+    const url = new URL(request.url);
+    const body = await request.json().catch(() => ({} as any));
+    const receiptId: string = (url.searchParams.get('receiptId') || body?.receiptId || '').toString();
+    if (!receiptId) return NextResponse.json({ ok: false, error: 'ไม่ระบุใบเสร็จที่ต้องการลบ' }, { status: 400 });
+
+    const docRef = db().collection('receipts').doc(receiptId);
+    const snap = await docRef.get();
+    if (!snap.exists) return NextResponse.json({ ok: false, error: 'ไม่พบใบเสร็จนี้ในระบบ' }, { status: 404 });
+    const data: any = snap.data() || {};
+
+    const isAdmin = await isAdminFromPayload(payload).catch(() => false);
+    if (!isAdmin) {
+      const me = await prisma.user.findUnique({ where: { id: userId }, select: { memberCode: true, email: true } }).catch(() => null);
+      const mine = new Set([userId, me?.memberCode, me?.email].filter(Boolean).map(String));
+      if (!mine.has(String(data.memberId))) {
+        return NextResponse.json({ ok: false, error: 'ลบได้เฉพาะใบเสร็จของตัวเอง' }, { status: 403 });
+      }
+    }
+
+    // ลบไฟล์ต้นฉบับใน Storage ก่อน (ถ้ามี) — ไม่ให้เหลือไฟล์กำพร้า
+    if (data.storagePath) {
+      await storage().bucket(STORAGE_BUCKET).file(String(data.storagePath)).delete().catch(() => null);
+    }
+    await docRef.delete();
+
+    await prisma.auditLog.create({
+      data: {
+        userId,
+        action: 'receipt.deleted',
+        entity: 'FirestoreReceipt',
+        entityId: receiptId,
+        oldValue: { memberId: data.memberId ?? null, filename: data.filename ?? null, amount: data.amount ?? null, storagePath: data.storagePath ?? null },
+        reason: isAdmin ? 'ผู้ดูแลระบบลบใบเสร็จ' : 'เจ้าของลบใบเสร็จของตัวเอง',
+      },
+    }).catch(() => null);
+
+    return NextResponse.json({ ok: true, deleted: receiptId, message: 'ลบใบเสร็จออกจากระบบแล้ว' });
+  } catch (e: any) {
+    console.error('[documents DELETE]', e?.message);
+    return NextResponse.json({ ok: false, error: e.message || 'ลบใบเสร็จไม่สำเร็จ' }, { status: 500 });
   }
 }
 

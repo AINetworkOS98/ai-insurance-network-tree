@@ -86,6 +86,12 @@ export default function Header(){
                     <span className="text-base">⚙️</span>
                     <span>{t('n8n_workflows')}</span>
                   </a>
+                  {/* ต่อลงไปในเมนู n8n Workflow Automation — ฉาก 3D อธิบายกระบวนการทำงาน (สั่งโดยเจ้าของระบบ) */}
+                  <a href="/n8n/workflow-3d" className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-[#eff6ff] hover:text-sky-700 transition-colors">
+                    <span className="text-base">🧊</span>
+                    <span>กระบวนการทำงาน 3D</span>
+                    <span className="ml-auto text-[11px] text-slate-400">สำหรับสมาชิก</span>
+                  </a>
                   <div className="my-1 border-t border-[#e2e8f0]"></div>
                   <div className="px-4 py-2 text-xs text-slate-400 bg-slate-50">
                     <span className="block">{t('n8n_status_running')}</span>
@@ -158,6 +164,7 @@ export default function Header(){
                 <a href="/n8n_automation" onClick={()=> setMobileNav(false)} className="block px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">🤖 {t('n8n_automation')}</a>
                 <a href="/n8n" onClick={()=> setMobileNav(false)} className="block px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">🔗 {t('n8n_webhooks')}</a>
                 <a href="/n8n/workflows" onClick={()=> setMobileNav(false)} className="block px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">⚙️ {t('n8n_workflows')}</a>
+                <a href="/n8n/workflow-3d" onClick={()=> setMobileNav(false)} className="block px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">🧊 กระบวนการทำงาน 3D</a>
                 <a href="http://localhost:5679/" target="_blank" rel="noopener noreferrer" className="block px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">🖥️ {t('n8n_editor')}</a>
               </div>
             )}
