@@ -50,6 +50,7 @@ const PUBLIC_API = [
   '/api/videos', // ช่องดูวีดีโอ TikTok แบบสุ่มต่อเนื่อง — route ตรวจสิทธิ์เอง (next/played เปิดสาธารณะ, add/list ต้องมี Bearer)
   // เส้นทางสำหรับระบบอัตโนมัติ: route ตรวจสิทธิ์เอง (ผู้ดูแล หรือ Bearer CRON_SECRET) — ถ้าไม่มีสิทธิ์ตอบ 401
   '/api/line',
+  '/api/net/1x5', // ระบบบริหารเครือข่าย 1 แตก 5 (ข้อมูลจริง) — route ตรวจสิทธิ์เอง (สมาชิก/ผู้ดูแล/Bearer CRON_SECRET สำหรับ n8n)
 ];
 
 const PUBLIC_PAGES = [
@@ -152,7 +153,7 @@ export async function middleware(req: NextRequest) {
   // --- Page guard: ล็อกอินก่อนเข้าระบบ ---
   // ให้หน้าแรกและหน้าสาธารณะผ่านได้โดยไม่ต้องล็อกอิน
   // หน้าที่ต้องล็อกอิน: /dashboard, /tree, /income, /members, /admin, /reports, /receipts, /prospects, /appointments, /referral, /settings, /notifications, /periods, /rank-plans ฯลฯ
-  const protectedPrefixes = ['/dashboard','/tree','/income','/members','/reports','/receipts','/documents','/prospects','/appointments','/referral','/settings','/notifications','/periods','/rank-plans','/progress','/network-simulator'];
+  const protectedPrefixes = ['/dashboard','/tree','/income','/members','/reports','/receipts','/documents','/prospects','/appointments','/referral','/settings','/notifications','/periods','/rank-plans','/progress','/network-simulator','/network/1x5-autopilot'];
 
   const needsAuth = protectedPrefixes.some(p => pathname === p || pathname.startsWith(p + '/'));
 

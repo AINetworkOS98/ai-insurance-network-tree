@@ -1,0 +1,127 @@
+{
+  "name": "1×5 Autopilot 01 · ตรวจกำหนดเวลา + รันคัดออก/เลื่อนตำแหน่ง (ทุก 15 นาที)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "minutes", "minutesInterval": 15 }
+          ]
+        }
+      },
+      "id": "a1010000-0000-4000-8000-000000000001",
+      "name": "ทุก 15 นาที",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-200, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/net/1x5/state",
+        "options": { "timeout": 30000, "response": { "response": { "neverError": true } } },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.CRON_SECRET }}" }
+          ]
+        }
+      },
+      "id": "a1010000-0000-4000-8000-000000000002",
+      "name": "GET /api/net/1x5/state",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [40, 0],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ตรวจกำหนดเวลาที่ต้องดำเนินการ + สรุปสถานะปัจจุบัน\n// ปลายทางจริง: /api/net/1x5/state (ข้อมูลจริงในฐานข้อมูล)\nconst s = $json || {};\nconst deadline = s.deadline || {};\nconst summary = s.summary || {};\nconst shouldRun = deadline.passed === true || summary.failed > 0;\nreturn [{\n  json: {\n    workflow: '1x5 Autopilot 01 · deadline check',\n    ok: s.ok !== false,\n    period: s.period || null,\n    deadlineISO: deadline.iso || null,\n    daysLeft: typeof deadline.daysLeft === 'number' ? deadline.daysLeft : null,\n    deadlinePassed: deadline.passed === true,\n    pendingReview: summary.pendingReview || 0,\n    failed: summary.failed || 0,\n    vacancies: summary.vacancies || 0,\n    readyCandidates: summary.readyCandidates || 0,\n    shouldRunNow: shouldRun,\n    idempotencyKey: 'net1x5-auto-' + (s.period || 'noperiod') + '-15m-' + new Date().toISOString().slice(0, 13),\n    checkedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "a1010000-0000-4000-8000-000000000003",
+      "name": "ตรวจกำหนดเวลา/สรุปสถานะ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [280, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "cond-deadline",
+              "leftValue": "={{ $json.shouldRunNow }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1010000-0000-4000-8000-000000000004",
+      "name": "ถึงกำหนด/มีคนไม่ผ่าน?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [520, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/net/1x5/run",
+        "options": { "timeout": 60000, "response": { "response": { "neverError": true } } },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.CRON_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ mode: 'apply', idempotencyKey: $json.idempotencyKey, period: $json.period }) }}"
+      },
+      "id": "a1010000-0000-4000-8000-000000000005",
+      "name": "POST /api/net/1x5/run (apply)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [760, 0],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// สรุปผลการรันวงจรอัตโนมัติ (คัดออก → เลื่อนตำแหน่ง → จัดสายงาน → Log)\nconst r = $json || {};\nconst sm = r.summary || {};\nconst steps = Array.isArray(r.steps) ? r.steps.map(function (s) { return { step: s.step, label: s.label, count: s.count, status: s.status, detail: s.detail }; }) : [];\nreturn [{ json: {\n  workflow: '1x5 Autopilot 01 · apply result',\n  ok: r.ok !== false,\n  mode: r.mode || 'apply',\n  runId: r.runId || null,\n  period: r.period || null,\n  cut: sm.cutLast || 0,\n  promoted: sm.promotedLast || 0,\n  vacancies: sm.vacancies || 0,\n  readyCandidates: sm.readyCandidates || 0,\n  steps: steps,\n  warnings: r.warnings || [],\n  note: 'ทุกการเปลี่ยนแปลงถูกบันทึกใน Audit Log + PlacementHistory + PlacementRun ตรวจสอบย้อนหลังได้',\n  finishedAt: new Date().toISOString()\n} }];"
+      },
+      "id": "a1010000-0000-4000-8000-000000000006",
+      "name": "สรุปผลการรัน",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ยังไม่ถึงกำหนด และไม่มีคนไม่ผ่านเงื่อนไข — ไม่ต้องทำอะไร (กันการยิงซ้ำ)\nreturn [{ json: { workflow: '1x5 Autopilot 01 · idle', skipped: true, detail: 'ยังไม่ถึงกำหนด และไม่มีสมาชิกที่ไม่ผ่านเงื่อนไข', checkedAt: new Date().toISOString() } }];"
+      },
+      "id": "a1010000-0000-4000-8000-000000000007",
+      "name": "ยังไม่ต้องดำเนินการ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [760, 200]
+    }
+  ],
+  "connections": {
+    "ทุก 15 นาที": { "main": [[{ "node": "GET /api/net/1x5/state", "type": "main", "index": 0 }]] },
+    "GET /api/net/1x5/state": { "main": [[{ "node": "ตรวจกำหนดเวลา/สรุปสถานะ", "type": "main", "index": 0 }]] },
+    "ตรวจกำหนดเวลา/สรุปสถานะ": { "main": [[{ "node": "ถึงกำหนด/มีคนไม่ผ่าน?", "type": "main", "index": 0 }]] },
+    "ถึงกำหนด/มีคนไม่ผ่าน?": {
+      "main": [
+        [{ "node": "POST /api/net/1x5/run (apply)", "type": "main", "index": 0 }],
+        [{ "node": "ยังไม่ต้องดำเนินการ", "type": "main", "index": 0 }]
+      ]
+    },
+    "POST /api/net/1x5/run (apply)": { "main": [[{ "node": "สรุปผลการรัน", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": ["1x5-autopilot", "network", "real-data"]
+}

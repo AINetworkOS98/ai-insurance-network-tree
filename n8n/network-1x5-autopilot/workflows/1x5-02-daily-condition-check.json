@@ -1,0 +1,131 @@
+{
+  "name": "1×5 Autopilot 02 · ตรวจใบเสร็จ/เงื่อนไขรอบ (ทุกวัน 06:00)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "cronExpression", "expression": "0 6 * * *" }
+          ]
+        }
+      },
+      "id": "a1020000-0000-4000-8000-000000000001",
+      "name": "ทุกวัน 06:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-200, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/net/1x5/run",
+        "options": { "timeout": 60000, "response": { "response": { "neverError": true } } },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.CRON_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ mode: 'preview', idempotencyKey: 'net1x5-preview-' + new Date().toISOString().slice(0, 10) }) }}"
+      },
+      "id": "a1020000-0000-4000-8000-000000000002",
+      "name": "POST /api/net/1x5/run (preview)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [40, 0],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ตรวจเงื่อนไข (ยังไม่แก้ข้อมูลจริง) — แจกแจงใบเสร็จ/ยอดรับรอง/กำหนดเวลา ของทุกคนที่ตรวจ\nconst r = $json || {};\nconst sm = r.summary || {};\nconst failed = Array.isArray(r.failed) ? r.failed : [];\nconst lines = failed.slice(0, 30).map(function (f) {\n  const who = f.code ? (f.code + (f.name ? ' ' + f.name : '')) : (f.userId || 'ไม่ทราบรหัส');\n  return '- ' + who + ' : ' + ((f.reasons || []).join(', ') || 'ไม่ผ่านเงื่อนไข') + (f.pendingReview ? ' [รอตรวจใบเสร็จ — ระบบกันการคัด]' : '');\n});\nreturn [{ json: {\n  workflow: '1x5 Autopilot 02 · daily condition check',\n  ok: r.ok !== false,\n  mode: 'preview',\n  period: r.period || null,\n  deadlineLabel: (r.deadline || {}).label || null,\n  total: sm.total || 0,\n  passed: sm.passed || 0,\n  failed: sm.failed || 0,\n  pendingReview: sm.pendingReview || 0,\n  vacancies: sm.vacancies || 0,\n  readyCandidates: sm.readyCandidates || 0,\n  failedList: lines,\n  reportText: 'รายงานตรวจเงื่อนไขรอบ ' + (r.period || '-') + ' : ผ่าน ' + (sm.passed || 0) + ' / ไม่ผ่าน ' + (sm.failed || 0) + ' / รอตรวจใบเสร็จ ' + (sm.pendingReview || 0) + ' / ตำแหน่งว่าง ' + (sm.vacancies || 0),\n  checkedAt: new Date().toISOString()\n} }];"
+      },
+      "id": "a1020000-0000-4000-8000-000000000003",
+      "name": "สรุปรายงานตรวจเงื่อนไข",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [280, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "cond-hasfailed",
+              "leftValue": "={{ $json.failed }}",
+              "rightValue": 1,
+              "operator": { "type": "number", "operation": "gte" }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1020000-0000-4000-8000-000000000004",
+      "name": "มีผู้ไม่ผ่านเงื่อนไข?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [520, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/net/1x5/run",
+        "options": { "timeout": 60000, "response": { "response": { "neverError": true } } },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.CRON_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ mode: 'apply', idempotencyKey: 'net1x5-daily-' + new Date().toISOString().slice(0, 10) }) }}"
+      },
+      "id": "a1020000-0000-4000-8000-000000000005",
+      "name": "POST /api/net/1x5/run (apply — คัดออก/เลื่อนแทน)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [760, 0],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// สรุปหลังดำเนินการ: คัดสมาชิกที่ไม่ผ่านออกจากตำแหน่ง + เลื่อนผู้มีคุณสมบัติขึ้นแทน + เติมช่อง 1:5\nconst r = $json || {};\nconst sm = r.summary || {};\nreturn [{ json: {\n  workflow: '1x5 Autopilot 02 · applied',\n  ok: r.ok !== false,\n  runId: r.runId || null,\n  cut: sm.cutLast || 0,\n  promoted: sm.promotedLast || 0,\n  vacanciesLeft: sm.vacancies || 0,\n  readyLeft: sm.readyCandidates || 0,\n  warnings: r.warnings || [],\n  detail: 'คัดออก ' + (sm.cutLast || 0) + ' คน · เลื่อนตำแหน่งแทน ' + (sm.promotedLast || 0) + ' คน · ตำแหน่งว่างคงเหลือ ' + (sm.vacancies || 0),\n  finishedAt: new Date().toISOString()\n} }];"
+      },
+      "id": "a1020000-0000-4000-8000-000000000006",
+      "name": "สรุปผลหลังคัดออก/เลื่อนแทน",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ทุกคนผ่านเงื่อนไข — ไม่ต้องคัดออก/เลื่อนตำแหน่ง\nreturn [{ json: { workflow: '1x5 Autopilot 02 · all passed', ok: true, detail: 'ทุกคนผ่านเงื่อนไขในรอบนี้ — ไม่มีการคัดออกหรือเลื่อนตำแหน่ง', checkedAt: new Date().toISOString() } }];"
+      },
+      "id": "a1020000-0000-4000-8000-000000000007",
+      "name": "ผ่านครบทุกคน",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [760, 200]
+    }
+  ],
+  "connections": {
+    "ทุกวัน 06:00": { "main": [[{ "node": "POST /api/net/1x5/run (preview)", "type": "main", "index": 0 }]] },
+    "POST /api/net/1x5/run (preview)": { "main": [[{ "node": "สรุปรายงานตรวจเงื่อนไข", "type": "main", "index": 0 }]] },
+    "สรุปรายงานตรวจเงื่อนไข": { "main": [[{ "node": "มีผู้ไม่ผ่านเงื่อนไข?", "type": "main", "index": 0 }]] },
+    "มีผู้ไม่ผ่านเงื่อนไข?": {
+      "main": [
+        [{ "node": "POST /api/net/1x5/run (apply — คัดออก/เลื่อนแทน)", "type": "main", "index": 0 }],
+        [{ "node": "ผ่านครบทุกคน", "type": "main", "index": 0 }]
+      ]
+    },
+    "POST /api/net/1x5/run (apply — คัดออก/เลื่อนแทน)": { "main": [[{ "node": "สรุปผลหลังคัดออก/เลื่อนแทน", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": ["1x5-autopilot", "network", "daily"]
+}

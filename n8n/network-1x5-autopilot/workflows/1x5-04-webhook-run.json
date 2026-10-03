@@ -1,0 +1,82 @@
+{
+  "name": "1×5 Autopilot 04 · Webhook สั่งรันวงจรทันที (manual/API)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "net-1x5/run",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1040000-0000-4000-8000-000000000001",
+      "name": "Webhook POST /net-1x5/run",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-260, 0],
+      "webhookId": "c0d1e2f3-a4b5-4c6d-8e9f-1a2b3c4d5e6f"
+    },
+    {
+      "parameters": {
+        "jsCode": "// รับคำสั่งจากผู้ดูแล/ระบบอื่น: { mode:'preview'|'apply', period?, reason? }\n// ตัวอย่างเรียก:  curl -X POST http://localhost:5679/webhook/net-1x5/run -H 'Content-Type: application/json' -d '{\"mode\":\"preview\"}'\nconst b = ($json.body && typeof $json.body === 'object') ? $json.body : ($json || {});\nconst mode = (b.mode === 'apply') ? 'apply' : 'preview';\nconst period = (typeof b.period === 'string' && /^\\d{4}-\\d{2}$/.test(b.period)) ? b.period : undefined;\nconst body = { mode: mode };\nif (period) body.period = period;\nbody.idempotencyKey = 'net1x5-webhook-' + mode + '-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '');\nreturn [{ json: { mode: mode, period: period || null, reason: b.reason || null, requestBody: body, requestedAt: new Date().toISOString() } }];"
+      },
+      "id": "a1040000-0000-4000-8000-000000000002",
+      "name": "เตรียมคำสั่งรัน",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-20, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/net/1x5/run",
+        "options": { "timeout": 60000, "response": { "response": { "neverError": true } } },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.CRON_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.requestBody) }}"
+      },
+      "id": "a1040000-0000-4000-8000-000000000003",
+      "name": "POST /api/net/1x5/run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// สรุปผล + เตรียมส่งกลับให้ผู้เรียก\nconst r = $json || {};\nconst sm = r.summary || {};\nreturn [{ json: {\n  ok: r.ok !== false,\n  mode: r.mode || null,\n  runId: r.runId || null,\n  period: r.period || null,\n  deadline: (r.deadline || {}).label || null,\n  summary: sm,\n  failed: r.failed || [],\n  promotions: r.promotions || [],\n  vacancies: r.vacancies || [],\n  candidates: (r.candidates || []).slice(0, 20),\n  warnings: r.warnings || [],\n  note: 'ทุกการเปลี่ยนแปลงถูกบันทึกใน Audit Log ตรวจสอบย้อนหลังได้',\n  finishedAt: new Date().toISOString()\n} }];"
+      },
+      "id": "a1040000-0000-4000-8000-000000000004",
+      "name": "สรุปผล",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": { "responseCode": 200 }
+      },
+      "id": "a1040000-0000-4000-8000-000000000005",
+      "name": "ตอบกลับผู้เรียก",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [700, 0]
+    }
+  ],
+  "connections": {
+    "Webhook POST /net-1x5/run": { "main": [[{ "node": "เตรียมคำสั่งรัน", "type": "main", "index": 0 }]] },
+    "เตรียมคำสั่งรัน": { "main": [[{ "node": "POST /api/net/1x5/run", "type": "main", "index": 0 }]] },
+    "POST /api/net/1x5/run": { "main": [[{ "node": "สรุปผล", "type": "main", "index": 0 }]] },
+    "สรุปผล": { "main": [[{ "node": "ตอบกลับผู้เรียก", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": ["1x5-autopilot", "network", "webhook"]
+}

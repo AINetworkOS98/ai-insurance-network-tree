@@ -1,0 +1,114 @@
+{
+  "name": "1×5 Autopilot 03 · จัดสายงาน 1:5 + เติมตำแหน่งว่าง (ทุก 30 นาที)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "minutes", "minutesInterval": 30 }] }
+      },
+      "id": "a1030000-0000-4000-8000-000000000001",
+      "name": "ทุก 30 นาที",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-200, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/net/1x5/state",
+        "options": { "timeout": 30000, "response": { "response": { "neverError": true } } },
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{ $env.CRON_SECRET }}" }] }
+      },
+      "id": "a1030000-0000-4000-8000-000000000002",
+      "name": "GET /api/net/1x5/state",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [40, 0],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// กติกา: ห้ามปล่อยตำแหน่งว่าง ถ้ามีสมาชิกที่ผ่านเงื่อนไข → ต้องเติม/เลื่อนขึ้นแทนทันที\nconst s = $json || {};\nconst sm = s.summary || {};\nconst mustFill = (sm.vacancies || 0) > 0 && (sm.readyCandidates || 0) > 0;\nconst slots = (s.vacancies || []).filter(function (v) { return v.kind === 'slot'; }).length;\nconst positions = (s.vacancies || []).filter(function (v) { return v.kind === 'position'; }).length;\nreturn [{ json: {\n  workflow: '1x5 Autopilot 03 · refill check',\n  ok: s.ok !== false,\n  period: s.period || null,\n  vacancies: sm.vacancies || 0,\n  slotVacancies: slots,\n  positionVacancies: positions,\n  readyCandidates: sm.readyCandidates || 0,\n  mustFill: mustFill,\n  idempotencyKey: 'net1x5-fill-' + new Date().toISOString().slice(0, 13),\n  checkedAt: new Date().toISOString()\n} }];"
+      },
+      "id": "a1030000-0000-4000-8000-000000000003",
+      "name": "ตรวจตำแหน่งว่าง/ผู้พร้อมเลื่อน",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [280, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+          "combinator": "and",
+          "conditions": [
+            { "id": "cond-fill", "leftValue": "={{ $json.mustFill }}", "rightValue": true, "operator": { "type": "boolean", "operation": "true", "singleValue": true } }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1030000-0000-4000-8000-000000000004",
+      "name": "มีตำแหน่งว่างและมีผู้พร้อมเลื่อน?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [520, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/net/1x5/run",
+        "options": { "timeout": 60000, "response": { "response": { "neverError": true } } },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.CRON_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ mode: 'apply', idempotencyKey: $json.idempotencyKey }) }}"
+      },
+      "id": "a1030000-0000-4000-8000-000000000005",
+      "name": "POST /api/net/1x5/run (apply — เติมตำแหน่งว่าง)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [760, 0],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// สรุปการจัดสายงาน 1:5 หลังเติมตำแหน่งว่าง\nconst r = $json || {};\nconst sm = r.summary || {};\nconst relink = (r.steps || []).filter(function (s) { return s.key === 'relink' || s.key === 'promote'; }).map(function (s) { return { step: s.key, count: s.count, detail: s.detail }; });\nreturn [{ json: {\n  workflow: '1x5 Autopilot 03 · refill applied',\n  ok: r.ok !== false,\n  runId: r.runId || null,\n  promoted: sm.promotedLast || 0,\n  vacanciesLeft: sm.vacancies || 0,\n  steps: relink,\n  warnings: r.warnings || [],\n  finishedAt: new Date().toISOString()\n} }];"
+      },
+      "id": "a1030000-0000-4000-8000-000000000006",
+      "name": "สรุปผลการเติมตำแหน่งว่าง",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ไม่มีตำแหน่งว่าง หรือยังไม่มีผู้มีคุณสมบัติครบ — โครงสร้างเต็มตามกติกา\nreturn [{ json: { workflow: '1x5 Autopilot 03 · no action', ok: true, detail: 'ไม่มีตำแหน่งว่างให้เติม หรือยังไม่มีผู้มีคุณสมบัติครบในรอบนี้', checkedAt: new Date().toISOString() } }];"
+      },
+      "id": "a1030000-0000-4000-8000-000000000007",
+      "name": "ไม่ต้องเติม",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [760, 200]
+    }
+  ],
+  "connections": {
+    "ทุก 30 นาที": { "main": [[{ "node": "GET /api/net/1x5/state", "type": "main", "index": 0 }]] },
+    "GET /api/net/1x5/state": { "main": [[{ "node": "ตรวจตำแหน่งว่าง/ผู้พร้อมเลื่อน", "type": "main", "index": 0 }]] },
+    "ตรวจตำแหน่งว่าง/ผู้พร้อมเลื่อน": { "main": [[{ "node": "มีตำแหน่งว่างและมีผู้พร้อมเลื่อน?", "type": "main", "index": 0 }]] },
+    "มีตำแหน่งว่างและมีผู้พร้อมเลื่อน?": {
+      "main": [
+        [{ "node": "POST /api/net/1x5/run (apply — เติมตำแหน่งว่าง)", "type": "main", "index": 0 }],
+        [{ "node": "ไม่ต้องเติม", "type": "main", "index": 0 }]
+      ]
+    },
+    "POST /api/net/1x5/run (apply — เติมตำแหน่งว่าง)": { "main": [[{ "node": "สรุปผลการเติมตำแหน่งว่าง", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": ["1x5-autopilot", "network", "refill"]
+}

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ระบบบริหารเครือข่าย 1 แตก 5 — เชื่อมต่อสายงานทุกระดับอัตโนมัติ</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm 16mm 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Leelawadee UI", "Tahoma", "Segoe UI", sans-serif; color: #2f2c26; font-size: 11.5pt; line-height: 1.6; margin: 0; }
+  h1 { font-size: 19pt; margin: 0 0 2mm; color: #1f3a5f; }
+  h2 { font-size: 13.5pt; margin: 7mm 0 2mm; color: #1f3a5f; border-left: 4px solid #c8a84e; padding-left: 3mm; page-break-after: avoid; }
+  h3 { font-size: 12pt; margin: 4mm 0 1.5mm; color: #33415c; page-break-after: avoid; }
+  .lead { color: #57534e; font-size: 11pt; }
+  .badge { display: inline-block; background: #c8a84e; color: #2f2c26; font-size: 9pt; font-weight: 700; padding: 1mm 3mm; border-radius: 999px; margin-bottom: 3mm; }
+  table { width: 100%; border-collapse: collapse; margin: 2mm 0 3mm; font-size: 10.5pt; }
+  th, td { border: 1px solid #e3dcc9; padding: 2mm 2.5mm; text-align: left; vertical-align: top; }
+  th { background: #f7f1e3; font-weight: 700; }
+  ul, ol { margin: 1mm 0 3mm 5mm; padding: 0; }
+  li { margin: 0.8mm 0; }
+  .box { background: #f8fbff; border: 1px solid #dbeafe; border-radius: 3mm; padding: 3mm; margin: 2mm 0 3mm; }
+  .warn { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 3mm; padding: 3mm; margin: 2mm 0 3mm; }
+  .ok { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 3mm; padding: 3mm; margin: 2mm 0 3mm; }
+  code, .mono { font-family: "Consolas", monospace; font-size: 10pt; background: #f3f4f6; padding: 0.4mm 1mm; border-radius: 1mm; }
+  .steps { display: flex; flex-wrap: wrap; gap: 2mm; margin: 2mm 0 3mm; }
+  .step { flex: 1 1 30%; border: 1px solid #e3dcc9; border-radius: 3mm; padding: 2.5mm; background: #fffdf7; }
+  .step b { display: block; color: #1f3a5f; font-size: 10.5pt; }
+  .step span { font-size: 9.5pt; color: #57534e; }
+  .pb { page-break-before: always; }
+  footer { margin-top: 6mm; border-top: 1px solid #e3dcc9; padding-top: 2mm; font-size: 9pt; color: #78716c; }
+</style>
+</head>
+<body>
+
+<span class="badge">ระบบจริง · ข้อมูลจริงในฐานข้อมูล · ทำงานอัตโนมัติ</span>
+<h1>ระบบบริหารเครือข่าย 1 แตก 5<br>เชื่อมต่อสายงานทุกระดับอัตโนมัติ</h1>
+<p class="lead">เอกสารสรุประบบ (System Document) — ระบบจัดโครงสร้างสายงาน เชื่อมต่อสมาชิก บริหารตำแหน่งทุกระดับ ตรวจสอบเงื่อนไข คัดสมาชิกที่ไม่ผ่าน เลื่อนสมาชิกที่ผ่านเงื่อนไขขึ้นแทน และเชื่อมต่อสายงานอย่างต่อเนื่องโดยไม่ต้องให้ผู้ดูแลระบบจัดตำแหน่งด้วยมือ<br>
+เข้าถึง Dashboard: <span class="mono">/network/1x5-autopilot</span> · เมนูอยู่ในแถบเมนูบน ต่อจาก “สอบถามรายละเอียด”</p>
+
+<h2>1. หลักการทำงาน</h2>
+<ol>
+  <li><b>สมาชิก 1 คน แตกสมาชิกต่อได้ 5 คน</b> — สมาชิกแต่ละคนมีตำแหน่งและสายงานของตนเอง เมื่อมีสมาชิกใหม่ ระบบตรวจตำแหน่งที่ว่างและจัดวางเข้าสายงานอัตโนมัติ (BFS จากผู้แนะนำลงไปทุกระดับ) และเชื่อมโยงสายงานตั้งแต่ระดับบนลงไปต่อเนื่อง</li>
+  <li><b>ระบบตรวจสอบเงื่อนไขโดยอัตโนมัติ</b> — ตรวจสถานะสมาชิก · ตรวจการดาวน์โหลด/ยืนยันใบเสร็จตามเงื่อนไข · ตรวจวันและเวลาที่ต้องดำเนินการ · บันทึกประวัติการดำเนินการของสมาชิกทุกคน</li>
+  <li><b>กรณีสมาชิกไม่ปฏิบัติตามเงื่อนไข</b> — ระบบตั้งสถานะ “ไม่ผ่านเงื่อนไข” (SUSPENDED) นำออกจากตำแหน่งตามกติกาโดยอัตโนมัติ และ<b>ห้ามให้ตำแหน่งว่างค้างอยู่ในโครงสร้าง</b></li>
+  <li><b>การเลื่อนตำแหน่งแทนอัตโนมัติ</b> — เมื่อมีตำแหน่งว่าง ระบบตรวจสมาชิกที่มีคุณสมบัติครบถ้วนจากตำแหน่งถัดไป แล้วเลื่อนขึ้นมาแทนโดยอัตโนมัติ</li>
+  <li><b>การเชื่อมต่อสายงาน</b> — หลังเปลี่ยนตำแหน่ง ระบบ Recalculate โครงสร้างเครือข่ายทั้งหมด และตรวจความสัมพันธ์ของผู้แนะนำ · ผู้แนะนำระดับบน · สมาชิกในสายงาน · ตำแหน่ง 1 แตก 5 · ตำแหน่งที่ว่าง · สมาชิกที่มีสิทธิ์เลื่อนตำแหน่ง</li>
+  <li><b>ทำงานแบบ Real-time</b> — เมื่อสถานะสมาชิกเปลี่ยน ระบบปรับโครงสร้างและตำแหน่งที่เกี่ยวข้องอัตโนมัติ (Dashboard อัปเดตทุก 8 วินาที · n8n ตรวจทุก 15/30 นาที ทุกวัน 06:00 และทุกชั่วโมง)</li>
+</ol>
+
+<h2>2. ลำดับการทำงานอัตโนมัติ (7 ขั้น)</h2>
+<div class="steps">
+  <div class="step"><b>ขั้น 1 · ตรวจสอบเงื่อนไข</b><span>สถานะ · ใบเสร็จ · ยอดรับรอง · กำหนดเวลา · ใบเสร็จรอตรวจ</span></div>
+  <div class="step"><b>ขั้น 2 · ระบุสมาชิกที่ไม่ผ่าน</b><span>แจกแจงเหตุผลรายคน + กันการคัดกรณีรอตรวจ</span></div>
+  <div class="step"><b>ขั้น 3 · นำออกจากตำแหน่ง</b><span>ตั้งสถานะไม่ผ่านเงื่อนไข · ปิดจุดในผัง · บันทึกประวัติ</span></div>
+  <div class="step"><b>ขั้น 4 · ค้นหาผู้มีคุณสมบัติครบ</b><span>จัดลำดับความสำคัญตามกติกาที่ตั้งไว้</span></div>
+  <div class="step"><b>ขั้น 5 · เลื่อนขึ้นแทน</b><span>ผู้ผ่านเงื่อนไขเท่านั้น · ห้ามเลื่อนคนไม่ผ่าน</span></div>
+  <div class="step"><b>ขั้น 6 · ปรับสายงาน 1:5</b><span>เติมช่องว่าง · ตรวจผู้แนะนำ/สมาชิกในสายงาน</span></div>
+  <div class="step"><b>ขั้น 7 · อัปเดตทุกระดับ + Log</b><span>Recalculate ระดับ/จำนวนลูกตรง · Audit Log ครบ</span></div>
+</div>
+
+<h2>3. เกณฑ์ที่ระบบใช้ตัดสิน (แก้ได้จากหน้าจอ เก็บในฐานข้อมูล)</h2>
+<table>
+  <tr><th style="width:38%">เกณฑ์</th><th>ค่าเริ่มต้น</th><th>ความหมาย</th></tr>
+  <tr><td>รอบที่ประเมิน</td><td>เดือนปัจจุบัน (YYYY-MM)</td><td>รอบบัญชีที่ใช้ตรวจเงื่อนไขและบันทึกประวัติ</td></tr>
+  <tr><td>ต้องส่งใบเสร็จภายใน</td><td>15 วันหลังปิดรอบ</td><td>เกินกำหนด = ไม่ผ่านเงื่อนไข</td></tr>
+  <tr><td>วัน/เวลาที่ต้องดำเนินการ</td><td>วันที่ 25 เวลา 18:00 น.</td><td>ใช้กับตัวนับถอยหลังบน Dashboard และรอบทำงานของ n8n</td></tr>
+  <tr><td>ยอดรับรองขั้นต่ำต่อรอบ</td><td>฿20,000</td><td>อ่านจาก PerformanceLedger (สถานะ active) ของรอบนั้น</td></tr>
+  <tr><td>ผ่อนผันสมาชิกใหม่</td><td>30 วัน</td><td>สมาชิกใหม่ยังไม่ถูกคัดออกระหว่างผ่อนผัน</td></tr>
+  <tr><td>คัดออกอัตโนมัติจริง</td><td>ปิด (ตรวจแล้วรออนุมัติ)</td><td>เปิดเมื่อพร้อม — ระบบจึงตัดสมาชิกออกจริงอัตโนมัติ</td></tr>
+  <tr><td>เลื่อนตำแหน่งแทนอัตโนมัติ</td><td>เปิด</td><td>เลื่อนผู้ผ่านเงื่อนไขขึ้นแทนตำแหน่งว่างทันที</td></tr>
+  <tr><td>ห้ามทิ้งตำแหน่งว่าง</td><td>เปิด</td><td>เติมช่อง 1:5 ทันทีที่ว่าง ถ้าไม่มีผู้มีคุณสมบัติ จะแจ้งเตือนและตรวจซ้ำทุกรอบ</td></tr>
+  <tr><td>ลำดับความสำคัญ</td><td>ใกล้ตำแหน่งว่างที่สุด → ผลงานรับรองสูงสุด → อาวุโส</td><td>ใช้เมื่อมีผู้ผ่านเงื่อนไขหลายคน</td></tr>
+</table>
+<p class="lead">เกณฑ์ทั้งหมดถูกเก็บในฐานข้อมูลจริง (ตาราง <span class="mono">ReceiptSettings.settings.net1x5</span>) แก้จาก Dashboard ได้โดยไม่ต้องแก้โค้ด และทุกครั้งที่แก้จะถูกบันทึก Audit Log</p>
+
+<h2>4. กฎสำคัญที่ระบบบังคับในโค้ด</h2>
+<div class="warn">
+  <ul>
+    <li><b>ห้ามเลื่อนสมาชิกที่ยังไม่ผ่านเงื่อนไข</b> — ฟังก์ชันเลื่อนตำแหน่งจะปฏิเสธทันทีถ้าผู้รับการเลื่อนไม่ผ่านเงื่อนไขครบ</li>
+    <li><b>ห้ามปล่อยตำแหน่งว่าง</b> — ถ้ามีสมาชิกที่มีคุณสมบัติครบ ระบบต้องเติม/เลื่อนขึ้นแทนทันที ถ้าไม่มี ระบบแจ้งเตือนผู้ดูแลและตรวจซ้ำอัตโนมัติทุกรอบ (ไม่ค้างเงียบ)</li>
+    <li><b>ต้องตรวจสอบคุณสมบัติก่อนเลื่อนตำแหน่งทุกครั้ง</b></li>
+    <li><b>ต้องเก็บ Log ทุกการเปลี่ยนแปลง</b> — Audit Log + PlacementHistory + PlacementRun/Entry + RankHistory + MembershipStatusHistory และตรวจสอบย้อนหลังได้จากแท็บ Log บน Dashboard</li>
+    <li><b>ถ้ามีผู้ผ่านเงื่อนไขหลายคน</b> ใช้ลำดับความสำคัญที่ระบบกำหนดไว้ (เลือกได้ 3 แบบ)</li>
+    <li><b>ทุกครั้งที่มีการเปลี่ยนตำแหน่ง</b> ระบบปรับโครงสร้างสายงานที่เกี่ยวข้องอัตโนมัติ (Recalculate ระดับ + จำนวนลูกตรง)</li>
+    <li><b>ใบเสร็จที่ยังรอตรวจ ห้ามใช้เป็นเหตุคัดออก</b> — กันความผิดพลาดจาก OCR/ผู้ตรวจล่าช้า</li>
+  </ul>
+</div>
+
+<h2>5. สถาปัตยกรรม: n8n + ฐานข้อมูล + Dashboard</h2>
+<table>
+  <tr><th style="width:24%">ชั้น</th><th>รายละเอียด</th></tr>
+  <tr>
+    <td>เครื่องยนต์ (Engine)</td>
+    <td><span class="mono">src/lib/net1x5.ts</span> — ตรวจเงื่อนไข · คัดออก · ค้นหาผู้มีคุณสมบัติ · เลื่อนตำแหน่ง · เติมช่อง 1:5 · Recalculate · แจ้งเตือน · บันทึก Log (ทำงานบนข้อมูลจริงเท่านั้น ไม่ใช้ข้อมูลจำลอง)</td>
+  </tr>
+  <tr>
+    <td>API</td>
+    <td>
+      <span class="mono">GET /api/net/1x5/state</span> — สถานะ/เงื่อนไข/ตำแหน่งว่าง/ผู้มีสิทธิ์/Log<br>
+      <span class="mono">POST /api/net/1x5/run</span> — รันวงจร (<span class="mono">mode: preview | apply</span>, รองรับ idempotencyKey)<br>
+      <span class="mono">GET|POST /api/net/1x5/rules</span> — อ่าน/แก้กติกา (ผู้ดูแลระบบ)<br>
+      <span class="mono">POST /api/net/1x5/seed</span> — สร้าง/ลบเครือข่ายทดสอบ (โดเมน <span class="mono">@ai-insurance-test.local</span>)<br>
+      สิทธิ์: สมาชิกที่ล็อกอินอ่านได้ · งานเขียนข้อมูลจริงต้องเป็นผู้ดูแลระบบ หรือ n8n ส่ง <span class="mono">Authorization: Bearer &lt;CRON_SECRET&gt;</span>
+    </td>
+  </tr>
+  <tr>
+    <td>ฐานข้อมูล (จริง)</td>
+    <td><span class="mono">User · TreeNode · TreePlacement · PlacementQueue · PerformanceLedger · ReceiptFile · AuditLog · PlacementRun/Entry · PlacementHistory · RankHistory · MembershipStatusHistory · ReceiptSettings · Notification · EventOutbox</span></td>
+  </tr>
+  <tr>
+    <td>Dashboard</td>
+    <td><span class="mono">/network/1x5-autopilot</span> — KPI · ลำดับการทำงาน 7 ขั้นแบบเรียลไทม์ · ผู้ไม่ผ่านเงื่อนไข · ผู้มีสิทธิ์เลื่อน · ตำแหน่งว่าง · ผังสมาชิก 1:5 (แสดงช่อง 1-5) · Log ตรวจสอบย้อนหลัง · แผงแก้กติกา</td>
+  </tr>
+  <tr>
+    <td>n8n Workflows</td>
+    <td>
+      <b>01</b> ตรวจกำหนดเวลา + รันคัดออก/เลื่อนตำแหน่ง (ทุก 15 นาที)<br>
+      <b>02</b> ตรวจใบเสร็จ/เงื่อนไขรอบ + สรุปรายงาน (ทุกวัน 06:00)<br>
+      <b>03</b> จัดสายงาน 1:5 + เติมตำแหน่งว่าง (ทุก 30 นาที)<br>
+      <b>04</b> Webhook สั่งรันวงจรทันที (manual/API) — <span class="mono">POST /webhook/net-1x5/run</span><br>
+      <b>05</b> เฝ้า Audit Log + เตือนตำแหน่งว่างค้าง (ทุก 1 ชั่วโมง)<br>
+      ไฟล์ workflow: <span class="mono">n8n/network-1x5-autopilot/workflows/</span>
+    </td>
+  </tr>
+</table>
+
+<h2>6. ความปลอดภัยและความถูกต้องของข้อมูล</h2>
+<div class="ok">
+  <ul>
+    <li>การคัดออก/เลื่อนตำแหน่งเป็น “งานเขียนข้อมูลจริง” — ต้องเป็นผู้ดูแลระบบหรือ n8n ที่มี CRON_SECRET เท่านั้น และมีค่า idempotencyKey กันรันซ้ำ</li>
+    <li>โหมด <b>ตรวจสอบ (preview)</b> ใช้ฟรีสำหรับทุกคนที่ล็อกอิน — ไม่แก้ข้อมูลจริงแม้แต่แถวเดียว</li>
+    <li>ค่าเริ่มต้นปิด “คัดออกอัตโนมัติจริง” — เพื่อให้ผู้ดูแลเห็นผลตรวจก่อนตัดสินใจเปิด</li>
+    <li>สมาชิกที่ไม่ใช่ผู้ดูแลจะเห็นชื่อสมาชิกแบบปกปิดบางส่วน (ยังตรวจสอบด้วยรหัสสมาชิกได้)</li>
+    <li>เครือข่ายทดสอบใช้โดเมนอีเมล <span class="mono">@ai-insurance-test.local</span> เท่านั้น ลบได้ทุกเมื่อ และไม่แตะข้อมูลสมาชิกจริง</li>
+    <li>ระบบไม่ใช้ข้อมูลจำลอง (sim_*) ปนกับข้อมูลจริง — Dashboard ระบุชัดว่าเป็น “ข้อมูลจริงในฐานข้อมูล”</li>
+  </ul>
+</div>
+
+<h2>7. การใช้งานจริง (ขั้นตอนสั้น)</h2>
+<ol>
+  <li>เข้าสู่ระบบ → เมนู “ระบบ 1 แตก 5 อัตโนมัติ” (ต่อจาก “สอบถามรายละเอียด”)</li>
+  <li>กด <b>“ตรวจสอบเงื่อนไข (ยังไม่แก้ข้อมูล)”</b> เพื่อดูผลตรวจ/ตำแหน่งว่าง/ผู้มีสิทธิ์ก่อน</li>
+  <li>ปรับ “กติกา” ให้ตรงนโยบาย เช่น จำนวนวันส่งใบเสร็จ, ยอดรับรองขั้นต่ำ, ลำดับความสำคัญ</li>
+  <li>ตั้ง <b>คัดออกอัตโนมัติจริง = เปิด</b> แล้วกด <b>“รันจริง”</b> (หรือปล่อยให้ n8n รันตามรอบ)</li>
+  <li>ตรวจย้อนหลังได้ที่แท็บ <b>Log ตรวจสอบย้อนหลัง</b> — ทุกการคัดออก/เลื่อนตำแหน่ง/เติมตำแหน่งว่างมีบันทึกครบ</li>
+</ol>
+
+<footer>
+  เอกสารนี้สร้างจากระบบจริง (โค้ด + ฐานข้อมูลของโปรเจกต์ ai-insurance-network-tree) · ตัวเลข/เกณฑ์ทั้งหมดเป็นค่าตั้งต้นของระบบ ไม่ใช่การรับประกันรายได้หรือผลลัพธ์
+</footer>
+
+</body>
+</html>
