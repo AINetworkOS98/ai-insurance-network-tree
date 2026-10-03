@@ -73,7 +73,7 @@ export default function Home() {
                       หนึ่งคนเชื่อม 5 คน · 5 ขยายเป็น 25 · 25 ขยายเป็น 125 · 125 ขยายเป็น 625
                     </p>
                     <div className="mt-2">
-                      <CosmicNetwork heightClass="h-[44vh] min-h-[300px]" />
+                      <CosmicNetwork heightClass="h-[38vh] min-h-[300px]" />
                     </div>
                     <p className="mx-auto mt-2 max-w-[760px] text-center text-[10px] leading-relaxed text-slate-500">
                       ภาพจำลองโครงสร้างเครือข่าย 1 แตก 5 (781 โหนดตัวอย่าง) — ลากเพื่อหมุนจักรวาล ซูมเข้า-ออก
