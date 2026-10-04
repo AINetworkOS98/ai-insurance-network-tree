@@ -270,13 +270,22 @@ export default function CosmicNetwork({
   );
 
   const toggleSound = useCallback(() => {
-    setSoundOn((v) => {
-      const next = !v;
-      if (!next) setSoundLive(false);
-      writeUniverseSoundPref({ on: next });
-      return next;
-    });
-  }, []);
+    if (soundOn) {
+      setSoundOn(false);
+      setSoundLive(false);
+      writeUniverseSoundPref({ on: false });
+      return;
+    }
+    // กันเคส "เปิดแล้วเงียบ": ถ้าระดับเสียงถูกตั้งไว้ต่ำมาก ให้กลับไปค่าเริ่มต้นที่ได้ยินชัด
+    if (volumeRef.current < 0.05) {
+      volumeRef.current = DEFAULT_UNIVERSE_VOLUME;
+      setVolume(DEFAULT_UNIVERSE_VOLUME);
+      audioRef.current?.setVolume(DEFAULT_UNIVERSE_VOLUME);
+      writeUniverseSoundPref({ volume: DEFAULT_UNIVERSE_VOLUME });
+    }
+    setSoundOn(true);
+    writeUniverseSoundPref({ on: true });
+  }, [soundOn]);
 
   useEffect(() => {
     if (!soundOn) return;

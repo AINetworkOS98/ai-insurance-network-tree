@@ -33,10 +33,15 @@ export function readUniverseSoundPref(): UniverseSoundPref {
   if (typeof window === 'undefined') return fallback;
   try {
     const rawOn = window.localStorage.getItem(KEY_ON);
-    const rawVol = Number(window.localStorage.getItem(KEY_VOL));
+    const rawVolStored = window.localStorage.getItem(KEY_VOL);
+    // ระวัง: Number(null) === 0 — ถ้ายังไม่เคยตั้งค่า ต้องได้ค่าเริ่มต้น ไม่ใช่ 0 (ไม่งั้นเสียงเงียบ)
+    const rawVol = rawVolStored === null ? Number.NaN : Number(rawVolStored);
+    const on = rawOn === null ? true : rawOn === '1';
+    const vol = Number.isFinite(rawVol) ? clampVolume(rawVol) : DEFAULT_UNIVERSE_VOLUME;
     return {
-      on: rawOn === null ? true : rawOn === '1',
-      volume: Number.isFinite(rawVol) && rawVol >= 0 ? clampVolume(rawVol) : DEFAULT_UNIVERSE_VOLUME,
+      on,
+      // "เปิดเสียงอยู่" แต่ระดับเสียง ~0 = ผู้ใช้จะไม่ได้ยินอะไรเลย → คืนค่าเริ่มต้นที่ได้ยินชัด
+      volume: on && vol < MIN_AUDIBLE ? DEFAULT_UNIVERSE_VOLUME : vol,
     };
   } catch {
     return fallback;

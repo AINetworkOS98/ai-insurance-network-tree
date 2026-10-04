@@ -188,6 +188,12 @@ export default function NetworkSimulator() {
       setMsg('ปิดเสียงจักรวาลแล้ว');
       return;
     }
+    // กันเคส "เปิดแล้วเงียบ": ระดับเสียงต่ำมาก → กลับไปค่าเริ่มต้นที่ได้ยินชัด
+    if (volumeRef.current < 0.05) {
+      volumeRef.current = DEFAULT_UNIVERSE_VOLUME;
+      setVolume(DEFAULT_UNIVERSE_VOLUME);
+      writeUniverseSoundPref({ volume: DEFAULT_UNIVERSE_VOLUME });
+    }
     audio.setVolume(volumeRef.current);
     const started = await audio.start();
     if (started) {
