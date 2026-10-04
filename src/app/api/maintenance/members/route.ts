@@ -6,11 +6,13 @@ import { prisma } from '@/lib/prisma';
  * ประตู: Authorization: Bearer $CRON_SECRET เท่านั้น
  *
  * GET  → นับจำนวน + รายชื่อ (ปิดอีเมลบางส่วน) + จำนวนข้อมูลที่ผูกอยู่  (อ่านอย่างเดียว ปลอดภัย)
- * POST → ลบสมาชิกทั้งหมด "ยกเว้น" อีเมลที่กำหนด
- *        บังคับ ?confirm=DELETE-OTHERS  (กันกดพลาด)
- *        สำรองข้อมูลทุกแถวที่จะลบลง NotificationLog ก่อนลบ (กู้คืนได้) แล้วค่อยลบ
+ * POST → ปิดใช้งานแล้ว (405) — ห้ามลบสมาชิกแบบยกชุดผ่าน endpoint นี้
+ *        ของเดิมลบ user ทุกบัญชีที่ไม่ใช่ DEFAULT_KEEP ด้วยการมี CRON_SECRET เท่านั้น
+ *        และขั้นตอน "สำรองก่อนลบ" เขียนฟิลด์ title/payload ลง NotificationLog ซึ่งตารางนั้น
+ *        ไม่มีฟิลด์ดังกล่าว → Prisma error ถูก .catch() กลืน → ลบสำเร็จจริงโดยไม่มีข้อมูลสำรอง
  */
-const DEFAULT_KEEP = 'akarapol.pro798@gmail.com';
+const READ_ONLY_ONLY =
+  'การลบสมาชิกแบบยกชุดถูกปิดในระบบจริง (กันข้อมูลเสียหาย) — ใช้การลบเป็นรายบุคคลผ่านหน้าผู้ดูแลระบบแทน';
 
 function allowed(req: NextRequest) {
   const secret = process.env.CRON_SECRET || '';
@@ -61,52 +63,15 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     totalUsers: rows.length,
-    willKeep: DEFAULT_KEEP,
-    willDeleteCount: rows.filter((r) => r.emailFull !== DEFAULT_KEEP).length,
+    readOnly: true,
     users: rows.map(({ emailFull, ...r }) => r),
   });
 }
 
-export async function POST(req: NextRequest) {
-  if (!allowed(req)) return NextResponse.json({ ok: false, error: 'ต้องมีสิทธิ์ (Bearer CRON_SECRET)' }, { status: 401 });
-  const url = new URL(req.url);
-  if (url.searchParams.get('confirm') !== 'DELETE-OTHERS') {
-    return NextResponse.json({ ok: false, error: 'ต้องระบุ ?confirm=DELETE-OTHERS' }, { status: 400 });
-  }
-  const db = prisma as any;
-
-  // 0) ต้องมีผู้ใช้ที่เก็บไว้จริง (กันลบหมดเกลี้ยง)
-  const keep = DEFAULT_KEEP;
-  const keeper = await db.user.findUnique({ where: { email: keep }, select: { id: true, email: true } }).catch(() => null);
-  if (!keeper) return NextResponse.json({ ok: false, error: `ไม่พบบัญชีที่จะเก็บไว้: ${keep} — ยกเลิกเพื่อความปลอดภัย` }, { status: 409 });
-
-  // 1) สำรองข้อมูลผู้ใช้ที่จะลบ (กู้คืนได้)
-  const full = await db.user.findMany({ where: { email: { not: keep } } });
-  const backupMeta = await db.notificationLog.create({
-    data: {
-      type: 'maintenance.members_backup',
-      channel: 'system',
-      status: 'SENT',
-      title: `สำรองข้อมูลสมาชิกก่อนลบ (${full.length} บัญชี)`,
-      payload: { kept: keep, users: full, at: new Date().toISOString() } as any,
-    },
-    select: { id: true, createdAt: true },
-  }).catch((e: any) => ({ id: null, error: String(e?.message || e).slice(0, 160) }));
-
-  // 2) ลบ (relation ที่ผูกอยู่จะถูกจัดการตาม onDelete ของสคีมา)
-  const before = await db.user.count();
-  const del = await db.user.deleteMany({ where: { email: { not: keep } } });
-  const after = await db.user.count();
-  const remaining = await db.user.findMany({ select: { email: true, status: true } });
-
-  return NextResponse.json({
-    ok: true,
-    backupLogId: (backupMeta as any).id,
-    backupRows: full.length,
-    deletedCount: del.count,
-    usersBefore: before,
-    usersAfter: after,
-    remaining: remaining.map((r: any) => ({ email: mask(r.email), status: r.status })),
-    note: 'ข้อมูลสำรองอยู่ใน NotificationLog (type=maintenance.members_backup) กู้คืนได้จากที่นั่น',
-  });
+// ลบแบบยกชุด: ปิดถาวรใน production
+// (ของเดิมลบ user ทุกบัญชีที่ไม่ใช่ DEFAULT_KEEP ด้วยการมี CRON_SECRET เท่านั้น
+//  และขั้นตอน "สำรองก่อนลบ" เขียนฟิลด์ title/payload ลง NotificationLog ซึ่งตารางนั้น
+//  ไม่มีฟิลด์ดังกล่าว → Prisma error ถูก .catch() กลืน → ลบสำเร็จจริงโดยไม่มีข้อมูลสำรอง)
+export async function POST() {
+  return NextResponse.json({ ok: false, error: READ_ONLY_ONLY }, { status: 405 });
 }
