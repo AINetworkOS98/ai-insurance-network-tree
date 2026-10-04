@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getHermesProvider } from '@/lib/ai/hermesProvider';
+import { getHermesProvider, providerChain } from '@/lib/ai/hermesProvider';
 
 // GET /api/ai/status — ตรวจสอบสถานะ Hermes เบื้องหลัง (admin only ถ้ามี token)
 // แต่ถ้าไม่มี token ก็ตอบแบบ public ว่า configured หรือไม่ — ไม่ expose ชื่อ provider จริง
@@ -12,8 +12,9 @@ export async function GET(req: NextRequest){
     ok: true,
     displayName: 'ระบบค้นหาด้วย AI อัจฉริยะ',
     configured: info.configured,
+    streaming: true,
     // รายละเอียด provider จริงแสดงเฉพาะ admin
-    ...(isAdmin ? { provider: info.provider, model: info.model } : {}),
+    ...(isAdmin ? { provider: info.provider, model: info.model, failover: providerChain().map(c => c.provider) } : {}),
     gateway: 'active',
     modes: ['เร็ว','อัจฉริยะ','วิเคราะห์เชิงลึก'],
   });
