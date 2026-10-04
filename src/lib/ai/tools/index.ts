@@ -122,7 +122,7 @@ const tools: Record<string, ToolDef> = {
     name:"Calculator", description:"คำนวณเลขคณิตปลอดภัย",
     async run(args,ctx){
       const expr = String(args.expression ?? args.query ?? ctx.query).trim();
-      const clean = expr.replace(/[^0-9+\-*/().%\s]/g,"").slice(0,120);
+      const clean = expr.replace(/[^0-9+\-*/().%\s]/g,"").trim().slice(0,120);
       if(!clean) return { error:"ไม่มีนิพจน์คำนวณ" };
       try{
         const safe = clean.replace(/%/g,"/100");
