@@ -122,6 +122,7 @@ export default function CosmicNetwork({
   const [addMode, setAddMode] = useState(false);
   const [confirmParent, setConfirmParent] = useState<number | null>(null);
   const [soundOn, setSoundOn] = useState(false);
+  const [soundLive, setSoundLive] = useState(false); // เสียงดังจริงแล้ว (ผ่านการแตะจอครั้งแรก) หรือยัง
   const [volume, setVolume] = useState(DEFAULT_UNIVERSE_VOLUME);
   const [quality, setQuality] = useState<'high' | 'low'>('high');
   const [glOk, setGlOk] = useState<boolean | null>(null);
@@ -134,7 +135,7 @@ export default function CosmicNetwork({
   const apiRef = useRef<SceneApi | null>(null);
   const labelRef = useRef<LabelState>({ root: { x: 0, y: 0, visible: false }, sel: { x: 0, y: 0, visible: false }, ready: false });
   const selLabelDom = useRef<HTMLDivElement>(null);
-  const audioRef = useRef<{ setVolume: (v: number) => void; start: () => Promise<boolean>; stop: () => void; energyPulse: (i?: number, n?: number) => void; whoosh: (i?: number) => void; activation: () => void } | null>(null);
+  const audioRef = useRef<{ running: boolean; setVolume: (v: number) => void; start: () => Promise<boolean>; stop: () => void; energyPulse: (i?: number, n?: number) => void; whoosh: (i?: number) => void; activation: () => void } | null>(null);
   const slowFrames = useRef(0);
   const volumeRef = useRef(DEFAULT_UNIVERSE_VOLUME);
   const toastTimer = useRef<number | null>(null);
@@ -227,6 +228,7 @@ export default function CosmicNetwork({
       audioRef.current = a;
       await a.start();
       a.setVolume(volumeRef.current);
+      if (a.running) setSoundLive(true);
     })();
     return () => {
       cancelled = true;
@@ -243,7 +245,9 @@ export default function CosmicNetwork({
     const kick = (e: Event) => {
       const el = e.target as Element | null;
       if (el && typeof el.closest === 'function' && el.closest('[data-sound-toggle]')) return;
-      void audioRef.current?.start();
+      void audioRef.current?.start().then(() => {
+        if (audioRef.current?.running) setSoundLive(true);
+      });
     };
     window.addEventListener('pointerdown', kick, { once: true, capture: true });
     window.addEventListener('keydown', kick, { once: true });
@@ -268,6 +272,7 @@ export default function CosmicNetwork({
   const toggleSound = useCallback(() => {
     setSoundOn((v) => {
       const next = !v;
+      if (!next) setSoundLive(false);
       writeUniverseSoundPref({ on: next });
       return next;
     });
@@ -626,7 +631,7 @@ export default function CosmicNetwork({
           </GlassButton>
           <span data-sound-toggle className="contents">
             <GlassButton active={soundOn} onClick={toggleSound} title="เสียงบรรยากาศอวกาศ (สังเคราะห์สดในเบราว์เซอร์)">
-              {soundOn ? '🔊 เสียง: เปิด' : '🔇 เสียง: ปิด'}
+              {soundOn ? (soundLive ? '🔊 เสียง: เปิด' : '🔊 เสียง: เปิด · แตะจอ 1 ครั้ง') : '🔇 เสียง: ปิด'}
             </GlassButton>
           </span>
           {/* ── แถบปรับระดับเสียง — ค่าที่ตั้งไว้ใช้ร่วมกันทุกหน้าที่ฝังจักรวาลนี้ ── */}
