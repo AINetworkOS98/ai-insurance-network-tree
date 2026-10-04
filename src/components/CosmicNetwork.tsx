@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { addChildNode, availableParentIds, buildInitialNetwork, nodeColor, type CosmicNetworkModel, type CosmicNode } from '@/lib/cosmicNetwork';
+import { DEFAULT_UNIVERSE_VOLUME, clampVolume, readUniverseSoundPref, writeUniverseSoundPref } from '@/lib/universeSoundPref';
 import type { SceneApi, SceneStats, LabelState } from './CosmicNetworkScene';
 
 const CosmicNetworkScene = dynamic(() => import('./CosmicNetworkScene'), {
@@ -121,6 +122,7 @@ export default function CosmicNetwork({
   const [addMode, setAddMode] = useState(false);
   const [confirmParent, setConfirmParent] = useState<number | null>(null);
   const [soundOn, setSoundOn] = useState(false);
+  const [volume, setVolume] = useState(DEFAULT_UNIVERSE_VOLUME);
   const [quality, setQuality] = useState<'high' | 'low'>('high');
   const [glOk, setGlOk] = useState<boolean | null>(null);
   const [stats, setStats] = useState<SceneStats>({ activeEnergy: 62, fps: 60, quality: 'high' });
@@ -134,6 +136,7 @@ export default function CosmicNetwork({
   const selLabelDom = useRef<HTMLDivElement>(null);
   const audioRef = useRef<{ setVolume: (v: number) => void; start: () => Promise<boolean>; stop: () => void; energyPulse: (i?: number, n?: number) => void; whoosh: (i?: number) => void; activation: () => void } | null>(null);
   const slowFrames = useRef(0);
+  const volumeRef = useRef(DEFAULT_UNIVERSE_VOLUME);
   const toastTimer = useRef<number | null>(null);
 
   const total = model.total;
@@ -204,7 +207,15 @@ export default function CosmicNetwork({
     }
   }, []);
 
-  /* ── เสียง (สังเคราะห์สด · เปิดเมื่อผู้ใช้กดเท่านั้น) ── */
+  /* ── เสียง: เปิด/ปิด + ระดับความดัง ที่ตั้งไว้ใช้ร่วมกันทุกหน้า (จำค่าใน localStorage) ── */
+  useEffect(() => {
+    const pref = readUniverseSoundPref();
+    volumeRef.current = pref.volume;
+    setVolume(pref.volume);
+    setSoundOn(pref.on);
+  }, []);
+
+  /* ── เสียง (สังเคราะห์สด · ต้องมีการแตะ/คลิกของผู้ใช้ก่อนจึงดัง) ── */
   useEffect(() => {
     if (!soundOn) return;
     let cancelled = false;
@@ -212,8 +223,10 @@ export default function CosmicNetwork({
       const { UniverseAudio } = await import('@/lib/universeAudio');
       if (cancelled) return;
       const a = new UniverseAudio();
+      a.setVolume(volumeRef.current);
       audioRef.current = a;
       await a.start();
+      a.setVolume(volumeRef.current);
     })();
     return () => {
       cancelled = true;
@@ -222,13 +235,51 @@ export default function CosmicNetwork({
     };
   }, [soundOn]);
 
+  /* ผู้ใช้เคยเปิดเสียงไว้ (รวมค่าที่ตั้งจากหน้าอื่น) → เริ่มให้เองเมื่อแตะจอครั้งแรก
+     เพราะเบราว์เซอร์อนุญาตให้เล่นเสียงจาก gesture ของผู้ใช้เท่านั้น
+     (ข้ามการแตะที่ "ปุ่ม/แถบเสียง" เอง เพื่อไม่ให้ชนกับการกดเปิด-ปิดของผู้ใช้) */
+  useEffect(() => {
+    if (!soundOn) return;
+    const kick = (e: Event) => {
+      const el = e.target as Element | null;
+      if (el && typeof el.closest === 'function' && el.closest('[data-sound-toggle]')) return;
+      void audioRef.current?.start();
+    };
+    window.addEventListener('pointerdown', kick, { once: true, capture: true });
+    window.addEventListener('keydown', kick, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', kick, true);
+      window.removeEventListener('keydown', kick);
+    };
+  }, [soundOn]);
+
+  const changeVolume = useCallback(
+    (v: number) => {
+      const next = clampVolume(v);
+      volumeRef.current = next;
+      setVolume(next);
+      if (next > 0) setSoundOn(true); // ขยับแถบเสียง = ต้องการให้มีเสียง
+      audioRef.current?.setVolume(next);
+      writeUniverseSoundPref({ volume: next });
+    },
+    [],
+  );
+
+  const toggleSound = useCallback(() => {
+    setSoundOn((v) => {
+      const next = !v;
+      writeUniverseSoundPref({ on: next });
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     if (!soundOn) return;
     if (paused) return;
     let timer = 0;
     const loop = () => {
       timer = window.setTimeout(() => {
-        audioRef.current?.energyPulse(0.03 + Math.random() * 0.025);
+        audioRef.current?.energyPulse(0.045 + Math.random() * 0.035);
         loop();
       }, 900 + Math.random() * 1400);
     };
@@ -237,7 +288,7 @@ export default function CosmicNetwork({
   }, [soundOn, paused]);
 
   const onCometPass = useCallback(() => {
-    audioRef.current?.whoosh(0.085);
+    audioRef.current?.whoosh(0.13);
   }, []);
 
   const onUserInteract = useCallback(() => {
@@ -253,7 +304,7 @@ export default function CosmicNetwork({
       }
       setSelectedId(id);
       onSelectCode?.(id === null ? null : model.nodes[id]?.code ?? null);
-      if (id !== null && soundOn) audioRef.current?.energyPulse(0.04, 520 + Math.random() * 260);
+      if (id !== null && soundOn) audioRef.current?.energyPulse(0.055, 560 + Math.random() * 280);
     },
     [addMode, soundOn, onSelectCode, model],
   );
@@ -573,9 +624,26 @@ export default function CosmicNetwork({
           <GlassButton active={paused} onClick={() => setPaused((v) => !v)} title="หยุด/เล่นแอนิเมชันทั้งหมด">
             {paused ? 'เล่นแอนิเมชัน' : 'หยุดแอนิเมชัน'}
           </GlassButton>
-          <GlassButton active={soundOn} onClick={() => setSoundOn((v) => !v)} title="เสียงบรรยากาศอวกาศ (สังเคราะห์สด)">
-            {soundOn ? '🔊 เสียง: เปิด' : '🔇 เสียง: ปิด'}
-          </GlassButton>
+          <span data-sound-toggle className="contents">
+            <GlassButton active={soundOn} onClick={toggleSound} title="เสียงบรรยากาศอวกาศ (สังเคราะห์สดในเบราว์เซอร์)">
+              {soundOn ? '🔊 เสียง: เปิด' : '🔇 เสียง: ปิด'}
+            </GlassButton>
+          </span>
+          {/* ── แถบปรับระดับเสียง — ค่าที่ตั้งไว้ใช้ร่วมกันทุกหน้าที่ฝังจักรวาลนี้ ── */}
+          <label data-sound-toggle className="flex items-center gap-1.5 rounded-lg border border-slate-600/40 bg-slate-900/60 px-2 py-1 text-[10px] text-slate-200 backdrop-blur-sm">
+            <span>ระดับเสียง</span>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={volume}
+              onChange={(e) => changeVolume(Number(e.target.value))}
+              className="h-1 w-20 accent-sky-400"
+              aria-label="ระดับความดังเสียงจักรวาล"
+            />
+            <span className="w-8 text-right tabular-nums text-slate-300">{Math.round(volume * 100)}%</span>
+          </label>
           {!live ? (
             <>
               <GlassButton

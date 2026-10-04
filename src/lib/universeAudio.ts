@@ -12,7 +12,13 @@
  *  7) คอมเพรสเซอร์ + ไฮเชลฟ์ลดความจัดของยอดแหลม กันเสียงแตก
  *
  * ต้องเริ่มจาก "การคลิกของผู้ใช้" เท่านั้น (ข้อกำหนดของเบราว์เซอร์)
+ *
+ * v3 (เพิ่มเสียง · ทุกลิงก์): ระดับความดังเริ่มต้น 0.62 (เดิม 0.32) · ยกเพดานคอมเพรสเซอร์ขึ้นเป็น -10 dB
+ * เพื่อไม่ให้เสียงถูกบีบจนเบา · เพิ่มเกนชดเชย (makeup) 1.35 เท่าหลังตัวกรองแหลม ⇒ ดังขึ้นจริงประมาณ 7-8 dB
+ * ค่าเปิด/ปิด + ระดับเสียงที่ผู้ใช้ตั้งไว้ใช้ร่วมกันทุกหน้าผ่าน `universeSoundPref.ts`
  */
+
+import { DEFAULT_UNIVERSE_VOLUME } from './universeSoundPref';
 
 export class UniverseAudio {
   private ctx: AudioContext | null = null;
@@ -20,7 +26,7 @@ export class UniverseAudio {
   private send: GainNode | null = null; // บัสส่งเข้า reverb
   private nodes: AudioScheduledSourceNode[] = [];
   private timers: number[] = [];
-  private volume = 0.32;
+  private volume = DEFAULT_UNIVERSE_VOLUME;
 
   /**
    * @param makeCtx ใช้สำหรับทดสอบ (เช่นส่ง OfflineAudioContext เข้ามาเพื่อวัดเสียง)
@@ -58,9 +64,9 @@ export class UniverseAudio {
     master.gain.value = 0;
 
     const comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -18;
+    comp.threshold.value = -10; // เดิม -18 → บีบเสียงมากเกินไปจนเบา
     comp.knee.value = 24;
-    comp.ratio.value = 3;
+    comp.ratio.value = 2.6;
     comp.attack.value = 0.05;
     comp.release.value = 0.6;
 
@@ -69,7 +75,11 @@ export class UniverseAudio {
     softTop.frequency.value = 6500;
     softTop.gain.value = -3.5;
 
-    master.connect(comp).connect(softTop).connect(ctx.destination);
+    // เกนชดเชยหลังคอมเพรสเซอร์ — ทำให้ได้ยินชัดขึ้นโดยไม่ให้ยอดแหลมแตก
+    const makeup = ctx.createGain();
+    makeup.gain.value = 1.35;
+
+    master.connect(comp).connect(softTop).connect(makeup).connect(ctx.destination);
     this.master = master;
 
     // ── Reverb ยาว (สร้าง impulse response เอง) + บัสส่ง ──
@@ -257,7 +267,7 @@ export class UniverseAudio {
     // ── 6) ระฆังไกลเป็นระยะ ──
     const schedulePing = () => {
       const t = window.setTimeout(() => {
-        this.ping(0.05 + Math.random() * 0.045);
+        this.ping(0.07 + Math.random() * 0.06);
         schedulePing();
       }, 7000 + Math.random() * 13000);
       this.timers.push(t);
@@ -265,7 +275,7 @@ export class UniverseAudio {
     schedulePing();
 
     await ctx.resume?.().catch(() => null);
-    this.fade(this.volume, 3.0); // ค่อย ๆ ก่อตัว เหมือนค่อย ๆ เข้าไปในอวกาศ
+    this.fade(this.volume, 2.2); // ค่อย ๆ ก่อตัว แต่ไวกว่าเดิมเล็กน้อยให้ได้ยินไวขึ้น
     return true;
   }
 
@@ -404,7 +414,7 @@ export class UniverseAudio {
   }
 
   /** ประกายดาว: เสียงแคร็กสั้นมาก ๆ ผ่านตัวกรองสูง (ทำให้จักรวาลมีชีวิต) */
-  crackle(gainAmount = 0.02) {
+  crackle(gainAmount = 0.03) {
     const ctx = this.ctx;
     if (!ctx || !this.master || !this.audible) return;
     const now = ctx.currentTime;

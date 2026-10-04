@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { UniverseAudio } from '@/lib/universeAudio';
+import { DEFAULT_UNIVERSE_VOLUME, clampVolume, readUniverseSoundPref, writeUniverseSoundPref } from '@/lib/universeSoundPref';
 
 const NetworkUniverse3D = dynamic(() => import('./NetworkUniverse3D'), {
   ssr: false,
@@ -108,7 +109,7 @@ export default function NetworkSimulator() {
   const [msg, setMsg] = useState<string>('');
   const [total, setTotal] = useState(0);
   const [soundOn, setSoundOn] = useState(false);
-  const [volume, setVolume] = useState(0.32);
+  const [volume, setVolume] = useState(DEFAULT_UNIVERSE_VOLUME);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [autoTick, setAutoTick] = useState(true);
   // โหมดเต็มจอ: เหลือเฉพาะจักรวาล 3D + แถบควบคุมลอย (เข้าผ่านปุ่ม ⛶ หรือลิงก์ ?full=1)
@@ -116,6 +117,7 @@ export default function NetworkSimulator() {
   const wrapRef = useRef<HTMLElement | null>(null);
   const playRef = useRef<number | null>(null);
   const audioRef = useRef<UniverseAudio | null>(null);
+  const volumeRef = useRef(DEFAULT_UNIVERSE_VOLUME);
   const simIdRef = useRef<string | null>(null);
 
   const refresh = useCallback(async (simId?: string) => {
@@ -182,23 +184,29 @@ export default function NetworkSimulator() {
     if (soundOn) {
       audio.stop();
       setSoundOn(false);
+      writeUniverseSoundPref({ on: false });
       setMsg('ปิดเสียงจักรวาลแล้ว');
       return;
     }
+    audio.setVolume(volumeRef.current);
     const started = await audio.start();
     if (started) {
-      audio.setVolume(volume);
+      audio.setVolume(volumeRef.current);
       setSoundOn(true);
-      setMsg('เปิดเสียงจักรวาลแล้ว 🎧 (ปรับความดังได้ที่แถบด้านล่าง)');
+      writeUniverseSoundPref({ on: true, volume: volumeRef.current });
+      setMsg('เปิดเสียงจักรวาลแล้ว 🎧 (ค่าระดับเสียงใช้ร่วมกันทุกหน้า)');
     } else {
       setMsg('เปิดเสียงไม่สำเร็จ — เบราว์เซอร์นี้ไม่รองรับเสียง');
     }
-  }, [soundOn, volume]);
+  }, [soundOn]);
 
   const changeVolume = useCallback(
     (v: number) => {
-      setVolume(v);
-      audioRef.current?.setVolume(v);
+      const next = clampVolume(v);
+      volumeRef.current = next;
+      setVolume(next);
+      audioRef.current?.setVolume(next);
+      writeUniverseSoundPref({ volume: next });
     },
     [],
   );
@@ -211,6 +219,36 @@ export default function NetworkSimulator() {
     },
     [],
   );
+
+  /* ค่าเปิด/ปิด + ระดับเสียง ใช้ร่วมกันทุกหน้า (จำไว้ใน localStorage) — เริ่มเสียงให้เอง
+     ถ้าผู้ใช้เคยเปิดไว้ โดยเริ่มจากการแตะจอครั้งแรก (เบราว์เซอร์อนุญาตเสียงจาก gesture เท่านั้น)
+     ข้ามการแตะที่แถบเสียงเอง เพื่อไม่ให้ชนกับการกดเปิด-ปิดของผู้ใช้ */
+  useEffect(() => {
+    const pref = readUniverseSoundPref();
+    volumeRef.current = pref.volume;
+    setVolume(pref.volume);
+    if (!pref.on) return;
+    const kick = (e: Event) => {
+      const el = e.target as Element | null;
+      if (el && typeof el.closest === 'function' && el.closest('[data-sound-toggle]')) return;
+      if (!audioRef.current) audioRef.current = new UniverseAudio();
+      const audio = audioRef.current;
+      audio.setVolume(volumeRef.current);
+      void audio.start().then((ok) => {
+        if (!ok) return;
+        audio.setVolume(volumeRef.current);
+        setSoundOn(true);
+        writeUniverseSoundPref({ on: true, volume: volumeRef.current });
+        setMsg('เปิดเสียงจักรวาลให้เองแล้ว 🎧');
+      });
+    };
+    window.addEventListener('pointerdown', kick, { once: true, capture: true });
+    window.addEventListener('keydown', kick, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', kick, true);
+      window.removeEventListener('keydown', kick);
+    };
+  }, []);
 
   const startSim = async () => {
     setBusy('start');
@@ -483,8 +521,8 @@ export default function NetworkSimulator() {
               <button onClick={() => void resetSim()} disabled={busy === 'reset'} className="rounded-lg border border-rose-900/60 bg-rose-950/40 px-3 py-2 text-rose-200 hover:border-rose-500">🧹 ล้าง Simulation</button>
             </div>
 
-            {/* ── เสียงจักรวาล (สังเคราะห์เอง ต้องกดเองจึงดัง — ไม่มีไฟล์เสียงจากภายนอก) ── */}
-            <div className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950 p-2">
+            {/* ── เสียงจักรวาล (สังเคราะห์เอง · ค่าเปิด/ปิด + ระดับเสียง ใช้ร่วมกันทุกหน้า) ── */}
+            <div data-sound-toggle className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950 p-2">
               <button
                 onClick={() => void toggleSound()}
                 className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-bold transition ${soundOn ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-100 hover:bg-slate-700'}`}
@@ -494,7 +532,7 @@ export default function NetworkSimulator() {
               <input type="range" min={0} max={1} step={0.05} value={volume} onChange={(e) => changeVolume(Number(e.target.value))} className="w-full accent-sky-400" aria-label="ความดังเสียงจักรวาล" />
               <span className="w-9 text-right text-[11px] text-slate-400">{Math.round(volume * 100)}%</span>
             </div>
-            <p className="text-[11px] leading-snug text-slate-500">เสียงจักรวาลสังเคราะห์สดในเบราว์เซอร์ (ไม่โหลดไฟล์จากภายนอก) — จะมีเสียงติ๊งเบา ๆ เมื่อเกิดสมาชิกใหม่</p>
+            <p className="text-[11px] leading-snug text-slate-500">เสียงจักรวาลสังเคราะห์สดในเบราว์เซอร์ (ไม่โหลดไฟล์จากภายนอก) — จะมีเสียงติ๊งเบา ๆ เมื่อเกิดสมาชิกใหม่ · ระดับเสียงและสถานะเปิด/ปิดใช้ร่วมกันทุกหน้าที่ฝังจักรวาลนี้ (จำค่าไว้ในเบราว์เซอร์)</p>
             {msg && <p className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-[11px] text-sky-200">{msg}</p>}
             <p className="text-xs leading-relaxed text-slate-400">ปุ่ม &quot;เติบโตทีละคน&quot; จะสร้างสมาชิกจำลองใต้โหนดที่มีที่ว่าง แล้วสร้าง event MEMBER_CREATED / LEVEL_COMPLETED ให้เห็นใน Timeline</p>
           </div>
