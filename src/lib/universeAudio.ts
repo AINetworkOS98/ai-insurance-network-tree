@@ -77,9 +77,17 @@ export class UniverseAudio {
 
     // เกนชดเชยหลังคอมเพรสเซอร์ — ทำให้ได้ยินชัดขึ้นโดยไม่ให้ยอดแหลมแตก
     const makeup = ctx.createGain();
-    makeup.gain.value = 1.35;
+    makeup.gain.value = 1.2;
 
-    master.connect(comp).connect(softTop).connect(makeup).connect(ctx.destination);
+    // ตัวจำกัดยอด (limiter) — วัดแบบ offline แล้วพบว่าถ้าไม่มียอดพุ่งเกิน 1.0 (เสียงแตก)
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -3;
+    limiter.knee.value = 0;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.003;
+    limiter.release.value = 0.15;
+
+    master.connect(comp).connect(softTop).connect(makeup).connect(limiter).connect(ctx.destination);
     this.master = master;
 
     // ── Reverb ยาว (สร้าง impulse response เอง) + บัสส่ง ──
