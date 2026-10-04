@@ -83,8 +83,11 @@ export function resolveConfig(override?: { provider?: string; model?: string }):
     }
   }
 
-  const modelEnv = env('AI_MODEL') || env('HERMES_MODEL') || env('DEEPSEEK_MODEL') || env('GEMINI_MODEL');
-  const model = override?.model || modelEnv || DEFAULT_MODELS[provider] || 'deepseek-chat';
+  const modelEnv = override?.model
+    || env('AI_MODEL') || env('HERMES_MODEL')
+    || (provider === 'deepseek' ? env('DEEPSEEK_MODEL') : undefined)
+    || (provider === 'gemini' ? env('GEMINI_MODEL') : undefined);
+  const model = modelEnv || DEFAULT_MODELS[provider] || 'deepseek-chat';
   const baseUrl = (env('AI_BASE_URL') || env('HERMES_BASE_URL') || env('DEEPSEEK_BASE_URL') || DEFAULT_BASE[provider] || '').replace(/\/+$/, '');
   const configured = provider === 'opencode-free' ? true : !!apiKey;
   return { provider, model, apiKey, baseUrl, configured };
@@ -103,11 +106,11 @@ export function providerChain(): { provider: string; model: string }[] {
   const active = resolveConfig();
   const chain: { provider: string; model: string }[] = [{ provider: active.provider, model: active.model }];
   if (active.provider === 'opencode-free') return chain;
-  const modelEnv = env('AI_MODEL') || env('HERMES_MODEL') || env('DEEPSEEK_MODEL');
   for (const p of ['deepseek', 'gemini', 'openrouter', 'openai']) {
     if (p === active.provider) continue;
     if (!providerKeyAvailable(p)) continue;
-    chain.push({ provider: p, model: (p === active.provider ? active.model : modelEnv) || DEFAULT_MODELS[p] });
+    // ใช้รุ่นเริ่มต้น/รุ่นเฉพาะค่ายนั้น (ห้ามยืม DEEPSEEK_MODEL ให้ค่ายอื่น)
+    chain.push({ provider: p, model: resolveConfig({ provider: p }).model });
   }
   return chain;
 }

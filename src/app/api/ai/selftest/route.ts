@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { HermesProvider, resolveConfig, getHermesProvider } from '@/lib/ai/hermesProvider';
+import { HermesProvider, resolveConfig, getHermesProvider, providerKeyAvailable } from '@/lib/ai/hermesProvider';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -37,8 +37,12 @@ export async function GET(req: NextRequest) {
 
   const results = [] as any[];
   for (const t of targets) {
+    const name = t.provider ?? active.provider;
+    // ข้ามค่ายที่ไม่มี key จริง — ไม่ต้องให้ resolveConfig ถอยไปค่ายอื่นแทน
+    if (t.provider && !providerKeyAvailable(t.provider)) { results.push({ provider: name, configured: false }); continue; }
     const p = new HermesProvider(t);
     const info = p.getInfo();
+    if (info.provider !== name) { results.push({ provider: name, configured: false }); continue; }
     if (!info.configured) { results.push({ provider: info.provider, model: info.model, configured: false }); continue; }
     const r = await p.probe({ provider: t.provider, model: t.model, timeoutMs: 25000 });
     results.push({ configured: true, ...r });
