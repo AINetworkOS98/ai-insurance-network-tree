@@ -1936,3 +1936,22 @@ model SimPayment {
   @@index([status])
   @@map("sim_payments")
 }
+
+// ── ตัวตรวจจับ workflow ที่ถูกสร้างใน n8n (n8n Workflow Watch) ────────────────
+// ใช้โดย: scripts/n8n-workflow-watch.mjs (เครื่องที่รัน n8n) → POST /api/n8n/watch
+// แล้วหน้าเว็บ /n8n/workflow-3d แสดงรายการที่ตรวจจับได้แบบสด ๆ (ผู้ใช้สั่งไว้)
+model N8nWorkflowWatch {
+  id           String    @id // workflow id จาก n8n (uuid) — ไม่สร้างใหม่เอง
+  name         String
+  active       Boolean   @default(false)
+  nodeCount    Int       @default(0) @map("node_count")
+  n8nCreatedAt DateTime? @map("n8n_created_at") @db.Timestamptz
+  n8nUpdatedAt DateTime? @map("n8n_updated_at") @db.Timestamptz
+  firstSeenAt  DateTime  @default(now()) @map("first_seen_at") @db.Timestamptz // ครั้งแรกที่ระบบตรวจจับได้ = "ใหม่"
+  lastSeenAt   DateTime  @default(now()) @map("last_seen_at") @db.Timestamptz
+  source       String    @default("n8n-local")
+
+  @@index([firstSeenAt])
+  @@index([lastSeenAt])
+  @@map("n8n_workflow_watch")
+}

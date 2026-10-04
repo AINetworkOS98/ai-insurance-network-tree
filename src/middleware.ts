@@ -38,6 +38,7 @@ const PUBLIC_API = [
   '/api/ai/query',
   '/api/ai/status',
   '/api/ai/stream',
+  '/api/ai/selftest', // ตรวจสุขภาพ AI — route บังคับสิทธิ์เอง (ผู้ดูแล x-user-rank>=3 หรือ Bearer CRON_SECRET) ไม่คืนค่า key
   '/api/cron/hermes-sync',
   '/api/cron/backup',
   '/api/cron/renewal',
@@ -55,6 +56,7 @@ const PUBLIC_API = [
   '/api/line',
   '/api/net/1x5', // ระบบบริหารเครือข่าย 1 แตก 5 (ข้อมูลจริง) — route ตรวจสิทธิ์เอง (สมาชิก/ผู้ดูแล/Bearer CRON_SECRET สำหรับ n8n)
   '/api/automation', // สถานะระบบอัตโนมัติ n8n ที่แสดงบนหน้าเว็บ — อ่านอย่างเดียว ไม่มีข้อมูลส่วนบุคคล (route ไม่แตะข้อมูลสำคัญ)
+  '/api/n8n/watch', // ตัวตรวจจับ workflow n8n ส่งข้อมูลเข้า — route บังคับ Authorization: Bearer CRON_SECRET เอง (หน้าอ่านใช้ /api/n8n/workflows ซึ่งต้องล็อกอิน)
   '/api/activity', // เรดาร์กิจกรรม/รายงานสมาชิก — route ตรวจสิทธิ์เอง (สมาชิก หรือ Bearer CRON_SECRET สำหรับ n8n)
 ];
 

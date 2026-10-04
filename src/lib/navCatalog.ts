@@ -103,7 +103,8 @@ export const NAV_ENTRIES: NavEntry[] = [
 
   // ── n8n Workflow Automation (ทุกสมาชิกที่ล็อกอิน) ─────────────────────────
   // สั่งโดยเจ้าของระบบ: "สร้าง 3D เพื่อบอกกระบวนการทำงาน ให้สมาชิกนำไปสร้างระบบต่อไป"
-  { href: '/n8n/workflow-3d', section: 'workflow', label: 'กระบวนการทำงาน 3D', icon: '🧊', minRank: 0 },
+  // + "สร้าง 3D ทั้งหมด" ⇒ หน้าเดียวกันมีเมนูเวิร์กโฟลว์ n8n ทุกตัว (ฉาก 3D ต่อตัว)
+  { href: '/n8n/workflow-3d', section: 'workflow', label: 'กระบวนการทำงาน 3D · ทุกเวิร์กโฟลว์', icon: '🧊', minRank: 0 },
 
   // ── ระบบอัตโนมัติ (Admin เท่านั้น) ────────────────────────────────────────
   { href: 'http://localhost:5679/', section: 'system', label: 'n8n · สร้าง Workflow', key: 'sb_n8n_editor', icon: '⚡', minRank: 0, adminOnly: true, external: true },

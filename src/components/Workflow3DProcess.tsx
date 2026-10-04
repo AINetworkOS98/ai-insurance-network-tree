@@ -13,6 +13,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { WORKFLOW_STEPS, workflowPlainText } from '@/lib/workflow3d';
+import N8nWorkflowMonitor from './N8nWorkflowMonitor';
 
 const Workflow3DScene = dynamic(() => import('./Workflow3DScene'), {
   ssr: false,
@@ -79,6 +80,11 @@ export default function Workflow3DProcess() {
               </Link>
             </div>
           </div>
+        </div>
+
+        {/* ── ตัวตรวจจับ workflow n8n (สด) — ผู้ใช้สั่ง: มี workflow ใหม่ให้โชว์ในระบบตลอด ── */}
+        <div className="mb-4">
+          <N8nWorkflowMonitor />
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
