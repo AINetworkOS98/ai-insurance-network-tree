@@ -215,17 +215,17 @@ function RecruitInner() {
     <main className="mx-auto w-full max-w-4xl px-4 sm:px-6 py-8">
       {/* ── หัวเรื่อง ───────────────────────────────────────────────── */}
       <section
-        className="rounded-2xl border border-white/10 p-6 text-white shadow-sm sm:p-8"
-        style={{ background: 'linear-gradient(135deg, #475569 0%, #0f172a 100%)' }}
+        className="rounded-2xl border border-sky-100 p-6 text-slate-800 shadow-sm sm:p-8"
+        style={{ background: 'linear-gradient(135deg, #e0f2fe 0%, #eef2ff 100%)' }}
       >
         <span className="badge-demo">ลิงก์รับสมัครตัวแทน</span>
         <h1 className="mt-3 text-2xl font-bold leading-snug sm:text-3xl">ใบสมัครเป็นตัวแทน (ผู้มุ่งหวัง)</h1>
-        <p className="mt-2 text-sm text-white/85 sm:text-base">
+        <p className="mt-2 text-sm text-slate-600 sm:text-base">
           4 ขั้นตอนสั้น ๆ — กรอกครบแล้วระบบบันทึกเข้าคิวผู้มุ่งหวังทันที และเข้าสู่การสมัครสมาชิก
         </p>
         {sponsorCode && (
-          <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-sm">
-            <span className="opacity-80">ผู้แนะนำ</span><b className="font-mono tracking-wide">{sponsorCode}</b>
+          <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1.5 text-sm">
+            <span className="text-slate-500">ผู้แนะนำ</span><b className="font-mono tracking-wide text-slate-800">{sponsorCode}</b>
           </div>
         )}
       </section>
@@ -240,7 +240,7 @@ function RecruitInner() {
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <input readOnly value={link} placeholder="/recruit?ref=…" className={inputCls} />
           <button type="button" onClick={copyLink} disabled={!link}
-            className="shrink-0 rounded-xl bg-[#475569] px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">
+            className="shrink-0 rounded-xl bg-sky-500 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">
             {copied ? 'คัดลอกแล้ว ✓' : 'คัดลอกลิงก์'}
           </button>
         </div>
@@ -250,7 +250,7 @@ function RecruitInner() {
       <ol className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
         {STEPS.map((st) => (
           <li key={st.n}
-            className={`rounded-xl border px-3 py-2 text-xs sm:text-sm ${step === st.n ? 'border-[#475569] bg-[#475569] text-white' : step > st.n ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-[#e2e8f0] bg-white text-slate-500'}`}>
+            className={`rounded-xl border px-3 py-2 text-xs sm:text-sm ${step === st.n ? 'border-sky-500 bg-sky-500 text-white' : step > st.n ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-[#e2e8f0] bg-white text-slate-500'}`}>
             <b>ขั้น {st.n}</b>
             <div className="truncate">{st.title}</div>
           </li>
@@ -380,7 +380,7 @@ function RecruitInner() {
           {step < 4 ? (
             <button type="button" disabled={!stepValid}
               onClick={() => { setError(''); if (!stepValid) { setError('กรอกข้อมูลในขั้นนี้ให้ครบก่อนไปขั้นถัดไป'); return; } setStep(step + 1); }}
-              className="rounded-xl bg-[#475569] px-6 py-3 text-sm font-semibold text-white disabled:opacity-40">
+              className="rounded-xl bg-sky-500 px-6 py-3 text-sm font-semibold text-white disabled:opacity-40">
               ขั้นตอนถัดไป →
             </button>
           ) : (
