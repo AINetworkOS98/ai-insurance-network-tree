@@ -66,6 +66,10 @@ export const NAV_ENTRIES: NavEntry[] = [
 
   // ── สมาชิกทั่วไป (rank 0) ────────────────────────────────────────────────
   { href: '/financial-freedom', section: 'general', label: 'อิสรภาพทางการเงิน', key: 'sb_financial_freedom', icon: '🌟', minRank: 0 },
+  // ลิงก์รับสมัครตัวแทน — สมาชิกกรอกเองได้ หรือคัดลอกลิงก์ส่งให้ผู้มุ่งหวังกรอกเอง (หน้าสาธารณะ /recruit)
+  { href: '/recruit', section: 'general', label: 'ลิงก์รับสมัครตัวแทน', icon: '🤝', minRank: 0 },
+  // ไปป์ไลน์ 8 ขั้นของผู้มุ่งหวัง (รอดำเนินการ → อนุมัติ → สอบ → ใบอนุญาต → ค้ำประกัน → แต่งตั้ง → สอบใบอนุญาต → ต่ออายุ)
+  { href: '/recruit/pipeline', section: 'general', label: 'ขั้นตอนรับสมัครตัวแทน (ผู้มุ่งหวัง)', icon: '🧭', minRank: 0 },
   // หมายเหตุ: เมนู "ระบบ 1 แตก 5 อัตโนมัติ" (/network/1x5-autopilot) ไม่ใส่ในเมนูด้านซ้าย
   //          เพราะมีอยู่ในเมนูด้านบน (Header) แล้ว — ใส่ซ้ำจะซ้ำซ้อนกัน
   { href: '/notifications', section: 'general', label: 'ศูนย์แจ้งเตือน', key: 'nav_notif', icon: '🔔', minRank: 0 },

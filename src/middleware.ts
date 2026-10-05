@@ -12,6 +12,8 @@ const PUBLIC_API = [
   // ระบบ AI Video Intelligence: /api/video-intel/event = สาธารณะ (consent-gated) · เส้นทางอื่นตรวจ Bearer/session เอง
   '/api/video-intel',
   '/api/lead', // ลงทะเบียนลีดจากฟอร์มสาธารณะ (route ตรวจความยินยอม + กันสแปมเอง)
+  '/api/recruit/apply', // ใบสมัครรับสมัครตัวแทนจากลิงก์สาธารณะ /recruit (route ตรวจ consent + rate-limit เอง)
+  // หมายเหตุ: /api/recruit/stage (เลื่อนขั้นไปป์ไลน์) ต้องล็อกอิน — ไม่ใส่ในลิสต์นี้
   '/api/maintenance', // งานดูแลระบบ — route บังคับ Authorization: Bearer $CRON_SECRET เอง
   // เส้นทางที่ n8n (และเว็บ) เรียก — route ตรวจสิทธิ์เอง (คุกกี้ token หรือ Bearer CRON_SECRET)
   '/api/dashboard/leads',
@@ -45,6 +47,11 @@ const PUBLIC_API = [
   '/api/cron/registration-sync',
   '/api/cron/email-sync',
   '/api/cron/net-1x5', // ตัวเฝ้าให้ข้อมูลระบบ 1 แตก 5 เป็นปัจจุบันเสมอ (Bearer CRON_SECRET / ผู้ดูแลที่ล็อกอิน)
+  '/api/cron/tl-smart-sync', // ส่งใบสมัครตัวแทนจาก /recruit → app TL SMART (route บังคับ Bearer CRON_SECRET เอง)
+  '/api/tl-smart/status', // ดูสถานะสะพาน TL SMART (route บังคับ Bearer CRON_SECRET เอง)
+  '/api/address/lookup', // ค้นหาที่อยู่ไทย (จังหวัด/อำเภอ/รหัสไปรษณีย์) — ข้อมูลสาธารณะ ไม่มีความลับ
+  '/api/tl-smart/queue', // คิวใบสมัครที่ต้องกรอกเข้า TL SMART (route บังคับ Bearer CRON_SECRET เอง)
+  '/api/tl-smart/push', // บันทึกเลขตัวแทนที่ TL SMART ออกให้ (route บังคับ Bearer CRON_SECRET เอง)
   '/api/read-file',
   '/api/fetch-url',
   '/api/search',
@@ -72,6 +79,7 @@ const PUBLIC_PAGES = [
   '/terms',
   '/faq',
   '/admin',
+  '/recruit', // ลิงก์รับสมัครตัวแทน (สาธารณะ) — ผู้มุ่งหวังกรอกเองได้โดยไม่ต้องมีบัญชี
 ];
 
 function isPublicApi(pathname: string) {
@@ -160,7 +168,7 @@ export async function middleware(req: NextRequest) {
   // --- Page guard: ล็อกอินก่อนเข้าระบบ ---
   // ให้หน้าแรกและหน้าสาธารณะผ่านได้โดยไม่ต้องล็อกอิน
   // หน้าที่ต้องล็อกอิน: /dashboard, /tree, /income, /members, /admin, /reports, /receipts, /prospects, /appointments, /referral, /settings, /notifications, /periods, /rank-plans ฯลฯ
-  const protectedPrefixes = ['/dashboard','/tree','/income','/members','/reports','/receipts','/documents','/prospects','/appointments','/referral','/settings','/notifications','/periods','/rank-plans','/progress','/network-simulator','/network/1x5-autopilot'];
+  const protectedPrefixes = ['/recruit/pipeline','/dashboard','/tree','/income','/members','/reports','/receipts','/documents','/prospects','/appointments','/referral','/settings','/notifications','/periods','/rank-plans','/progress','/network-simulator','/network/1x5-autopilot'];
 
   const needsAuth = protectedPrefixes.some(p => pathname === p || pathname.startsWith(p + '/'));
 

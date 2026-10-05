@@ -79,6 +79,10 @@ export interface LeadCaptureBoxProps {
   onSuccess?: (lead: any) => void;
   /** ย่อขนาดสำหรับวางในSidebar/การ์ดเล็ก */
   compact?: boolean;
+  /** รหัสผู้แนะนำ (รหัสตัวแทนเจ้าของ "ลิงก์รับสมัครตัวแทน") — แนบไปกับลีดเพื่อเครดิตรอบทาบทาม */
+  referralCode?: string;
+  /** ที่มาของลีด (ค่าเริ่มต้นของ API = lead_box_web) */
+  source?: string;
 }
 
 // ── helper เล็ก ๆ ────────────────────────────────────────────────────────────
@@ -107,6 +111,8 @@ export default function LeadCaptureBox({
   defaultChannel = 'line',
   onSuccess,
   compact = false,
+  referralCode = '',
+  source = '',
 }: LeadCaptureBoxProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const opened = useRef(false);
@@ -201,6 +207,10 @@ export default function LeadCaptureBox({
       channels: { ...channelPreference },
       // ── ที่มาแคมเปญ (UTM / ttclid) — เก็บไว้ทั้ง session แล้วแนบไปด้วย ────
       ...utmFormFields(),
+      // ── ผู้แนะนำ + ที่มา (ลิงก์รับสมัครตัวแทน /recruit?ref=XXXX) ──────────
+      referralCode: referralCode.trim() || undefined,
+      ref: referralCode.trim() || undefined,
+      source: source.trim() || undefined,
     };
 
     try {
