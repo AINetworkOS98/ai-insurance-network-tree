@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, type ReactElement } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { auth, firebaseConfigError } from '@/lib/firebase-client';
@@ -17,6 +17,21 @@ function safeNext(v: string | null): string {
   if(v.startsWith('/login') || v.startsWith('/register')) return '/';
   return v;
 }
+
+// ── โลโก้ Social ตามสีแบรนด์จริง (สากล) ────────────────────────────────────────
+const GoogleIcon = (
+  <svg viewBox="0 0 48 48" className="h-5 w-5" aria-hidden="true">
+    <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
+    <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
+    <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0124 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
+    <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 01-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
+  </svg>
+);
+const GithubIcon = (
+  <svg viewBox="0 0 24 24" className="h-5 w-5 fill-white" aria-hidden="true">
+    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.545 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.92 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+  </svg>
+);
 
 export default function LoginPage(){
   return <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-slate-400">กำลังโหลด...</div>}><LoginInner/></Suspense>;
@@ -148,13 +163,13 @@ function LoginInner(){
   }
 
   const btnBase = "w-full py-2.5 rounded-xl border text-[13px] font-medium flex items-center justify-center gap-2.5 disabled:opacity-50 transition-all shadow-sm hover:shadow hover:-translate-y-[1px] active:translate-y-0";
-  const providerBtns: {id:Provider,label:string,style:string,icon:string,iconStyle:string}[] = [
-    {id:'google', label:'ดำเนินการต่อด้วย Google', style:'bg-white border-[#e8eef5] hover:bg-[#f8fafc] text-slate-700', icon:'G', iconStyle:'bg-white border border-slate-200 text-slate-600 shadow-sm'},
-    {id:'github', label:'ดำเนินการต่อด้วย GitHub', style:'bg-[#f8fafc] border-[#e2e8f0] hover:bg-[#f1f5f9] text-slate-700', icon:'⌁', iconStyle:'bg-slate-800 text-white shadow-sm'},
+  const providerBtns: {id:Provider,label:string,style:string,icon:ReactElement}[] = [
+    {id:'google', label:'ดำเนินการต่อด้วย Google', style:'bg-white border-[#e8eef5] hover:bg-[#f8fafc] text-slate-700', icon: GoogleIcon},
+    {id:'github', label:'ดำเนินการต่อด้วย GitHub', style:'bg-[#24292f] border-[#24292f] hover:bg-[#1b1f24] text-white', icon: GithubIcon},
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f8fafc] via-[#f0f7ff] to-[#fdf2f8] flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-[#eff6ff] via-[#dbeafe] to-[#bfdbfe] flex flex-col">
       {/* Top bar minimal */}
       <div className="h-[56px] flex items-center justify-between px-4 md:px-8">
         <Link href="/" className="flex items-center gap-2.5">
@@ -198,7 +213,7 @@ function LoginInner(){
             <div className="mt-4 flex flex-col gap-2">
               {providerBtns.map(p=>(
                 <button key={p.id} onClick={()=> loginSocial(p.id)} disabled={!!socialLoading || loading} className={`${btnBase} ${p.style}`}>
-                  <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${p.iconStyle}`}>{p.icon}</span>
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center">{p.icon}</span>
                   <span className="flex-1 text-left">{socialLoading===p.id ? 'กำลังเชื่อม...' : p.label}</span>
                 </button>
               ))}
@@ -223,14 +238,14 @@ function LoginInner(){
                   <button type="button" onClick={()=> setShowPass(!showPass)} className="absolute right-1 top-1/2 -translate-y-1/2 h-7 px-2.5 rounded-full bg-white border border-slate-200 text-[11px] font-medium text-slate-600 shadow-sm hover:bg-slate-50">{showPass ? 'ซ่อน' : 'ดู'}</button>
                 </div>
               </div>
-              <button disabled={loading || !!socialLoading} className="w-full py-2.5 rounded-xl bg-[#475569] text-white text-sm font-bold shadow-[0_6px_16px_-8px_rgba(71,85,105,0.6)] hover:bg-slate-800 hover:shadow-lg hover:-translate-y-[1px] active:translate-y-0 disabled:opacity-50 transition-all">
+              <button disabled={loading || !!socialLoading} className="w-full py-2.5 rounded-xl bg-blue-500 text-white text-sm font-bold shadow-[0_6px_16px_-8px_rgba(59,130,246,0.6)] hover:bg-blue-600 hover:shadow-lg hover:-translate-y-[1px] active:translate-y-0 disabled:opacity-50 transition-all">
                 {loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
               </button>
             </form>
 
             <div className="mt-4 text-center text-xs text-slate-500">
               ยังไม่มีบัญชี?{' '}
-              <Link href={`/register${nextParam !== '/' ? `?next=${encodeURIComponent(nextParam)}` : ''}`} className="font-semibold text-[#475569] underline underline-offset-4 hover:text-slate-800">
+              <Link href={`/register${nextParam !== '/' ? `?next=${encodeURIComponent(nextParam)}` : ''}`} className="font-semibold text-blue-600 underline underline-offset-4 hover:text-blue-700">
                 ลงทะเบียนด้วยอีเมล
               </Link>
             </div>
