@@ -207,7 +207,8 @@ export function workflowPlainText(wf: WorkflowGraph): string {
 
 /** ดึงข้อมูลเวิร์กโฟลว์ทั้งหมด (ไฟล์นิ่งใน public/n8n/workflows.json) */
 export async function loadWorkflows(): Promise<WorkflowPayload> {
-  const r = await fetch('/n8n/workflows.json', { cache: 'force-cache' });
+  // ต่อ timestamp เพื่อกันเบราว์เซอร์/ขอบ CDN เสิร์ฟไฟล์เก่าค้าง (สาเหตุ "ไม่เห็นอัปเดต")
+  const r = await fetch(`/n8n/workflows.json?v=${Date.now()}`, { cache: 'no-store' });
   if (!r.ok) throw new Error(`อ่านข้อมูลเวิร์กโฟลว์ไม่สำเร็จ (${r.status})`);
   return (await r.json()) as WorkflowPayload;
 }
