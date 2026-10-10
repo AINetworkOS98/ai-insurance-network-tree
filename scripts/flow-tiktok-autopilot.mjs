@@ -89,6 +89,28 @@ async function gotoAndWait(filter, url, waitMs = 12000) {
   c.close();
 }
 
+async function ensureChrome() {
+  // ถ้า Chrome สำหรับงานอัตโนมัติ (cdp-flow :9333) ปิดอยู่ ให้เปิดให้เอง แล้วรอพอร์ต
+  const probe = async () => {
+    try { const r = await fetch(CDP + '/json/version'); return r.ok; } catch { return false; }
+  };
+  if (await probe()) return true;
+  log('CDP ไม่ตอบ — เปิด Chrome โปรไฟล์ cdp-flow ให้เอง');
+  const chrome = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+  const args = [
+    '--user-data-dir=C:/Users/User/cdp-flow', '--profile-directory=Default',
+    `--remote-debugging-port=${CDP_PORT}`, '--remote-allow-origins=*', '--no-first-run',
+    '--no-default-browser-check', '--window-size=1400,950',
+    '--disable-features=DeviceBoundSessionCredentials,DeviceBoundSessions',
+  ];
+  try {
+    const { spawn } = await import('node:child_process');
+    spawn(chrome, args, { detached: true, stdio: 'ignore', windowsHide: false }).unref();
+  } catch (e) { log('เปิด Chrome ไม่สำเร็จ: ' + e.message); }
+  for (let i = 1; i <= 20; i++) { await sleep(2000); if (await probe()) { log(`CDP พร้อมหลัง ${i * 2} วิ`); return true; } }
+  return false;
+}
+
 /* ── 1) ChatGPT: prompt ล่าสุด ─────────────────────────────────────────── */
 async function latestPromptFromChatGPT() {
   result.step = 'chatgpt';
@@ -341,6 +363,9 @@ async function postToTikTok(videoFile, caption) {
 
 /* ── main ─────────────────────────────────────────────────────────────── */
 try {
+  if (!(await ensureChrome())) {
+    throw new Error(`Chrome สำหรับงานอัตโนมัติไม่ตอบที่พอร์ต ${CDP_PORT} — ลองเปิด Chrome โปรไฟล์ cdp-flow แล้ว (ดูวิธีในหัวไฟล์สคริปต์)`);
+  }
   const prompt = await latestPromptFromChatGPT();
   log('ได้พรอมต์ล่าสุด', prompt.length, 'ตัวอักษร');
   const caption = fs.existsSync(CAPTION_FILE) ? fs.readFileSync(CAPTION_FILE, 'utf8') : '';

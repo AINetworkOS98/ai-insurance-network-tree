@@ -27,10 +27,20 @@ export default function AiAutopilotPage() {
   const [busy, setBusy] = useState<'' | 'dry' | 'post'>('');
   const [result, setResult] = useState<RunResult | null>(null);
   const [error, setError] = useState('');
+  const [runLog, setRunLog] = useState<string[]>([]);
+
+  async function fetchStatus() {
+    try {
+      const r = await fetch(`${API}?status=1`, { credentials: 'include' });
+      return r.ok ? await r.json() : null;
+    } catch { return null; }
+  }
 
   async function run(mode: 'dry' | 'post') {
-    setBusy(mode); setError(''); setResult(null);
+    setBusy(mode); setError(''); setResult(null); setRunLog([]);
     try {
+      const before = await fetchStatus();
+      const prevId = before?.runs?.[0]?.id ?? null;
       const res = await fetch(API, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -39,10 +49,28 @@ export default function AiAutopilotPage() {
           ? { post: true, conversation: CHATGPT_CONV, project: FLOW_PROJECT, aspect: '9:16' }
           : { post: false, skipGenerate: true, conversation: CHATGPT_CONV, project: FLOW_PROJECT, aspect: '9:16' }),
       });
-      const text = await res.text();
-      let data: RunResult = {};
-      try { data = JSON.parse(text); } catch { data = { error: text.slice(0, 400) }; }
-      setResult(data);
+      const data: any = await res.json().catch(() => ({}));
+      if (res.status === 401 || res.status === 403) { setError(data?.error || 'ต้องล็อกอินเป็นผู้ดูแลระบบ'); return; }
+      if (!res.ok || data?.started !== true) {
+        setError(data?.error || 'เริ่มไม่สำเร็จ');
+        setResult(data);
+        return;
+      }
+      setResult({ ok: true, step: 'started' });
+      // ท่อทำงานเบื้องหลัง → poll สถานะจาก log ของแอปทุก 5 วิ (สูงสุด 6 นาที)
+      const t0 = Date.now();
+      while (Date.now() - t0 < 6 * 60 * 1000) {
+        await new Promise((r) => setTimeout(r, 5000));
+        const snap = await fetchStatus();
+        const top = snap?.runs?.[0];
+        if (!top) continue;
+        setRunLog((prev) => [...prev.slice(-6), `${new Date(top.at).toLocaleTimeString('th-TH')} • ${top.ok ? '✅' : '⚠️'} ${top.stage || ''} ${top.detail || ''}`]);
+        if (top.id !== prevId) {
+          setResult({ ok: !!top.ok, step: top.stage || 'done', error: top.ok ? '' : (top.detail || 'ไม่สำเร็จ'), posted: /โพสต์/.test(top.detail || '') });
+          return;
+        }
+      }
+      setError('รอเกิน 6 นาที — ตรวจผลได้ที่ log ของ workflow ใน n8n');
     } catch (e: any) {
       setError(String(e?.message || e));
     } finally { setBusy(''); }
@@ -93,6 +121,14 @@ export default function AiAutopilotPage() {
 
           {error && (
             <div className="mt-4 p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-sm">{error}</div>
+          )}
+
+          {busy && (
+            <div className="mt-4 p-3 rounded-xl border border-blue-100 bg-[#f0f7ff] text-sm text-slate-700">
+              <div className="font-semibold mb-1">⏳ กำลังทำงานเบื้องหลัง… (ไม่ต้องรอค้าง หน้านี้จะเช็คสถานะทุก 5 วิ)</div>
+              {runLog.length === 0 && <div className="text-xs text-slate-500">เริ่มแล้ว — รอผลรอบแรก…</div>}
+              {runLog.map((l, i) => <div key={i} className="text-xs text-slate-600">{l}</div>)}
+            </div>
           )}
 
           {result && (

@@ -30,10 +30,39 @@ function token(req: NextRequest): string {
 export async function GET(req: NextRequest) {
   const t = token(req);
   const me: any = t ? await verifyTokenEdge(t) : null;
+  const isAdmin = !!me && (String(me.email || '').toLowerCase() === ADMIN_EMAIL || Number(me.rankLevel ?? 0) >= 2);
+  if (!isAdmin) return NextResponse.json({ ok: false, error: 'unauthorized — ต้องเป็นผู้ดูแลระบบ' }, { status: 401 });
+
+  const url = new URL(req.url);
+  if (url.searchParams.get('status') === '1') {
+    // สถานะการรันล่าสุด (n8n เขียน log ผ่าน /api/agent-log เมื่อท่อจบ)
+    const { prisma } = await import('@/lib/prisma');
+    const rows: any[] = await (prisma as any).notificationLog
+      .findMany({
+        where: { type: 'agent.log', target: 'AI Content Autopilot' },
+        orderBy: { sentAt: 'desc' },
+        take: 8,
+        select: { id: true, status: true, error: true, sentAt: true, payload: true },
+      })
+      .catch(() => []);
+    return NextResponse.json({
+      ok: true,
+      configured: Boolean(process.env.N8N_WEBHOOK_BASE),
+      runs: rows.map((r) => ({
+        id: r.id,
+        status: r.status,
+        at: r.sentAt,
+        stage: (r.payload && r.payload.stage) || '',
+        detail: (r.payload && r.payload.detail) || r.error || '',
+        ok: r.status === 'SENT',
+      })),
+    });
+  }
+
   const base = (process.env.N8N_WEBHOOK_BASE || '').replace(/\/+$/, '');
   return NextResponse.json({
     ok: true,
-    spec: 'POST { post?, skipGenerate?, conversation?, project?, aspect? } — ผู้ดูแลระบบเท่านั้น',
+    spec: 'POST { post?, skipGenerate?, conversation?, project?, aspect? } — ผู้ดูแลระบบเท่านั้น · GET ?status=1 = ผลการรันล่าสุด',
     configured: Boolean(base),
     // ไม่เปิดเผยที่อยู่ tunnel ให้ผู้ที่ยังไม่ล็อกอิน
     ...(me ? { tunnelHost: base ? new URL(base).host : null } : {}),
@@ -63,18 +92,22 @@ export async function POST(req: NextRequest) {
   };
 
   try {
+    // n8n ตั้ง webhook เป็น onReceived แล้ว → ตอบ "Workflow was started" ทันที
+    // ส่วนการสร้าง/โพสต์จริงทำเบื้องหลัง แล้ว page จะ poll สถานะจาก GET ?status=1
     const r = await fetch(`${base}/${WEBHOOK_PATH}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${secret}` },
       body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(25000),
     });
     const text = await r.text();
-    let data: any = {};
-    try { data = JSON.parse(text); } catch { data = { raw: text.slice(0, 400) }; }
-    return NextResponse.json({ ...data, ok: r.ok && (data as any).ok !== false, httpStatus: r.status });
+    if (!r.ok) {
+      return NextResponse.json({ ok: false, started: false, error: `n8n ตอบ ${r.status}: ${text.slice(0, 200)}` }, { status: 502 });
+    }
+    return NextResponse.json({ ok: true, started: true, n8n: text.slice(0, 160), at: new Date().toISOString() });
   } catch (e: any) {
     return NextResponse.json(
-      { ok: false, error: 'เรียก n8n ไม่สำเร็จ: ' + String(e?.message || e) + ' (ตรวจว่า tunnel และ n8n ในเครื่องทำงานอยู่)' },
+      { ok: false, started: false, error: 'เรียก n8n ไม่สำเร็จ: ' + String(e?.message || e) + ' (ตรวจว่า tunnel และ n8n ในเครื่องทำงานอยู่)' },
       { status: 502 },
     );
   }
