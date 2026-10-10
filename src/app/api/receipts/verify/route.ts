@@ -4,6 +4,23 @@ import { verifyToken } from '@/lib/auth';
 import { isAdminFromPayload } from '@/lib/admin';
 import { mirrorToFirestore } from '@/lib/firestoreMirror';
 
+// หลังรับรองยอด → ประเมินคุณสมบัติขึ้นตำแหน่งทันที (ทำให้ใบเสร็จที่รับรองแล้ว "ผลักดัน" ขึ้นตำแหน่งได้จริง)
+// ควบคุมด้วยค่าตั้งค่า autoEvaluateAfterVerify (ค่าตั้งต้น = เปิด)
+async function promoteAfterReceipt(userId: string, actorId: string, cfg: any) {
+  if (cfg?.autoEvaluateAfterVerify === false) return { evaluated: false, reason: 'ปิดประเมินอัตโนมัติในค่าตั้งค่า' };
+  try {
+    const { evaluateRank, applyRankPromotion } = await import('@/lib/rankEngine');
+    const ev: any = await evaluateRank(userId);
+    if (ev?.result === 'qualified_auto') {
+      const pr: any = await applyRankPromotion(userId, `receipt:${actorId}`);
+      if (pr?.result === 'promoted') return { evaluated: true, promoted: true, newRank: pr.currentRank, message: pr.message };
+    }
+    return { evaluated: true, promoted: false, result: ev?.result || '', message: ev?.message || '', missing: ev?.missing || [] };
+  } catch (e: any) {
+    return { evaluated: false, reason: String(e?.message || e).slice(0, 120) };
+  }
+}
+
 // POST /api/receipts/verify — ส่งตรวจ / อนุมัติ / ปฏิเสธ (ต้องมี document.verify)
 // สเปค: 7 ขั้น — Uploaded→Extracted→PendingVerification→Verified/Rejected/Duplicate (+ Reversed)
 // แยก "ยอดรับชำระเบี้ย" ออกจาก "ค่าบำเหน็จ" — ใบเสร็จเบี้ยไม่ใช่หลักฐานค่าบำเหน็จ
@@ -50,7 +67,8 @@ export async function POST(req: NextRequest){
           await tx.performanceLedger.create({ data:{ userId: receipt.userId, receiptId, type:'premium', amount: String(ext.amount), period: new Date().toISOString().slice(0,7) } });
         });
         await prisma.auditLog.create({ data:{ userId: actorId, action:'receipt.auto_verify', entity:'ReceiptFile', entityId: receiptId } }).catch(()=>null);
-        return NextResponse.json({ ok:true, status:'Verified', message:'รับรองอัตโนมัติตามค่าที่ตั้งไว้ — สร้างรายการผลงานแล้ว' });
+        const promotion = await promoteAfterReceipt(String(receipt.userId), actorId, cfg);
+        return NextResponse.json({ ok:true, status:'Verified', promotion, message:'รับรองอัตโนมัติตามค่าที่ตั้งไว้ — สร้างรายการผลงานแล้ว' + (promotion?.promoted ? ` และขึ้นตำแหน่ง: ${promotion.message}` : '') });
       }
       await prisma.receiptFile.update({ where:{ id: receiptId }, data:{ status:'PendingVerification' } });
       await prisma.auditLog.create({ data:{ userId: actorId, action:'receipt.submit', entity:'ReceiptFile', entityId: receiptId } });
@@ -98,7 +116,8 @@ export async function POST(req: NextRequest){
               });
             });
       await prisma.auditLog.create({ data:{ userId: actorId, action:'receipt.verify', entity:'ReceiptFile', entityId: receiptId, newValue:{ creditedPeriod } } });
-      return NextResponse.json({ ok:true, status:'Verified', message:'รับรองยอดสำเร็จ — สร้างรายการผลงานแล้ว', creditedPeriod });
+      const promotion = await promoteAfterReceipt(String(receipt.userId), actorId, cfg);
+      return NextResponse.json({ ok:true, status:'Verified', promotion, message:'รับรองยอดสำเร็จ — สร้างรายการผลงานแล้ว' + (promotion?.promoted ? ` และขึ้นตำแหน่ง: ${promotion.message}` : ''), creditedPeriod });
     }
 
     if(action === 'reject'){

@@ -5,7 +5,9 @@ import Sidebar from '@/components/Sidebar';
 
 // เมนูตั้งค่าใบเสร็จ — ดูได้เมื่อล็อกอิน, เปลี่ยนได้เฉพาะผู้บริหารระบบ / Admin Akarapol
 export default function ReceiptSettingsPage(){
-  const [form, setForm] = useState({ maxAmount:'500000', autoVerifyLimit:'0', requirePolicyNo:false, defaultLedgerType:'premium', allowedTypes:['premium','commission'] as string[] });
+  const [form, setForm] = useState({ maxAmount:'1000000', autoVerifyLimit:'20000', requirePolicyNo:false, defaultLedgerType:'premium', allowedTypes:['premium','commission'] as string[], countPremiumForRank:true, autoEvaluateAfterVerify:true, maskPayerName:true });
+  const [plan, setPlan] = useState<any>(null);
+  const [rankSources, setRankSources] = useState<string[]>([]);
   const [canEdit, setCanEdit] = useState(false);
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,13 +19,18 @@ export default function ReceiptSettingsPage(){
       if(j.ok){
         const s = j.settings;
         setForm({
-          maxAmount: String(s.maxAmount ?? 500000),
-          autoVerifyLimit: String(s.autoVerifyLimit ?? 0),
+          maxAmount: String(s.maxAmount ?? 1000000),
+          autoVerifyLimit: String(s.autoVerifyLimit ?? 20000),
           requirePolicyNo: !!s.requirePolicyNo,
           defaultLedgerType: s.defaultLedgerType || 'premium',
           allowedTypes: s.allowedTypes || ['premium','commission'],
+          countPremiumForRank: s.countPremiumForRank !== false,
+          autoEvaluateAfterVerify: s.autoEvaluateAfterVerify !== false,
+          maskPayerName: s.maskPayerName !== false,
         });
         setCanEdit(!!j.canEdit);
+        setPlan(j.activePlan || null);
+        setRankSources(j.rankSources || []);
       } else setMsg(j.error || 'โหลดไม่สำเร็จ');
     }catch{ setMsg('โหลดไม่สำเร็จ'); }
   }
@@ -39,7 +46,8 @@ export default function ReceiptSettingsPage(){
       const res = await fetch('/api/receipts/settings', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
         maxAmount: Number(form.maxAmount), autoVerifyLimit: Number(form.autoVerifyLimit),
         requirePolicyNo: form.requirePolicyNo, defaultLedgerType: form.defaultLedgerType, allowedTypes: form.allowedTypes,
-      })});
+        countPremiumForRank: form.countPremiumForRank, autoEvaluateAfterVerify: form.autoEvaluateAfterVerify, maskPayerName: form.maskPayerName,
+      }) });
       const j = await res.json();
       setMsg(j.ok ? 'บันทึกค่าตั้งค่าใบเสร็จแล้ว — มีผลทันที' : (j.error || 'บันทึกไม่สำเร็จ'));
       if(j.ok) load();
@@ -63,7 +71,7 @@ export default function ReceiptSettingsPage(){
             <div>
               <label className="text-xs font-semibold">เพดานรับรองต่อใบ (บาท)</label>
               <input value={form.maxAmount} onChange={e=> setForm({...form, maxAmount:e.target.value})} inputMode="numeric" disabled={dis} className={`${inp} mt-1`} />
-              <div className="text-[11px] text-slate-500 mt-1">ยอดเกินนี้กดรับรองไม่ผ่าน</div>
+              <div className="text-[11px] text-slate-500 mt-1">ยอดเกินนี้กดรับรองไม่ผ่าน (ค่าที่แนะนำ 1,000,000 — ใบเสร็จเบี้ยจริงมักหลักหมื่นถึงแสน)</div>
             </div>
             <div>
               <label className="text-xs font-semibold">รับรองอัตโนมัติเมื่อยอดไม่เกิน (บาท, 0 = ปิด)</label>

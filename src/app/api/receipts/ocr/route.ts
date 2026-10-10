@@ -1,6 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+// PDPA: ระบบไม่เก็บชื่อผู้ชำระเงินแบบเต็ม และไม่เก็บเลขบัญชี/เลขบัตร/เลขประจำตัว
+// เก็บเฉพาะรูปแบบปิด เช่น "นางสาว อ**** ภ**" เพื่อตรวจทานย้อนหลังได้โดยไม่เปิดเผยตัวบุคคล
+function maskName(v: any): string | null {
+  const s = String(v ?? '').trim();
+  if (!s) return null;
+  const TITLE = /^(นาย|นาง|นางสาว|น\.ส\.|ด\.ช\.|ด\.ญ\.|mr|mrs|ms)\.?$/i;
+  return s.split(/\s+/).map((p) => {
+    if (TITLE.test(p)) return p;
+    if (p.length <= 2) return p[0] + '*';
+    return p[0] + '*'.repeat(Math.min(8, p.length - 1));
+  }).join(' ');
+}
+// ลบข้อมูลส่วนบุคคลออกจาก raw OCR ก่อนบันทึก (ไม่เก็บแม้แต่ใน log ข้อมูลดิบ)
+function scrubPii(obj: any): any {
+  if (!obj || typeof obj !== 'object') return obj;
+  const out: any = Array.isArray(obj) ? [] : {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (/payer|payerName|account|acct|citizen|idcard|บัตร|บัญชี|ผู้ชำระ/i.test(k)) { out[k] = 'REDACTED'; continue; }
+    out[k] = v && typeof v === 'object' ? scrubPii(v) : v;
+  }
+  return out;
+}
+
 // POST /api/receipts/ocr { receiptId, ocrResult? } — จำลอง OCR (ใน production เรียก tesseract.js / API จริง)
 // สเปค: OCR เป็นการอ่านข้อมูล ไม่ใช่การพิสูจน์ว่าเอกสารแท้, ต้องมี confidence รายช่อง, ให้แก้ไขได้โดยเก็บค่าเดิมและผู้แก้
 export async function POST(req: NextRequest){
@@ -16,7 +39,9 @@ export async function POST(req: NextRequest){
       const ext = receipt.extractions[0];
       const originalValues: any = ext.originalValues || {};
       const updates: any = {};
-      for(const [k,v] of Object.entries(correctedFields)){
+      for(const [k,v0] of Object.entries(correctedFields)){
+        // PDPA: แม้ผู้ใช้กรอกเอง ระบบก็ไม่เก็บชื่อผู้ชำระแบบเต็ม
+        const v = k === 'payerName' ? maskName(v0) : v0;
         if((ext as any)[k] !== v){
           originalValues[k] = (ext as any)[k];
           updates[k] = v;
@@ -58,7 +83,7 @@ export async function POST(req: NextRequest){
             receiptNo: receiptNo || null,
             transactionRef: transactionRef || null,
             policyNo: policyNo || null,
-            payerName: payerName || null,
+            payerName: maskName(payerName),
             paidAt: paidAt ? new Date(paidAt) : null,
             amount: amount ? String(amount) : null,
             type: type || null,
@@ -66,7 +91,7 @@ export async function POST(req: NextRequest){
             agentCode: agentCode || null,
             qrBarcode: qrBarcode || null,
             confidence: confidence || { overall: 0.85, note:'OCR สำเร็จ — ให้ผู้ใช้ตรวจทานก่อนส่ง' },
-            rawOcr: rawOcr || ocrResult,
+            rawOcr: scrubPii(rawOcr || ocrResult),
           } as any
         });
       } else {
@@ -77,7 +102,7 @@ export async function POST(req: NextRequest){
             receiptNo: receiptNo || null,
             transactionRef: transactionRef || null,
             policyNo: policyNo || null,
-            payerName: payerName || null,
+            payerName: maskName(payerName),
             paidAt: paidAt ? new Date(paidAt) : null,
             amount: amount ? String(amount) : null,
             type: type || null,
@@ -85,7 +110,7 @@ export async function POST(req: NextRequest){
             agentCode: agentCode || null,
             qrBarcode: qrBarcode || null,
             confidence: confidence || { overall: 0.85 },
-            rawOcr: rawOcr || ocrResult,
+            rawOcr: scrubPii(rawOcr || ocrResult),
           } as any
         });
       }

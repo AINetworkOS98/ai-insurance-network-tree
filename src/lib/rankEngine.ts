@@ -1,6 +1,21 @@
 import { prisma } from '@/lib/prisma';
 import { RANK_CATALOG } from '@/lib/rankCatalog';
 
+// แหล่งผลงานที่ใช้ประเมิน (อ่านจากค่าตั้งค่าใบเสร็จ)
+// ใบเสร็จที่รับรองแล้วจะสร้าง PerformanceLedger type='premium' (เบี้ยรับชำระ = หลักฐานจริง)
+// ถ้าเปิด countPremiumForRank (ค่าตั้งต้น = เปิด) และแผนกำหนดเกณฑ์เป็น 'commission'
+// ระบบจะนับเบี้ยจากใบเสร็จที่รับรองแล้วเข้าด้วย เพื่อให้ใบเสร็จผลักดันการขึ้นตำแหน่งได้จริง
+// (ledger ยังคงบันทึกชนิดจริง ไม่ปลอมแปลงข้อมูล)
+async function metricSources(planMetric: string): Promise<string[]> {
+  const base = [planMetric];
+  try {
+    const row: any = await prisma.receiptSettings.findUnique({ where: { id: 'default' } });
+    const s: any = row?.settings || {};
+    if (s.countPremiumForRank !== false && planMetric === 'commission') return ['commission', 'premium'];
+  } catch { }
+  return base;
+}
+
 // หมวด 6: เลื่อน/ลดตำแหน่ง ตามแผน Active เท่านั้น — Draft ไม่คำนวณจริง ไม่ใช้ผัง 1 แตก 5
 export async function evaluateRank(userId: string){
   const user = await prisma.user.findUnique({ where:{ id: userId } });
@@ -21,7 +36,8 @@ export async function evaluateRank(userId: string){
   const missing: string[] = [];
   let allPass = true;
   for(const rule of rules){
-    const ledgerRows: any[] = await prisma.performanceLedger.findMany({ where:{ userId, type: rule.metric, status:'active' } });
+    const srcs = await metricSources(String(rule.metric));
+    const ledgerRows: any[] = await prisma.performanceLedger.findMany({ where:{ userId, type:{ in: srcs }, status:'active' } });
     const personalSum = ledgerRows.reduce((s:any,r:any)=> s + Number(r.amount), 0);
     if(rule.personalMin != null && personalSum < Number(rule.personalMin)){
       missing.push(`${rule.metric} ส่วนตัว ${personalSum} < ${Number(rule.personalMin)}`);
@@ -31,7 +47,7 @@ export async function evaluateRank(userId: string){
       // ยอดทีม: รวม ledger ของลูกทีมใต้ managerId (โครงสร้างบังคับบัญชา ไม่ใช่ผัง 1 แตก 5)
       const teamMembers: any[] = await prisma.user.findMany({ where:{ managerId: userId }, select:{ id:true } });
       const teamIds = teamMembers.map((m:any)=> m.id);
-      const teamRows: any[] = teamIds.length ? await prisma.performanceLedger.findMany({ where:{ userId:{ in: teamIds }, type: rule.metric, status:'active' } }) : [];
+      const teamRows: any[] = teamIds.length ? await prisma.performanceLedger.findMany({ where:{ userId:{ in: teamIds }, type:{ in: srcs }, status:'active' } }) : [];
       const teamSum = teamRows.reduce((s:any,r:any)=> s + Number(r.amount), 0);
       if(teamSum < Number(rule.teamMin)){ missing.push(`${rule.metric} ทีม ${teamSum} < ${Number(rule.teamMin)}`); allPass=false; }
     }

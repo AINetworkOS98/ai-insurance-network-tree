@@ -170,6 +170,10 @@ export default function Net1x5Autopilot() {
               📄 อ่าน PDF: สรุประบบ 1 แตก 5
             </a>
             <a href="/network/1x5-rules" className="text-xs text-sky-700 underline">หลักเกณฑ์ 1 แตก 5</a>
+            {/* เพิ่มใหม่ (ไม่ลบของเดิม): ทางลัดสแกนใบเสร็จ มุมบนขวา — ใบเสร็จที่สแกนจะไหลเข้าสู่ระบบตรวจเงื่อนไขนี้ */}
+            <Link href="/documents" className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-700 underline">
+              🧾 สแกนใบเสร็จรับเงิน
+            </Link>
           </div>
         </div>
 
