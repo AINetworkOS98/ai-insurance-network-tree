@@ -376,6 +376,12 @@ function AdminContent() {
             </button>
             {canAdminTools && (<>
             <Link
+              href="/admin/ai-autopilot"
+              className="px-4 py-2 rounded-full text-sm font-medium bg-white border border-blue-100 text-slate-600 hover:bg-[#f0f7ff]"
+            >
+              🎬 AI Autopilot
+            </Link>
+            <Link
               href="/admin/messages"
               className="px-4 py-2 rounded-full text-sm font-medium bg-white border border-blue-100 text-slate-600 hover:bg-[#f0f7ff] flex items-center gap-2"
             >
