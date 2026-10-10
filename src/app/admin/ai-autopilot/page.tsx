@@ -28,6 +28,7 @@ export default function AiAutopilotPage() {
   const [result, setResult] = useState<RunResult | null>(null);
   const [error, setError] = useState('');
   const [runLog, setRunLog] = useState<string[]>([]);
+  const [count, setCount] = useState(1);
 
   async function fetchStatus() {
     try {
@@ -46,8 +47,8 @@ export default function AiAutopilotPage() {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(mode === 'post'
-          ? { post: true, conversation: CHATGPT_CONV, project: FLOW_PROJECT, aspect: '9:16' }
-          : { post: false, skipGenerate: true, conversation: CHATGPT_CONV, project: FLOW_PROJECT, aspect: '9:16' }),
+          ? { post: true, count, conversation: CHATGPT_CONV, project: FLOW_PROJECT, aspect: '9:16' }
+          : { post: false, skipGenerate: true, count, conversation: CHATGPT_CONV, project: FLOW_PROJECT, aspect: '9:16' }),
       });
       const data: any = await res.json().catch(() => ({}));
       if (res.status === 401 || res.status === 403) { setError(data?.error || 'ต้องล็อกอินเป็นผู้ดูแลระบบ'); return; }
@@ -92,8 +93,27 @@ export default function AiAutopilotPage() {
             ดาวน์โหลด → <b>โพสต์ TikTok @aka989._</b> พร้อมคำอธิบายเครือข่าย + ลิงก์สมัครสมาชิก →
             ส่งรายงานผลทางเมล และบันทึก log ลงระบบ
           </p>
+          <p className="mt-2 text-sm text-sky-700 bg-[#f0f7ff] rounded-xl p-3">
+            ⏰ ตั้งเวลาไว้อัตโนมัติแล้ว: <b>ทุกวัน 09:00</b> ระบบจะดึงพรอมต์ล่าสุด → สร้างคลิป → ส่งรายงานเมล
+            (โหมดตั้งเวลายัง<b>ไม่โพสต์อัตโนมัติ</b> เพื่อให้คุณตรวจก่อน — กดปุ่มด้านล่างเมื่อต้องการโพสต์จริง)
+          </p>
 
-          <div className="mt-4 flex flex-wrap gap-3">
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="text-sm text-slate-600">จำนวนคลิปต่อรอบ:</span>
+            {[1, 2, 3, 4].map((n) => (
+              <button
+                key={n}
+                onClick={() => setCount(n)}
+                disabled={busy !== ''}
+                className={`px-3 py-1 rounded-full text-sm border disabled:opacity-50 ${count === n ? 'bg-sky-500 text-white border-sky-500' : 'bg-white border-blue-100 text-slate-600'}`}
+              >
+                x{n}
+              </button>
+            ))}
+            <span className="text-xs text-slate-500">(1 คลิป = 8 วินาที · ใช้ 1 เครดิต Flow)</span>
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-3">
             <button
               onClick={() => run('dry')}
               disabled={busy !== ''}

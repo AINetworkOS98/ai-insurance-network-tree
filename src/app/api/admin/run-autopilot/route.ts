@@ -86,6 +86,7 @@ export async function POST(req: NextRequest) {
   const payload = {
     post: !!body.post,
     skipGenerate: !!body.skipGenerate,
+    count: Math.min(4, Math.max(1, Number(body.count) || 1)),
     conversation: body.conversation || undefined,
     project: body.project || undefined,
     aspect: body.aspect || '9:16',

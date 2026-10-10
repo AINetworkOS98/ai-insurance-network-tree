@@ -196,15 +196,16 @@ async function generateInFlow(prompt) {
   await clickAt(c, asp.x, asp.y);
   await sleep(1500);
 
-  // count x1
-  const x1 = await rectOf(c, `(() => {
+  // count: x1..x4 (เลือกจากพารามิเตอร์ --count)
+  const xCount = Math.min(4, Math.max(1, Number(arg('count', 1)) || 1));
+  const xBtn = await rectOf(c, `(() => {
     const vis = e => { const r = e.getBoundingClientRect(); return r.width > 8 && r.height > 8; };
-    const e = [...document.querySelectorAll('.settings-content [class*="toggle"]')].filter(vis).find(x => (x.innerText||'').trim().startsWith('x1'));
-    if (!e) return JSON.stringify({ ok:false, why:'no x1 toggle' });
+    const e = [...document.querySelectorAll('.settings-content [class*="toggle"]')].filter(vis).find(x => (x.innerText||'').trim().startsWith('x${xCount}'));
+    if (!e) return JSON.stringify({ ok:false, why:'no x${xCount} toggle' });
     const r = e.getBoundingClientRect();
     return JSON.stringify({ ok:true, x: Math.round(r.x + r.width/2), y: Math.round(r.y + r.height/2) });
   })()`).catch(() => null);
-  if (x1) { await clickAt(c, x1.x, x1.y); await sleep(1200); }
+  if (xBtn) { await clickAt(c, xBtn.x, xBtn.y); log('ตั้งจำนวนคลิป x' + xCount); await sleep(1200); }
   await c.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
   await c.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
   await sleep(1200);

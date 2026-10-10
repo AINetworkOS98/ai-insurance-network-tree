@@ -49,6 +49,7 @@ const server = http.createServer((req, res) => {
       '--conversation', String(b.conversation || '6aca4737-38dc-83ec-a8f4-804d8115de25'),
       '--project', String(b.project || '5d5bdf40-93fb-4ff0-9d18-37839f7beb2b'),
       '--aspect', String(b.aspect || '9:16'),
+      '--count', String(Math.min(4, Math.max(1, Number(b.count) || 1))),
       '--caption-file', CAPTION];
     if (b.post) args.push('--post');
     if (b.skipGenerate) args.push('--skip-generate');
