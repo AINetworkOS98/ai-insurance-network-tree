@@ -66,6 +66,7 @@ const server = http.createServer((req, res) => {
       let parsed = null;
       try { parsed = JSON.parse(last); } catch { }
       logLine(`run done code=${code} ok=${parsed ? parsed.ok : '?'}`);
+      if (err) logLine('stderr: ' + err.replace(/\s+/g, ' ').slice(-500));
       json(res, 200, parsed || { ok: false, error: 'สคริปต์ไม่คืน JSON', exitCode: code, stdoutTail: out.slice(-600), stderrTail: err.slice(-600) });
     });
   });

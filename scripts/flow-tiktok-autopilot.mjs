@@ -52,10 +52,10 @@ async function newPage(url) {
   const r = await fetch(CDP + '/json/new?' + encodeURIComponent(url), { method: 'PUT' });
   return r.json();
 }
-async function attach(filter) {
+async function attach(filter, exclude = null) {
   const pages = await listPages();
-  const p = pages.find(t => (t.url || '').includes(filter));
-  if (!p) throw new Error(`no tab matched: ${filter} | open: ${pages.map(x => x.url).join(', ')}`);
+  const p = pages.find(t => (t.url || '').includes(filter) && (!exclude || !(t.url || '').includes(exclude)));
+  if (!p) throw new Error(`no tab matched: ${filter}${exclude ? ' (ยกเว้น ' + exclude + ')' : ''} | open: ${pages.map(x => x.url).join(', ')}`);
   const ws = new WebSocket(p.webSocketDebuggerUrl);
   await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
   let id = 0; const waiters = new Map();
@@ -78,11 +78,11 @@ async function attach(filter) {
 }
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-async function gotoAndWait(filter, url, waitMs = 12000) {
+async function gotoAndWait(filter, url, waitMs = 12000, exclude = null) {
   const pages = await listPages();
-  let target = pages.find(t => (t.url || '').includes(filter));
+  let target = pages.find(t => (t.url || '').includes(filter) && (!exclude || !(t.url || '').includes(exclude)));
   if (!target) target = await newPage(url);
-  const c = await attach(filter);
+  const c = await attach(filter, exclude);
   await c.send('Page.enable');
   await c.send('Page.navigate', { url });
   await sleep(waitMs);
@@ -159,8 +159,8 @@ async function clickAt(c, x, y) {
 async function generateInFlow(prompt) {
   result.step = 'flow';
   const url = `https://flow.google.com/project/${PROJECT}`;
-  await gotoAndWait('flow.google.com/project', url, 14000);
-  const c = await attach('flow.google.com/project');
+  await gotoAndWait('flow.google.com/project', url, 14000, '/edit/');
+  const c = await attach('flow.google.com/project', '/edit/');
 
   // open composer settings (chip at bottom right of the composer)
   const chip = await rectOf(c, `(() => {
@@ -223,6 +223,15 @@ async function generateInFlow(prompt) {
   await c.send('Input.insertText', { text: prompt });
   await sleep(2000);
 
+  if (SKIP_GENERATE) { log('skip-generate: ไม่กดสร้าง'); c.close(); return null; }
+
+  // เครดิต Flow หมด = ปุ่ม "เริ่มสร้าง" ถูกแทนด้วยป้ายเตือน → แจ้งให้ชัด
+  const credit = await c.evaluate(`(() => {
+    const w = [...document.querySelectorAll('*')].some(x => /เครดิตไม่เพียงพอ/.test((x.getAttribute && x.getAttribute('aria-label')) || ''));
+    return JSON.stringify({ warn: w });
+  })()`).then(JSON.parse).catch(() => ({ warn: false }));
+  if (credit.warn) throw new Error('Flow เครดิตไม่เพียงพอ — ปุ่มสร้างถูกปิด รอเครดิตรีเซ็ต (รายวัน) หรืออัปเกรดแพ็กเกจแล้วรันใหม่');
+
   // verify send enabled then click it
   const send = await rectOf(c, `(() => {
     const b = [...document.querySelectorAll('button')].find(x => (x.getAttribute('aria-label')||'') === 'เริ่มสร้าง');
@@ -231,7 +240,6 @@ async function generateInFlow(prompt) {
     const r = b.getBoundingClientRect();
     return JSON.stringify({ ok:true, x: Math.round(r.x + r.width/2), y: Math.round(r.y + r.height/2) });
   })()`);
-  if (SKIP_GENERATE) { log('skip-generate: ไม่กดสร้าง'); c.close(); return null; }
   await clickAt(c, send.x, send.y);
   log('ส่งพรอมต์เข้า Flow แล้ว (' + prompt.length + ' ตัวอักษร) กำลังรอสร้าง...');
 
