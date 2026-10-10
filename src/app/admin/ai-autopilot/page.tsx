@@ -7,13 +7,13 @@ import Link from 'next/link';
  * /admin/ai-autopilot — หน้าควบคุมท่อ "AI Content Autopilot"
  * ท่อ: ChatGPT (prompt ล่าสุด) → Google Flow (สร้างวิดีโอ) → ดาวน์โหลด → TikTok @aka989._ + คำอธิบาย + ลิงก์สมัคร
  *
- * ทำงานผ่าน webhook ของ n8n ที่รันอยู่ในเครื่อง (ค่าเริ่มต้น http://localhost:5679)
- * จึงต้องเปิดหน้านี้จากเครื่องที่รัน n8n (หรือตั้ง NEXT_PUBLIC_N8N_BASE เป็น URL ของ tunnel)
+ * เรียกใช้ผ่าน API ของแอปเอง (/api/admin/run-autopilot) — ฝั่งเซิร์ฟเวอร์จึงต่อไปยัง n8n ในเครื่อง
+ * ผ่าน tunnel ด้วย CRON_SECRET (เบราว์เซอร์ไม่เห็นความลับ) ใช้ได้จากทุกที่ที่ล็อกอินเป็นผู้ดูแลระบบ
  */
 
-const N8N_BASE = process.env.NEXT_PUBLIC_N8N_BASE || 'http://localhost:5679';
+const API = '/api/admin/run-autopilot';
+const N8N_LOCAL = process.env.NEXT_PUBLIC_N8N_BASE || 'http://localhost:5679';
 const WORKFLOW_ID = '2cca7ada-ca9f-4c95-94c0-7151c15574bb';
-const WEBHOOK = `${N8N_BASE}/webhook/ai-content-autopilot`;
 const CHATGPT_CONV = '6aca4737-38dc-83ec-a8f4-804d8115de25';
 const FLOW_PROJECT = '5d5bdf40-93fb-4ff0-9d18-37839f7beb2b';
 
@@ -31,9 +31,10 @@ export default function AiAutopilotPage() {
   async function run(mode: 'dry' | 'post') {
     setBusy(mode); setError(''); setResult(null);
     try {
-      const res = await fetch(WEBHOOK, {
+      const res = await fetch(API, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(mode === 'post'
           ? { post: true, conversation: CHATGPT_CONV, project: FLOW_PROJECT, aspect: '9:16' }
           : { post: false, skipGenerate: true, conversation: CHATGPT_CONV, project: FLOW_PROJECT, aspect: '9:16' }),
@@ -43,7 +44,7 @@ export default function AiAutopilotPage() {
       try { data = JSON.parse(text); } catch { data = { error: text.slice(0, 400) }; }
       setResult(data);
     } catch (e: any) {
-      setError(String(e?.message || e) + ' — ตรวจว่า n8n รันอยู่ (localhost:5679) และเปิดหน้านี้จากเครื่องนั้น');
+      setError(String(e?.message || e));
     } finally { setBusy(''); }
   }
 
@@ -79,14 +80,15 @@ export default function AiAutopilotPage() {
             >
               {busy === 'post' ? '⏳ กำลังสร้างและโพสต์... (1-3 นาที)' : '🚀 สร้างวิดีโอ + โพสต์ TikTok'}
             </button>
-            <a href={`${N8N_BASE}/workflow/${WORKFLOW_ID}`} target="_blank" rel="noreferrer"
+            <a href={`${N8N_LOCAL}/workflow/${WORKFLOW_ID}`} target="_blank" rel="noreferrer"
                className="px-4 py-2 rounded-full bg-white border border-blue-100 text-slate-600 text-sm">
-              เปิด workflow ใน n8n ↗
+              เปิด workflow ใน n8n ↗ (เครื่องนี้เท่านั้น)
             </a>
           </div>
 
           <p className="mt-3 text-xs text-slate-500">
-            webhook: <code className="px-1 bg-slate-100 rounded">{WEBHOOK}</code> · ปุ่มนี้ใช้ได้เมื่อ n8n ในเครื่องทำงานอยู่
+            เรียกผ่าน API ของแอป <code className="px-1 bg-slate-100 rounded">{API}</code> (ผู้ดูแลระบบเท่านั้น) →
+            ฝั่งเซิร์ฟเวอร์ต่อไปยัง n8n ในเครื่องผ่าน tunnel โดยใช้ CRON_SECRET
           </p>
 
           {error && (
