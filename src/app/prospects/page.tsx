@@ -1,5 +1,6 @@
 'use client';
 import Header from '@/components/Header';
+import ThreeStepsJourney from '@/components/ThreeStepsJourney';
 import Sidebar from '@/components/Sidebar';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
@@ -64,6 +65,8 @@ export default function GeneralMembersPage(){
       <div className="flex w-full">
         <Sidebar/>
         <main className="flex-1 p-6 space-y-6">
+          {/* ส่วนแนะนำ 3 ขั้นสู่อิสรภาพทางการเงิน — แสดงเป็นข้อความแรกก่อนเนื้อหาอื่น (สั่งโดยเจ้าของระบบ) */}
+          <ThreeStepsJourney />
           {/* หัวหน้า */}
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-xl font-bold text-[#475569]">สมาชิกทั่วไป</h1>
