@@ -15,21 +15,57 @@ function fingerprint(amount: number, date: string | null, reference: string | nu
   return `${amount}|${date || ''}|${reference || ''}`.trim();
 }
 
-// ── GET: รายการใบเสร็จ (จาก Firestore จริง) ─────────────────────────
-export async function GET(request: Request) {
+// ── GET: คลังใบเสร็จที่สแกนแล้ว (ของสมาชิกคนนี้) + สรุปยอดเข้าเครือข่าย 1 แตก 5 ────
+//  สมาชิกเห็นเฉพาะใบเสร็จของตัวเอง (จับคู่จาก userId / memberCode / email ที่ล็อกอิน)
+//  ผู้ดูแลระบบเห็นทั้งหมด · ไม่มีข้อมูลส่วนบุคคลในคำตอบ (PDPA)
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const memberId = searchParams.get('memberId');
+    const memberIdParam = searchParams.get('memberId');
 
-    const snapshot = await db().collection('receipts').limit(200).get();
-    let receipts = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+    // ระบุตัวตนผู้ใช้จากโทเค็น (ถ้ามี) เพื่อจำกัดขอบเขตข้อมูล
+    const tokenHeader = request.headers.get('authorization') || '';
+    const token = request.cookies.get('token')?.value
+      || request.cookies.get('auth_token')?.value
+      || tokenHeader.replace(/^Bearer\s+/i, '').trim();
 
-    if (memberId) {
-      receipts = receipts.filter((r: any) => r.memberId === memberId);
+    let payload: any = null;
+    try { payload = token ? verifyToken(token) : null; } catch { payload = null; }
+
+    const userId = String(payload?.sub || '');
+    let isAdmin = false;
+    let mine = new Set<string>();
+    let memberName = '';
+    if (userId) {
+      isAdmin = await isAdminFromPayload(payload).catch(() => false);
+      const me = await prisma.user.findUnique({ where: { id: userId }, select: { memberCode: true, email: true, displayName: true } }).catch(() => null);
+      memberName = me?.displayName || me?.email || '';
+      mine = new Set([userId, me?.memberCode, me?.email, memberIdParam].filter(Boolean).map(String));
+    }
+
+    const snapshot = await db().collection('receipts').limit(500).get();
+    let receipts: any[] = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+    if (!isAdmin) {
+      const wanted = mine.size ? mine : new Set([memberIdParam || 'demo-member']);
+      receipts = receipts.filter((r: any) => wanted.has(String(r.memberId)));
     }
     receipts.sort((a: any, b: any) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
 
-    return NextResponse.json({ ok: true, receipts });
+    // สรุปยอดสำหรับแสดงบนหน้าคลังใบเสร็จ
+    const counted = receipts.filter((r: any) => r.countsToward1x5 === true);
+    const summary = {
+      total: receipts.length,
+      countedCount: counted.length,
+      countedAmount: counted.reduce((n: number, r: any) => n + Number(r.verifiedAmount ?? r.amount ?? 0), 0),
+      pendingReview: receipts.filter((r: any) => r.needsManualReview !== false).length,
+      lastScanAt: receipts[0]?.createdAt || null,
+      scope: isAdmin ? 'all' : 'mine',
+      memberName,
+      piiPolicy: 'masked_only',
+    };
+
+    return NextResponse.json({ ok: true, receipts, summary });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e.message || 'โหลดรายการใบเสร็จไม่สำเร็จ' }, { status: 500 });
   }
@@ -103,6 +139,24 @@ export async function POST(request: Request) {
     const payerName = (form.get('payerName') as string) || null;
     const receiverName = (form.get('receiverName') as string) || null;
     const bank = (form.get('bank') as string) || null;
+    // ── ฟิลด์ผลตรวจกติกาจากระบบสแกน (ไม่มีข้อมูลส่วนบุคคล) ─────────────────
+    const receiptNumber = (form.get('receiptNumber') as string) || null;
+    const policyNo = (form.get('policyNo') as string) || null;
+    const company = (form.get('company') as string) || null;
+    const paidAt = (form.get('paidAt') as string) || null;
+    const installmentLabel = (form.get('installmentLabel') as string) || null;
+    const paymentMethod = (form.get('paymentMethod') as string) || null;
+    const planName = (form.get('planName') as string) || null;
+    const policyTermYears = Number(form.get('policyTermYears')) || null;
+    const docType = (form.get('docType') as string) || null;
+    const dedupKey = (form.get('dedupKey') as string) || null;
+    const provider = (form.get('provider') as string) || null;
+    const confidence = Number(form.get('confidence')) || null;
+    const countsToward1x5 = (form.get('countsToward1x5') as string) === 'true';
+    const verifiedAmount = Number(form.get('verifiedAmount')) || 0;
+    const needsManualReview = (form.get('needsManualReview') as string) !== 'false';
+    let issues: any = [];
+    try { issues = JSON.parse((form.get('issues') as string) || '[]'); } catch { issues = []; }
 
     if (!file) {
       return NextResponse.json({ ok: false, error: 'ไม่พบไฟล์ที่อัปโหลด' }, { status: 400 });
@@ -113,7 +167,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: 'ไม่สามารถอ่านยอดเงินจากเอกสารได้' }, { status: 400 });
     }
 
-    // 1) ป้องกัน duplicate
+    // 1) ป้องกัน duplicate — เลขที่ใบเสร็จ+กรมธรรม์ (dedupKey) ก่อน แล้วค่อยลายนิ้วมือเดิม
+    if (dedupKey) {
+      const dupKeySnap = await db().collection('receipts').where('dedupKey', '==', dedupKey).limit(1).get();
+      if (!dupKeySnap.empty) {
+        return NextResponse.json(
+          { ok: false, duplicate: true, error: 'ใบเสร็จเลขที่นี้ถูกบันทึกแล้ว (กันนับยอดซ้ำ)' },
+          { status: 409 }
+        );
+      }
+    }
     const fp = fingerprint(amount, date, referenceNumber);
     const dupSnapshot = await db().collection('receipts').where('fingerprint', '==', fp).limit(1).get();
     if (!dupSnapshot.empty) {
@@ -180,12 +243,33 @@ export async function POST(request: Request) {
         amount,
         date,
         referenceNumber,
-        payerName,
+        // PDPA: ไม่เก็บชื่อผู้ชำระ (payerName) ลงคลัง — เก็บเฉพาะข้อมูลธุรกรรมและชื่อบริษัท
         receiverName,
         bank,
         fingerprint: fp,
         position: current,
         createdAt: new Date().toISOString(),
+        // ── ผลตรวจกติกาที่บันทึกไว้กับใบเสร็จ (ใช้เป็นหลักฐานย้อนหลังได้) ──
+        receiptNumber,
+        policyNo,
+        company,
+        paidAt,
+        installmentLabel,
+        paymentMethod,
+        planName,
+        policyTermYears,
+        docType,
+        dedupKey,
+        provider,
+        confidence,
+        countsToward1x5,
+        verifiedAmount: countsToward1x5 ? (verifiedAmount || amount) : 0,
+        needsManualReview,
+        issues,
+        verificationStatus: countsToward1x5
+          ? (needsManualReview ? 'รอตรวจสอบ' : 'ผ่านการตรวจกติกา')
+          : 'ไม่เข้าเกณฑ์',
+        piiPolicy: 'masked_only',
       });
     });
 

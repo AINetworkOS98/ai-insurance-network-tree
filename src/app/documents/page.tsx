@@ -58,6 +58,34 @@ type ReceiptRecord = {
   date: string;
   referenceNumber: string;
   createdAt: string;
+  // ── ผลตรวจกติกาที่บันทึกไว้กับใบเสร็จ (ระบบสแกนแบบตรวจไขว้) ──
+  receiptNumber?: string | null;
+  policyNo?: string | null;
+  company?: string | null;
+  paidAt?: string | null;
+  installmentLabel?: string | null;
+  paymentMethod?: string | null;
+  planName?: string | null;
+  policyTermYears?: number | null;
+  docType?: string | null;
+  provider?: string | null;
+  confidence?: number | null;
+  countsToward1x5?: boolean;
+  verifiedAmount?: number;
+  needsManualReview?: boolean;
+  verificationStatus?: string | null;
+  dedupKey?: string | null;
+  receiverName?: string | null;
+};
+
+type ReceiptSummary = {
+  total: number;
+  countedCount: number;
+  countedAmount: number;
+  pendingReview: number;
+  lastScanAt: string | null;
+  scope: 'mine' | 'all';
+  memberName?: string;
 };
 
 type Stage = 'idle' | 'uploading' | 'reading' | 'verifying' | 'preview' | 'saving';
@@ -82,6 +110,7 @@ export default function DocumentsPage() {
   const [form, setForm] = useState<{ amount: string; date: string; payerName: string; receiverName: string; referenceNumber: string }>({ amount: '', date: '', payerName: '', receiverName: '', referenceNumber: '' });
   const [position, setPosition] = useState<PositionResult | null>(null);
   const [receipts, setReceipts] = useState<ReceiptRecord[]>([]);
+  const [summary, setSummary] = useState<ReceiptSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -95,7 +124,7 @@ export default function DocumentsPage() {
     try {
       const res = await fetch(`/api/documents?memberId=${encodeURIComponent(memberId)}`);
       const data = await res.json();
-      if (data.ok) setReceipts(data.receipts || []);
+      if (data.ok) { setReceipts(data.receipts || []); setSummary(data.summary || null); }
     } catch {
       /* ignore */
     }
@@ -309,6 +338,28 @@ export default function DocumentsPage() {
       formData.append('payerName', form.payerName);
       formData.append('receiverName', form.receiverName);
       formData.append('referenceNumber', form.referenceNumber);
+    // ส่งผลตรวจกติกา (จากระบบสแกน) ติดไปกับใบเสร็จ เพื่อเก็บไว้ในคลังของสมาชิก
+    {
+      const v: any = (ocr as any)?.verification || {};
+      const fdExtra = new FormData();
+      fdExtra.append('receiptNumber', (ocr as any)?.receiptNumber || '');
+      fdExtra.append('policyNo', (ocr as any)?.policyNo || '');
+      fdExtra.append('company', (ocr as any)?.companyName || '');
+      fdExtra.append('paidAt', (ocr as any)?.date || '');
+      fdExtra.append('installmentLabel', v.installmentLabel || '');
+      fdExtra.append('paymentMethod', v.paymentMethod || '');
+      fdExtra.append('planName', v.planName || '');
+      fdExtra.append('policyTermYears', v.policyTermYears ? String(v.policyTermYears) : '');
+      fdExtra.append('docType', (ocr as any)?.documentType || '');
+      fdExtra.append('dedupKey', v.dedupKey || '');
+      fdExtra.append('provider', (ocr as any)?.provider || '');
+      fdExtra.append('confidence', String((ocr as any)?.confidence ?? ''));
+      fdExtra.append('countsToward1x5', String(!!v.network?.countsToward1x5));
+      fdExtra.append('verifiedAmount', String(v.network?.verifiedAmount || 0));
+      fdExtra.append('needsManualReview', String((ocr as any)?.needsManualReview ?? true));
+      fdExtra.append('issues', JSON.stringify(v.issues || []));
+      for (const [k, val] of fdExtra.entries()) formData.append(k, val as string);
+    }
 
       const res = await fetch('/api/documents', { method: 'POST', body: formData });
       const data = await res.json();
@@ -590,52 +641,107 @@ export default function DocumentsPage() {
             )}
           </div>
 
-          {/* รายการใบเสร็จ */}
-          <div className="card p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold text-[#475569]">ใบเสร็จที่บันทึกแล้ว</h2>
+          {/* คลังใบเสร็จที่สแกนแล้ว — เก็บใบเสร็จของสมาชิกพร้อมผลตรวจกติกา */}
+          <div className="card p-5" data-section="receipt-store">
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+              <div>
+                <h2 className="font-semibold text-[#475569]">📚 คลังใบเสร็จที่สแกนแล้ว</h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {summary?.scope === 'all'
+                    ? 'มุมมองผู้ดูแลระบบ — เห็นใบเสร็จของสมาชิกทุกคน'
+                    : `ใบเสร็จของ ${summary?.memberName || 'บัญชีที่ล็อกอิน'} — บันทึกอัตโนมัติเมื่อสแกนสำเร็จ`}
+                </p>
+              </div>
               <button onClick={loadReceipts} className="text-xs text-[#475569] underline">รีเฟรช</button>
             </div>
-            {receipts.length === 0 ? (
-              <p className="text-sm text-slate-400">ยังไม่มีใบเสร็จ</p>
-            ) : (
-              <table className="w-full text-xs">
-                <thead className="bg-[#475569] text-white">
-                  <tr>
-                    <th className="text-left p-2">ยอด (฿)</th>
-                    <th className="text-left p-2">วันที่</th>
-                    <th className="text-left p-2">เลขอ้างอิง</th>
-                    <th className="text-left p-2">ไฟล์</th>
-                    <th className="p-2">เวลา</th>
-                    <th className="p-2">จัดการ</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {receipts.map((r) => (
-                    <tr key={r.id} className="hover:bg-slate-50">
-                      <td className="p-2 font-semibold">{r.amount?.toLocaleString()}</td>
-                      <td className="p-2">{r.date || '—'}</td>
-                      <td className="p-2">{r.referenceNumber || '—'}</td>
-                      <td className="p-2">
-                        <a href={r.storageUrl} target="_blank" rel="noreferrer" className="text-[#475569] underline">{r.filename}</a>
-                      </td>
-                      <td className="p-2 text-center">{new Date(r.createdAt).toLocaleString('th-TH')}</td>
-                      <td className="p-2 text-center">
-                        <button
-                          type="button"
-                          onClick={() => removeReceipt(r.id, r.filename)}
-                          title="ลบใบเสร็จออกจากระบบ"
-                          className="px-2.5 py-1 rounded-full border border-red-200 text-red-600 hover:bg-red-50"
-                        >
-                          ลบ
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+            {summary && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+                <div className="rounded-xl border border-[#f3e8d3] bg-[#FCFBF6] p-3">
+                  <div className="text-[11px] text-slate-500">ใบเสร็จที่สแกนแล้ว</div>
+                  <div className="text-lg font-bold text-[#475569]">{summary.total} ใบ</div>
+                </div>
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                  <div className="text-[11px] text-emerald-700">นับยอดเข้าเครือข่าย 1 แตก 5</div>
+                  <div className="text-lg font-bold text-emerald-800">{summary.countedCount} ใบ</div>
+                  <div className="text-[11px] text-emerald-700">฿{summary.countedAmount.toLocaleString('th-TH')}</div>
+                </div>
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                  <div className="text-[11px] text-amber-700">รอตรวจสอบ</div>
+                  <div className="text-lg font-bold text-amber-800">{summary.pendingReview} ใบ</div>
+                </div>
+                <div className="rounded-xl border border-[#f3e8d3] bg-[#FCFBF6] p-3">
+                  <div className="text-[11px] text-slate-500">สแกนล่าสุด</div>
+                  <div className="text-sm font-semibold text-[#475569]">
+                    {summary.lastScanAt ? new Date(summary.lastScanAt).toLocaleString('th-TH') : '—'}
+                  </div>
+                </div>
+              </div>
             )}
+
+            {receipts.length === 0 ? (
+              <p className="text-sm text-slate-400">ยังไม่มีใบเสร็จในคลัง — สแกนใบเสร็จด้านบน ระบบจะบันทึกไว้ที่นี่อัตโนมัติ</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-[#475569] text-white">
+                    <tr>
+                      <th className="text-left p-2">วันที่สแกน</th>
+                      <th className="text-left p-2">เลขที่ใบเสร็จ</th>
+                      <th className="text-left p-2">กรมธรรม์</th>
+                      <th className="text-left p-2">บริษัท</th>
+                      <th className="text-left p-2">ยอด (฿)</th>
+                      <th className="text-left p-2">วันที่ชำระ</th>
+                      <th className="text-left p-2">งวด</th>
+                      <th className="text-left p-2">สถานะตรวจ</th>
+                      <th className="text-left p-2">1 แตก 5</th>
+                      <th className="text-left p-2">ไฟล์</th>
+                      <th className="p-2">จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {receipts.map((r) => (
+                      <tr key={r.id} className="hover:bg-slate-50">
+                        <td className="p-2 whitespace-nowrap">{r.createdAt ? new Date(r.createdAt).toLocaleString('th-TH') : '—'}</td>
+                        <td className="p-2 font-mono">{r.receiptNumber || r.referenceNumber || '—'}</td>
+                        <td className="p-2 font-mono">{r.policyNo || '—'}</td>
+                        <td className="p-2 max-w-[180px] truncate" title={r.company || r.receiverName || ''}>{r.company || r.receiverName || '—'}</td>
+                        <td className="p-2 font-semibold">{(r.verifiedAmount || r.amount || 0).toLocaleString('th-TH')}</td>
+                        <td className="p-2">{r.paidAt || r.date || '—'}</td>
+                        <td className="p-2">{r.installmentLabel || '—'}{r.paymentMethod ? ` (${r.paymentMethod})` : ''}</td>
+                        <td className="p-2">
+                          <span className={`rounded-full px-2 py-0.5 whitespace-nowrap ${
+                            r.countsToward1x5 && !r.needsManualReview ? 'bg-emerald-100 text-emerald-800'
+                            : r.countsToward1x5 ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'
+                          }`}>{r.verificationStatus || (r.countsToward1x5 ? 'รอตรวจสอบ' : 'ไม่เข้าเกณฑ์')}</span>
+                        </td>
+                        <td className="p-2">{r.countsToward1x5 ? '✅' : '—'}</td>
+                        <td className="p-2">
+                          {r.storageUrl
+                            ? <a href={r.storageUrl} target="_blank" rel="noreferrer" className="text-[#475569] underline">{r.filename}</a>
+                            : <span className="text-slate-400">{r.filename}</span>}
+                        </td>
+                        <td className="p-2 text-center">
+                          <button
+                            type="button"
+                            onClick={() => removeReceipt(r.id, r.filename)}
+                            title="ลบใบเสร็จออกจากคลัง"
+                            className="px-2.5 py-1 rounded-full border border-red-200 text-red-600 hover:bg-red-50"
+                          >
+                            ลบ
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <p className="text-[11px] text-slate-400 mt-3">
+              🔒 PDPA: คลังนี้เก็บเฉพาะข้อมูลธุรกรรม (เลขที่ใบเสร็จ กรมธรรม์ วันที่ ยอดเงิน สถานะตรวจ) — ไม่เก็บชื่อ-นามสกุล เลขภาษี ที่อยู่ หรือเลขบัตรของลูกค้า
+            </p>
           </div>
+
         </main>
       </div>
     </div>

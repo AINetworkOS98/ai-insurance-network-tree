@@ -1,0 +1,366 @@
+{
+  "name": "AI Content Autopilot 02 · ChatGPT → Flow → TikTok + รายงานผู้สมัคร /register",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "flow-tiktok-register",
+        "responseMode": "onReceived",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "id": "830af8fc-e33e-488b-a22c-66e182160851",
+      "name": "Webhook · Flow→TikTok + รายงาน",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -560,
+        0
+      ],
+      "webhookId": "0b9675b1-9e94-48e4-a6e8-6e24a4b54f75"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 9,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "8e6be9f4-6a04-4da2-8c5b-65a599b7faea",
+      "name": "Schedule · ทุกวัน 09:00 (ปิดไว้ — เปิดเองถ้าต้องการอัตโนมัติ)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -560,
+        200
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {},
+      "id": "22630387-1427-4bdc-8f22-0809220dc3c4",
+      "name": "Manual · กดรันเอง",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// ประตูกันคนนอก: tunnel เปิด webhook นี้สู่อินเทอร์เน็ต จึงต้องมี token\n// หมายเหตุ: ใน Code node ห้ามใช้ process.env (sandbox) — ใช้ $env ของ n8n แทน\nconst j = $input.first().json || {};\nconst h = j.headers || {};\nconst auth = String(h.authorization || h.Authorization || '');\nconst secret = ($env && $env.CRON_SECRET) ? String($env.CRON_SECRET) : '';\nconst expected = 'Bearer ' + secret;\nconst bodyToken = String((j.body && j.body.token) || '');\nconst ok = !!secret && (auth === expected || bodyToken === secret);\nif (!ok) {\n  throw new Error('UNAUTHORIZED: webhook นี้ต้องมี Authorization: Bearer $CRON_SECRET หรือ body.token');\n}\nreturn $input.all();"
+      },
+      "id": "a7760fc0-70aa-490e-8318-6f6222039e19",
+      "name": "ตรวจสิทธิ์ (token)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        0
+      ],
+      "onError": "stopWorkflow"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18811/run-autopilot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ post: ($json.body && typeof $json.body.post !== 'undefined') ? !!$json.body.post : (String($env.AUTOPILOT_AUTOPOST || 'true') === 'true'), skipGenerate: !!($json.body && $json.body.skipGenerate), count: Math.min(4, Math.max(1, Number((($json.body && $json.body.count) || $env.AUTOPILOT_CLIP_COUNT) || 1))), conversation: String(($json.body && $json.body.conversation) || $env.AUTOPILOT_CONVERSATION || '6acaccdd-9db8-83ec-a810-87a3fb36a004'), project: String(($json.body && $json.body.project) || $env.AUTOPILOT_PROJECT || '5d5bdf40-93fb-4ff0-9d18-37839f7beb2b'), aspect: String(($json.body && $json.body.aspect) || '9:16') }) }}",
+        "options": {
+          "timeout": 900000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "b1173ddd-8284-4ccd-b43d-af8888aa1cd1",
+      "name": "รันไปป์ไลน์ (ChatGPT → Flow → TikTok)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -80,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// อ่านผลลัพธ์จาก local-runner (JSON บรรทัดสุดท้ายของสคริปต์) แล้วสรุปให้เป็นฟิลด์เดียว\n// พร้อมตั้งค่าช่วงวันของรายงานผู้สมัคร (จาก body ของ webhook ถ้ามี ไม่งั้นใช้ค่าเริ่มต้น)\nconst pickNode = (names) => {\n  for (const n of names) { try { const j = $(n).first().json; if (j) return j; } catch (e) {} }\n  return {};\n};\nconst src = pickNode(['ตรวจสิทธิ์ (token)']);\nconst req = (src && src.body) || {};\n\nconst j = $input.first().json || {};\nlet r = null;\nif (j && typeof j.ok !== 'undefined') r = j;                 // มาจาก local-runner โดยตรง\nelse {                                                       // เผื่อมาจาก stdout ของคำสั่งอื่น\n  const tail = String((j && j.stdout) || '').trim().split('\\n').filter(Boolean).pop() || '';\n  try { r = JSON.parse(tail); } catch (e) { r = null; }\n}\nif (!r || typeof r !== 'object') {\n  r = { ok: false, error: 'อ่านผลลัพธ์สคริปต์ไม่ได้', raw: JSON.stringify(j).slice(0, 400) };\n}\n\nconst ok = r.ok === true;\nconst step = r.step || (ok ? 'done' : 'unknown');\nconst posted = r.posted === true;\nconst tk = r.tiktok;\nconst tiktokUrl = (tk && typeof tk === 'object') ? (tk.profile || null) : (typeof tk === 'string' ? tk : null);\nconst posts = (tk && typeof tk === 'object' && typeof tk.posts !== 'undefined') ? tk.posts : null;\n\nconst days = Math.min(90, Math.max(1, Number(req.days) || Number($env.AUTOPILOT_REGISTER_DAYS) || 7));\n\nreturn [{ json: {\n  ok, step, posted,\n  videoFile: r.videoFile || null,\n  videoBytes: r.videoBytes || null,\n  captionLen: r.captionLen || 0,\n  promptLen: r.promptLen || 0,\n  promptHead: r.promptHead || null,\n  posts, tiktok: tiktokUrl,\n  error: r.error || null,\n  days, limit: 200,\n  conversation: String(req.conversation || $env.AUTOPILOT_CONVERSATION || '6acaccdd-9db8-83ec-a810-87a3fb36a004'),\n  detail: ok\n    ? (posted ? 'สร้างวิดีโอด้วย Flow + โพสต์ขึ้น TikTok แล้ว' : 'สร้างวิดีโอแล้ว แต่ยังไม่กดโพสต์ (หรือโพสต์ไม่ยืนยัน)')\n    : ('ล้มเหลวขั้น ' + step + ': ' + (r.error || 'ไม่ทราบสาเหตุ'))\n} }];"
+      },
+      "id": "89f6742d-1028-4734-8f37-b49049542e52",
+      "name": "สรุปผล + ตั้งค่าคิวรี",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        0
+      ],
+      "onError": "stopWorkflow"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18811/run-register-report",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ days: $json.days, limit: $json.limit }) }}",
+        "options": {
+          "timeout": 300000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "823cbd02-3428-43d2-aad1-765427a1b947",
+      "name": "ดึงรายชื่อผู้สมัคร (/register)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// ประกอบอีเมล HTML: ผลการสร้าง/โพสต์วิดีโอ + รายชื่อผู้สนใจสมัครใหม่จากหน้า /register\nconst v = $('สรุปผล + ตั้งค่าคิวรี').first().json;\nconst reg = $input.first().json || {};\nconst list = Array.isArray(reg.registrants) ? reg.registrants : [];\nconst days = Number(v.days) || 7;\n\nconst esc = (s) => String(s === null || s === undefined ? '' : s)\n  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;');\n\nconst thDate = (iso) => {\n  try {\n    const d = new Date(iso);\n    return d.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });\n  } catch (e) { return String(iso || ''); }\n};\n\nconst badge = (txt, color) =>\n  '<span style=\"display:inline-block;padding:2px 8px;border-radius:10px;background:' + color + ';color:#fff;font-size:12px\">' + esc(txt) + '</span>';\n\nconst statusColor = v.ok ? (v.posted ? '#138a36' : '#b26a00') : '#c0392b';\nconst statusText = v.ok ? (v.posted ? 'สำเร็จ + โพสต์ TikTok' : 'สร้างวิดีโอแล้ว (ยังไม่ยืนยันโพสต์)') : 'ล้มเหลว';\n\nconst rows = list.length\n  ? list.map((r, i) => {\n      const lvl = Number(r.level) === 0 ? badge('ผู้สนใจ (rank 0)', '#0b6ea8') : badge('rank ' + r.level, '#6b7280');\n      return '<tr style=\"background:' + (i % 2 ? '#f8fafc' : '#fff') + '\">' +\n        '<td style=\"padding:6px 8px;border-bottom:1px solid #e5e7eb\">' + esc(r.name || '-') + '</td>' +\n        '<td style=\"padding:6px 8px;border-bottom:1px solid #e5e7eb\"><a href=\"mailto:' + esc(r.email) + '\">' + esc(r.email) + '</a></td>' +\n        '<td style=\"padding:6px 8px;border-bottom:1px solid #e5e7eb;white-space:nowrap\">' + esc(r.phone || '-') + '</td>' +\n        '<td style=\"padding:6px 8px;border-bottom:1px solid #e5e7eb;white-space:nowrap\">' + esc(thDate(r.createdAt)) + '</td>' +\n        '<td style=\"padding:6px 8px;border-bottom:1px solid #e5e7eb\">' + esc(r.sponsor || '-') + '</td>' +\n        '<td style=\"padding:6px 8px;border-bottom:1px solid #e5e7eb\">' + lvl + '</td></tr>';\n    }).join('')\n  : '<tr><td colspan=\"6\" style=\"padding:10px;color:#6b7280\">— ยังไม่มีผู้สมัครใหม่ในช่วง ' + days + ' วันที่ผ่านมา —</td></tr>';\n\nconst byDay = Object.keys(reg.byDay || {}).sort().reverse().slice(0, 10)\n  .map(d => esc(d) + ': ' + reg.byDay[d]).join(' · ') || '-';\n\nconst tr = (k, val) => '<tr><td style=\"padding:4px 10px 4px 0;color:#6b7280;white-space:nowrap\">' + esc(k) + '</td><td style=\"padding:4px 0\">' + val + '</td></tr>';\n\nconst html = '' +\n'<div style=\"font-family:system-ui,-apple-system,Segoe UI,sans-serif;line-height:1.65;color:#111827;max-width:760px\">' +\n  '<h2 style=\"margin:0 0 4px\">📣 AI Content Autopilot — รายงานผล</h2>' +\n  '<div style=\"color:#6b7280;font-size:13px;margin-bottom:14px\">' + esc(thDate(new Date().toISOString())) +\n    ' · ChatGPT (' + esc(String(v.conversation).slice(0, 12)) + '…) → Google Flow → TikTok @aka989._</div>' +\n\n  '<div style=\"border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;margin-bottom:16px\">' +\n    '<h3 style=\"margin:0 0 8px;font-size:15px\">1) วิดีโอ + การโพสต์ TikTok ' + badge(statusText, statusColor) + '</h3>' +\n    '<table style=\"border-collapse:collapse;font-size:13px\">' +\n      tr('ขั้นตอนสุดท้าย', esc(v.step)) +\n      tr('พรอมต์จาก ChatGPT', v.promptLen ? (v.promptLen + ' ตัวอักษร') : '—') +\n      tr('ไฟล์วิดีโอ', v.videoFile ? esc(v.videoFile.split(/[\\\\/]/).pop()) : '— (ยังไม่ได้สร้าง/ดาวน์โหลด)') +\n      (v.videoBytes ? tr('ขนาดไฟล์', (Math.round(v.videoBytes / 1048576 * 10) / 10) + ' MB') : '') +\n      tr('ความยาวคำอธิบาย', v.captionLen ? (v.captionLen + ' ตัวอักษร') : '—') +\n      tr('โพสต์บน TikTok', v.posted ? 'ยืนยันแล้ว' : 'ยังไม่ยืนยัน') +\n      (v.posts !== null ? tr('จำนวนโพสต์ในบัญชี', String(v.posts)) : '') +\n      (v.error ? tr('ข้อผิดพลาด', '<span style=\"color:#c0392b\">' + esc(v.error) + '</span>') : '') +\n    '</table>' +\n  '</div>' +\n\n  '<div style=\"border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;margin-bottom:16px\">' +\n    '<h3 style=\"margin:0 0 8px;font-size:15px\">2) ผู้สนใจสมัครผ่านหน้า /register ' +\n      badge(String(list.length) + ' ราย / ' + days + ' วัน', '#0b6ea8') + '</h3>' +\n    '<div style=\"color:#6b7280;font-size:12px;margin-bottom:8px\">' + esc(byDay) + '</div>' +\n    '<table style=\"border-collapse:collapse;font-size:13px;width:100%\">' +\n      '<tr style=\"background:#f1f5f9;text-align:left\">' +\n        '<th style=\"padding:6px 8px\">ชื่อ</th><th style=\"padding:6px 8px\">อีเมล</th>' +\n        '<th style=\"padding:6px 8px\">โทร</th><th style=\"padding:6px 8px\">สมัครเมื่อ</th>' +\n        '<th style=\"padding:6px 8px\">ผู้แนะนำ</th><th style=\"padding:6px 8px\">ระดับ</th></tr>' +\n      rows +\n    '</table>' +\n    '<div style=\"color:#6b7280;font-size:12px;margin-top:8px\">ที่มา: ทะเบียนจริงของแอป (ตาราง user) — อ่านอย่างเดียวจากเครื่องที่รัน n8n</div>' +\n  '</div>' +\n\n  '<div style=\"font-size:13px\">' +\n    '🔗 <a href=\"' + REGISTER_URL + '\">หน้าสมัคร /register</a> · ' +\n    '<a href=\"' + TIKTOK_URL + '\">โปรไฟล์ TikTok @aka989._</a>' +\n  '</div>' +\n  '<div style=\"color:#9ca3af;font-size:12px;margin-top:10px\">ระบบอัตโนมัติ n8n · AI Content Autopilot 02 · อีเมลนี้ส่งถึงผู้ดูแลระบบเท่านั้น</div>' +\n'</div>';\n\nconst subject = (v.ok ? (v.posted ? '✅ ' : '⚠️ ') : '❌ ') + 'AI Content Autopilot · ' + v.step +\n  ' · ผู้สนใจใหม่ ' + list.length + ' ราย (' + days + ' วัน)';\n\nreturn [{ json: { subject, html, kind: 'info', stage: v.step, ok: v.ok, posted: v.posted,\n                  registrants: list.length, detail: v.detail, error: v.error } }];"
+      },
+      "id": "ba132586-6a97-4125-bcc3-4e3c532a9d47",
+      "name": "ประกอบอีเมลรายงาน",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        0
+      ],
+      "onError": "stopWorkflow"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/video-intel/notify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ subject: $json.subject, html: $json.html, kind: 'info' }) }}",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "ac189dfd-aaec-4229-8c6b-190a2c814b0a",
+      "name": "ส่งรายงานทางเมล",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || \"https://ai-insurance-network-tree.vercel.app\" }}/api/agent-log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: 'AI Content Autopilot 02', ok: $('สรุปผล + ตั้งค่าคิวรี').first().json.ok, stage: $('สรุปผล + ตั้งค่าคิวรี').first().json.step, detail: $('สรุปผล + ตั้งค่าคิวรี').first().json.detail, at: new Date().toISOString() }) }}",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "356a2190-e226-4e91-b7a4-44489ca69422",
+      "name": "บันทึก log ลงแอป",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook · Flow→TikTok + รายงาน": {
+      "main": [
+        [
+          {
+            "node": "ตรวจสิทธิ์ (token)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ตรวจสิทธิ์ (token)": {
+      "main": [
+        [
+          {
+            "node": "รันไปป์ไลน์ (ChatGPT → Flow → TikTok)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule · ทุกวัน 09:00 (ปิดไว้ — เปิดเองถ้าต้องการอัตโนมัติ)": {
+      "main": [
+        [
+          {
+            "node": "รันไปป์ไลน์ (ChatGPT → Flow → TikTok)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual · กดรันเอง": {
+      "main": [
+        [
+          {
+            "node": "รันไปป์ไลน์ (ChatGPT → Flow → TikTok)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "รันไปป์ไลน์ (ChatGPT → Flow → TikTok)": {
+      "main": [
+        [
+          {
+            "node": "สรุปผล + ตั้งค่าคิวรี",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สรุปผล + ตั้งค่าคิวรี": {
+      "main": [
+        [
+          {
+            "node": "ดึงรายชื่อผู้สมัคร (/register)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ดึงรายชื่อผู้สมัคร (/register)": {
+      "main": [
+        [
+          {
+            "node": "ประกอบอีเมลรายงาน",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ประกอบอีเมลรายงาน": {
+      "main": [
+        [
+          {
+            "node": "ส่งรายงานทางเมล",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ส่งรายงานทางเมล": {
+      "main": [
+        [
+          {
+            "node": "บันทึก log ลงแอป",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "description": "ChatGPT conversation 6acaccdd-9db8-83ec-a810-87a3fb36a004 → Google Flow (9:16) → TikTok @aka989._ แล้วส่งอีเมลรายงานผล พร้อมรายชื่อ/อีเมลผู้สนใจสมัครใหม่จาก /register (7 วัน, ปรับได้ด้วย body.days)",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
