@@ -164,10 +164,19 @@ export default function ReceiptsPage(){
     setLoading(''); load();
   }
 
+  // แสดงผลขึ้นตำแหน่งที่ได้จากการรับรองยอด (ระบบประเมินให้ทันทีหลังรับรอง)
+  function promoText(p:any){
+    if(!p) return '';
+    if(p.promoted) return ` 🎉 ขึ้นตำแหน่งแล้ว: ${p.message || ''}`;
+    if(p.missing?.length) return ` • ยังขาดเกณฑ์ขึ้นตำแหน่ง: ${p.missing.slice(0,3).join(', ')}`;
+    if(p.reason) return ` • ${p.reason}`;
+    return '';
+  }
+
   async function submitVerify(receiptId:string){
     const res = await fetch('/api/receipts/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ receiptId, action:'submit' }) });
     const j = await res.json();
-    setMsg(j.ok ? 'ส่งตรวจสอบแล้ว — รอเจ้าหน้าที่ตรวจกับแหล่งรับเงินจริง' : j.error);
+    setMsg(j.ok ? ('ส่งตรวจสอบแล้ว — รอเจ้าหน้าที่ตรวจกับแหล่งรับเงินจริง' + promoText(j.promotion)) : j.error);
     load();
   }
 
@@ -186,7 +195,7 @@ export default function ReceiptsPage(){
   async function verify(receiptId:string, action:'verify'|'reject'){
     const res = await fetch('/api/receipts/verify', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ receiptId, action, reason: action==='verify' ? 'ตรวจสอบกับรายงานรับเงินจริงแล้ว' : 'เอกสารไม่ชัดเจน', creditedPeriod: new Date().toISOString().slice(0,7), ledgerType:'premium' }) });
     const j = await res.json();
-    setMsg(j.ok ? (action==='verify' ? 'รับรองยอดสำเร็จ' : 'ปฏิเสธแล้ว') : j.error);
+    setMsg(j.ok ? (action==='verify' ? ('รับรองยอดสำเร็จ' + promoText(j.promotion)) : 'ปฏิเสธแล้ว') : j.error);
     load();
   }
 

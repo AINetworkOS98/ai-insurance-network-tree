@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 import { isAdminFromPayload } from '@/lib/admin';
 import { mirrorToFirestore } from '@/lib/firestoreMirror';
+// มาตรฐานใบเสร็จที่ยึดถือตอนสมาชิกสแกนเข้าร่วม/ใช้เป็นหลักฐานขึ้นตำแหน่ง (ใช้ร่วมทุกเส้นทาง)
+import { checkReceiptStandard } from '@/lib/receiptStandard';
 
 // หลังรับรองยอด → ประเมินคุณสมบัติขึ้นตำแหน่งทันที (ทำให้ใบเสร็จที่รับรองแล้ว "ผลักดัน" ขึ้นตำแหน่งได้จริง)
 // ควบคุมด้วยค่าตั้งค่า autoEvaluateAfterVerify (ค่าตั้งต้น = เปิด)
@@ -31,7 +33,7 @@ export async function POST(req: NextRequest){
     if(!payload) return NextResponse.json({ ok:false, error:'กรุณาเข้าสู่ระบบ' }, { status:401 });
     const actorId = (payload as any).sub;
 
-    const { receiptId, action, reason, creditedPeriod, ledgerType } = await req.json();
+    const { receiptId, action, reason, creditedPeriod, ledgerType, force } = await req.json();
     // action: submit | verify | reject | duplicate | reverse
     if(!receiptId || !action) return NextResponse.json({ ok:false, error:'กรุณาระบุ receiptId และ action' }, { status:400 });
 
@@ -55,6 +57,9 @@ export async function POST(req: NextRequest){
       // ตรวจว่าข้อมูลสำคัญครบ
       if(!ext?.amount || !ext?.paidAt) return NextResponse.json({ ok:false, error:'กรุณาตรวจทานจำนวนเงินและวันที่ชำระให้ครบก่อนส่ง' }, { status:400 });
       if(cfg.requirePolicyNo && !ext?.policyNo) return NextResponse.json({ ok:false, error:'ระบบบังคับเลขกรมธรรม์ — กรุณากรอกก่อนส่ง' }, { status:400 });
+      // ยึดถือ "มาตรฐานใบเสร็จ" ของโครงการ: ใบที่ไม่ตรงมาตรฐานใช้เป็นหลักฐานการเข้าร่วมไม่ได้
+      const stdSubmit = checkReceiptStandard(ext as any);
+      if(!stdSubmit.ok) return NextResponse.json({ ok:false, standard: stdSubmit, error:`ใบเสร็จไม่ตรงมาตรฐานที่ยึดถือ: ขาด ${stdSubmit.missing.join(', ')} (ต้องมีผู้ออกเป็น บมจ.ไทยประกันชีวิต, ยอดเงิน, วันที่, เลขใบเสร็จ/เลขอ้างอิงรายการ)` }, { status:400 });
       // รับรองอัตโนมัติตามค่าที่ admin ตั้ง (ยอดไม่เกิน + OCR มั่นใจ + premium)
       const conf = Number(ext?.confidence?.overall ?? 0);
       const amt = Number(ext.amount);
@@ -88,6 +93,9 @@ export async function POST(req: NextRequest){
 
     if(action === 'verify'){
       if(!['PendingVerification','Extracted'].includes(receipt.status)) return NextResponse.json({ ok:false, error:'สถานะไม่ถูกต้องสำหรับรับรอง' }, { status:400 });
+      // ยึดถือมาตรฐานใบเสร็จ — ผู้ดูแลกด override ได้ด้วย force (จะถูกบันทึกใน audit log)
+      const stdVerify = checkReceiptStandard(ext as any);
+      if(!stdVerify.ok && !force) return NextResponse.json({ ok:false, standard: stdVerify, error:`ใบเสร็จไม่ตรงมาตรฐานที่ยึดถือ: ขาด ${stdVerify.missing.join(', ')} — ถ้าตั้งใจรับรองให้ส่ง force:true (ระบบจะบันทึกผู้รับรอง)` }, { status:400 });
       // เพดานยอดต่อใบตามค่าที่ตั้งไว้
       if(Number(ext?.amount || 0) > Number(cfg.maxAmount || 500000)) return NextResponse.json({ ok:false, error:`ยอดเกินเพดานที่ตั้งไว้ (${Number(cfg.maxAmount).toLocaleString()} บาท) — แยกใบหรือติดต่อผู้บริหารระบบ` }, { status:400 });
       // ต้องมีแหล่งยืนยัน: ถ้าไม่มี API ให้เข้าคิวตรวจจากรายงานรับเงินจริง — บันทึก source

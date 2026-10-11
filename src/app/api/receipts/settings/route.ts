@@ -59,7 +59,8 @@ export async function GET(req: NextRequest){
       };
     }catch{}
     const settings = await loadSettings();
-    return NextResponse.json({ ok:true, settings, canEdit, activePlan,
+    const { RECEIPT_STANDARD } = await import('@/lib/receiptStandard');
+    return NextResponse.json({ ok:true, settings, canEdit, activePlan, receiptStandard: RECEIPT_STANDARD,
       rankSources: (settings as any).countPremiumForRank === false ? ['commission'] : ['commission','premium'] });
   }catch(e:any){ return NextResponse.json({ ok:false, error:e?.message || 'error' }, { status:500 }); }
 }

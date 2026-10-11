@@ -227,13 +227,22 @@ function buildResult(parsed: any, rawText: string, provider: 'openai' | 'gemini'
   };
 }
 
-// ── เลือก provider อัตโนมัติ: OpenAI ก่อน (ถ้ามี key) ไม่งั้น Gemini ──
+// ── เลือก provider อัตโนมัติ: OpenAI ก่อน (ถ้ามี key) ถ้าล้มเหลวถอยไป Gemini ──
+// เดิมถ้ามี OPENAI_API_KEY แต่คีย์ตาย/โควตาหมด ระบบจะคืน error ทันที
+// ทำให้สแกนใบเสร็จล้มทั้งระบบทั้งที่ Gemini ใช้ได้ → ใบเสร็จค้างสถานะ Uploaded ไม่มีข้อมูล
 export async function extractReceiptData(imageBase64: string, mime: string): Promise<OCRResult> {
   const hasOpenAI = !!process.env.OPENAI_API_KEY;
-  const hasGemini = !!process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY';
+  const gem = process.env.GEMINI_API_KEY || '';
+  const hasGemini = !!gem && gem !== 'MY_GEMINI_API_KEY' && !gem.includes('placeholder');
 
   if (hasOpenAI) {
-    return extractWithOpenAI(imageBase64, mime);
+    try {
+      return await extractWithOpenAI(imageBase64, mime);
+    } catch (e: any) {
+      if (!hasGemini) throw e;
+      console.warn('[ocr] OpenAI ล้มเหลว → ใช้ Gemini แทน:', String(e?.code || e?.message || e).slice(0, 140));
+      return extractWithGemini(imageBase64, mime);
+    }
   }
   if (hasGemini) {
     return extractWithGemini(imageBase64, mime);

@@ -1,28 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-
-// PDPA: ระบบไม่เก็บชื่อผู้ชำระเงินแบบเต็ม และไม่เก็บเลขบัญชี/เลขบัตร/เลขประจำตัว
-// เก็บเฉพาะรูปแบบปิด เช่น "นางสาว อ**** ภ**" เพื่อตรวจทานย้อนหลังได้โดยไม่เปิดเผยตัวบุคคล
-function maskName(v: any): string | null {
-  const s = String(v ?? '').trim();
-  if (!s) return null;
-  const TITLE = /^(นาย|นาง|นางสาว|น\.ส\.|ด\.ช\.|ด\.ญ\.|mr|mrs|ms)\.?$/i;
-  return s.split(/\s+/).map((p) => {
-    if (TITLE.test(p)) return p;
-    if (p.length <= 2) return p[0] + '*';
-    return p[0] + '*'.repeat(Math.min(8, p.length - 1));
-  }).join(' ');
-}
-// ลบข้อมูลส่วนบุคคลออกจาก raw OCR ก่อนบันทึก (ไม่เก็บแม้แต่ใน log ข้อมูลดิบ)
-function scrubPii(obj: any): any {
-  if (!obj || typeof obj !== 'object') return obj;
-  const out: any = Array.isArray(obj) ? [] : {};
-  for (const [k, v] of Object.entries(obj)) {
-    if (/payer|payerName|account|acct|citizen|idcard|บัตร|บัญชี|ผู้ชำระ/i.test(k)) { out[k] = 'REDACTED'; continue; }
-    out[k] = v && typeof v === 'object' ? scrubPii(v) : v;
-  }
-  return out;
-}
+// PDPA: maskName (ชื่อผู้ชำระ) + scrubPii (ลบข้อมูลส่วนบุคคลจาก raw OCR) — ใช้ร่วมทุกเส้นทาง
+import { maskName, scrubPii } from '@/lib/pii';
 
 // POST /api/receipts/ocr { receiptId, ocrResult? } — จำลอง OCR (ใน production เรียก tesseract.js / API จริง)
 // สเปค: OCR เป็นการอ่านข้อมูล ไม่ใช่การพิสูจน์ว่าเอกสารแท้, ต้องมี confidence รายช่อง, ให้แก้ไขได้โดยเก็บค่าเดิมและผู้แก้

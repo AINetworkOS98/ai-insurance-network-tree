@@ -2,8 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 import { isAdminFromPayload } from '@/lib/admin';
+import { maskName, scrubPii } from '@/lib/pii';
+import { checkReceiptStandard } from '@/lib/receiptStandard';
 import crypto from 'crypto';
 import { mirrorToFirestore } from '@/lib/firestoreMirror';
+
+// ให้เวลา OCR ฝั่งเซิร์ฟเวอร์พอ (อ่านภาพด้วย vision)
+export const maxDuration = 60;
 
 // POST /api/receipts/upload — อัปโหลด JPG/PNG/PDF หลายหน้า (สเปคหมวด 7)
 // ตรวจชนิด/ขนาด + hash ตรวจไฟล์ซ้ำ + สร้าง ReceiptFile (Uploaded)
@@ -54,7 +59,7 @@ export async function POST(req: NextRequest){
     });
 
     // สร้าง extraction ว่างรอ OCR
-    await prisma.receiptExtraction.create({
+    const extRow = await prisma.receiptExtraction.create({
       data:{
         receiptId: receipt.id,
         receiptNo: receiptNoHint || null,
@@ -64,6 +69,58 @@ export async function POST(req: NextRequest){
       }
     });
 
+    // ── สแกนแล้วอ่านข้อมูลทันทีที่เซิร์ฟเวอร์ ─────────────────────────────
+    // เดิมต้องรอเบราว์เซอร์เรียก /api/ocr เอง ถ้าขั้นนั้นไม่สำเร็จ ใบเสร็จจะค้างสถานะ Uploaded
+    // ไม่มีข้อมูล → ตรวจไม่ได้ → ไม่ขึ้นตำแหน่ง ทำที่นี่ให้ทุกใบที่สแกนเข้ามามีข้อมูลครบ
+    // (ข้อมูลส่วนบุคคลถูกปิดทันทีตาม PDPA: ชื่อผู้ชำระถูก mask, เลขบัญชี/บัตรไม่ถูกเก็บ)
+    let ocrOk = false;
+    let ocrNote = '';
+    let std: any = null;   // ผลตรวจกับ "มาตรฐานใบเสร็จ" ที่ยึดถือตอนสมาชิกสแกนเข้าร่วม
+    if(file.type !== 'application/pdf'){
+      try{
+        const { extractReceiptData } = await import('@/lib/ocr');
+        const ocr: any = await extractReceiptData(buf.toString('base64'), file.type);
+        if(ocr){
+          if(ocr.transactionRef){
+            const dupTx = await prisma.receiptExtraction.findFirst({ where:{ transactionRef: String(ocr.transactionRef).trim(), receiptId:{ not: receipt.id } } }).catch(()=>null);
+            if(dupTx){
+              await prisma.receiptFile.update({ where:{ id: receipt.id }, data:{ status:'Duplicate' } });
+              await prisma.receiptVerification.create({ data:{ receiptId: receipt.id, result:'Duplicate', reason:`เลขธุรกรรมซ้ำกับใบเสร็จ ${dupTx.receiptId}` } }).catch(()=>null);
+              return NextResponse.json({ ok:false, duplicate:true, error:'เลขธุรกรรมซ้ำ — ไม่นับยอดซ้ำ', receipt:{ id: receipt.id } }, { status:409 });
+            }
+          }
+          await prisma.receiptExtraction.update({
+            where:{ id: extRow.id },
+            data:{
+              issuerName: ocr.companyName || null,
+              receiptNo: ocr.receiptNumber || receiptNoHint || null,
+              transactionRef: ocr.referenceNumber || transactionRefHint || null,
+              policyNo: ocr.policyNo || null,
+              payerName: maskName(ocr.payerName),
+              paidAt: ocr.date ? new Date(ocr.time ? `${ocr.date}T${ocr.time}` : ocr.date) : null,
+              amount: ocr.amount != null ? String(ocr.amount) : null,
+              type: 'premium',
+              agentCode: ocr.agentCode || null,
+              confidence: { overall: ocr.confidence ?? 0, provider: ocr.provider, needsReview: ocr.confidence < 0.8 },
+              rawOcr: scrubPii(ocr),
+            } as any
+          });
+          await prisma.receiptFile.update({ where:{ id: receipt.id }, data:{ status:'Extracted', paymentAt: ocr.date ? new Date(ocr.date) : null } });
+          // ตรวจกับมาตรฐานใบเสร็จที่ยึดถือ (ทุกช่องทางใช้กติกาเดียวกัน — ไม่เก็บข้อมูลส่วนบุคคล)
+          std = checkReceiptStandard({
+            issuerName: ocr.companyName, receiverName: ocr.receiverName, amount: ocr.amount, paidAt: ocr.date,
+            receiptNo: ocr.receiptNumber, transactionRef: ocr.referenceNumber, agentCode: ocr.agentCode,
+            policyNo: ocr.policyNo, confidence: { overall: ocr.confidence ?? 0 },
+          });
+          ocrOk = true;
+        }
+      }catch(e:any){
+        ocrNote = String(e?.thaiMessage || e?.message || e).slice(0, 160);
+      }
+    } else {
+      ocrNote = 'PDF — กรุณากรอกค่าจากเอกสารเอง (ระบบอ่านภาพ PDF อัตโนมัติยังไม่เปิด)';
+    }
+
     await prisma.auditLog.create({ data:{ userId, action:'receipt.upload', entity:'ReceiptFile', entityId: receipt.id, newValue:{ fileHash, originalName: file.name } } });
     // แจ้งเตือนอัปโหลดสำเร็จ — ให้ไปหน้า preview OCR
     try{
@@ -72,8 +129,13 @@ export async function POST(req: NextRequest){
     }catch{}
     return NextResponse.json({
       ok:true,
-      receipt: { id: receipt.id, status: receipt.status, fileHash },
-      message:'อัปโหลดสำเร็จ — กำลังอ่านข้อมูล (OCR)',
+      receipt: { id: receipt.id, status: ocrOk ? 'Extracted' : receipt.status, fileHash },
+      ocr: ocrOk ? 'read' : 'needs_manual',
+      standard: std || checkReceiptStandard(null),
+      message: ocrOk
+        ? ('อัปโหลด + อ่านข้อมูลจากภาพสำเร็จ — กรุณาตรวจทานก่อนส่งตรวจสอบ (ระบบไม่เก็บชื่อผู้ชำระเต็มตาม PDPA)'
+           + (std && !std.ok ? ` • ยังไม่ตรงมาตรฐานใบเสร็จ: ขาด ${std.missing.join(', ')}` : ' • ตรงมาตรฐานใบเสร็จของโครงการ'))
+        : ('อัปโหลดสำเร็จ แต่ยังอ่านอัตโนมัติไม่ได้' + (ocrNote ? ` (${ocrNote})` : '') + ' — กรุณากรอกค่าจากเอกสารเอง'),
       nextStep: `/api/receipts/ocr?receiptId=${receipt.id}`
     });
   }catch(e:any){
