@@ -50,7 +50,22 @@ export async function GET(req: NextRequest){
       }
     }catch(e:any){ autoMaintenance = { ok:false, error: e?.message }; }
 
-    return NextResponse.json({ ok:true, cron:'hermes-sync', at: now, counts, autoClose, autoMaintenance, note:'AI heartbeat — memory & period checks light' });
+    // ── Heartbeat ให้ /api/ai/status ตรวจ "ความสดของ sync" ได้ (ไม่แก้สคีมา: ใช้ NotificationLog เดิม) ──
+    let heartbeatId: string | null = null;
+    let heartbeatError: string | null = null;
+    try{
+      const hb: any = await (prisma as any).notificationLog.create({
+        data: {
+          type: 'agent.log', channel: 'cron', target: 'hermes-sync', status: 'SENT',
+          payload: { at: now, ok: true, counts },
+          sentAt: new Date(),
+        },
+        select: { id: true },
+      });
+      heartbeatId = hb?.id ?? null;
+    }catch(e:any){ heartbeatError = e?.message ?? 'heartbeat failed'; }
+
+    return NextResponse.json({ ok:true, cron:'hermes-sync', at: now, syncedAt: now, heartbeatId, heartbeatError, counts, autoClose, autoMaintenance, note:'AI heartbeat — memory & period checks light' });
   } catch (e:any){
     return NextResponse.json({ ok:true, cron:'hermes-sync', at: now, error:e?.message });
   }
