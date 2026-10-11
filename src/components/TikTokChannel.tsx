@@ -514,7 +514,7 @@ export default function TikTokChannel() {
   const netPct = Math.round(NET_RATIO * 100);
 
   return (
-    <div className="mb-8">
+    <div id="tiktok-channel" className="mb-8 scroll-mt-6">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 text-pink-300 text-sm font-semibold border border-slate-800">
           <span>🎬</span> ช่องดูวีดีโอ · สุ่มต่อเนื่อง

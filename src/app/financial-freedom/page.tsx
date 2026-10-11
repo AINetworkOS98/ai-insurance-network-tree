@@ -7,6 +7,7 @@ import AutomationShowcase from '@/components/AutomationShowcase';
 import SuccessPath from '@/components/SuccessPath';
 import TikTokChannel from '@/components/TikTokChannel';
 import FinancialFreedomVideo from '@/components/FinancialFreedomVideo';
+import Net1x5FirstVideo from '@/components/Net1x5FirstVideo';
 import CosmicNetwork from '@/components/CosmicNetwork';
 
 export default function FinancialFreedom() {
@@ -44,6 +45,9 @@ export default function FinancialFreedom() {
               </p>
             </div>
           </div>
+
+          {/* ── วีดีโอแรกของระบบ 1 แตก 5 · สร้างเครือข่าย (คลิป TikTok ที่ตรึงไว้ + ทางเข้าระบบ) ── */}
+          <Net1x5FirstVideo />
 
           {/* Hero Section */}
           <div className="max-w-4xl mx-auto mb-12">

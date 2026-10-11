@@ -43,6 +43,33 @@ export async function POST(req: Request) {
         select: { id: true, videoId: true, tiktokId: true },
       });
       if (!found) return NextResponse.json({ ok: false, error: 'not_found', id: key }, { status: 200 });
+      // ── ตรึง "วีดีโอแรก" ของระบบ 1 แตก 5 (pin) / เลิกตรึง (unpin) ──
+      // ใช้ field priority ที่มีอยู่แล้ว (ไม่ต้อง migration) · ตรึงทีละคลิปเป็นค่าเริ่มต้น
+      if (action === 'pin' || action === 'unpin') {
+        if (action === 'unpin') {
+          await prisma.video.update({ where: { id: found.id }, data: { priority: 0 } });
+          return NextResponse.json(
+            { ok: true, action, videoId: found.videoId, tiktokId: found.tiktokId, priority: 0 },
+            { headers: { 'Cache-Control': 'no-store' } },
+          );
+        }
+        const pr = Math.max(1, Math.min(1000, Number(body.priority ?? 100) || 100));
+        if (body.keepOthers !== true) {
+          await prisma.video
+            .updateMany({ where: { priority: { gt: 0 }, id: { not: found.id } }, data: { priority: 0 } })
+            .catch(() => null);
+        }
+        const upd: Record<string, unknown> = { priority: pr, status: 'active', updatedAt: new Date() };
+        if (body.topic) upd.topic = String(body.topic).slice(0, 80);
+        if (body.cta) upd.cta = String(body.cta).slice(0, 200);
+        if (body.ctaUrl) upd.ctaUrl = String(body.ctaUrl).slice(0, 400);
+        await prisma.video.update({ where: { id: found.id }, data: upd });
+        return NextResponse.json(
+          { ok: true, action, videoId: found.videoId, tiktokId: found.tiktokId, priority: pr, isFirstVideo: true },
+          { headers: { 'Cache-Control': 'no-store' } },
+        );
+      }
+
       if (action === 'delete') {
         await prisma.videoView.deleteMany({ where: { videoId: found.id } }).catch(() => null);
         await prisma.video.delete({ where: { id: found.id } });
