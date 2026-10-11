@@ -19,6 +19,8 @@ export interface OCRResult {
   confidence: number;
   provider: 'openai' | 'gemini';
   rawText?: string;
+  // ข้อความถอดความทั้งหมด (ใช้ตรวจกติกาใน lib/receipts/thaiLifeReceipt) — ห้ามบันทึกลงฐานข้อมูล (PDPA)
+  plainText?: string | null;
 }
 
 export class OCRError extends Error {
@@ -51,7 +53,8 @@ const PROMPT = [
   '  "policyNo": "<เลขที่กรมธรรม์/เลขที่สัญญา ถ้ามี>",',
   '  "agentCode": "<รหัสตัวแทน/รหัสผู้แนะนำ ถ้ามี>",',
   '  "companyName": "<ชื่อบริษัทที่ออกเอกสาร>",',
-  '  "confidence": <0.0 ถึง 1.0 ความมั่นใจในการอ่านภาพรวม>',
+  '  "confidence": <0.0 ถึง 1.0 ความมั่นใจในการอ่านภาพรวม>,',
+  '  "plainText": "<ถอดข้อความทุกบรรทัดที่เห็นในเอกสาร ตามจริงทุกตัวอักษร รวมเลขที่ วันที่ จำนวนเงิน ชื่อบริษัท>"',
   '}',
 ].join('\n');
 
@@ -80,7 +83,7 @@ function parseResponse(rawText: string): any {
 }
 
 // ── OpenAI GPT-4o ────────────────────────────────────────────────
-async function extractWithOpenAI(imageBase64: string, mime: string): Promise<OCRResult> {
+async function extractWithOpenAI(imageBase64: string, mime: string, allowMissingAmount = false): Promise<OCRResult> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new OCRError(500, 'MISSING_KEY', 'OPENAI_API_KEY is not configured');
 
@@ -125,7 +128,7 @@ async function extractWithOpenAI(imageBase64: string, mime: string): Promise<OCR
     const data = await response.json();
     const rawText = data?.choices?.[0]?.message?.content || '';
     const parsed = parseResponse(rawText);
-    return buildResult(parsed, rawText, 'openai');
+    return buildResult(parsed, rawText, 'openai', allowMissingAmount);
   } catch (e: any) {
     clearTimeout(timeout);
     if (e instanceof OCRError) throw e;
@@ -142,7 +145,7 @@ const GEMINI_OCR_MODELS = ENV_OCR_MODELS.length
   ? ENV_OCR_MODELS
   : ['gemini-3.5-flash-lite', 'gemini-flash-lite-latest', 'gemini-3.1-flash-lite'];
 
-async function extractWithGemini(imageBase64: string, mime: string): Promise<OCRResult> {
+async function extractWithGemini(imageBase64: string, mime: string, allowMissingAmount = false): Promise<OCRResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || apiKey === 'MY_GEMINI_API_KEY' || apiKey.includes('placeholder')) {
     throw new OCRError(500, 'MISSING_KEY', 'GEMINI_API_KEY is not configured');
@@ -182,7 +185,7 @@ async function extractWithGemini(imageBase64: string, mime: string): Promise<OCR
       const data = await response.json();
       const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
       const parsed = parseResponse(rawText);
-      return buildResult(parsed, rawText, 'gemini');
+      return buildResult(parsed, rawText, 'gemini', allowMissingAmount);
     } catch (e: any) {
       clearTimeout(timeout);
       if (e instanceof OCRError && e.code === 'INVALID_KEY') throw e;
@@ -198,9 +201,10 @@ async function extractWithGemini(imageBase64: string, mime: string): Promise<OCR
   throw new OCRError(500, 'OCR_FAILED', 'เกิดข้อผิดพลาดในการอ่านเอกสาร กรุณาลองใหม่');
 }
 
-function buildResult(parsed: any, rawText: string, provider: 'openai' | 'gemini'): OCRResult {
+function buildResult(parsed: any, rawText: string, provider: 'openai' | 'gemini', allowMissingAmount = false): OCRResult {
   const amount = parseAmount(parsed.amount);
-  if (amount === null) {
+  // โหมดสแกนใบเสร็จแบบตรวจกติกา: ยอมให้ยอดเงินว่างได้ แล้วให้ตัวตรวจกติกาชี้จุดผิดแทนการล้มทั้งงาน
+  if (amount === null && !allowMissingAmount) {
     throw new OCRError(422, 'NO_AMOUNT', 'ไม่สามารถอ่านยอดเงินจากเอกสารได้ กรุณาถ่ายรูปให้ชัดขึ้น');
   }
   const confidence = Number(parsed.confidence);
@@ -224,28 +228,35 @@ function buildResult(parsed: any, rawText: string, provider: 'openai' | 'gemini'
     confidence: finalConfidence,
     provider,
     rawText,
+    plainText: typeof parsed.plainText === 'string' ? parsed.plainText : null,
   };
 }
 
 // ── เลือก provider อัตโนมัติ: OpenAI ก่อน (ถ้ามี key) ถ้าล้มเหลวถอยไป Gemini ──
 // เดิมถ้ามี OPENAI_API_KEY แต่คีย์ตาย/โควตาหมด ระบบจะคืน error ทันที
 // ทำให้สแกนใบเสร็จล้มทั้งระบบทั้งที่ Gemini ใช้ได้ → ใบเสร็จค้างสถานะ Uploaded ไม่มีข้อมูล
-export async function extractReceiptData(imageBase64: string, mime: string): Promise<OCRResult> {
-  const hasOpenAI = !!process.env.OPENAI_API_KEY;
+export async function extractReceiptData(
+  imageBase64: string,
+  mime: string,
+  opts: { allowMissingAmount?: boolean } = {}
+): Promise<OCRResult> {
+  const allowMissingAmount = !!opts.allowMissingAmount;
+  const isPdf = /pdf/i.test(mime);
+  const hasOpenAI = !!process.env.OPENAI_API_KEY && !isPdf; // gpt-4o-mini อ่าน PDF ไม่ได้ → ใช้ Gemini
   const gem = process.env.GEMINI_API_KEY || '';
   const hasGemini = !!gem && gem !== 'MY_GEMINI_API_KEY' && !gem.includes('placeholder');
 
   if (hasOpenAI) {
     try {
-      return await extractWithOpenAI(imageBase64, mime);
+      return await extractWithOpenAI(imageBase64, mime, allowMissingAmount);
     } catch (e: any) {
       if (!hasGemini) throw e;
       console.warn('[ocr] OpenAI ล้มเหลว → ใช้ Gemini แทน:', String(e?.code || e?.message || e).slice(0, 140));
-      return extractWithGemini(imageBase64, mime);
+      return extractWithGemini(imageBase64, mime, allowMissingAmount);
     }
   }
   if (hasGemini) {
-    return extractWithGemini(imageBase64, mime);
+    return extractWithGemini(imageBase64, mime, allowMissingAmount);
   }
   throw new OCRError(500, 'MISSING_KEY', 'ยังไม่ได้ตั้งค่า API key สำหรับ OCR (OPENAI_API_KEY หรือ GEMINI_API_KEY)');
 }

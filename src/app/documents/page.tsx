@@ -19,6 +19,20 @@ type OCRData = {
   status: string;
   companyWarning: string | null;
   needsManualReview: boolean;
+  // ผลตรวจกติกาจาก /api/ocr (ระบบสแกนใบเสร็จแบบตรวจไขว้) — ไม่มีข้อมูลส่วนบุคคล
+  verification?: {
+    summary?: string;
+    issues?: { code: string; level: 'error' | 'warn' | 'info'; message: string }[];
+    amountCrossCheck?: { digits: number | null; words: number | null; matched: boolean };
+    installmentLabel?: string | null;
+    paymentMethod?: string | null;
+    planName?: string | null;
+    policyTermYears?: number | null;
+    insuredNameMasked?: string | null;
+    taxIdMasked?: string | null;
+    dedupKey?: string | null;
+    network?: { countsToward1x5: boolean; verifiedAmount: number; reason: string };
+  };
 };
 
 type PositionResult = {
@@ -462,6 +476,40 @@ export default function DocumentsPage() {
 
                     {ocr.companyWarning && (
                       <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">⚠️ {ocr.companyWarning}</div>
+                    )}
+
+                    {ocr.verification && (
+                      <div className="rounded-xl border border-[#f3e8d3] bg-[#FCFBF6] p-3 space-y-2">
+                        <div className="text-xs font-semibold text-[#57534e]">🧾 ผลตรวจกติกา — สแกนใบเสร็จแบบตรวจไขว้</div>
+                        <div className="text-xs text-slate-600">
+                          งวด/วิธีชำระ: {ocr.verification.installmentLabel || '—'} · {ocr.verification.paymentMethod || '—'}
+                          {ocr.verification.planName ? ` · แบบ ${ocr.verification.planName}` : ''}
+                          {ocr.verification.policyTermYears ? ` · ${ocr.verification.policyTermYears} ปี` : ''}
+                        </div>
+                        <div className="text-xs text-slate-600">
+                          ตรวจไขว้ยอดเงิน: ตัวเลข {ocr.verification.amountCrossCheck?.digits != null ? `฿${Number(ocr.verification.amountCrossCheck?.digits).toLocaleString('th-TH')}` : '—'}
+                          {' · '}คำอ่านจำนวนเงิน {ocr.verification.amountCrossCheck?.words != null ? `฿${Number(ocr.verification.amountCrossCheck?.words).toLocaleString('th-TH')}` : '—'}
+                          {' '}{ocr.verification.amountCrossCheck?.matched
+                            ? <span className="text-emerald-700 font-semibold">✓ ตรงกัน</span>
+                            : <span className="text-amber-700 font-semibold">⚠ ยังไม่ตรง</span>}
+                        </div>
+                        <div className={`rounded-lg p-2 text-xs border ${ocr.verification.network?.countsToward1x5 ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
+                          <b>{ocr.verification.network?.countsToward1x5 ? '✅ นับยอดเข้าเครือข่าย 1 แตก 5' : '⏳ ยังไม่นับยอดเข้าเครือข่าย'}</b>
+                          <div className="mt-0.5">{ocr.verification.network?.reason}</div>
+                        </div>
+                        {!!ocr.verification.issues?.length && (
+                          <ul className="text-xs space-y-1">
+                            {ocr.verification.issues.map((it, i) => (
+                              <li key={i} className={it.level === 'error' ? 'text-red-700' : it.level === 'warn' ? 'text-amber-700' : 'text-slate-500'}>
+                                {it.level === 'error' ? '✕' : it.level === 'warn' ? '!' : 'i'} {it.message}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        <div className="text-[11px] text-slate-400">
+                          🔒 PDPA: ไม่เก็บข้อมูลส่วนบุคคลของลูกค้าในระบบ{ocr.verification.insuredNameMasked ? ` · ผู้เอาประกัน ${ocr.verification.insuredNameMasked}` : ''}
+                        </div>
+                      </div>
                     )}
 
                     {editing ? (
