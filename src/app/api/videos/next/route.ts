@@ -59,7 +59,18 @@ export async function GET(req: Request) {
     if (!pool.length) pool = chosen.length ? chosen : vids;
     if (wanted > 1) pool = pool.slice(0, wanted);
 
-    const pick = pool.length === 1 ? pool[0] : pool[Math.floor(Math.random() * pool.length)];
+    // ── วีดีโอแรก: ผู้ชมใหม่ของ session นี้ (ยังไม่มีประวัติ) จะได้คลิปที่ "ตรึงไว้" ก่อนเสมอ ──
+    // ตรึงด้วย priority ผ่าน POST /api/videos/add { action: "pin" } — ไม่ต้อง migration
+    const pinnedFirst = chosen
+      .filter((v) => (v.priority || 0) > 0)
+      .sort((a, b) => (b.priority || 0) - (a.priority || 0))[0] || null;
+    const startWithPinned = !!pinnedFirst && recentIds.size === 0;
+
+    const pick = startWithPinned
+      ? pinnedFirst!
+      : pool.length === 1
+        ? pool[0]
+        : pool[Math.floor(Math.random() * pool.length)];
     const tiktokId = pick.tiktokId || (pick.url.match(/\/video\/(\d+)/)?.[1] ?? null);
 
     // บันทึกการเริ่มเล่น (ไม่ให้ล้มทั้งคำขอถ้าบันทึกไม่ได้)
@@ -91,6 +102,7 @@ export async function GET(req: Request) {
           lane,
           skippedRecent: Math.max(0, chosen.length - pool.length),
         },
+        first: startWithPinned ? pick.videoId : null,
         queue: 'shuffle',
         topic: topic || null,
         session: sid,
