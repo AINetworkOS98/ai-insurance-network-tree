@@ -4,7 +4,7 @@
 // ⛔ ห้ามสัญญารายได้/ผลตอบแทน/อิสรภาพทางการเงินว่าเกิดขึ้นแน่นอน · ห้ามแต่งเงื่อนไข/ค่าธรรมเนียม/กรอบเวลาเอง
 // 🔗 ลิงก์ทั้งสามต้องคงไว้ตรงตามที่กำหนด: /recruit · /register · /documents
 import Link from 'next/link';
-import { useT } from '@/i18n';
+import { useEffect, useState } from 'react';
 
 type Copy = {
   eyebrow: string;
@@ -85,8 +85,18 @@ const STEPS_UI = [
 ];
 
 export default function ThreeStepsJourney() {
-  const { lang } = useT();
-  const c: Copy = lang === 'th' ? TH : EN; // อังกฤษ = ค่าเริ่มต้น · รองรับการแปล (ตอนนี้มีไทย)
+  // อังกฤษ = ภาษาเริ่มต้นของส่วนนี้เสมอ (ทั้งตอนเรนเดอร์ฝั่งเซิร์ฟเวอร์และครั้งแรกบนเบราว์เซอร์)
+  // จะเปลี่ยนเป็นไทยก็ต่อเมื่อผู้ใช้ "เลือกภาษาไทยเอง" ผ่านตัวเลือกภาษา (localStorage: app-lang = 'th')
+  const [lang, setLang] = useState<'en' | 'th'>('en');
+  useEffect(() => {
+    const read = () => {
+      try { setLang(localStorage.getItem('app-lang') === 'th' ? 'th' : 'en'); } catch { setLang('en'); }
+    };
+    read();
+    window.addEventListener('app-lang-change', read);
+    return () => window.removeEventListener('app-lang-change', read);
+  }, []);
+  const c: Copy = lang === 'th' ? TH : EN;
 
   return (
     <section aria-labelledby="three-steps-heading" data-section="three-steps" className="space-y-5">
