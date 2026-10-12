@@ -65,9 +65,6 @@ export default function GeneralMembersPage(){
       <div className="flex w-full">
         <Sidebar/>
         <main className="flex-1 p-6 space-y-6">
-          {/* ส่วนแนะนำ 3 ขั้นสู่อิสรภาพทางการเงิน — แสดงก่อนเนื้อหาอื่น (สั่งโดยเจ้าของระบบ)
-              หน้านี้: ไม่แสดงรูป และไม่แสดงหัวเรื่อง/คำโปรย (ตามที่สั่ง) — เหลือการ์ด 3 ขั้นตอน + แถบคุณสมบัติ */}
-          <ThreeStepsJourney showImage={false} showHeadline={false} />
           {/* หัวหน้า */}
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-xl font-bold text-[#475569]">สมาชิกทั่วไป</h1>
@@ -205,6 +202,10 @@ export default function GeneralMembersPage(){
               <Link href="/members" className="inline-block mt-2 text-xs text-sky-700 underline">ไปหน้าสมาชิกของฉัน →</Link>
             </div>
           </div>
+          {/* ส่วน 3 ขั้นสู่อิสรภาพทางการเงิน — ย้ายมาไว้ช่วงล่างของหน้า (ตามที่สั่ง)
+              ด้านบนคงเนื้อหาเดิมของหน้า เริ่มตั้งแต่หัวข้อ "สมาชิกทั่วไป" เหมือนเดิมทุกประการ
+              หน้านี้ไม่แสดงรูป และไม่แสดงหัวเรื่อง/คำโปรย — เหลือการ์ด 3 ขั้นตอน + แถบคุณสมบัติ */}
+          <ThreeStepsJourney showImage={false} showHeadline={false} />
         </main>
       </div>
     </div>
