@@ -70,6 +70,8 @@ export const NAV_ENTRIES: NavEntry[] = [
   { href: '/recruit', section: 'general', label: 'ลิงก์รับสมัครตัวแทน', icon: '🤝', minRank: 0 },
   // ไปป์ไลน์ 8 ขั้นของผู้มุ่งหวัง (รอดำเนินการ → อนุมัติ → สอบ → ใบอนุญาต → ค้ำประกัน → แต่งตั้ง → สอบใบอนุญาต → ต่ออายุ)
   { href: '/recruit/pipeline', section: 'general', label: 'ขั้นตอนรับสมัครตัวแทน (ผู้มุ่งหวัง)', icon: '🧭', minRank: 0 },
+  // ศูนย์รวมช่องทาง/เครื่องมือขยายทีม (ลิงก์แนะนำ + QR + 6 ช่องทาง + ข้อความชวนสำเร็จรูป + แผน 7 วัน)
+  { href: '/expand-team', section: 'general', label: 'ช่องขยายทีมงาน', key: 'nav_expand_team', icon: '📣', minRank: 0 },
   // หมายเหตุ: เมนู "ระบบ 1 แตก 5 อัตโนมัติ" (/network/1x5-autopilot) ไม่ใส่ในเมนูด้านซ้าย
   //          เพราะมีอยู่ในเมนูด้านบน (Header) แล้ว — ใส่ซ้ำจะซ้ำซ้อนกัน
   { href: '/notifications', section: 'general', label: 'ศูนย์แจ้งเตือน', key: 'nav_notif', icon: '🔔', minRank: 0 },

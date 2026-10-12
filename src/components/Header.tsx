@@ -55,6 +55,8 @@ export default function Header(){
           <Link href={user ? "/" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_home')}</Link>
           <Link href="/financial-freedom" className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors font-semibold">{t('nav_vision')}</Link>
           <Link href={user ? "/prospects" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_prospects')}</Link>
+          {/* เมนูใหม่ "ช่องขยายทีมงาน" — ต่อจาก "สมาชิกทั่วไป" (ศูนย์รวมช่องทาง/เครื่องมือขยายทีม) */}
+          <Link href={user ? "/expand-team" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors font-semibold">📣 {t('nav_expand_team')}</Link>
           {/* N8N Submenu — เฉพาะ Admin หรือสมาชิกอีเมล akarapol.pro798@gmail.com */}
           {canUseN8n && (
           <div className="relative">
@@ -156,6 +158,8 @@ export default function Header(){
             <Link href="/financial-freedom" onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_vision')}</Link>
             {/* "ตรวจสอบสมาชิก" (/verify) และ "รายได้" (/income) อยู่ในเมนูด้านข้างแล้ว (กดปุ่ม "เมนูทั้งหมด" ได้) */}
             <Link href={user ? '/prospects' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_prospects')}</Link>
+            {/* เมนูใหม่ "ช่องขยายทีมงาน" (มือถือ) — ต่อจาก "สมาชิกทั่วไป" */}
+            <Link href={user ? '/expand-team' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#57534e] hover:bg-[#FCFBF6]">📣 {t('nav_expand_team')}</Link>
             <Link href={user ? '/network/1x5-autopilot' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#57534e] hover:bg-[#FCFBF6]">🧬 {t('nav_1x5')}</Link>
             {/* เมนูย่อย "สแกนใบเสร็จ" (มือถือ) — เพิ่มใหม่ ไม่ได้ลบเมนูเดิม */}
             <ReceiptScanMobileItems onNavigate={()=> setMobileNav(false)} />
