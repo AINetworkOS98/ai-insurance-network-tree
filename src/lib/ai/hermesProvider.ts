@@ -11,14 +11,25 @@ const HERMES_SYSTEM_PROMPT = `คุณคือระบบค้นหาด�
 กฎ: ถามสั้นตอบสั้น ถามลึกตอบลึก — เข้าประเด็นทันที ไม่มีคำฟุ่มเฟือย ไม่สรุปซ้ำ — ไม่แน่ใจบอกตรงๆ — อ้างอิงผลจาก tools จริงเท่านั้น — ตอบไทย กระชับ — ห้ามเปิดเผยชื่อ provider/model/key
 ตอบเป็นข้อความล้วน ไม่ต้องมีหัวข้อ "คำตอบ:" หรือลอกคำถามมาวางซ้ำ`;
 
-/** โมเดลเริ่มต้นของแต่ละค่าย */
+/** โมเดลเริ่มต้นของแต่ละค่าย — DeepSeek รุ่นล่าสุดคือ V4.1 ให้บริการใต้ id `deepseek-flash` */
 const DEFAULT_MODELS: Record<string, string> = {
-  deepseek: 'deepseek-chat',
+  deepseek: 'deepseek-flash',
   gemini: 'gemini-3.5-flash-lite',
   openai: 'gpt-4o-mini',
   openrouter: 'deepseek/deepseek-chat-v3.1',
   'opencode-free': 'muse-spark-1.2-contributor-free',
 };
+
+/** รุ่นสำรองของค่ายเดียวกัน — ใช้เมื่อรุ่นหลักถูกยกเลิก/บัญชีไม่มี (เช่น `deepseek-chat` ที่เลิกใช้แล้ว) */
+const MODEL_FALLBACKS: Record<string, string[]> = {
+  deepseek: ['deepseek-v4-pro', 'deepseek-chat'],
+};
+
+/** DeepSeek V4.x รับ reasoning_effort = low | high | max (ปริยาย high) — โหมดเร็วควรใช้ low เพื่อไม่ให้ช้า */
+function deepseekEffort(mode?: string): 'low' | 'high' | 'max' {
+  if (mode === 'DEEP') return 'high';
+  return 'low';
+}
 
 const DEFAULT_BASE: Record<string, string> = {
   deepseek: 'https://api.deepseek.com',
@@ -105,6 +116,10 @@ export function providerKeyAvailable(p: string): boolean {
 export function providerChain(): { provider: string; model: string }[] {
   const active = resolveConfig();
   const chain: { provider: string; model: string }[] = [{ provider: active.provider, model: active.model }];
+  // รุ่นสำรองของค่ายเดียวกัน (เช่น deepseek-flash → deepseek-v4-pro) — รุ่นหลักถูกยกเลิกก็ยังตอบได้
+  for (const m of MODEL_FALLBACKS[active.provider] ?? []) {
+    if (m !== active.model) chain.push({ provider: active.provider, model: m });
+  }
   if (active.provider === 'opencode-free') return chain;
   for (const p of ['deepseek', 'gemini', 'openrouter', 'openai']) {
     if (p === active.provider) continue;
@@ -116,7 +131,7 @@ export function providerChain(): { provider: string; model: string }[] {
 }
 
 type Msg = { role: 'system' | 'user' | 'assistant'; content: string };
-type ChatOpts = { model?: string; temperature?: number; maxTokens?: number; timeoutMs?: number; signal?: AbortSignal };
+type ChatOpts = { model?: string; temperature?: number; maxTokens?: number; timeoutMs?: number; signal?: AbortSignal; effort?: 'low' | 'high' | 'max'; mode?: string };
 
 const RETRY_STATUS = new Set([408, 409, 425, 429, 500, 502, 503, 504, 529]);
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
@@ -210,8 +225,12 @@ export class HermesProvider implements AIProvider {
       max_tokens: opts?.maxTokens ?? 1200,
       ...(stream ? { stream: true } : {}),
     }, provider, model);
-    // DeepSeek: ปิด thinking ให้คำตอบเร็ว/ไม่ถูกตัด เมื่อใช้รุ่น chat
-    if (provider === 'deepseek' && /reasoner/i.test(model) === false) delete payload.reasoning_effort;
+    // DeepSeek V4.x (deepseek-flash / deepseek-v4-pro): ตั้งระดับคิดตามโหมด — โหมดเร็ว low, โหมดลึก max
+    if (provider === 'deepseek') {
+      const effort = opts?.effort ?? deepseekEffort(opts?.mode);
+      if (effort && !/reasoner/i.test(model)) payload.reasoning_effort = effort;
+      else delete payload.reasoning_effort;
+    }
     return payload;
   }
 
@@ -231,6 +250,13 @@ export class HermesProvider implements AIProvider {
         if (!res.ok) {
           const txt = await res.text().catch(() => '');
           const err = new Error(`AI provider error ${res.status}: ${txt.slice(0, 300)}`);
+          // พารามิเตอร์ไม่เป็นที่ยอมรับ (เช่นรุ่นนี้ไม่รับ reasoning_effort) → ถอดออกแล้วลองใหม่ทันที
+          if (res.status === 400 && payload && 'reasoning_effort' in payload
+              && /reasoning_effort|unknown|unexpected|not supported|invalid/i.test(txt)) {
+            delete payload.reasoning_effort;
+            attempt--;
+            continue;
+          }
           if (RETRY_STATUS.has(res.status) && attempt === 0 && Date.now() - t0 < timeoutMs) {
             lastErr = err;
             await sleep(res.status === 429 ? 900 : 350);

@@ -178,7 +178,7 @@ export async function* hermesStream(params: {
       yield { type: "step", step: "llm", label: i === 0 ? "กำลังคิด" : "สลับค่ายสำรอง", detail: cand.model, status: "start" };
       let answer = ""; let started = false;
       try {
-        for await (const delta of p.chatStream(messages, { temperature, maxTokens, signal: params.signal })) {
+        for await (const delta of p.chatStream(messages, { temperature, maxTokens, signal: params.signal, mode: params.mode })) {
           if (params.signal?.aborted) break;
           if (!started) { started = true; yield { type: "start", via: "hermes", trace }; }
           answer += delta;
