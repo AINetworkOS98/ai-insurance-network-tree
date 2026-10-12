@@ -10,6 +10,7 @@ import FinancialFreedomVideo from '@/components/FinancialFreedomVideo';
 import Net1x5FirstVideo from '@/components/Net1x5FirstVideo';
 import CosmicNetwork from '@/components/CosmicNetwork';
 import ThreeStepsJourney from '@/components/ThreeStepsJourney';
+import FinancialFreedom3DScenes from '@/components/FinancialFreedom3DScenes';
 
 export default function FinancialFreedom() {
   return (
@@ -159,6 +160,10 @@ export default function FinancialFreedom() {
             <TikTokChannel />
 
             {/* ── (นำออกแล้ว) ส่วน 1 แตก 5 – Future Network Simulator — ซ้ำซ้อนกับระบบ 1 แตก 5 อัตโนมัติที่ /network/1x5-autopilot ── */}
+
+            {/* ── ต่อลงด้านล่างสุดของหน้า: ภาพ 3 มิติ 2 ฉาก ที่แปลงจากภาพต้นแบบ 2 ภาพของเจ้าของระบบ ──
+                 1) อิสรภาพทางการเงินท่ามกลางธรรมชาติ  2) ผังงานอัตโนมัติ (n8n) — โหลดแบบ ssr:false (three.js) ── */}
+            <FinancialFreedom3DScenes />
 
             {/* ── (ย้ายขึ้นบนสุดของหน้าแล้ว) จักรวาลของเครือข่าย 3 มิติ + ปุ่มขยายเต็มจอ ── */}
 
