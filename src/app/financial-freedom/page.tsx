@@ -9,6 +9,7 @@ import TikTokChannel from '@/components/TikTokChannel';
 import FinancialFreedomVideo from '@/components/FinancialFreedomVideo';
 import Net1x5FirstVideo from '@/components/Net1x5FirstVideo';
 import CosmicNetwork from '@/components/CosmicNetwork';
+import ThreeStepsJourney from '@/components/ThreeStepsJourney';
 
 export default function FinancialFreedom() {
   return (
@@ -17,6 +18,9 @@ export default function FinancialFreedom() {
       <div className="flex flex-1 min-h-0">
         <Sidebar />
         <div className="flex-1 overflow-y-auto overscroll-contain p-6 md:p-10 pb-24">
+          {/* ส่วนแรกของหน้า: 3 ขั้นสู่อิสรภาพทางการเงิน (ไทย/อังกฤษ สลับตามปุ่มเลือกภาษา) */}
+          <ThreeStepsJourney />
+
           {/* ── บนสุดของหน้า: จักรวาลของเครือข่าย 3 มิติ (Interactive Cosmic Network) ──
               ปุ่ม ⛶ “ขยายเต็มจอ” อยู่ในจักรวาลเอง (มุมขวาบนของฉาก) กด Esc เพื่อย่อกลับ */}
           <div className="mb-14">
