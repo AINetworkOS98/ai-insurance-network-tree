@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import Link from 'next/link';
 import MemberActivityTable from '@/components/MemberActivityTable';
 import VisitorActivityTable from '@/components/VisitorActivityTable';
+import { LiveStamp, thaiDateTimeFull } from '@/components/LiveStamp';
 
 interface Member {
   id: string;
@@ -39,70 +40,93 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [incomeSummary, setIncomeSummary] = useState<{ estimated: number; approved: number; paid: number } | null>(null);
   const [health, setHealth] = useState<HealthStatus | null>(null);
+  // อัปเดตข้อมูลให้เป็นปัจจุบัน: ดึงซ้ำอัตโนมัติทุก 30 วินาที + ปุ่มกดอัปเดตเอง + เวลาที่ดึงล่าสุด
+  const [lastAt, setLastAt] = useState<Date | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [auto, setAuto] = useState(true);
+  const alive = useRef(true);
 
-  useEffect(() => {
-    let mounted = true;
+  const load = useCallback(async () => {
+    if (!alive.current) return;
+    setBusy(true);
+    try {
+      // 1) members list
+      const membersRes = await fetch('/api/members', { cache: 'no-store', credentials: 'include' });
+      const membersData = await membersRes.json();
+      if (alive.current && membersData.ok) {
+        setMembers(membersData.members || []);
+      }
 
-    async function fetchData() {
-      try {
-        // 1) members list
-        const membersRes = await fetch('/api/members');
-        const membersData = await membersRes.json();
-        if (mounted && membersData.ok) {
-          setMembers(membersData.members || []);
-        }
+      // 2) positions (admin-only — gracefully degrade)
+      // ยืนยันตัวตนด้วยคุกกี้ httpOnly (อ่าน document.cookie ไม่ได้) — ส่ง Authorization เฉพาะเมื่อมีค่าเท่านั้น
+      const posRes = await fetch('/api/admin/positions', {
+        cache: 'no-store',
+        credentials: 'include',
+        headers: authHeaders(),
+      });
+      const posData = await posRes.json();
+      if (alive.current && posData.ok) {
+        setPositions(posData.summary?.byPosition || []);
+        setTreeData(posData.treeStructure || null);
+      }
 
-        // 2) positions (admin-only — gracefully degrade)
-        // ยืนยันตัวตนด้วยคุกกี้ httpOnly (อ่าน document.cookie ไม่ได้) — ส่ง Authorization เฉพาะเมื่อมีค่าเท่านั้น
-        const posRes = await fetch('/api/admin/positions', {
-          credentials: 'include',
-          headers: authHeaders(),
-        });
-        const posData = await posRes.json();
-        if (mounted && posData.ok) {
-          setPositions(posData.summary?.byPosition || []);
-          setTreeData(posData.treeStructure || null);
-        }
-
-        // 3) income summary (admin-only)
-        const incRes = await fetch('/api/admin/income', {
-          credentials: 'include',
-          headers: authHeaders(),
-        });
-        const incData = await incRes.json();
-        if (mounted && incData.ok && incData.incomes) {
-          let estimated = 0,
-            approved = 0,
-            paid = 0;
-          for (const item of incData.incomes as any[]) {
-            if (item.summary) {
-              if (typeof item.summary.estimatedIncome === 'number') estimated += item.summary.estimatedIncome;
-              if (typeof item.summary.approvedIncome === 'number') approved += item.summary.approvedIncome;
-              if (typeof item.summary.paidIncome === 'number') paid += item.summary.paidIncome;
-            }
+      // 3) income summary (admin-only)
+      const incRes = await fetch('/api/admin/income', {
+        cache: 'no-store',
+        credentials: 'include',
+        headers: authHeaders(),
+      });
+      const incData = await incRes.json();
+      if (alive.current && incData.ok && incData.incomes) {
+        let estimated = 0,
+          approved = 0,
+          paid = 0;
+        for (const item of incData.incomes as any[]) {
+          if (item.summary) {
+            if (typeof item.summary.estimatedIncome === 'number') estimated += item.summary.estimatedIncome;
+            if (typeof item.summary.approvedIncome === 'number') approved += item.summary.approvedIncome;
+            if (typeof item.summary.paidIncome === 'number') paid += item.summary.paidIncome;
           }
-          setIncomeSummary({ estimated, approved, paid });
         }
+        setIncomeSummary({ estimated, approved, paid });
+      }
 
-        // 4) system health — เส้นทางที่ถูกคือ /api/system/health (เดิมเรียก /api/admin/backup ซึ่งไม่มี → 404 HTML → JSON.parse พัง)
-        const healthRes = await fetch('/api/system/health', {
-          credentials: 'include',
-          headers: authHeaders(),
-        });
-        const healthData = await healthRes.json();
-        if (mounted && healthData.ok) {
-          setHealth({ db: healthData.db, firestore: healthData.firestore, lastBackup: healthData.lastBackup } as HealthStatus);
-        }
-      } catch (e: any) {
-        if (mounted) setError(e?.message || 'เกิดข้อผิดพลาด');
-      } finally {
-        if (mounted) setLoading(false);
+      // 4) system health — เส้นทางที่ถูกคือ /api/system/health (เดิมเรียก /api/admin/backup ซึ่งไม่มี → 404 HTML → JSON.parse พัง)
+      const healthRes = await fetch('/api/system/health', {
+        cache: 'no-store',
+        credentials: 'include',
+        headers: authHeaders(),
+      });
+      const healthData = await healthRes.json();
+      if (alive.current && healthData.ok) {
+        setHealth({ db: healthData.db, firestore: healthData.firestore, lastBackup: healthData.lastBackup } as HealthStatus);
+      }
+
+      if (alive.current) {
+        setLastAt(new Date());
+        setError(null);
+      }
+    } catch (e: any) {
+      if (alive.current) setError(e?.message || 'เกิดข้อผิดพลาด');
+    } finally {
+      if (alive.current) {
+        setLoading(false);
+        setBusy(false);
       }
     }
-
-    fetchData();
-    return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    load();
+    return () => { alive.current = false; };
+  }, [load]);
+
+  // อัปเดตอัตโนมัติทุก 30 วินาที (ปิด/เปิดได้ที่ปุ่มด้านบน)
+  useEffect(() => {
+    if (!auto) return;
+    const t = setInterval(() => { load(); }, 30 * 1000);
+    return () => clearInterval(t);
+  }, [auto, load]);
 
   const token = getToken();
   const isLoggedIn = !!token;
@@ -176,6 +200,42 @@ export default function Dashboard() {
                 {Object.values(health.lastBackup.counts).reduce((a: number, b: number) => a + b, 0)} แถว)
               </div>
             )}
+          </div>
+
+          {/* แถบอัปเดตข้อมูลให้เป็นปัจจุบัน — เวลาปัจจุบัน + เวลาดึงข้อมูลล่าสุด + ปุ่มอัปเดตเอง + สวิตช์อัตโนมัติ */}
+          <div className="card p-3 flex items-center gap-3 flex-wrap text-xs text-slate-500">
+            <LiveStamp className="text-slate-600" />
+            <span className="text-slate-300">|</span>
+            <span suppressHydrationWarning>
+              อัปเดตล่าสุด: {lastAt ? thaiDateTimeFull(lastAt) + ' น.' : 'กำลังดึงข้อมูล...'}
+            </span>
+            <button
+              type="button"
+              onClick={() => load()}
+              disabled={busy}
+              className={`ml-auto px-3 py-1.5 rounded-full font-semibold border ${
+                busy ? 'border-slate-200 bg-slate-50 text-slate-400' : 'border-blue-200 bg-[#eff6ff] text-sky-800 hover:bg-[#dbeafe]'
+              }`}
+            >
+              {busy ? '⏳ กำลังอัปเดต...' : '↻ อัปเดตเดี๋ยวนี้'}
+            </button>
+            <label className="flex items-center gap-1.5 cursor-pointer select-none">
+              <input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} />
+              อัปเดตอัตโนมัติทุก 30 วินาที
+            </label>
+          </div>
+
+          {/* ทางลัดงานใหม่ล่าสุด (สแกนใบเสร็จ + ระบบ 1 แตก 5 อัตโนมัติ) */}
+          <div className="flex gap-3 flex-wrap text-sm">
+            <Link href="/documents" className="px-4 py-2 rounded-full bg-[#c8a84e] text-[#475569] font-semibold">
+              🧾 สแกนใบเสร็จรับเงิน
+            </Link>
+            <Link href="/network/1x5-autopilot" className="px-4 py-2 rounded-full bg-[#475569] text-white font-semibold">
+              🧬 ระบบ 1 แตก 5 อัตโนมัติ
+            </Link>
+            <Link href="/network/1x5-rules" className="px-4 py-2 rounded-full border bg-white">
+              📋 กติกาการขึ้นตำแหน่ง
+            </Link>
           </div>
 
           {/* KPI cards */}
@@ -258,7 +318,7 @@ export default function Dashboard() {
                 )}
               </div>
               <p className="text-xs text-slate-400 mt-2">
-                ตัวเลขจากทะเบียนจริง (Postgres) รวมกับข้อมูลเดิมใน Firestore • อัปเดตเมื่อเปิดหน้า
+                ตัวเลขจากทะเบียนจริง (Postgres) รวมกับข้อมูลเดิมใน Firestore • อัปเดตอัตโนมัติทุก 30 วินาที (กด ↻ อัปเดตเดี๋ยวนี้ ได้ทันที)
               </p>
             </div>
 
@@ -341,7 +401,7 @@ export default function Dashboard() {
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-slate-400" />
                   <span>
-                    รุ่นeeker: {health.lastBackup ? new Date(health.lastBackup.stamp).toLocaleDateString('th-TH') : '-'}
+                    สำรองข้อมูลล่าสุด: {health.lastBackup ? new Date(health.lastBackup.stamp).toLocaleDateString('th-TH') : '-'}
                   </span>
                 </div>
               </div>
