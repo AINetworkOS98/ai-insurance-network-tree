@@ -102,12 +102,13 @@ export default function Header(){
               </div>
             )}
           </div>)}
-          <Link href={user ? "/contact" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_inquire')}</Link>
           {/* เมนูใหม่ ต่อจาก "สอบถามรายละเอียด" — ระบบบริหารเครือข่าย 1 แตก 5 อัตโนมัติ (ข้อมูลจริง + Dashboard + n8n) */}
           <Link href={user ? "/network/1x5-autopilot" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors font-semibold">🧬 {t('nav_1x5')}</Link>
           {/* เมนูย่อยใหม่ "สแกนใบเสร็จ" — อยู่มุมบนขวา ต่อจากเมนู 1 แตก 5 (สั่งโดยเจ้าของระบบ)
               เป็นเมนูย่อย (submenu) ไม่ได้ลบเมนูเดิมตัวใด — ลิงก์ภายในครอบงานใบเสร็จทั้งหมด */}
           <ReceiptScanMenu />
+          {/* "สอบถามรายละเอียด" ย้ายมาต่อท้ายเมนู "สแกนใบเสร็จ" (สั่งโดยเจ้าของระบบ) */}
+          <Link href={user ? "/contact" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_inquire')}</Link>
           <Link href={user ? "/notifications" : "/admin"} className="relative text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">🔔 {t('nav_notif')} {unread!=null && unread>0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-red-600 text-white text-[11px]">{unread}</span>}</Link>
         </nav>
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
@@ -155,10 +156,11 @@ export default function Header(){
             <Link href="/financial-freedom" onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_vision')}</Link>
             {/* "ตรวจสอบสมาชิก" (/verify) และ "รายได้" (/income) อยู่ในเมนูด้านข้างแล้ว (กดปุ่ม "เมนูทั้งหมด" ได้) */}
             <Link href={user ? '/prospects' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_prospects')}</Link>
-            <Link href={user ? '/contact' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_inquire')}</Link>
             <Link href={user ? '/network/1x5-autopilot' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#57534e] hover:bg-[#FCFBF6]">🧬 {t('nav_1x5')}</Link>
             {/* เมนูย่อย "สแกนใบเสร็จ" (มือถือ) — เพิ่มใหม่ ไม่ได้ลบเมนูเดิม */}
             <ReceiptScanMobileItems onNavigate={()=> setMobileNav(false)} />
+            {/* "สอบถามรายละเอียด" ย้ายมาต่อท้ายเมนู "สแกนใบเสร็จ" (สั่งโดยเจ้าของระบบ) */}
+            <Link href={user ? '/contact' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_inquire')}</Link>
             <Link href={user ? '/notifications' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6] flex items-center gap-2">
               <span>🔔 {t('nav_notif')}</span>
               {unread!=null && unread>0 && <span className="px-1.5 py-0.5 rounded-full bg-red-600 text-white text-[11px]">{unread}</span>}
