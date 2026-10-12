@@ -1,3 +1,4 @@
+import { CurrentDateTh } from '@/components/LiveStamp';
 import Link from 'next/link';
 export const metadata = { title: 'ข้อกำหนดการใช้งาน — AI Insurance Network Tree' };
 export default function Terms(){
@@ -6,7 +7,7 @@ export default function Terms(){
       <div className="max-w-[760px] mx-auto px-4 md:px-6 py-8">
         <Link href="/" className="inline-flex items-center gap-2 text-sm text-sky-600 hover:underline mb-6">← กลับหน้าแรก</Link>
         <h1 className="text-2xl font-bold text-slate-800">ข้อกำหนดการใช้งาน</h1>
-        <p className="text-sm text-slate-500 mt-1">มีผลตั้งแต่: 12 กันยายน 2026</p>
+        <p className="text-sm text-slate-500 mt-1"><CurrentDateTh prefix="มีผลตั้งแต่: " /></p>
         <div className="mt-6 space-y-4">
           <div className="card p-5">
             <h2 className="font-semibold text-slate-800">1. การใช้งานที่ยอมรับ</h2>

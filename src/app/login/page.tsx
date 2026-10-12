@@ -1,4 +1,5 @@
 'use client';
+import { CeYear } from '@/components/LiveStamp';
 import { useState, useEffect, Suspense, type ReactElement } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -198,7 +199,7 @@ function LoginInner(){
                 <div className="flex items-center gap-2.5"><span className="w-7 h-7 rounded-full bg-white border border-[#dbeafe] text-[#3b82f6] flex items-center justify-center shadow-sm text-[11px]">✓</span> ข้อมูลปลอดภัย เข้ารหัสมาตรฐานสากล</div>
               </div>
             </div>
-            <div className="relative text-[11px] text-slate-400">© 2026 AI Insurance Network Tree • ระบบบริหารเครือข่ายตัวแทน</div>
+            <div className="relative text-[11px] text-slate-400">© <CeYear /> AI Insurance Network Tree • ระบบบริหารเครือข่ายตัวแทน</div>
           </div>
 
           {/* Right — Form */}

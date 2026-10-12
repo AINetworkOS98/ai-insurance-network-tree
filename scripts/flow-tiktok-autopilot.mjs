@@ -37,6 +37,7 @@ const MODEL_MODE = arg('mode', 'video');
 const CAPTION_FILE = arg('caption-file', path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\//, '')), '..', 'n8n', 'flow-tiktok-autopilot', 'caption.txt'));
 const DO_POST = !!arg('post', false);
 const SKIP_GENERATE = !!arg('skip-generate', false);
+const ASSET = arg('asset', null);   // อัปโหลดคลิปที่มีอยู่แล้วใน Flow ตรง ๆ (ไม่ต้องสร้างใหม่)
 const TIMEOUT_GEN_MS = Number(arg('gen-timeout-ms', 300000));
 
 const result = { ok: false, step: 'start', promptLen: 0, videoFile: null, tiktok: null, posted: false, error: null };
@@ -261,11 +262,18 @@ async function generateInFlow(prompt) {
   c.close();
   if (!assetId) throw new Error('วิดีโอไม่เสร็จภายในเวลาที่รอ');
   result.flowAssetId = assetId;
+  return await downloadAsset(assetId);
+}
+
+/* ── 2b) ดาวน์โหลดคลิปที่มีอยู่แล้วใน Flow (ใช้กับ --asset) ─────────────── */
+async function downloadAsset(assetId, project = PROJECT) {
+  result.step = 'download';
+  result.flowAssetId = assetId;
 
   // download the asset at original 720p
   const before = new Set(fs.readdirSync(DOWNLOADS));
-  const editUrl = `https://flow.google.com/project/${PROJECT}/edit/${assetId}`;
-  await gotoAndWait('flow.google.com/project', editUrl, 12000);
+  const editUrl = `https://flow.google.com/project/${project}/edit/${assetId}`;
+  await gotoAndWait('flow.google.com/project', editUrl, 16000);
   const c2 = await attach('flow.google.com/project');
   await c2.send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: DOWNLOADS }).catch(() => {});
   const dl = await rectOf(c2, `(() => {
@@ -375,11 +383,20 @@ try {
   if (!(await ensureChrome())) {
     throw new Error(`Chrome สำหรับงานอัตโนมัติไม่ตอบที่พอร์ต ${CDP_PORT} — ลองเปิด Chrome โปรไฟล์ cdp-flow แล้ว (ดูวิธีในหัวไฟล์สคริปต์)`);
   }
-  const prompt = await latestPromptFromChatGPT();
-  log('ได้พรอมต์ล่าสุด', prompt.length, 'ตัวอักษร');
   const caption = fs.existsSync(CAPTION_FILE) ? fs.readFileSync(CAPTION_FILE, 'utf8') : '';
   if (!caption) log('คำเตือน: ไม่พบไฟล์คำอธิบาย', CAPTION_FILE);
   else result.captionFile = CAPTION_FILE;
+
+  if (ASSET) {
+    log('โหมด --asset: ดาวน์โหลดคลิปที่มีอยู่แล้วใน Flow แล้วโพสต์ (ไม่สร้างใหม่)');
+    const videoDirect = await downloadAsset(ASSET);
+    log('ได้ไฟล์', videoDirect);
+    await postToTikTok(videoDirect, caption);
+    result.ok = true; result.step = 'done'; finish(0);
+  }
+
+  const prompt = await latestPromptFromChatGPT();
+  log('ได้พรอมต์ล่าสุด', prompt.length, 'ตัวอักษร');
 
   const video = SKIP_GENERATE ? null : await generateInFlow(prompt);
   if (!SKIP_GENERATE && !video) throw new Error('ดาวน์โหลดวิดีโอไม่สำเร็จ');

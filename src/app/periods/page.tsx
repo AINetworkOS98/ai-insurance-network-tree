@@ -2,8 +2,11 @@
 import { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import { beYear } from '@/lib/now';
 import YearTimeline from '@/components/YearTimeline';
 import { RANK_CATALOG } from '@/lib/rankCatalog';
+
+const BY = beYear();
 
 export default function PeriodMaintenancePage(){
   const [periods, setPeriods] = useState<any[]>([]);
@@ -183,7 +186,7 @@ export default function PeriodMaintenancePage(){
                   </select>
                   <button onClick={createPlan} className="px-5 py-1.5 rounded-full bg-navy text-white text-xs">สร้าง Draft</button>
                 </div>
-                <div className="text-[11px] text-slate-500 mt-1">แผนไตรมาส 2569 (Draft อ้างอิง) ห้าม Active — สร้างแผนรายเดือนแยก ไม่หาร 3 และไม่เดาตัวเลข</div>
+                <div className="text-[11px] text-slate-500 mt-1">แผนไตรมาส {BY} (Draft อ้างอิง) ห้าม Active — สร้างแผนรายเดือนแยก ไม่หาร 3 และไม่เดาตัวเลข</div>
               </div>
               <div className="card p-4">
                 <h3 className="font-semibold text-sm">รายการแผน ({plans.length})</h3>
@@ -194,7 +197,7 @@ export default function PeriodMaintenancePage(){
                         <span className="font-bold">{pl.name}</span>
                         <span className="font-mono text-[11px]">{pl.kind}/{pl.cycle}</span>
                         <span className={`px-2 py-0.5 rounded-full text-[11px] ${pl.status==='Active'?'bg-emerald-600 text-white': pl.status==='Draft'?'bg-amber-400':'bg-slate-300'}`}>{pl.status}</span>
-                        {pl.isLegacyRef && <span className="px-2 py-0.5 rounded-full bg-slate-200 text-[10px]">อ้างอิงไตรมาส 2569</span>}
+                        {pl.isLegacyRef && <span className="px-2 py-0.5 rounded-full bg-slate-200 text-[10px]">อ้างอิงไตรมาส {BY}</span>}
                         <span className="ml-auto flex gap-1">
                           {pl.status==='Draft' && <button onClick={()=> setActive(pl.id,'Active')} className="px-3 py-1 rounded-full bg-navy text-white text-[11px]">ตั้ง Active</button>}
                           {pl.status==='Active' && <button onClick={()=> runMaintain(pl.id, cur)} className="px-3 py-1 rounded-full bg-amber-500 text-white text-[11px]">รัน {cur}</button>}

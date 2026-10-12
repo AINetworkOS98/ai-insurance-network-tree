@@ -1,3 +1,4 @@
+import { CurrentDateTh } from '@/components/LiveStamp';
 import Link from 'next/link';
 export const metadata = { title: 'รายละเอียดการประมวลผลข้อมูลส่วนบุคคล — AI Insurance Network Tree' };
 export default function PrivacyDetails(){
@@ -6,7 +7,7 @@ export default function PrivacyDetails(){
       <div className="max-w-[760px] mx-auto px-4 md:px-6 py-8">
         <Link href="/" className="inline-flex items-center gap-2 text-sm text-sky-600 hover:underline mb-6">← กลับหน้าแรก</Link>
         <h1 className="text-2xl font-bold text-slate-800">รายละเอียดการประมวลผลข้อมูลส่วนบุคคล</h1>
-        <p className="text-sm text-slate-500 mt-1">ปรับปรุงล่าสุด: 23 กันยายน 2026</p>
+        <p className="text-sm text-slate-500 mt-1"><CurrentDateTh prefix="ปรับปรุงล่าสุด: " /></p>
         <div className="mt-6 space-y-4">
           <div className="card p-5">
             <h2 className="font-semibold text-slate-800">1. ประเภทข้อมูลที่ประมวลผล</h2>

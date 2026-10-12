@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import { CeYear } from '@/components/LiveStamp';
 import AIIntelligentSearch from '@/components/AIIntelligentSearch';
 
 export const dynamic = 'force-dynamic';
@@ -72,7 +73,7 @@ export default function SearchLanding(){
       </div>
 
       <footer className="py-3 text-center text-[11px] text-slate-400 border-t border-[#dbeafe] bg-white">
-        <Link href="/privacy" className="hover:underline">นโยบายความเป็นส่วนตัว</Link> • <Link href="/terms" className="hover:underline">ข้อกำหนด</Link> • © 2026 AI Insurance Network Tree
+        <Link href="/privacy" className="hover:underline">นโยบายความเป็นส่วนตัว</Link> • <Link href="/terms" className="hover:underline">ข้อกำหนด</Link> • © <CeYear /> AI Insurance Network Tree
       </footer>
     </div>
   );

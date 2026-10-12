@@ -2,20 +2,18 @@
 import { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import { beYear, quartersOfYear, thaiDateFull } from '@/lib/now';
 
-// หน้าเกณฑ์มาตรฐาน — ฝ่าย 19 ไทยประกันชีวิต ไตรมาส 2569
+// หน้าเกณฑ์มาตรฐาน — ฝ่าย 19 ไทยประกันชีวิต (ไตรมาสคำนวณจากปีปัจจุบันอัตโนมัติ)
 // ชัดเจน โปร่งใส วัดผลได้จริง — สมาชิกทุกคนดูได้
 const STATIC_ROWS = [
   { rank:'ตัวแทน', level:1, keep:'3,000', fix:'3,000' },
   { rank:'ผบ.หน่วย', level:2, keep:'7,500', fix:'10,000' },
   { rank:'ผบ.ศูนย์', level:3, keep:'30,000', fix:'30,000' },
 ];
-const QUARTERS = [
-  { q:'ไตรมาส 1/2569', m:'ม.ค. – มี.ค. 2569' },
-  { q:'ไตรมาส 2/2569', m:'เม.ย. – มิ.ย. 2569' },
-  { q:'ไตรมาส 3/2569', m:'ก.ค. – ก.ย. 2569' },
-  { q:'ไตรมาส 4/2569', m:'ต.ค. – ธ.ค. 2569' },
-];
+// ปีพุทธศักราชปัจจุบัน (เขตเวลาไทย) — คำนวณสด ไม่ฝังตายตัว เพื่อให้หน้าอัปเดตเป็นปัจจุบันเสมอ
+const BY = beYear();
+const QUARTERS = quartersOfYear(BY);
 
 export default function CriteriaPage(){
   const [plan, setPlan] = useState<any>(null);
@@ -49,7 +47,7 @@ export default function CriteriaPage(){
           <div>
             <div className="text-xs text-slate-500">ฝ่าย 19 • ไทยประกันชีวิต</div>
             <h1 className="text-xl font-bold text-navy">เกณฑ์วัดรอบผลงานบริษัท</h1>
-            <p className="text-xs text-slate-500 mt-1">ชัดเจน โปร่งใส วัดผลได้จริง สร้างผลงานไปด้วยกัน — วัดรอบผลงานทุกไตรมาส (ม.ค.-มี.ค. / เม.ย.-มิ.ย. / ก.ค.-ก.ย. / ต.ค.-ธ.ค. 2569)</p>
+            <p className="text-xs text-slate-500 mt-1">ชัดเจน โปร่งใส วัดผลได้จริง สร้างผลงานไปด้วยกัน — วัดรอบผลงานทุกไตรมาส (ม.ค.-มี.ค. / เม.ย.-มิ.ย. / ก.ค.-ก.ย. / ต.ค.-ธ.ค. {BY})</p>
           </div>
 
           <div className="card p-5">
@@ -85,7 +83,7 @@ export default function CriteriaPage(){
           </div>
 
           <div className="card p-5">
-            <h3 className="font-semibold text-sm">รอบไตรมาส 2569</h3>
+            <h3 className="font-semibold text-sm">รอบไตรมาส {BY}</h3>
             <div className="mt-2 grid md:grid-cols-4 gap-2">
               {QUARTERS.map(q=>(
                 <div key={q.q} className="p-3 rounded-xl border bg-slate-50 text-xs">

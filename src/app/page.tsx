@@ -5,6 +5,7 @@ import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import AIIntelligentSearch from '@/components/AIIntelligentSearch';
 import CosmicNetwork from '@/components/CosmicNetwork';
+import { LiveStamp } from '@/components/LiveStamp';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,6 +44,10 @@ export default function Home() {
                   <p className="mt-1 text-sm text-slate-500">
                     พิมพ์คำถาม · ค้นหาเว็บ/YouTube · วางตาราง CSV/JSON · แนบไฟล์ PDF/รูป แล้ว AI ช่วยวิเคราะห์ให้ทันที
                   </p>
+                  {/* เวลาปัจจุบัน (เขตเวลาไทย) — หน้าอื่น ๆ ดึงจาก lib/now ตัวเดียวกันทั้งหมด */}
+                  <div className="mt-2 text-xs text-slate-500">
+                    <LiveStamp />
+                  </div>
                 </div>
                 {/* ── ปุ่มสลับ: จักรวาลของเครือข่าย ⇄ ทางลัดเข้าระบบ (จักรวาลรันก่อน) ── */}
                 <div className="mt-4 flex items-center justify-center gap-2 max-w-[760px] mx-auto">

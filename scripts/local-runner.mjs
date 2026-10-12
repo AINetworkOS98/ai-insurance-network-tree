@@ -64,6 +64,7 @@ const server = http.createServer((req, res) => {
         '--caption-file', CAPTION];
       if (b.post) args.push('--post');
       if (b.skipGenerate) args.push('--skip-generate');
+      if (b.asset) args.push('--asset', String(b.asset));
     }
 
     logLine((isRegister ? 'register-report' : 'run') + ' start ' + JSON.stringify(isRegister ? { days: Number(b.days) || 7 } : { post: !!b.post, skipGenerate: !!b.skipGenerate }));
