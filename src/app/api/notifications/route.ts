@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyToken } from '@/lib/auth';
+import { verifyToken, payloadUserId } from '@/lib/auth';
 
 // GET /api/notifications — ศูนย์แจ้งเตือน: ค้นหา, อ่านแล้ว/ยังไม่อ่าน, ลิงก์ตามสิทธิ
 export async function GET(req: NextRequest){
@@ -8,7 +8,8 @@ export async function GET(req: NextRequest){
     const token = req.cookies.get('token')?.value || req.cookies.get('auth_token')?.value;
     if(!token) return NextResponse.json({ error:'กรุณาเข้าสู่ระบบ'},{status:401});
     let p:any; try{ p=verifyToken(token);}catch{ return NextResponse.json({error:'โทเค็นไม่ถูกต้อง'},{status:401});}
-    const uid = p.sub||p.id;
+    const uid = payloadUserId(p);
+    if(!uid) return NextResponse.json({ error:'เซสชันไม่ถูกต้อง — กรุณาเข้าสู่ระบบใหม่' }, { status:401 });
     const sp = new URL(req.url).searchParams;
     const q = sp.get('q')?.trim() || '';
     const unreadOnly = sp.get('unread')==='1';
@@ -27,7 +28,8 @@ export async function POST(req: NextRequest){
     const token = req.cookies.get('token')?.value || req.cookies.get('auth_token')?.value;
     if(!token) return NextResponse.json({ error:'กรุณาเข้าสู่ระบบ'},{status:401});
     let p:any; try{ p=verifyToken(token);}catch{ return NextResponse.json({error:'โทเค็นไม่ถูกต้อง'},{status:401});}
-    const uid = p.sub||p.id;
+    const uid = payloadUserId(p);
+    if(!uid) return NextResponse.json({ error:'เซสชันไม่ถูกต้อง — กรุณาเข้าสู่ระบบใหม่' }, { status:401 });
     const body = await req.json().catch(()=> ({} as any));
     const { notificationId, action } = body;
     if(action==='readAll'){

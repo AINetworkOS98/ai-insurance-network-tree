@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyToken } from '@/lib/auth';
+import { verifyToken, payloadUserId } from '@/lib/auth';
 import { generateMemberCode, generateReferralCode, referralLink } from '@/lib/referral';
 import { rankName } from '@/lib/rankCatalog';
 
@@ -11,7 +11,10 @@ export async function GET(req: NextRequest){
     if(!token) return NextResponse.json({ ok:false, error:'กรุณาเข้าสู่ระบบ' }, { status:401 });
     const payload = verifyToken(token);
     if(!payload) return NextResponse.json({ ok:false, error:'เซสชันหมดอายุ' }, { status:401 });
-    const userId = (payload as any).sub;
+    // โทเคนที่ไม่ผูกกับผู้ใช้จริง (sub ไม่ใช่ UUID) → ตอบ 401 ให้ไคลเอนต์ไปล็อกอินใหม่
+    // (เดิมเอา sub ไป query Prisma ตรง ๆ ทำให้ได้ 500 + stack trace ใน log)
+    const userId = payloadUserId(payload);
+    if(!userId) return NextResponse.json({ ok:false, error:'เซสชันไม่ถูกต้อง — กรุณาเข้าสู่ระบบใหม่' }, { status:401 });
 
     // สร้างรหัส auto ถ้ายังไม่มี (unique constraint กันซ้ำฝั่ง DB + retry)
     let user = await prisma.user.findUnique({ where:{ id: userId } });
