@@ -1,6 +1,5 @@
 'use client';
 import Header from '@/components/Header';
-import ThreeStepsJourney from '@/components/ThreeStepsJourney';
 import Sidebar from '@/components/Sidebar';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
@@ -202,10 +201,6 @@ export default function GeneralMembersPage(){
               <Link href="/members" className="inline-block mt-2 text-xs text-sky-700 underline">ไปหน้าสมาชิกของฉัน →</Link>
             </div>
           </div>
-          {/* ส่วน 3 ขั้นสู่อิสรภาพทางการเงิน — ย้ายมาไว้ช่วงล่างของหน้า (ตามที่สั่ง)
-              ด้านบนคงเนื้อหาเดิมของหน้า เริ่มตั้งแต่หัวข้อ "สมาชิกทั่วไป" เหมือนเดิมทุกประการ
-              หน้านี้ไม่แสดงรูป และไม่แสดงหัวเรื่อง/คำโปรย — เหลือการ์ด 3 ขั้นตอน + แถบคุณสมบัติ */}
-          <ThreeStepsJourney showImage={false} showHeadline={false} />
         </main>
       </div>
     </div>
