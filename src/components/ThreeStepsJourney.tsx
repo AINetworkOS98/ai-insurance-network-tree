@@ -8,7 +8,7 @@
 // ⛔ ไม่สัญญารายได้/ผลตอบแทน/อิสรภาพทางการเงินว่าเกิดขึ้นแน่นอน และไม่กำหนดเงื่อนไข/ค่าธรรมเนียม/กรอบเวลาเอง
 // 🔗 ลิงก์คงตามที่กำหนด: /recruit · /register · /documents
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useT } from '@/i18n';
 
 type CopyStep = { title: string; desc: string; cta: string };
 type Copy = {
@@ -88,26 +88,37 @@ const NAVY = '#123a6b';
 const GOLD = '#c8a84e';
 
 export default function ThreeStepsJourney() {
-  // อังกฤษ = ค่าเริ่มต้น · เปลี่ยนเป็นไทยเมื่อผู้ใช้เลือกภาษาไทยจากปุ่มเลือกภาษา
-  const [lang, setLang] = useState<'th' | 'en'>('en');
-  useEffect(() => {
-    const read = () => {
-      try { setLang(localStorage.getItem('app-lang') === 'th' ? 'th' : 'en'); } catch { setLang('en'); }
-    };
-    read();
-    window.addEventListener('app-lang-change', read);
-    window.addEventListener('storage', read);
-    return () => {
-      window.removeEventListener('app-lang-change', read);
-      window.removeEventListener('storage', read);
-    };
-  }, []);
-
-  const c: Copy = lang === 'th' ? TH : EN;
+  // ใช้ภาษาจากปุ่มเลือกภาษาของแอปโดยตรง (i18n/useT) → กดปุ่มแล้วทั้ง "ภาพ" และ "ข้อความ" เปลี่ยนทันที
+  // ไทย = ภาพ+ข้อความไทย · ภาษาอื่น ๆ ทั้งหมด = ภาพ+ข้อความอังกฤษ (ชุดภาษาอังกฤษเป็นชุดสำรอง)
+  const { lang } = useT();
+  const isThai = String(lang) === 'th';
+  const c: Copy = isThai ? TH : EN;
+  const img = isThai ? '/steps/3-steps-th' : '/steps/3-steps-en';
 
   return (
     <section aria-labelledby="three-steps-heading" data-section="three-steps" className="max-w-6xl mx-auto mb-14">
-      {/* ── หัวเรื่อง ── */}
+      {/* ── ภาพขั้นตอน 3 ขั้น (แสดงก่อนทุกอย่าง) — เปลี่ยนตามภาษาที่เลือก: ไทย ⇄ อังกฤษ ── */}
+      <figure className="m-0">
+        <picture>
+          <source srcSet={`${img}.webp`} type="image/webp" />
+          <img
+            src={`${img}.jpg`}
+            alt={isThai
+              ? 'เริ่มต้นเส้นทางสู่อิสรภาพทางการเงิน เพียง 3 ขั้นตอน: 1) สมัครเป็นตัวแทน (ผู้มุ่งหวัง) 2) สมัครแสดงความสนใจ 3) ส่งใบเสร็จรับเงิน'
+              : 'Start your journey to financial freedom in 3 simple steps: 1) Become a prospective agent 2) Register your interest 3) Submit your payment receipt'}
+            className="w-full h-auto rounded-3xl border border-slate-200 shadow-lg"
+            width={1600}
+            height={1093}
+            loading="eager"
+            data-step-art={isThai ? 'th' : 'en'}
+          />
+        </picture>
+        <figcaption className="mt-2 text-center text-[11px] text-slate-400">
+          🖼 {isThai ? 'ภาพชุดภาษาไทย' : 'English artwork'} · เปลี่ยนตามปุ่มเลือกภาษา (🇹🇭 ไทย / 🇬🇧 English)
+        </figcaption>
+      </figure>
+
+      {/* ── หัวเรื่อง (ข้อความประกอบใต้ภาพ) ── */}
       <div className="rounded-3xl p-6 sm:p-8 text-white shadow-lg"
            style={{ background: 'linear-gradient(135deg, #123a6b 0%, #1c4f8a 60%, #2f6fb0 100%)' }}>
         <div className="flex flex-col md:flex-row md:items-center gap-6">
