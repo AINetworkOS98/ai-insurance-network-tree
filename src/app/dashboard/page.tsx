@@ -129,6 +129,13 @@ export default function Dashboard() {
     return () => clearInterval(t);
   }, [auto, load]);
 
+  // ตัวจัดการสมาชิก (อนุมัติ / ลบ) ยิง event นี้หลังทำรายการเสร็จ → อัปเดตตัวเลข KPI และทุกแผงบนหน้าให้ตรงกันทันที
+  useEffect(() => {
+    const onMembersUpdated = () => { load(); };
+    window.addEventListener('members-updated', onMembersUpdated);
+    return () => window.removeEventListener('members-updated', onMembersUpdated);
+  }, [load]);
+
   const token = getToken();
   const isLoggedIn = !!token;
 
@@ -208,7 +215,7 @@ export default function Dashboard() {
             <LiveStamp className="text-slate-600" />
             <span className="text-slate-300">|</span>
             <span suppressHydrationWarning>
-              อัปเดตล่าสุด: {lastAt ? thaiDateTimeFull(lastAt) + ' น.' : 'กำลังดึงข้อมูล...'}
+              อัปเดตล่าสุด: {lastAt ? thaiDateTimeFull(lastAt) : 'กำลังดึงข้อมูล...'}
             </span>
             <button
               type="button"
