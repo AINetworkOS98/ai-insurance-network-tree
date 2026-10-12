@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import AdsManager from '@/components/AdsManager';
 import { useT } from '@/i18n';
 
 type Any = Record<string, any>;
@@ -440,6 +441,12 @@ export default function ExpandTeamPage() {
 
           {/* ── ข้อกำกับ (บังคับแสดง) ──────────────────────────────────── */}
           <div className="rounded-xl bg-slate-50 border border-[#dbeafe] p-3 text-[11px] text-slate-500">{x.note}</div>
+
+          {/* ── ล่างสุด: AI Insurance Ads Manager (ศูนย์โฆษณา TikTok) ──────
+              คำสั่งเจ้าของระบบ 12 ต.ค. 2026: "สร้างต่อลงมาไว้ล่างสุดในหน้านี้"
+              แยกเป็นคอมโพเนนต์ @/components/AdsManager — อ่านข้อมูลจริงผ่าน GET /api/ads/overview
+              และแสดงโหมด Demo ชัดเจนจนกว่าจะเชื่อมต่อ TikTok Marketing API (ห้ามยิงแอดจริง) */}
+          <AdsManager />
         </main>
       </div>
 
