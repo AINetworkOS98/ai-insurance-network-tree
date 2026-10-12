@@ -87,7 +87,15 @@ const TH: Copy = {
 const NAVY = '#123a6b';
 const GOLD = '#c8a84e';
 
-export default function ThreeStepsJourney() {
+export default function ThreeStepsJourney({
+  showImage = true,
+  showHeadline = true,
+}: {
+  /** แสดงภาพขั้นตอนด้านบน (ปิดได้เมื่อหน้าไหนไม่ต้องการรูป) */
+  showImage?: boolean;
+  /** แสดงหัวเรื่อง + คำโปรย (ปิดได้เมื่อหน้าไหนไม่อยากซ้ำข้อความใหญ่) */
+  showHeadline?: boolean;
+} = {}) {
   // ใช้ภาษาจากปุ่มเลือกภาษาของแอปโดยตรง (i18n/useT) → กดปุ่มแล้วทั้ง "ภาพ" และ "ข้อความ" เปลี่ยนทันที
   // ไทย = ภาพ+ข้อความไทย · ภาษาอื่น ๆ ทั้งหมด = ภาพ+ข้อความอังกฤษ (ชุดภาษาอังกฤษเป็นชุดสำรอง)
   const { lang } = useT();
@@ -98,6 +106,7 @@ export default function ThreeStepsJourney() {
   return (
     <section aria-labelledby="three-steps-heading" data-section="three-steps" className="max-w-6xl mx-auto mb-14">
       {/* ── ภาพขั้นตอน 3 ขั้น (แสดงก่อนทุกอย่าง) — เปลี่ยนตามภาษาที่เลือก: ไทย ⇄ อังกฤษ ── */}
+      {showImage && (
       <figure className="m-0">
         <picture>
           <source srcSet={`${img}.webp`} type="image/webp" />
@@ -117,8 +126,10 @@ export default function ThreeStepsJourney() {
           🖼 {isThai ? 'ภาพชุดภาษาไทย' : 'English artwork'} · เปลี่ยนตามปุ่มเลือกภาษา (🇹🇭 ไทย / 🇬🇧 English)
         </figcaption>
       </figure>
+      )}
 
       {/* ── หัวเรื่อง (ข้อความประกอบใต้ภาพ) ── */}
+      {showHeadline && (
       <div className="rounded-3xl p-6 sm:p-8 text-white shadow-lg"
            style={{ background: 'linear-gradient(135deg, #123a6b 0%, #1c4f8a 60%, #2f6fb0 100%)' }}>
         <div className="flex flex-col md:flex-row md:items-center gap-6">
@@ -136,9 +147,10 @@ export default function ThreeStepsJourney() {
           </div>
         </div>
       </div>
+      )}
 
       {/* ── 3 ขั้นตอน ── */}
-      <ol className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-5 list-none p-0 m-0">
+      <ol className={`${showHeadline || showImage ? 'mt-6' : 'mt-0'} grid grid-cols-1 md:grid-cols-3 gap-5 list-none p-0 m-0`}>
         {c.steps.map((s, i) => {
           const meta = STEP_META[i];
           return (

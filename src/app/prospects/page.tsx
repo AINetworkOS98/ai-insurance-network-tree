@@ -65,8 +65,9 @@ export default function GeneralMembersPage(){
       <div className="flex w-full">
         <Sidebar/>
         <main className="flex-1 p-6 space-y-6">
-          {/* ส่วนแนะนำ 3 ขั้นสู่อิสรภาพทางการเงิน — แสดงเป็นข้อความแรกก่อนเนื้อหาอื่น (สั่งโดยเจ้าของระบบ) */}
-          <ThreeStepsJourney />
+          {/* ส่วนแนะนำ 3 ขั้นสู่อิสรภาพทางการเงิน — แสดงก่อนเนื้อหาอื่น (สั่งโดยเจ้าของระบบ)
+              หน้านี้: ไม่แสดงรูป และไม่แสดงหัวเรื่อง/คำโปรย (ตามที่สั่ง) — เหลือการ์ด 3 ขั้นตอน + แถบคุณสมบัติ */}
+          <ThreeStepsJourney showImage={false} showHeadline={false} />
           {/* หัวหน้า */}
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-xl font-bold text-[#475569]">สมาชิกทั่วไป</h1>
