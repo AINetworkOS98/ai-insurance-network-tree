@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
 }
 
 // ── DELETE: ลบใบเสร็จออกจากระบบ (คลัง Firestore + ไฟล์ใน Storage) ──────────
-// สิทธิ์: เจ้าของ (memberId ตรงกับบัญชีที่ล็อกอิน) หรือผู้ดูแลระบบเท่านั้น
+// สิทธิ์: ผู้ดูแลระบบเท่านั้น (เจ้าของใบเสร็จลบเองไม่ได้)
 export async function DELETE(request: NextRequest) {
   try {
     const token = request.cookies.get('token')?.value
@@ -84,6 +84,16 @@ export async function DELETE(request: NextRequest) {
     try { payload = verifyToken(token); } catch { return NextResponse.json({ ok: false, error: 'โทเค็นไม่ถูกต้อง' }, { status: 401 }); }
     const userId = String(payload?.sub || '');
 
+    // ── สิทธิการลบ: ผู้ดูแลระบบเท่านั้น (นโยบายเจ้าของระบบ) ──
+    //    ตรวจสิทธิ์ก่อนแตะฐานข้อมูลเสมอ → ผู้ใช้ทั่วไปถูกปฏิเสธทันที ไม่มีการอ่าน/ลบข้อมูลใด ๆ
+    const isAdmin = await isAdminFromPayload(payload).catch(() => false);
+    if (!isAdmin) {
+      return NextResponse.json(
+        { ok: false, error: 'ลบได้เฉพาะผู้ดูแลระบบ — กรุณาติดต่อผู้ดูแลระบบให้ลบเอกสารให้', adminOnly: true },
+        { status: 403 },
+      );
+    }
+
     const url = new URL(request.url);
     const body = await request.json().catch(() => ({} as any));
     const receiptId: string = (url.searchParams.get('receiptId') || body?.receiptId || '').toString();
@@ -93,15 +103,6 @@ export async function DELETE(request: NextRequest) {
     const snap = await docRef.get();
     if (!snap.exists) return NextResponse.json({ ok: false, error: 'ไม่พบใบเสร็จนี้ในระบบ' }, { status: 404 });
     const data: any = snap.data() || {};
-
-    const isAdmin = await isAdminFromPayload(payload).catch(() => false);
-    if (!isAdmin) {
-      const me = await prisma.user.findUnique({ where: { id: userId }, select: { memberCode: true, email: true } }).catch(() => null);
-      const mine = new Set([userId, me?.memberCode, me?.email].filter(Boolean).map(String));
-      if (!mine.has(String(data.memberId))) {
-        return NextResponse.json({ ok: false, error: 'ลบได้เฉพาะใบเสร็จของตัวเอง' }, { status: 403 });
-      }
-    }
 
     // ลบไฟล์ต้นฉบับใน Storage ก่อน (ถ้ามี) — ไม่ให้เหลือไฟล์กำพร้า
     if (data.storagePath) {
@@ -116,7 +117,7 @@ export async function DELETE(request: NextRequest) {
         entity: 'FirestoreReceipt',
         entityId: receiptId,
         oldValue: { memberId: data.memberId ?? null, filename: data.filename ?? null, amount: data.amount ?? null, storagePath: data.storagePath ?? null },
-        reason: isAdmin ? 'ผู้ดูแลระบบลบใบเสร็จ' : 'เจ้าของลบใบเสร็จของตัวเอง',
+        reason: 'ผู้ดูแลระบบลบใบเสร็จ',
       },
     }).catch(() => null);
 

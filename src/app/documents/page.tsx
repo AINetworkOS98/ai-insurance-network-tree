@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import AdminRightsPanel, { useAdminMe } from '@/components/AdminRightsPanel';
 
 type OCRData = {
   documentType: string | null;
@@ -119,6 +120,9 @@ export default function DocumentsPage() {
   const [camOpen, setCamOpen] = useState(false);
   const [camError, setCamError] = useState<string | null>(null);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+  // สิทธิ์ผู้ดูแลระบบ — ใช้ซ่อน/แสดงปุ่มลบ (ฝั่งเซิร์ฟเวอร์บังคับซ้ำเสมอ)
+  const me = useAdminMe();
+  const isAdmin = me?.isAdmin === true;
 
   const loadReceipts = useCallback(async () => {
     try {
@@ -141,6 +145,7 @@ export default function DocumentsPage() {
 
   // ลบใบเสร็จออกจากระบบ — ยืนยันก่อนลบทุกครั้ง และบันทึก audit ฝั่งเซิร์ฟเวอร์
   const removeReceipt = async (receiptId: string, filename?: string) => {
+    if (!isAdmin) { setError('ลบได้เฉพาะผู้ดูแลระบบ — กรุณาติดต่อผู้ดูแลให้ลบเอกสารให้'); return; }
     if (!window.confirm(`ลบใบเสร็จ "${filename || receiptId}" ออกจากระบบ?\n\nการลบย้อนกลับไม่ได้`)) return;
     try {
       const res = await fetch('/api/documents', {
@@ -398,6 +403,17 @@ export default function DocumentsPage() {
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold text-[#475569]">สแกนใบเสร็จรับเงิน เข้าระบบ</h1>
           </div>
+
+          {/* ── แผงสิทธิ์: แสดงให้ "ผู้ดูแลระบบ" เห็นว่าตัวเองมีสิทธิอะไรในหน้านี้ (ผู้ใช้ทั่วไปไม่เห็น) ── */}
+          <AdminRightsPanel
+            scope="เห็นคลังใบเสร็จของสมาชิกทุกคนในระบบ (ไม่จำกัดเฉพาะของตัวเอง)"
+            rights={[
+              { icon: '🗑', label: 'ลบใบเสร็จ/เอกสารออกจากคลังได้ทุกใบ', detail: 'ลบทั้งข้อมูลในคลังและไฟล์ต้นฉบับใน Storage พร้อมบันทึก Audit Log (receipt.deleted)' },
+              { icon: '📚', label: 'ดูคลังใบเสร็จทั้งหมด + สรุปยอดเข้าเครือข่าย 1 แตก 5' },
+              { icon: '🧾', label: 'สแกน/บันทึกใบเสร็จให้สมาชิกคนใดก็ได้ผ่านช่องรหัสสมาชิก' },
+            ]}
+            note="ลบเป็นสิทธิ์ของผู้ดูแลระบบเท่านั้น — เจ้าของใบเสร็จทั่วไปจะไม่เห็นปุ่มลบ และถ้าเรียก API ลบตรง ๆ เซิร์ฟเวอร์จะตอบ 403"
+          />
 
           {/* สแกน + อัปโหลดใบเสร็จ */}
           <div className="card p-5">
@@ -722,14 +738,23 @@ export default function DocumentsPage() {
                             : <span className="text-slate-400">{r.filename}</span>}
                         </td>
                         <td className="p-2 text-center">
-                          <button
-                            type="button"
-                            onClick={() => removeReceipt(r.id, r.filename)}
-                            title="ลบใบเสร็จออกจากคลัง"
-                            className="px-2.5 py-1 rounded-full border border-red-200 text-red-600 hover:bg-red-50"
-                          >
-                            ลบ
-                          </button>
+                          {isAdmin ? (
+                            <button
+                              type="button"
+                              onClick={() => removeReceipt(r.id, r.filename)}
+                              title="ลบใบเสร็จออกจากคลัง (ผู้ดูแลระบบเท่านั้น)"
+                              className="px-2.5 py-1 rounded-full border border-red-200 text-red-600 hover:bg-red-50"
+                            >
+                              🗑 ลบ
+                            </button>
+                          ) : (
+                            <span
+                              className="text-[11px] text-slate-400 whitespace-nowrap"
+                              title="การลบเอกสารเป็นสิทธิ์ของผู้ดูแลระบบเท่านั้น"
+                            >
+                              🔒 ผู้ดูแลเท่านั้น
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}

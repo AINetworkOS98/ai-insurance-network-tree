@@ -31,5 +31,11 @@ export async function GET(req: NextRequest){
       }).catch(()=>[]);
     }
   }catch{}
-  return NextResponse.json({ ok:true, authed:true, user: { ...payload, ...(profile || {}) }, consents });
+  // สิทธิผู้ดูแล (ใช้แสดง/ซ่อนปุ่มฝั่งไคลเอนต์) — ฝั่งเซิร์ฟเวอร์ยังตรวจซ้ำทุกครั้งที่ทำรายการ
+  let isAdmin = false;
+  try{
+    const { isAdminFromPayload } = await import('@/lib/admin');
+    isAdmin = await isAdminFromPayload({ ...payload, ...(profile || {}) });
+  }catch{}
+  return NextResponse.json({ ok:true, authed:true, isAdmin, user: { ...payload, ...(profile || {}) }, consents });
 }

@@ -3,6 +3,7 @@ import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import AdminRightsPanel from '@/components/AdminRightsPanel';
 
 // หน้า "สมาชิกทั่วไป" (เดิมชื่อ "ผู้สนใจ") — ฐานเดียวกับระบบสมาชิก (/api/members)
 // นิยาม: สมาชิกทั่วไป = ผู้ที่ยังอยู่ระดับตำแหน่ง 0 (ยังไม่เลื่อนเป็นตัวแทน)
@@ -162,6 +163,17 @@ export default function GeneralMembersPage(){
               <Link href="/register" className="px-4 py-2 rounded-full bg-[#475569] text-white text-sm">+ เพิ่มสมาชิก</Link>
             </div>
           </div>
+
+          {/* ── แผงสิทธิ์: ผู้ดูแลระบบเห็นว่าตัวเองมีสิทธิอะไรในหน้านี้ (ผู้ใช้ทั่วไปไม่เห็น) ── */}
+          <AdminRightsPanel
+            scope="เห็นสมาชิกทั่วไป (ระดับ 0) ทุกคนในระบบ — ไม่จำกัดเฉพาะทีมของตัวเอง"
+            rights={[
+              { icon: '🗑', label: 'ลบสมาชิกออกจากระบบ (soft delete)', detail: 'สถานะเปลี่ยนเป็น RESIGNED + ซ่อนจากทะเบียน ข้อมูล/ประวัติยังอยู่ครบ กด ↩ คืนค่าได้ทุกเมื่อ' },
+              { icon: '↩', label: 'คืนค่าสมาชิกที่ลบแล้วกลับเข้าระบบ', detail: 'ดูได้จากช่อง “แสดงรายการที่ลบแล้ว” เหนือตาราง' },
+              { icon: '👁', label: 'เห็นรายการที่ถูกลบแล้วทั้งหมด (N รายการ)', detail: 'แถวที่ลบจะไฮไลต์ชมพูและติดป้าย “ลบออกแล้ว”' },
+            ]}
+            note="ปุ่ม 🗑 ลบสมาชิก แสดงเฉพาะบัญชีผู้ดูแลระบบ และทุกครั้งต้องยืนยันก่อนลบ — การลบ/คืนค่าถูกบันทึกใน Audit Log"
+          />
 
           {/* สรุป */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
