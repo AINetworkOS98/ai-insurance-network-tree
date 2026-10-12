@@ -117,6 +117,7 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
+    alive.current = true;
     load();
     return () => { alive.current = false; };
   }, [load]);
