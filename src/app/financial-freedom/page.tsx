@@ -182,6 +182,43 @@ export default function FinancialFreedom() {
               </p>
             </div>
 
+            {/* ── ภาพต้นแบบเต็ม — วางไว้ล่างสุดของหน้า (ภาพที่ใช้สร้างฉาก 3 มิติด้านบน) ── */}
+            <div className="mt-12 mb-10">
+              <div className="text-center mb-4">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-50 text-amber-700 text-sm font-semibold border border-amber-200">
+                  <span>🖼</span> ภาพต้นแบบ · อิสรภาพทางการเงินท่ามกลางธรรมชาติ
+                </div>
+                <h2 className="mt-4 text-2xl md:text-3xl font-bold text-slate-900">อิสรภาพทางการเงินท่ามกลางธรรมชาติ</h2>
+                <p className="mt-2 text-slate-600 leading-relaxed text-sm md:text-base max-w-3xl mx-auto">
+                  ภาพต้นแบบที่ใช้สร้างฉาก 3 มิติด้านบน — ป้ายไม้ 4 ป้าย <em>More Time · More Choices · Better Life · Financial Freedom</em>,
+                  มุมพักผ่อนริมทะเลสาบยามพระอาทิตย์ตก และการ์ด 5 ใบ กดที่ภาพเพื่อเปิดขนาดเต็ม
+                </p>
+              </div>
+
+              <a
+                href="/3d-src/financial-freedom-nature.png"
+                target="_blank"
+                rel="noreferrer"
+                title="เปิดภาพขนาดเต็ม (1254×1254 px)"
+                className="block mx-auto max-w-[900px] rounded-3xl overflow-hidden border border-amber-200 shadow-sm hover:shadow-md transition"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/3d-src/financial-freedom-nature.webp"
+                  alt="อิสรภาพทางการเงินท่ามกลางธรรมชาติ — ภาพต้นแบบ"
+                  width={1254}
+                  height={1254}
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-auto"
+                />
+              </a>
+
+              <p className="text-center mt-3 text-[11px] text-slate-500">
+                ไฟล์ต้นฉบับ 1254×1254 px (PNG 2.0 MB) — กดที่ภาพเพื่อเปิด · เวอร์ชันบนหน้าเว็บเป็น WebP 179 KB เพื่อให้โหลดเร็ว
+              </p>
+            </div>
+
             {/* ปุ่มกลับหน้าแรก */}
             <div className="text-center mt-8">
               <a
