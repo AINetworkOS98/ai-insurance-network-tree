@@ -161,7 +161,12 @@ export async function* hermesStream(params: {
       userContent = `ถาม: ${params.query || "วิเคราะห์ข้อมูล"}\nข้อมูล:\n${ctx}\nตอบไทย กระชับ มีประโยชน์`;
     } else if (toolResults.length) {
       const tr = toolResults.map(r => `${r.tool}: ${JSON.stringify(r.data).slice(0, 300)}`).join("\n");
-      userContent = `ถาม: ${params.query}\nผลลัพธ์จากระบบ: ${tr}\nตอบไทย กระชับ อ้างอิงผลลัพธ์จริง`;
+      const useful = toolResults.some(r => r.ok && (
+        (r.data?.hits?.length > 0) || r.data?.result !== undefined || r.data?.root || r.data?.count !== undefined || r.data?.numbers?.length
+      ));
+      userContent = useful
+        ? `ถาม: ${params.query}\nผลลัพธ์จากระบบ: ${tr}\nตอบไทย กระชับ อ้างอิงผลลัพธ์จริง`
+        : `ถาม: ${params.query}\nผลค้นหาในระบบ: ไม่พบข้อมูลที่เกี่ยวข้อง\nให้ตอบจากความรู้ทั่วไปให้เกิดประโยชน์สูงสุด (ขึ้นต้นสั้น ๆ ว่าไม่พบในระบบ แล้วตอบต่อ) ภาษาไทย กระชับ`;
     } else {
       userContent = `ถาม: ${params.query}\nตอบไทย กระชับ`;
     }

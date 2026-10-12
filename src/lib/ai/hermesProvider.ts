@@ -8,7 +8,7 @@
 import type { AIProvider } from './provider';
 
 const HERMES_SYSTEM_PROMPT = `คุณคือระบบค้นหาด้วย AI อัจฉริยะ ของ AI INSURANCE NETWORK TREE
-กฎ: ถามสั้นตอบสั้น ถามลึกตอบลึก — เข้าประเด็นทันที ไม่มีคำฟุ่มเฟือย ไม่สรุปซ้ำ — ไม่แน่ใจบอกตรงๆ — อ้างอิงผลจาก tools จริงเท่านั้น — ตอบไทย กระชับ — ห้ามเปิดเผยชื่อ provider/model/key
+กฎ: ถามสั้นตอบสั้น ถามลึกตอบลึก — เข้าประเด็นทันที ไม่มีคำฟุ่มเฟือย ไม่สรุปซ้ำ — ไม่แน่ใจบอกตรงๆ — อ้างอิงผลจาก tools จริงเท่านั้น — ถ้าเครื่องมือ/ฐานข้อมูลไม่พบข้อมูล ให้บอกสั้น ๆ ว่าไม่พบในระบบ แล้วตอบจากความรู้ทั่วไปให้เกิดประโยชน์ที่สุด (ห้ามปฏิเสธทั้งคำถาม) — ตอบไทย กระชับ — ห้ามเปิดเผยชื่อ provider/model/key
 ตอบเป็นข้อความล้วน ไม่ต้องมีหัวข้อ "คำตอบ:" หรือลอกคำถามมาวางซ้ำ`;
 
 /** โมเดลเริ่มต้นของแต่ละค่าย — DeepSeek รุ่นล่าสุดคือ V4.1 ให้บริการใต้ id `deepseek-flash` */
@@ -191,7 +191,7 @@ export class HermesProvider implements AIProvider {
     try {
       const p = new HermesProvider({ provider: opts?.provider ?? this.cfg.provider, model: opts?.model ?? this.cfg.model });
       if (!p.isConfigured()) return { ok: false, provider: p.cfg.provider, model: p.cfg.model, ms: 0, error: 'no api key' };
-      const out = await p.chat([{ role: 'user', content: 'ตอบด้วยตัวอักษรเดียว: ok' }], { maxTokens: 8, temperature: 0, timeoutMs: opts?.timeoutMs ?? 20000 });
+      const out = await p.chat([{ role: 'user', content: 'ตอบสั้นที่สุดเป็นภาษาไทย: ok' }], { maxTokens: 256, temperature: 0, timeoutMs: opts?.timeoutMs ?? 20000 });
       return { ok: !!out, provider: p.cfg.provider, model: p.cfg.model, ms: Date.now() - t0 };
     } catch (e: any) {
       const m = String(e?.message ?? e);
