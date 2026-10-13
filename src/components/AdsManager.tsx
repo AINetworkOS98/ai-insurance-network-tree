@@ -38,11 +38,11 @@ const LS_LIB = 'ads.lib.v1';
 const MAX_MB = 200;
 
 const EMPTY_FORM: Form = {
-  campaignName: '', objective: 'LEAD_GENERATION', audienceId: 'career', area: 'ทั่วประเทศ', ageRange: '25-44', language: 'th',
-  dailyBudget: '', totalBudget: '', startDate: '', endDate: '', landingPage: 'https://ai-insurance-network-tree.vercel.app/recruit',
+  campaignName: '', objective: 'TRAFFIC', audienceId: 'career', area: 'ทั่วประเทศ', ageRange: '25-44', language: 'th',
+  dailyBudget: '', totalBudget: '', startDate: '', endDate: '', landingPage: 'https://ai-insurance-network-tree.vercel.app/',
   leadCapture: 'form',
   videoTitle: '', adText: 'กำลังมองหาโอกาสเติบโตในสายงานที่ปรึกษาการเงินหรือไม่? เรียนรู้ทักษะการขาย การดูแลลูกค้า และการพัฒนาทีมงาน พร้อมพูดคุยเกี่ยวกับเส้นทางอาชีพตัวแทนประกันชีวิต',
-  headline: 'เริ่มจาก 0 ก็มีพี่เลี้ยงดูแล', cta: 'LEARN_MORE', destinationUrl: 'https://ai-insurance-network-tree.vercel.app/recruit', rights: false,
+  headline: 'เริ่มจาก 0 ก็มีพี่เลี้ยงดูแล', cta: 'LEARN_MORE', destinationUrl: 'https://ai-insurance-network-tree.vercel.app/', rights: false,
 };
 
 // สถานะผู้สนใจในระบบ (Prisma ProspectStatus) → 6 สถานะตามสเปกข้อ 7
@@ -110,10 +110,23 @@ export default function AdsManager() {
   const [lib, setLib] = useState<LibItem[]>([]);
   const [check, setCheck] = useState<string[] | null>(null);
   const [copied, setCopied] = useState('');
-  const [modal, setModal] = useState<'' | 'preview' | 'confirm' | 'settings' | 'submitResult'>('');
+  const [modal, setModal] = useState<'' | 'preview' | 'confirm' | 'settings' | 'submitResult' | 'dry'>('');
   const [submitMsg, setSubmitMsg] = useState('');
   const [range, setRange] = useState({ from: '', to: '' });
   const fileRef = useRef<HTMLInputElement | null>(null);
+  // ── สถานะการยิงจริงผ่าน TikTok Marketing API (POST /api/ads/campaigns) ──
+  const lastFile = useRef<File | null>(null);   // ไฟล์ที่ผู้ใช้เลือก (อยู่ในเครื่องเท่านั้น)
+  const [busy, setBusy] = useState('');
+  const [real, setReal] = useState<Any | null>(null);        // ผลตอบกลับจริงจาก TikTok
+  const [dry, setDry] = useState<Any | null>(null);          // payload ที่จะส่ง (dry run)
+  const [created, setCreated] = useState<Any | null>(null);  // แคมเปญที่สร้างบน TikTok จริงแล้ว
+  const [report, setReport] = useState<Any | null>(null);    // รายงานจริงจาก API
+  const [ttData, setTtData] = useState<Any | null>(null);    // accounts / videos / regions / list
+  const [areaIds, setAreaIds] = useState('');
+  const [videoIdInput, setVideoIdInput] = useState('');
+  // ยิงจากโพสต์ TikTok ของเจ้าของเอง (Spark Ads) — ค่าเริ่มต้น = คลิปต้นแบบ @aka989._
+  const [sparkItemId, setSparkItemId] = useState(PROTOTYPE_ID);
+  const [identityId, setIdentityId] = useState('');
 
   async function loadApi() {
     setLoading(true); setErr('');
@@ -147,6 +160,7 @@ export default function AdsManager() {
     if (f.size > MAX_MB * 1024 * 1024) { setFileErr(L(`ไฟล์ใหญ่เกิน ${MAX_MB}MB (ได้ ${(f.size / 1048576).toFixed(1)}MB)`, `File larger than ${MAX_MB}MB (got ${(f.size / 1048576).toFixed(1)}MB)`)); return; }
     if (fileUrl) URL.revokeObjectURL(fileUrl);
     const u = URL.createObjectURL(f);
+    lastFile.current = f;
     setFileUrl(u);
     setVideo({ kind: 'file', url: u, name: f.name });
     setForm((s) => ({ ...s, videoTitle: s.videoTitle || f.name.replace(/\.[^.]+$/, '') }));
@@ -168,6 +182,7 @@ export default function AdsManager() {
   }
   function clearVideo() {
     if (fileUrl) URL.revokeObjectURL(fileUrl);
+    lastFile.current = null;
     setFileUrl(''); setFilePlaying(false);
     setVideo({ kind: 'none', url: '' });
   }
@@ -226,12 +241,79 @@ export default function AdsManager() {
     const next = drafts.filter((d) => d.id !== id);
     setDrafts(next); save(LS_DRAFTS, next);
   }
-  function submitCampaign() {
+  // ── ยิงจริงผ่าน TikTok Marketing API ────────────────────────────────────────
+  const areaIdList = () => areaIds.split(/[,\s]+/).map((s) => s.trim()).filter(Boolean).map(Number).filter((n) => Number.isFinite(n));
+  const adsPayload = () => ({
+    payload: {
+      campaignName: form.campaignName, objective: form.objective, audienceId: form.audienceId, area: form.area,
+      ageRange: form.ageRange, language: form.language, dailyBudget: Number(form.dailyBudget || 0), totalBudget: Number(form.totalBudget || 0),
+      startDate: form.startDate, endDate: form.endDate, landingPage: form.landingPage, leadCapture: form.leadCapture,
+      videoTitle: form.videoTitle, adText: form.adText, headline: form.headline, cta: form.cta,
+      destinationUrl: form.destinationUrl, videoId: videoIdInput.trim(),
+      tiktokItemId: sparkItemId.trim(), identityId: identityId.trim(),
+    },
+    locationIds: areaIdList(),
+  });
+  async function callAds(body: Any, file?: File | null) {
+    let init: RequestInit;
+    if (file) {
+      const fd = new FormData();
+      fd.set('payload', JSON.stringify(body));
+      fd.set('video', file);
+      init = { method: 'POST', credentials: 'include', body: fd };
+    } else {
+      init = { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+    }
+    try { const r = await fetch('/api/ads/campaigns', init); return await r.json(); }
+    catch (e) { return { ok: false, error: `เรียกเซิร์ฟเวอร์ไม่สำเร็จ: ${(e as Error).message}` }; }
+  }
+  async function callAdsGet(qs: string) {
+    try { const r = await fetch(`/api/ads/campaigns?${qs}`, { credentials: 'include', cache: 'no-store' }); return await r.json(); }
+    catch (e) { return { ok: false, error: `เรียกเซิร์ฟเวอร์ไม่สำเร็จ: ${(e as Error).message}` }; }
+  }
+
+  async function runDry() {
+    setBusy('dry'); setModal('dry');
+    const j = await callAds({ action: 'dryRun', ...adsPayload() });
+    setDry(j); setBusy('');
+  }
+  async function submitCampaign() {
     setModal('submitResult');
-    // โหมด Demo: ห้ามรายงานว่าสร้างแคมเปญจริง — บอกตามจริงว่ายังไม่ได้ส่งอะไรออกไป
-    setSubmitMsg(demo
-      ? L('ยังไม่มีการสร้างแคมเปญบน TikTok — บัญชีนี้ยังไม่ได้เชื่อมต่อ Marketing API (ไม่มี Access Token/Advertiser ID ฝั่งเซิร์ฟเวอร์) ระบบจึงไม่ส่งคำสั่งใดออกไป และไม่มีการใช้จ่ายเกิดขึ้น', 'No campaign was created on TikTok — this account is not connected to the Marketing API (no server-side Access Token / Advertiser ID), so nothing was sent and no spend occurred')
-      : L('พร้อมส่งผ่าน API — แต่ยังไม่ได้เปิดใช้งานขั้นตอนส่งจริงในงานนี้ กรุณาตรวจสอบข้อมูลในหน้าต่างยืนยันและกดส่งอีกครั้งเมื่อทีมเทคนิคเปิด endpoint ให้', 'Ready for the API — the real submit step is not enabled in this build; re-check the confirmation dialog once the endpoint is enabled'));
+    if (demo) {
+      // โหมด Demo: ห้ามรายงานว่าสร้างแคมเปญจริง — บอกตามจริงว่ายังไม่ได้ส่งอะไรออกไป
+      setSubmitMsg(L('ยังไม่มีการสร้างแคมเปญบน TikTok — บัญชีนี้ยังไม่ได้เชื่อมต่อ Marketing API (ไม่มี Access Token/Advertiser ID ฝั่งเซิร์ฟเวอร์) ระบบจึงไม่ส่งคำสั่งใดออกไป และไม่มีการใช้จ่ายเกิดขึ้น · ถ้าต้องการยิงจริง ต้องตั้ง env TIKTOK_ADS_ACCESS_TOKEN และ TIKTOK_ADS_ADVERTISER_ID ฝั่งเซิร์ฟเวอร์ก่อน (ดูแท็บ «ตั้งค่าการเชื่อมต่อ TikTok»)',
+        'No campaign was created on TikTok — this account is not connected to the Marketing API (no server-side Access Token / Advertiser ID), so nothing was sent and no spend occurred'));
+      return;
+    }
+    setBusy('create'); setSubmitMsg('');
+    const j = await callAds({ action: 'create', confirm: true, ...adsPayload() }, video.kind === 'file' ? lastFile.current : null);
+    setReal(j); setBusy('');
+    if (j?.ok) { setCreated(j); setSubmitMsg(L('สร้างบน TikTok จริงแล้ว — สถานะ "หยุดไว้" ยังไม่มีการใช้จ่าย', 'Created on TikTok — status “paused”, no spend yet')); }
+    else setSubmitMsg(String(j?.error || 'ไม่สำเร็จ — ดูรายละเอียดผลตอบกลับด้านล่าง'));
+  }
+  async function setCampaignStatus(status: 'ENABLE' | 'DISABLE') {
+    if (!created?.campaignId) return;
+    const ask = status === 'ENABLE'
+      ? L('ยืนยันเปิดแคมเปญจริง? TikTok จะเริ่มใช้จ่ายตามงบที่ตั้งไว้ทันที', 'Confirm activating the campaign? TikTok will start spending your budget immediately')
+      : L('ยืนยันหยุดแคมเปญนี้?', 'Confirm pausing this campaign?');
+    if (typeof window !== 'undefined' && !window.confirm(ask)) return;
+    setBusy('status');
+    const j = await callAds({ action: 'status', confirm: true, campaignId: created.campaignId, status });
+    setReal(j); setBusy('');
+    setSubmitMsg(j?.ok ? String(j.note || '') : String(j?.error || 'ไม่สำเร็จ'));
+  }
+  async function loadReport() {
+    if (!range.from || !range.to) { setSubmitMsg(L('เลือกช่วงวันที่ก่อนดึงรายงานจริง', 'Pick a date range before loading the report')); return; }
+    setBusy('report'); setReport(null);
+    const j = await callAdsGet(`action=report&from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`);
+    setReport(j); setBusy('');
+  }
+  async function loadTt(action: 'accounts' | 'videos' | 'list' | 'regions' | 'identities') {
+    setBusy(action); setTtData(null);
+    const qs = action === 'regions' ? `action=regions&keyword=${encodeURIComponent(form.area)}` : `action=${action}`;
+    const j = await callAdsGet(qs);
+    setTtData({ action, ...j });
+    setBusy('');
   }
 
   function exportReport() {
@@ -266,11 +348,21 @@ export default function AdsManager() {
   }
 
   const previewSrc = video.kind === 'tiktok' && video.tiktokId ? EMBED(video.tiktokId) : '';
+  // ตัวชี้วัดจริงจากรายงาน TikTok (มีค่าก็ต่อเมื่อดึงรายงานสำเร็จ — ไม่มี = "ไม่มีข้อมูล" ไม่แต่งตัวเลข)
+  const m = useMemo(() => {
+    const rows: Any[] = report?.rows || [];
+    const n2 = (v: any) => Number(v || 0);
+    const sum = (k: string) => rows.reduce((s, r) => s + n2(r?.metrics?.[k]), 0);
+    const spend = sum('spend'), imp = sum('impressions'), clk = sum('clicks'), conv = sum('conversion');
+    return { rows, has: rows.length > 0, spend, imp, clk, conv, ctr: imp ? (clk / imp) * 100 : 0, cpl: conv ? spend / conv : 0 };
+  }, [report]);
+  const numFmt = (n: number, unit = '') => `${n.toLocaleString('th-TH', { maximumFractionDigits: 2 })}${unit ? ' ' + unit : ''}`;
   const num = (v: any) => (v === null || v === undefined || v === '' ? '—' : String(v));
   const leadsTotal = Number(api?.leads?.total || 0);
   const applied = Number(api?.leads?.byStatus?.APPLIED || 0) + Number(api?.leads?.byStatus?.CONVERTED || 0);
   const profileRate = leadsTotal > 0 ? `${((applied / leadsTotal) * 100).toFixed(1)}%` : L('ไม่มีข้อมูล', 'No data');
   const accountLabel = api?.tiktok?.advertiserId ? `Advertiser ${api.tiktok.advertiserId}` : L('ยังไม่ได้เชื่อมต่อ', 'Not connected');
+  const ttCampaignCount = Array.isArray(ttData?.campaigns) ? ttData.campaigns.length : 0;
 
   const TABS: { key: TabKey; icon: string; label: string }[] = [
     { key: 'overview', icon: '📊', label: L('ภาพรวมโฆษณา', 'Ad overview') },
@@ -389,10 +481,10 @@ export default function AdsManager() {
       {tab === 'overview' && (
         <>
           <div className="grid md:grid-cols-3 xl:grid-cols-5 gap-3">
-            <Kpi icon="💸" title={L('งบโฆษณาที่ใช้ไป', 'Ad spend')} value={L('ไม่มีข้อมูล', 'No data')} sub={L('ต้องมีสิทธิ์อ่านรายงานจาก TikTok API', 'Requires reporting access from the TikTok API')} />
-            <Kpi icon="📣" title={L('จำนวนแคมเปญ', 'Campaigns')} value={String(drafts.length)} sub={L('ฉบับร่างในเครื่องนี้ (ยังไม่ส่งไป TikTok)', 'Drafts on this device (not sent to TikTok)')} />
+            <Kpi icon="💸" title={L('งบโฆษณาที่ใช้ไป', 'Ad spend')} value={m.has ? numFmt(m.spend, 'THB') : L('ไม่มีข้อมูล', 'No data')} sub={m.has ? L('รวมจากรายงานจริงของ TikTok', 'Summed from the real TikTok report') : L('ต้องมีสิทธิ์อ่านรายงานจาก TikTok API', 'Requires reporting access from the TikTok API')} tone={m.has ? 'ok' : 'muted'} />
+            <Kpi icon="📣" title={L('จำนวนแคมเปญ', 'Campaigns')} value={created ? num(ttCampaignCount) : String(drafts.length)} sub={created ? L('นับจากบัญชีโฆษณาจริง', 'Counted from the real ad account') : L('ฉบับร่างในเครื่องนี้ (ยังไม่ส่งไป TikTok)', 'Drafts on this device (not sent to TikTok)')} />
             <Kpi icon="👤" title={L('จำนวนผู้สนใจ (Lead)', 'Leads')} value={num(api?.leads?.total)} sub={L('นับจากผู้สนใจในระบบจริง (Prospect)', 'Counted from real Prospect records')} tone="ok" />
-            <Kpi icon="🧮" title={L('ต้นทุนต่อ Lead', 'Cost per lead')} value={L('ไม่มีข้อมูล', 'No data')} sub={L('ต้องมีค่าใช้จ่ายจริงจาก API', 'Needs real spend data from the API')} />
+            <Kpi icon="🧮" title={L('ต้นทุนต่อ Lead', 'Cost per lead')} value={m.has ? numFmt(m.cpl, 'THB') : L('ไม่มีข้อมูล', 'No data')} sub={m.has ? L('ค่าใช้จ่ายจริง ÷ conversions จาก API', 'Real spend ÷ conversions from the API') : L('ต้องมีค่าใช้จ่ายจริงจาก API', 'Needs real spend data from the API')} tone={m.has ? 'ok' : 'muted'} />
             <Kpi icon="🎓" title={L('อัตราการเปลี่ยนเป็นผู้สมัคร', 'Application rate')} value={profileRate} sub={L('คำนวณจากสถานะในระบบ ไม่ใช่จากโฆษณา', 'Computed from system statuses, not from ads')} tone="ok" />
           </div>
 
@@ -559,6 +651,7 @@ export default function AdsManager() {
               <div>
                 <div className={labelCls}>{L('วัตถุประสงค์โฆษณา', 'Objective')}</div>
                 <select className={`${field} mt-1`} value={form.objective} onChange={(e) => set({ objective: e.target.value })}>
+                  <option value="TRAFFIC">{L('Traffic (พาคนกดลิงก์เข้ามาดูเว็บ)', 'Traffic (send people to the link)')}</option>
                   <option value="LEAD_GENERATION">{L('Lead Generation (เก็บผู้สนใจ)', 'Lead generation')}</option>
                   <option value="WEBSITE_CONVERSIONS">{L('Website Conversions (กรอกฟอร์มในเว็บ)', 'Website conversions')}</option>
                 </select>
@@ -616,6 +709,74 @@ export default function AdsManager() {
                 </select>
               </div>
             </div>
+
+            {/* ── ค่าที่ TikTok ต้องใช้จริง (ห้ามเดา): รหัสพื้นที่ + video_id ในบัญชีโฆษณา ── */}
+            <div className="grid md:grid-cols-2 gap-3 rounded-xl bg-white border border-[#dbeafe] p-3">
+              <div>
+                <div className={labelCls}>{L('รหัสพื้นที่โฆษณา (location_ids)', 'Ad location IDs (location_ids)')}</div>
+                <input className={`${field} mt-1`} value={areaIds} onChange={(e) => setAreaIds(e.target.value)} placeholder="เช่น 2764, 2765" />
+                <div className="text-[11px] text-slate-500 mt-1">{L('คั่นด้วยจุลภาค · ห้ามเดาเอง — กดปุ่มด้านขวาเพื่อดึงรายการจริงจากบัญชีโฆษณา', 'Comma separated · never guess — use the button to pull the real list from the ad account')}</div>
+                <button onClick={() => loadTt('regions')} disabled={busy === 'regions'} className={`${btnS} mt-1`}>{busy === 'regions' ? '…' : `🔎 ${L('ค้นหารหัสพื้นที่จาก TikTok', 'Look up location IDs from TikTok')}`}</button>
+              </div>
+              <div>
+                <div className={labelCls}>{L('video_id ในบัญชีโฆษณา', 'video_id in the ad account')}</div>
+                <input className={`${field} mt-1`} value={videoIdInput} onChange={(e) => setVideoIdInput(e.target.value)} placeholder={L('เว้นว่างได้ถ้าจะอัปโหลดไฟล์ตอนยิงแคมเปญ', 'Leave empty if the file is uploaded at launch time')} />
+                <div className="text-[11px] text-slate-500 mt-1">{L('ลิงก์ TikTok ไม่เท่ากับ video_id ในบัญชีโฆษณา — ต้องมีคลิปในบัญชีจริง', 'A TikTok link is not an ad-account video_id — the clip must exist in the ad account')}</div>
+                <button onClick={() => loadTt('videos')} disabled={busy === 'videos'} className={`${btnS} mt-1`}>{busy === 'videos' ? '…' : `🗂️ ${L('ดึงคลังวิดีโอของบัญชีโฆษณา', 'Load the ad account video library')}`}</button>
+              </div>
+            </div>
+
+            {/* ── ยิงจากโพสต์ TikTok ของตัวเอง (Spark Ads) → พาคนดูกดลิงก์เข้ามาที่เว็บ ── */}
+            <div className="grid md:grid-cols-2 gap-3 rounded-xl bg-white border border-[#dbeafe] p-3">
+              <div>
+                <div className={labelCls}>{L('โพสต์ TikTok ที่จะยิง (tiktok item id)', 'TikTok post to promote (item id)')}</div>
+                <input className={`${field} mt-1`} value={sparkItemId} onChange={(e) => setSparkItemId(e.target.value)} placeholder={PROTOTYPE_ID} />
+                <div className="text-[11px] text-slate-500 mt-1">{L('ค่าเริ่มต้น = คลิปต้นแบบของคุณ (@aka989._) · ต้องเป็นคลิปในบัญชี TikTok ของท่านเองเท่านั้น', 'Default = your prototype clip (@aka989._) · must be a clip in your own TikTok account')}</div>
+              </div>
+              <div>
+                <div className={labelCls}>{L('identity_id ของบัญชี TikTok ที่อนุญาต', 'identity_id of the authorized TikTok account')}</div>
+                <input className={`${field} mt-1`} value={identityId} onChange={(e) => setIdentityId(e.target.value)} placeholder={L('ดึงจากปุ่มด้านล่าง', 'Load it with the button below')} />
+                <button onClick={() => { setSparkItemId(sparkItemId || PROTOTYPE_ID); loadTt('identities'); }} disabled={busy === 'identities'} className={`${btnS} mt-1`}>{busy === 'identities' ? '…' : `🪪 ${L('ดึง identity ของบัญชี', 'Load account identities')}`}</button>
+              </div>
+            </div>
+            {ttData && (
+              <div className="rounded-xl bg-white border border-[#dbeafe] p-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">{L('ผลตอบกลับจาก TikTok', 'TikTok response')} · {String(ttData.action)}</span>
+                  <span className={`${chip} ${ttData.ok ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : 'bg-rose-50 border border-rose-200 text-rose-700'}`}>{ttData.ok ? L('สำเร็จ', 'OK') : L('ไม่สำเร็จ', 'Failed')}</span>
+                  <button onClick={() => setTtData(null)} className={`ml-auto ${btnS}`}>✕</button>
+                </div>
+                {!ttData.ok && <div className="text-[11px] text-rose-700 mt-1">{String(ttData.error || '')}{ttData.missing?.length ? ` (${ttData.missing.join(', ')})` : ''}</div>}
+                <pre className="whitespace-pre-wrap text-[11px] font-mono mt-2 max-h-52 overflow-y-auto m-0">{JSON.stringify(ttData.identities || ttData.videos || ttData.regions || ttData.campaigns || ttData.accounts || ttData, null, 1).slice(0, 4000)}</pre>
+                {Array.isArray(ttData.identities) && ttData.identities.length > 0 && (
+                  <div className="flex gap-2 flex-wrap mt-2">
+                    {ttData.identities.slice(0, 6).map((idn: Any, i: number) => (
+                      <button key={i} onClick={() => setIdentityId(String(idn.identity_id || idn.id || ''))} className={btnS}>
+                        {L('ใช้ identity', 'Use identity')} {String(idn.display_name || idn.identity_id || '')}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {Array.isArray(ttData.videos) && ttData.videos.length > 0 && (
+                  <div className="flex gap-2 flex-wrap mt-2">
+                    {ttData.videos.slice(0, 8).map((v: Any, i: number) => (
+                      <button key={i} onClick={() => setVideoIdInput(String(v.video_id || ''))} className={btnS}>
+                        {L('ใช้ video_id', 'Use video_id')} {String(v.video_id || '')}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {Array.isArray(ttData.regions) && ttData.regions.length > 0 && (
+                  <div className="flex gap-2 flex-wrap mt-2">
+                    {ttData.regions.slice(0, 10).map((rg: Any, i: number) => (
+                      <button key={i} onClick={() => setAreaIds(String(rg.location_id || rg.region_id || rg.id || ''))} className={btnS}>
+                        {String(rg.name || rg.region_name || rg.location_name || '')} ({String(rg.location_id || rg.region_id || rg.id || '')})
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {check && (
               <div className={`rounded-xl p-3 text-[11px] space-y-1 ${check.length ? 'bg-amber-50 border border-amber-200 text-amber-800' : 'bg-emerald-50 border border-emerald-200 text-emerald-800'}`}>
@@ -840,9 +1001,50 @@ export default function AdsManager() {
                   <div className={labelCls}>{L('ถึงวันที่', 'To')}</div>
                   <input type="date" className={`${field} mt-1`} value={range.to} onChange={(e) => setRange((s) => ({ ...s, to: e.target.value }))} />
                 </div>
-                <button onClick={exportReport} className={btnP}>⬇ {L('ส่งออกรายงาน (CSV)', 'Export report (CSV)')}</button>
+                <button onClick={loadReport} disabled={busy === 'report'} className={btnP}>{busy === 'report' ? L('กำลังดึง…', 'Loading…') : `↻ ${L('ดึงรายงานจริงจาก TikTok', 'Load the real TikTok report')}`}</button>
+                <button onClick={exportReport} className={btnS}>⬇ {L('ส่งออกรายงาน (CSV)', 'Export report (CSV)')}</button>
               </div>
             </div>
+
+            {report && !report.ok && (
+              <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-[11px] text-rose-700">
+                {String(report.error || 'ดึงรายงานไม่สำเร็จ')}
+                {report.tiktokCode !== undefined && report.tiktokCode !== null && <span className="block mt-1 font-mono">TikTok code: {String(report.tiktokCode)}{report.tiktokRequestId ? ` · request_id: ${String(report.tiktokRequestId)}` : ''}</span>}
+              </div>
+            )}
+            {report?.ok && m.has && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-left text-slate-500 border-b border-[#dbeafe]">
+                      <th className="py-1.5 pr-3">{L('วัน', 'Day')}</th>
+                      <th className="py-1.5 pr-3">{L('แคมเปญ', 'Campaign')}</th>
+                      <th className="py-1.5 pr-3">{L('ค่าใช้จ่าย', 'Spend')}</th>
+                      <th className="py-1.5 pr-3">Impressions</th>
+                      <th className="py-1.5 pr-3">Clicks</th>
+                      <th className="py-1.5 pr-3">CTR</th>
+                      <th className="py-1.5 pr-3">Conversions</th>
+                      <th className="py-1.5">CPL</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {m.rows.map((r: Any, i: number) => (
+                      <tr key={i} className="border-b border-[#eff6ff]">
+                        <td className="py-1.5 pr-3">{String(r?.dimensions?.stat_time_day || '')}</td>
+                        <td className="py-1.5 pr-3">{String(r?.dimensions?.campaign_id || '')}</td>
+                        <td className="py-1.5 pr-3">{String(r?.metrics?.spend ?? '')}</td>
+                        <td className="py-1.5 pr-3">{String(r?.metrics?.impressions ?? '')}</td>
+                        <td className="py-1.5 pr-3">{String(r?.metrics?.clicks ?? '')}</td>
+                        <td className="py-1.5 pr-3">{String(r?.metrics?.ctr ?? '')}</td>
+                        <td className="py-1.5 pr-3">{String(r?.metrics?.conversion ?? '')}</td>
+                        <td className="py-1.5">{String(r?.metrics?.cost_per_conversion ?? '')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {report?.ok && !m.has && <div className="text-xs text-slate-500">{L('TikTok ตอบสำเร็จแต่ยังไม่มีข้อมูลในช่วงวันที่นี้', 'TikTok responded successfully but has no data in this range')}</div>}
 
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
@@ -922,10 +1124,23 @@ export default function AdsManager() {
                  'Never put an access token in frontend code or project files — set it as a server-side environment variable (Vercel → Settings → Environment Variables) and only use ad accounts you may access')}
             </div>
             <div className="flex gap-2 flex-wrap">
+              <button onClick={() => loadTt('accounts')} disabled={busy === 'accounts'} className={btnS}>{busy === 'accounts' ? '…' : `🏦 ${L('ตรวจสอบบัญชีโฆษณา', 'Check ad accounts')}`}</button>
+              <button onClick={() => loadTt('identities')} disabled={busy === 'identities'} className={btnS}>{busy === 'identities' ? '…' : `🪪 ${L('identity ของบัญชี TikTok', 'TikTok account identities')}`}</button>
+              <button onClick={() => loadTt('list')} disabled={busy === 'list'} className={btnS}>{busy === 'list' ? '…' : `📋 ${L('รายการแคมเปญจริงในบัญชี', 'Real campaigns in the account')}`}</button>
               <button onClick={() => setModal('settings')} className={btnS}>📋 {L('ขั้นตอนตั้งค่า (คัดลอกได้)', 'Setup steps (copyable)')}</button>
               <a href={api?.tiktok?.managerUrl || MANAGER_URL} target="_blank" rel="noreferrer" className={btnS}>↗ {L('เปิด TikTok Ads Manager', 'Open TikTok Ads Manager')}</a>
               <a href="https://developers.tiktok.com/apps" target="_blank" rel="noreferrer" className={btnS}>{L('จัดการแอปนักพัฒนา', 'Developer apps')}</a>
             </div>
+            {ttData && (
+              <div className="rounded-xl bg-white border border-[#dbeafe] p-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">{L('ผลตอบกลับจาก TikTok', 'TikTok response')} · {String(ttData.action)}</span>
+                  <span className={`${chip} ${ttData.ok ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : 'bg-rose-50 border border-rose-200 text-rose-700'}`}>{ttData.ok ? L('สำเร็จ', 'OK') : L('ไม่สำเร็จ', 'Failed')}</span>
+                  <button onClick={() => setTtData(null)} className={`ml-auto ${btnS}`}>✕</button>
+                </div>
+                <pre className="whitespace-pre-wrap text-[11px] font-mono mt-2 max-h-52 overflow-y-auto m-0">{JSON.stringify(ttData, null, 1).slice(0, 4000)}</pre>
+              </div>
+            )}
           </div>
 
           <div className="card p-5 space-y-3">
@@ -1045,11 +1260,43 @@ export default function AdsManager() {
             <div className="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3 text-[11px] text-amber-800">
               {demo
                 ? L('ระบบยังไม่ได้เชื่อมต่อ TikTok Marketing API — การกดยืนยันจะ "ไม่" สร้างแคมเปญและไม่มีการใช้จ่ายจริง', 'The TikTok Marketing API is not connected — confirming will NOT create a campaign and no spend occurs')
-                : L('กดยืนยันแล้วระบบจะส่งคำสั่งสร้างแคมเปญผ่าน API และรายงานผลตอบกลับจริง', 'Confirming sends the create request through the API and reports the real response')}
+                : L('กดยืนยันแล้วระบบจะส่งคำสั่งสร้างแคมเปญจริงผ่าน API: campaign → adgroup → ad (สร้างแบบ "หยุดไว้" เสมอ) แล้วรายงานผลตอบกลับจริงจาก TikTok', 'Confirming sends the real create request through the API: campaign → adgroup → ad (always created paused) and reports TikTok’s real response')}
             </div>
             <div className="mt-4 flex gap-2 justify-end flex-wrap">
+              <button onClick={runDry} disabled={busy === 'dry'} className={btnS}>{busy === 'dry' ? '…' : L('ดู payload ที่จะส่ง (Dry run)', 'Inspect payload (dry run)')}</button>
               <button onClick={() => setModal('')} className={btnS}>{L('ยกเลิก', 'Cancel')}</button>
-              <button onClick={submitCampaign} className={btnP} disabled={issues.length > 0}>{L('ยืนยันส่งแคมเปญ', 'Confirm submit')}</button>
+              <button onClick={submitCampaign} className={btnP} disabled={issues.length > 0 || busy === 'create'}>
+                {busy === 'create' ? L('กำลังส่ง…', 'Submitting…') : L('ยืนยันส่งแคมเปญ', 'Confirm submit')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: payload ที่จะส่ง (Dry run) ─────────────────────────────── */}
+      {modal === 'dry' && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4" onClick={() => setModal('')}>
+          <div className="bg-white rounded-2xl p-5 max-w-[92vw] w-[620px] max-h-[86vh] overflow-y-auto space-y-3" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-semibold text-sm text-navy">{L('payload ที่จะส่งไป TikTok จริง', 'Payload that will be sent to TikTok')}</h3>
+            {busy === 'dry' && <div className="text-xs text-slate-400">…</div>}
+            {dry && (
+              <>
+                <div className="text-[11px] text-slate-600 space-y-1">
+                  {(dry.notes || []).map((n: string, i: number) => <div key={i}>• {n}</div>)}
+                </div>
+                {Array.isArray(dry.errors) && dry.errors.length > 0 && (
+                  <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-[11px] text-amber-800">
+                    <div className="font-semibold">{L('ยังต้องแก้ก่อนยิงจริง', 'Fix before launching')}</div>
+                    {dry.errors.map((e: string, i: number) => <div key={i}>• {e}</div>)}
+                  </div>
+                )}
+                <pre className="whitespace-pre-wrap text-[11px] font-mono bg-white border border-[#dbeafe] rounded-xl p-3 m-0 max-h-[50vh] overflow-y-auto">{JSON.stringify(dry.payloads, null, 2)}</pre>
+              </>
+            )}
+            <div className="flex gap-2 flex-wrap">
+              <button onClick={() => setModal('confirm')} className={btnS}>{L('กลับไปหน้ายืนยัน', 'Back to confirmation')}</button>
+              <button onClick={() => copy(JSON.stringify(dry?.payloads || {}, null, 2), 'payload')} className={btnS}>{cLabel('payload', L('คัดลอก payload', 'Copy payload'))}</button>
+              <button onClick={() => setModal('')} className={btnP}>{L('ปิด', 'Close')}</button>
             </div>
           </div>
         </div>

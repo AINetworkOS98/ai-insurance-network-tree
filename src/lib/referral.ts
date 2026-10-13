@@ -29,7 +29,16 @@ export async function ensureMemberCodes(prisma: any, userId: string) {
   if (!user) return null;
 
   const data: any = {};
-  if (!user.memberCode) data.memberCode = generateMemberCode();
+  // ผู้ดูแลลบรหัสสมาชิกไว้ (มีตราประทับ member.code_delete ใน AuditLog) → ห้ามสร้างใหม่ให้เอง
+  // จนกว่าจะกด "คืนค่า" ที่ /income (ไม่งั้นลบแล้วรหัสจะงอกกลับทันทีที่เปิดหน้าโปรไฟล์)
+  let memberCodeRevoked = false;
+  if (!user.memberCode) {
+    try {
+      const stamp = await prisma.auditLog.findFirst({ where: { action: 'member.code_delete', entity: 'User', entityId: userId }, select: { id: true } });
+      memberCodeRevoked = !!stamp;
+    } catch { memberCodeRevoked = false; }
+  }
+  if (!user.memberCode && !memberCodeRevoked) data.memberCode = generateMemberCode();
   if (!user.referralCode) data.referralCode = generateReferralCode();
 
   if (Object.keys(data).length) {
