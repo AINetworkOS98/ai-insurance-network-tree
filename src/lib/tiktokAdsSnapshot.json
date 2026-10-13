@@ -1,0 +1,42 @@
+{
+  "capturedAt": "2026-10-13T20:21:00+07:00",
+  "source": "TikTok Ads Manager (หน้า Campaigns) — อ่านด้วยตาจากบัญชีจริง เพราะบัญชีนี้ยังไม่มีสิทธิ์ Marketing API",
+  "advertiserId": "7251807874932883457",
+  "accountName": "ร้านค้าออนไลน์990704",
+  "managerUrl": "https://ads.tiktok.com/i18n/manage/campaign?aadvid=7251807874932883457",
+  "totalCampaignsInAccount": 7,
+  "campaign": {
+    "name": "Traffic20261013194131",
+    "objective": "TRAFFIC",
+    "objectiveTh": "ปริมาณการเข้าชม (Traffic)",
+    "status": "UNDER_REVIEW",
+    "statusTh": "รอ TikTok ตรวจสอบ (Under review)",
+    "adName": "Ad 1 2026-10-13 20:02:16",
+    "dailyBudgetThb": 200,
+    "startDate": "2026-10-13",
+    "endDate": "2026-10-20",
+    "landingPage": "https://ai-insurance-network-tree.vercel.app/",
+    "callToAction": "Learn more",
+    "creative": "คลิปของเจ้าของเอง (Steps_to_financial_freedom_journey…mp4 · แนวตั้ง 9:16)",
+    "placements": "TikTok + TikTok Ad Network",
+    "location": "ประเทศไทย",
+    "ageRange": "ทุกช่วงอายุ (ค่าเริ่มต้นของวิซาร์ด)",
+    "metrics": {
+      "spendThb": null,
+      "impressions": null,
+      "clicks": null,
+      "ctr": null,
+      "conversions": null,
+      "costPerConversion": null
+    },
+    "metricsNote": "แคมเปญเพิ่งส่งเข้าระบบและอยู่ระหว่างการตรวจสอบ — ยังไม่มีการใช้จ่าย ตัวเลขจะแสดงเมื่อแคมเปญเริ่มทำงาน (และ/หรือเมื่อบัญชีได้รับสิทธิ์ Marketing API ให้อ่านรายงานอัตโนมัติ)"
+  },
+  "evidence": [
+    { "file": "/ads/tiktok-ad-created-20261013.png", "caption": "กล่องยืนยันจาก TikTok: \"Ad created and in review.\"" },
+    { "file": "/ads/tiktok-campaigns-20261013.png", "caption": "หน้าจอ Campaigns จริงของบัญชี — แถวแรก Traffic20261013194131 สถานะ Under review" }
+  ],
+  "notes": [
+    "ตัวเลขโฆษณาชุดนี้ยังไม่ใช่ข้อมูลสดจาก API — ระบบไม่เดาและไม่สร้างตัวเลขเอง จึงแสดง \"ยังไม่มีข้อมูล\" ในช่องที่ยังไม่มีค่าจริง",
+    "เมื่อบัญชีได้รับสิทธิ์ Marketing API (TikTok ต้องอนุมัติ) ช่องตัวเลขเหล่านี้จะดึงอัตโนมัติจากรายงานของ TikTok"
+  ]
+}

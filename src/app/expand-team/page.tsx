@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import AdsManager from '@/components/AdsManager';
+import TikTokAdsResults from '@/components/TikTokAdsResults';
 import { useT } from '@/i18n';
 
 type Any = Record<string, any>;
@@ -447,6 +448,12 @@ export default function ExpandTeamPage() {
               แยกเป็นคอมโพเนนต์ @/components/AdsManager — อ่านข้อมูลจริงผ่าน GET /api/ads/overview
               และแสดงโหมด Demo ชัดเจนจนกว่าจะเชื่อมต่อ TikTok Marketing API (ห้ามยิงแอดจริง) */}
           <AdsManager />
+
+          {/* ── ล่างสุดของหน้า: ผลการทำงานโฆษณา TikTok (จาก Ads Manager จริง) ──
+              คำสั่งเจ้าของระบบ 13 ต.ค. 2026: "ให้แสดงผลการทำงานนี้ในหน้านี้ เอาไว้ล่างสุด"
+              ข้อมูล/ภาพหลักฐานอยู่ใน src/lib/tiktokAdsSnapshot.json + public/ads/*.png
+              ตัวเลขที่ยังไม่มีค่าจริงจะขึ้น "ยังไม่มีข้อมูล" (ไม่ใส่ 0 แทน) จนกว่าจะมีสิทธิ์ Marketing API */}
+          <TikTokAdsResults />
         </main>
       </div>
 
