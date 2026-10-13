@@ -19,8 +19,8 @@ export const dynamic = 'force-dynamic';
  *  4) คืนค่า = ลบตราประทับ + สร้างรหัสใหม่ (AuditLog member.code_restore) — ไม่แตะรหัสแนะนำ (referralCode) ของผู้ใช้
  */
 
-export const MEMBER_CODE_DELETE_ACTION = 'member.code_delete';
-export const MEMBER_CODE_RESTORE_ACTION = 'member.code_restore';
+const MEMBER_CODE_DELETE_ACTION = 'member.code_delete';
+const MEMBER_CODE_RESTORE_ACTION = 'member.code_restore';
 
 async function guard(req: NextRequest) {
   const token = req.cookies.get('token')?.value || req.cookies.get('auth_token')?.value || req.headers.get('authorization')?.replace(/^Bearer\s+/i, '') || '';
