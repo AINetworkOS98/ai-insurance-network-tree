@@ -150,6 +150,7 @@ def build() -> Dict[str, Any]:
             "rate_gap": round(s[0]["effective_rate"] - s[-1]["effective_rate"], 6),
         })
     same_income.sort(key=lambda g: -g["gap"])
+    same_income = [g for g in same_income if g["gap"] > 0]   # รายได้เท่ากัน+ภาษีเท่ากัน ไม่ต้องแสดง
     income_compare = {
         "filing_count": len(filing),
         "pay_tax": sum(1 for o in filing if o["tax"] > 0),

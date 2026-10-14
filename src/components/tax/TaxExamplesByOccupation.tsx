@@ -173,6 +173,7 @@ export default function TaxExamplesByOccupation() {
           cheaper: low.job, expensive: top.job,
         };
       })
+      .filter((g) => g.gap > 0)          // รายได้เท่ากันและภาษีเท่ากันไม่ต้องแสดง
       .sort((a, b) => b.gap - a.gap);
     return {
       filing, maxGross, maxTax, byTax, sameIncome, grossSum, taxSum,
