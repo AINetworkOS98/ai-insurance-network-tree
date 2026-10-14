@@ -225,6 +225,38 @@ export default function TaxExamplesByOccupation() {
     });
   }, []);
 
+  /** 1ข) เปรียบเทียบรายได้–ภาษี ของทุกอาชีพที่ต้องยื่นแบบ */
+  const compare = useMemo(() => {
+    const filing = occRows.filter((o) => o.r.must_file);
+    const maxGross = Math.max(1, ...filing.map((o) => o.gross));
+    const maxTax = Math.max(1, ...filing.map((o) => o.r.tax_before_credit));
+    const byTax = [...filing].sort((a, b) => b.r.tax_before_credit - a.r.tax_before_credit);
+    const grossSum = filing.reduce((s, o) => s + o.gross, 0);
+    const taxSum = filing.reduce((s, o) => s + o.r.tax_before_credit, 0);
+    const groupMap = new Map<number, typeof filing>();
+    filing.forEach((o) => groupMap.set(o.gross, [...(groupMap.get(o.gross) ?? []), o]));
+    const sameIncome = [...groupMap.entries()]
+      .filter(([, v]) => v.length > 1)
+      .map(([income, v]) => {
+        const sorted = [...v].sort((a, b) => b.r.tax_before_credit - a.r.tax_before_credit);
+        const top = sorted[0];
+        const low = sorted[sorted.length - 1];
+        return {
+          income, rows: sorted,
+          gap: top.r.tax_before_credit - low.r.tax_before_credit,
+          rateGap: top.eff - low.eff,
+          cheaper: low.job, expensive: top.job,
+        };
+      })
+      .sort((a, b) => b.gap - a.gap);
+    return {
+      filing, maxGross, maxTax, byTax, sameIncome, grossSum, taxSum,
+      payTax: filing.filter((o) => o.r.tax_before_credit > 0).length,
+      zeroTax: filing.filter((o) => o.r.tax_before_credit <= 0).length,
+      avgRate: grossSum > 0 ? taxSum / grossSum : 0,
+    };
+  }, [occRows]);
+
   const maxBand = TAX_BRACKETS[TAX_BRACKETS.length - 1][1];
 
   return (
@@ -292,6 +324,112 @@ export default function TaxExamplesByOccupation() {
           • ค่าใช้จ่ายเป็นแบบ <b>เหมา</b> ตามอัตราที่กฎหมายกำหนด — ผู้ที่ทำบัญชีได้ (40(5)–(8)) เลือกหัก <b>ตามจริง</b> แทนได้ ถ้าสูงกว่า<br/>
           • เกณฑ์ต้องยื่นแบบ: เงินได้ 40(1) เกิน 60,000 บาท หรือเงินได้ประเภทอื่นรวมเกิน 120,000 บาท · เงินเดือนอย่างเดียวทั้งปี → ยื่น ภ.ง.ด.91 (แบบสั้น)<br/>
           • กรณีมีบุตร/คู่สมรส/ซื้อบ้าน/กองทุนเกษียณ ให้กรอกเพิ่มในโปรแกรมคำนวณด้านบนเพื่อดูผลจริงของตัวเอง
+        </p>
+      </div>
+
+      {/* ── 1ข) เปรียบเทียบรายได้–ภาษี ทุกอาชีพที่ต้องยื่นแบบ ── */}
+      <div className="card p-4 sm:p-5" id="tax-income-compare">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-sm font-bold text-[#475569]">1ข) เปรียบเทียบรายได้–ภาษี ของทุกอาชีพที่ต้องยื่นแบบภาษี</h3>
+          <span className="text-[11px] px-2 py-0.5 rounded-full border border-sky-100 bg-sky-50 text-sky-700">
+            {compare.filing.length} อาชีพ · เรียงจากภาษีมาก → น้อย
+          </span>
+        </div>
+
+        {/* สรุปภาพรวม */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
+          {[
+            { label: 'อาชีพที่ต้องยื่นแบบ', value: `${compare.filing.length}`, unit: 'อาชีพ', tone: 'text-[#475569]' },
+            { label: 'ต้องชำระภาษี', value: `${compare.payTax}`, unit: 'อาชีพ', tone: 'text-rose-600' },
+            { label: 'ต้องยื่นแต่ภาษี 0 บาท', value: `${compare.zeroTax}`, unit: 'อาชีพ', tone: 'text-emerald-600' },
+            { label: 'อัตราภาษีเฉลี่ยรวม', value: pct(compare.avgRate), unit: `จากรายได้รวม ${baht0(compare.grossSum)}`, tone: 'text-sky-700' },
+          ].map((s) => (
+            <div key={s.label} className="rounded-2xl border border-gray-100 bg-slate-50/40 p-3">
+              <div className="text-[10px] text-slate-400 leading-3">{s.label}</div>
+              <div className={`text-xl font-bold tabular-nums mt-1 ${s.tone}`}>{s.value}</div>
+              <div className="text-[10px] text-slate-400 leading-3">{s.unit}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* กราฟแท่งเทียบรายได้ vs ภาษี */}
+        <div className="mt-4">
+          <div className="flex flex-wrap items-center gap-3 text-[10px] text-slate-500 mb-2">
+            <span className="flex items-center gap-1"><span className="inline-block w-4 h-2 rounded-full bg-sky-400" /> รายได้/ปี</span>
+            <span className="flex items-center gap-1"><span className="inline-block w-4 h-2 rounded-full bg-rose-400" /> ภาษีที่ต้องชำระ</span>
+            <span className="text-slate-400">(แต่ละแท่งเทียบเป็นสัดส่วนกับค่าสูงสุดของตัวเอง — แท่งรายได้เต็ม = {baht0(compare.maxGross)} · แท่งภาษีเต็ม = {baht0(compare.maxTax)})</span>
+          </div>
+          <div className="space-y-2.5">
+            {compare.byTax.map((o) => (
+              <div key={o.id} className="grid grid-cols-[minmax(110px,190px)_1fr_auto] gap-2 items-center">
+                <div className="text-[11px] text-slate-600 leading-3">{o.job}</div>
+                <div className="space-y-1">
+                  <div className="h-2.5 rounded-full bg-slate-100">
+                    <div className="h-2.5 rounded-full bg-sky-400" style={{ width: `${Math.max(1.5, (o.gross / compare.maxGross) * 100).toFixed(1)}%` }} />
+                  </div>
+                  <div className="h-2.5 rounded-full bg-slate-100">
+                    <div className="h-2.5 rounded-full bg-rose-400" style={{ width: `${(o.r.tax_before_credit / compare.maxTax) * 100 <= 0 ? 0 : Math.max(1.5, (o.r.tax_before_credit / compare.maxTax) * 100).toFixed(1)}%` }} />
+                  </div>
+                </div>
+                <div className="text-[11px] tabular-nums text-right leading-3 min-w-[150px]">
+                  <div className="text-slate-600">{baht0(o.gross)}</div>
+                  <div className="text-rose-600 font-semibold">
+                    {baht0(o.r.tax_before_credit)}
+                    <span className="text-slate-400 font-normal"> · {pct(o.eff)}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* รายได้เท่ากัน แต่ภาษีต่างกัน */}
+        <h4 className="text-xs font-bold text-[#475569] mt-5 mb-2">
+          1ค) รายได้เท่ากัน แต่ภาษีต่างกัน — เพราะประเภทเงินได้/ค่าใช้จ่ายเหมาไม่เหมือนกัน ({compare.sameIncome.length} กลุ่ม)
+        </h4>
+        <div className="overflow-x-auto -mx-1 px-1">
+          <table className="w-full text-[11px] tabular-nums min-w-[720px]">
+            <thead>
+              <tr className="text-slate-400 text-left border-b">
+                <th className="py-2 pr-2 font-semibold text-right">รายได้เท่ากัน</th>
+                <th className="py-2 pr-2 font-semibold">อาชีพ · ประเภทเงินได้ · ภาษี</th>
+                <th className="py-2 pr-2 font-semibold text-right">ภาษีต่างกัน</th>
+                <th className="py-2 font-semibold">เหตุผล</th>
+              </tr>
+            </thead>
+            <tbody>
+              {compare.sameIncome.map((g) => (
+                <tr key={g.income} className="border-b border-dashed last:border-0 align-top">
+                  <td className="py-2 pr-2 text-right text-slate-700 font-semibold">{baht0(g.income)}</td>
+                  <td className="py-2 pr-2">
+                    {g.rows.map((o) => (
+                      <div key={o.id} className="flex flex-wrap items-baseline gap-1.5">
+                        <span className="text-slate-700">{o.job}</span>
+                        <span className="text-[10px] text-slate-400">{o.form}</span>
+                        <span className={`font-semibold ${o === g.rows[0] ? 'text-rose-600' : 'text-emerald-700'}`}>
+                          ภาษี {baht0(o.r.tax_before_credit)}
+                        </span>
+                        <span className="text-[10px] text-slate-400">(อัตรา {pct(o.eff)})</span>
+                      </div>
+                    ))}
+                  </td>
+                  <td className="py-2 pr-2 text-right">
+                    <span className="font-semibold text-rose-600">{baht0(g.gap)}</span>
+                    <span className="block text-[10px] text-slate-400">คิดเป็น {pct(g.rateGap)} ของรายได้</span>
+                  </td>
+                  <td className="py-2 text-slate-500 leading-4">
+                    หักค่าใช้จ่ายเหมาต่างกัน ({g.rows.map((o) => `${o.form} ${baht0(o.r.expenses_total)}`).join(' · ')})
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-[11px] text-slate-400 mt-3 leading-4">
+          • รายได้เท่ากันไม่ได้แปลว่าภาษีเท่ากัน — ขึ้นกับ <b>ประเภทเงินได้ (40(1)–(8))</b> ที่ทำให้หักค่าใช้จ่ายเหมาได้ต่างกัน (40(1)/(2)/(3) 50% เพดาน 100,000 · 40(5)–(8) 30–60% ไม่มีเพดาน)
+          จึงเป็นเหตุผลว่าทำไม “ขายของออนไลน์ 1.2 ล้าน” เสียภาษีน้อยกว่า “วิศวกรรับงานเอง 1.2 ล้าน” มาก<br/>
+          • ในทางกลับกัน ธุรกิจที่หักเหมา 60% จะเสียเปรียบเมื่อมีค่าใช้จ่ายจริงสูงกว่า 60% → เลือก <b>หักตามจริง</b> ในโปรแกรมคำนวณด้านบนได้<br/>
+          • อาชีพที่มีรายได้เท่ากันและภาษีเท่ากัน (เช่นพนักงานเงินเดือนด้วยกัน) จะไม่แสดงในตารางนี้
         </p>
       </div>
 

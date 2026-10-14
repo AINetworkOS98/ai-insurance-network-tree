@@ -184,12 +184,47 @@ def build() -> Dict[str, Any]:
             "saved": round(no_ins["tax_before_credit"] - r["tax_before_credit"], 2),
         })
 
+    # 1ข) เปรียบเทียบรายได้–ภาษี เฉพาะอาชีพที่ต้องยื่นแบบ
+    filing = [o for o in occ if o["must_file"]]
+    by_tax = sorted(filing, key=lambda o: -o["tax"])
+    gross_sum = sum(o["gross"] for o in filing)
+    tax_sum = sum(o["tax"] for o in filing)
+    grouped: Dict[float, List[Dict[str, Any]]] = {}
+    for o in filing:
+        grouped.setdefault(float(o["gross"]), []).append(o)
+    same_income: List[Dict[str, Any]] = []
+    for income, rows in grouped.items():
+        if len(rows) < 2:
+            continue
+        s = sorted(rows, key=lambda o: -o["tax"])
+        same_income.append({
+            "income": income,
+            "rows": [{"job": r["job"], "income_type": r["income_type"], "tax": r["tax"],
+                      "effective_rate": r["effective_rate"], "expenses": r["expenses"]} for r in s],
+            "gap": round(s[0]["tax"] - s[-1]["tax"], 2),
+            "rate_gap": round(s[0]["effective_rate"] - s[-1]["effective_rate"], 6),
+        })
+    same_income.sort(key=lambda g: -g["gap"])
+    income_compare = {
+        "filing_count": len(filing),
+        "pay_tax": sum(1 for o in filing if o["tax"] > 0),
+        "zero_tax": sum(1 for o in filing if o["tax"] <= 0),
+        "gross_sum": gross_sum, "tax_sum": round(tax_sum, 2),
+        "avg_rate": round(tax_sum / gross_sum, 6) if gross_sum else 0.0,
+        "max_gross": max((o["gross"] for o in filing), default=0),
+        "max_tax": max((o["tax"] for o in filing), default=0),
+        "by_tax": [{"job": o["job"], "gross": o["gross"], "tax": o["tax"],
+                    "effective_rate": o["effective_rate"]} for o in by_tax],
+        "same_income": same_income,
+    }
+
     return {
         "year": DEFAULT_YEAR, "program": "tax_examples_by_occupation.py",
         "limits": {"life_insurance": LIFE, "health_insurance": HEALTH,
                    "life_health_combined": COMBINED, "pension_life": PENSION,
                    "child": CHILD, "retirement_cap": LIM["retirement_cap"]},
-        "occupations": occ, "table_a_income_levels": table_a,
+        "occupations": occ, "income_compare": income_compare,
+        "table_a_income_levels": table_a,
         "table_b_premium_sizes": table_b, "table_c_common_mistakes": table_c,
     }
 
@@ -272,6 +307,38 @@ def print_table_c(d: Dict[str, Any]) -> None:
     print()
 
 
+def print_income_compare(d: Dict[str, Any]) -> None:
+    c = d["income_compare"]
+    print(_line("="))
+    print(f" 1ข) เปรียบเทียบรายได้–ภาษี ของทุกอาชีพที่ต้องยื่นแบบ ({c['filing_count']} อาชีพ · เรียงจากภาษีมาก → น้อย)")
+    print(_line("="))
+    print(f" อาชีพที่ต้องยื่นแบบ {c['filing_count']} · ต้องชำระภาษี {c['pay_tax']} · "
+          f"ต้องยื่นแต่ภาษี 0 บาท {c['zero_tax']} · ภาษีรวม {c['tax_sum']:,.0f} บาท "
+          f"จากรายได้รวม {c['gross_sum']:,.0f} (อัตราเฉลี่ยรวม {c['avg_rate'] * 100:.2f}%)")
+    print(_line("-"))
+    print(f" {'อาชีพ':<34}{'รายได้/ปี':>14}{'ภาษี':>12}{'อัตรา':>10}   แท่งเทียบรายได้/ภาษี (เต็ม = "
+          f"{c['max_gross']:,.0f}/{c['max_tax']:,.0f})")
+    print(_line("-"))
+    for o in c["by_tax"]:
+        bar_g = "█" * max(1, round(o["gross"] / c["max_gross"] * 30)) if c["max_gross"] else ""
+        bar_t = "▒" * (round(o["tax"] / c["max_tax"] * 30) if c["max_tax"] and o["tax"] > 0 else 0)
+        print(f" {o['job'][:33]:<34}{o['gross']:>14,.0f}{o['tax']:>12,.0f}"
+              f"{o['effective_rate'] * 100:>9.2f}%  {bar_g}{'|' if bar_t else ''}{bar_t}")
+    print(_line("-"))
+    print(f" 1ค) รายได้เท่ากัน แต่ภาษีต่างกัน ({len(c['same_income'])} กลุ่ม)")
+    print(_line("-"))
+    for g in c["same_income"]:
+        print(f" รายได้ {g['income']:,.0f} บาท/ปี  → ภาษีต่างกัน {g['gap']:,.0f} บาท "
+              f"(คิดเป็น {g['rate_gap'] * 100:.2f}% ของรายได้)")
+        for r in g["rows"]:
+            print(f"     • {r['job'][:44]:<46}{r['income_type']:<12} ภาษี {r['tax']:>10,.0f}"
+                  f" (อัตรา {r['effective_rate'] * 100:>5.2f}% · หักค่าใช้จ่าย {r['expenses']:>10,.0f})")
+    print()
+    print(" เหตุผล: ประเภทเงินได้ 40(1)–(8) หักค่าใช้จ่ายเหมาได้ต่างกัน (40(1)/(2)/(3) 50% เพดาน 100,000 ·")
+    print("         40(5)–(8) 30–60% ไม่มีเพดาน) → รายได้เท่ากันจึงเสียภาษีไม่เท่ากัน")
+    print()
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     data = build()
@@ -282,7 +349,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     if "--only" in argv:
         i = argv.index("--only")
         only = argv[i + 1] if i + 1 < len(argv) else None
-    jobs = [("1", print_occupations), ("2ก", print_table_a), ("2ข", print_table_b), ("2ค", print_table_c)]
+    jobs = [("1", print_occupations), ("1ข", print_income_compare), ("2ก", print_table_a),
+            ("2ข", print_table_b), ("2ค", print_table_c)]
     for key, fn in jobs:
         if only is None or only == key:
             fn(data)
