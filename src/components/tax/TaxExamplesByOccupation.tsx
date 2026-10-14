@@ -81,6 +81,12 @@ const MIXED: Array<{ label: string; extra: Partial<PitPerson>; note: string }> =
   { label: `ชีวิตแบบบำนาญ 150,000`, extra: { pension_life_insurance: 150_000 }, note: 'ร้อยละ 15 ของเงินได้ (150,000) ไม่เกิน 200,000 · นับในวงเงินเกษียณ 500,000' },
 ];
 
+/** คำค้นยอดนิยมของช่องค้นหาอาชีพ */
+const QUICK_SEARCH = [
+  'พนักงาน', 'ข้าราชการ', 'ขายของออนไลน์', 'ให้เช่า', 'แพทย์', 'เกษตร',
+  'ขนส่ง', 'บันเทิง', 'ร้าน', 'ฟรีแลนซ์', 'ช่าง', '40(1)',
+];
+
 export default function TaxExamplesByOccupation() {
   /** แบ่งหน้า: แสดงหน้าละ 20 อาชีพ (ผู้ใช้ขอปุ่ม "หน้าถัดไป") + ช่องค้นหาอาชีพ */
   const PAGE_SIZE = 20;
@@ -186,13 +192,26 @@ export default function TaxExamplesByOccupation() {
 
   const maxBand = TAX_BRACKETS[TAX_BRACKETS.length - 1][1];
 
+  /* ── ค้นหาอาชีพ: ผลที่ตรงถูกดันขึ้นเป็นแถวแรกอัตโนมัติ ── */
+  const query = q.trim().toLowerCase();
+  const matchedIds = new Set<string>();
+  const ordered = (() => {
+    if (!query) return occRows;
+    const hit = (o: (typeof occRows)[number]) =>
+      `${o.job} ${o.form} ${o.assume}`.toLowerCase().includes(query);
+    const hits = occRows.filter(hit);
+    hits.forEach((o) => matchedIds.add(o.id));
+    return [...hits, ...occRows.filter((o) => !hit(o))];
+  })();
+  const matchCount = matchedIds.size;
+
   /* ── แบ่งหน้าอาชีพ ── */
-  const pageCount = Math.max(1, Math.ceil(occRows.length / PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(ordered.length / PAGE_SIZE));
   const safePage = Math.min(Math.max(1, page), pageCount);
-  const pageRows = occRows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const pageRows = ordered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const pageByTax = [...pageRows].sort((a, b) => b.r.tax_before_credit - a.r.tax_before_credit);
   const fromNo = (safePage - 1) * PAGE_SIZE + 1;
-  const toNo = Math.min(safePage * PAGE_SIZE, occRows.length);
+  const toNo = Math.min(safePage * PAGE_SIZE, ordered.length);
   const top10 = compare.byTax.slice(0, 10);
   const sameIncomeShown = compare.sameIncome.slice(0, 12);
 
@@ -231,7 +250,8 @@ export default function TaxExamplesByOccupation() {
           หน้าถัดไป ›
         </button>
         <span className="text-[11px] text-slate-400 ml-1 tabular-nums">
-          หน้า {safePage} จาก {pageCount} · แสดงอาชีพที่ {fromNo.toLocaleString('en-US')}–{toNo.toLocaleString('en-US')} จากทั้งหมด {occRows.length.toLocaleString('en-US')} อาชีพ
+          หน้า {safePage} จาก {pageCount} · แสดงอาชีพที่ {fromNo.toLocaleString('en-US')}–{toNo.toLocaleString('en-US')} จากทั้งหมด {ordered.length.toLocaleString('en-US')} อาชีพ
+          {query ? ` (ค้นหา “${q}” — ${matchCount} รายการอยู่แถวแรก)` : ''}
         </span>
       </div>
     );
@@ -258,6 +278,41 @@ export default function TaxExamplesByOccupation() {
       {/* ── ตารางอาชีพ ── */}
       <div className="card p-4 sm:p-5">
         <h3 className="text-sm font-bold text-[#475569] mb-3">1) ประมาณการภาษีตามอาชีพ ({OCCUPATIONS.length} อาชีพ)</h3>
+
+        {/* ── ช่องค้นหาอาชีพ (ผลที่ตรงถูกดันขึ้นแถวแรก) ── */}
+        <div className="mb-3 rounded-2xl border border-gray-100 bg-slate-50/40 p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-semibold text-slate-500">🔍 ค้นหาอาชีพ</span>
+            <input
+              id="tax-job-search"
+              value={q}
+              onChange={(e) => { setQ(e.target.value); setPage(1); }}
+              placeholder="พิมพ์ชื่ออาชีพหรือคำที่เกี่ยวข้อง เช่น แพทย์ · ขายของออนไลน์ · ให้เช่า · ขนส่ง · พนักงาน · เกษตร"
+              className="flex-1 min-w-[240px] border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-200"
+            />
+            {q && (
+              <button onClick={() => { setQ(''); setPage(1); }}
+                className="px-3 py-2 rounded-full border border-gray-200 bg-white text-[11px] font-semibold text-slate-600 hover:bg-sky-50">
+                ✕ ล้างคำค้น
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            <span className="text-[10px] text-slate-400 self-center">คำค้นยอดนิยม:</span>
+            {QUICK_SEARCH.map((k) => (
+              <button key={k} onClick={() => { setQ(k); setPage(1); }}
+                className={`px-2.5 py-1 rounded-full border text-[10px] font-semibold ${q === k ? 'bg-[#475569] text-white border-[#475569]' : 'bg-white text-slate-600 border-gray-200 hover:bg-sky-50'}`}>
+                {k}
+              </button>
+            ))}
+          </div>
+          {query && (
+            <div className="mt-2 text-[11px] text-sky-900 bg-sky-50 border border-sky-100 rounded-xl px-3 py-2 leading-4">
+              พบ <b>{matchCount}</b> อาชีพที่ตรงกับ “{q}” — ระบบดันผลที่ตรงขึ้นเป็น <b>แถวแรก</b> ของตารางให้อัตโนมัติ
+              {matchCount === 0 ? ' (ไม่พบคำที่ตรง — ลองพิมพ์สั้นลง เช่น “เช่า”, “แพทย์”, “ออนไลน์”)' : ' (ผลที่ไม่ตรงแสดงต่อท้าย)'}
+            </div>
+          )}
+        </div>
         <div className="overflow-x-auto -mx-1 px-1">
           <table className="w-full text-[11px] tabular-nums min-w-[880px]">
             <thead>
@@ -275,9 +330,14 @@ export default function TaxExamplesByOccupation() {
             </thead>
             <tbody>
               {pageRows.map((o) => (
-                <tr key={o.id} className="border-b border-dashed last:border-0 align-top">
+                <tr key={o.id} className={`border-b border-dashed last:border-0 align-top ${matchedIds.has(o.id) ? 'bg-amber-50/70' : ''}`}>
                   <td className="py-2 pr-2">
-                    <div className="font-semibold text-slate-700">{o.job}</div>
+                    <div className="font-semibold text-slate-700">
+                      {o.job}
+                      {matchedIds.has(o.id) && (
+                        <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 align-middle">ตรงคำค้น</span>
+                      )}
+                    </div>
                     <div className="text-[10px] text-slate-400 leading-3 mt-0.5 max-w-[300px]">{o.assume}</div>
                   </td>
                   <td className="py-2 pr-2 text-slate-500 whitespace-nowrap">{o.form}</td>
