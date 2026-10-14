@@ -71,8 +71,8 @@ export default function TikTokAdsResults({ adminOnly = false }: { adminOnly?: bo
           <div className="min-w-0">
             <h2 className="text-lg font-bold text-navy">📈 {L('ผลการทำงานโฆษณา TikTok', 'TikTok ad performance')}</h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              {L('แคมเปญที่ยิงจริงจาก Ads Manager ของบัญชีเรา — สรุปสถานะและตัวชี้วัดไว้ที่ล่างสุดของหน้านี้',
-                 'The campaign we actually launched from our Ads Manager account — status and metrics summarised at the bottom of this page')}
+              {L('แคมเปญที่ยิงจริงจาก Ads Manager ของบัญชีเรา — สถานะ ตัวชี้วัด และยอดเงินของบัญชีโฆษณา',
+                 'The campaign we actually launched from our Ads Manager account — status, metrics and ad-account balance')}
             </p>
           </div>
           <div className="ml-auto flex items-center gap-2 flex-wrap">
