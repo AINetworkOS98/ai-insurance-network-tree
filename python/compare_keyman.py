@@ -13,7 +13,9 @@ cases = json.loads((PY / "testcases_keyman.json").read_text(encoding="utf-8"))["
 
 FIELDS = ["profit_need", "replacement_need", "obligation_need", "recommended_cover", "cover_per_premium",
           "cit_before", "cit_after", "cit_saving", "pit_before", "pit_after", "exec_tax_increase",
-          "net_cost", "net_cost_per_cover", "cover_method", "result"]
+          "net_cost", "net_cost_per_cover", "cover_method", "result",
+          "gu_tax_borne", "gu_total_outlay", "gu_cit_saving", "gu_net_cost", "gu_rounds", "gu_converged",
+          "gu_marginal_rate", "gu_employee_declared_income", "gu_employee_gets"]
 BOOLS = ["deductible", "benefit_to_executive"]
 
 checks, fails = 0, []

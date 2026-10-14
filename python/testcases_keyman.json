@@ -83,6 +83,46 @@
         "profit_need": 2000000, "replacement_need": 500000, "obligation_need": 9000000,
         "recommended_cover": 9000000, "cover_method": "ภาระผูกพัน (หนี้ค้ำประกัน + ซื้อหุ้นคืนจากทายาท)"
       }
+    },
+    {
+      "name": "6) บริษัทออกภาษีให้ด้วย (SME) — ผู้บริหารได้ 2 ล้าน + เบี้ย 100,000: ภาษีทอดสุดท้าย 495,714.29",
+      "input": {
+        "profit_per_year": 1500000, "years_to_replace": 3, "successor_cost": 500000, "revenue_at_risk": 500000,
+        "guaranteed_debt": 2000000, "share_buyout": 3000000, "premium": 100000,
+        "deductible": true, "benefit_to_executive": true,
+        "company_revenue": 8000000, "company_expenses": 6500000, "company_capital": 3000000, "executive_income": 2000000
+      },
+      "expect": {
+        "gu_tax_borne": 495714.29, "gu_total_outlay": 595714.29, "gu_cit_saving": 89357.14,
+        "gu_net_cost": 506357.15, "gu_converged": true, "gu_marginal_rate": 0.3,
+        "gu_employee_declared_income": 2595714.29, "gu_employee_gets": 2100000
+      }
+    },
+    {
+      "name": "7) บริษัททั่วไป CIT 20% — ผู้บริหารได้ 1 ล้าน + เบี้ย 100,000: ภาษีทอดสุดท้าย 133,333.33",
+      "input": {
+        "profit_per_year": 8000000, "years_to_replace": 3, "successor_cost": 1000000, "revenue_at_risk": 2000000,
+        "guaranteed_debt": 10000000, "share_buyout": 8000000, "premium": 100000,
+        "deductible": true, "benefit_to_executive": true,
+        "company_revenue": 50000000, "company_expenses": 42000000, "company_capital": 10000000, "executive_income": 1000000
+      },
+      "expect": {
+        "gu_tax_borne": 133333.33, "gu_total_outlay": 233333.33, "gu_cit_saving": 46666.67,
+        "gu_net_cost": 186666.66, "gu_converged": true, "gu_marginal_rate": 0.25
+      }
+    },
+    {
+      "name": "8) จ่ายเฉพาะผู้ถือหุ้นรายเดียว + บริษัทออกภาษีให้ → หักค่าใช้จ่ายไม่ได้ทั้งเบี้ยและภาษี",
+      "input": {
+        "profit_per_year": 1500000, "years_to_replace": 3, "successor_cost": 500000, "revenue_at_risk": 500000,
+        "guaranteed_debt": 2000000, "share_buyout": 3000000, "premium": 100000,
+        "deductible": false, "benefit_to_executive": true,
+        "company_revenue": 8000000, "company_expenses": 6500000, "company_capital": 3000000, "executive_income": 2000000
+      },
+      "expect": {
+        "gu_tax_borne": 495714.29, "gu_total_outlay": 595714.29, "gu_cit_saving": 0,
+        "gu_net_cost": 595714.29, "deductible": false
+      }
     }
   ]
 }

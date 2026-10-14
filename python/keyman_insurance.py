@@ -104,6 +104,35 @@ def compute_keyman(data: Dict[str, Any]) -> Dict[str, Any]:
     net_cost = r2(premium - cit_saving + exec_tax_increase)
     net_cost_per_cover = r2(net_cost / premium) if premium > 0 else 0.0
 
+    # ── ภาษีที่บริษัท "ออกให้" — คำนวณเป็นทอด ๆ ตามคำสั่งกรมสรรพากรที่ ป. 96/2543 ข้อ 1(7),(8) ──
+    # "ให้นำเงินค่าภาษีที่นายจ้างออกแทนให้ไปรวมกับเงินเดือน ... แล้วคำนวณภาษีตามเกณฑ์ในมาตรา 48(1) ...
+    #  จนกว่าจะไม่มีเงินค่าภาษีที่นายจ้างต้องออกแทนให้อีก" · มาตรา 39 นับภาษีที่ผู้อื่นออกแทนให้เป็นเงินได้พึงประเมิน
+    pays_tax = d.get("company_pays_exec_tax", True) is not False
+    gu_rounds_detail: List[Dict[str, Any]] = []
+    gu_tax_borne = 0.0
+    gu_converged = not pays_tax
+    gu_marginal = 0.0
+    for i in range(1, 61):
+        if not pays_tax:
+            break
+        income_with_tax = r2(exec_income + (premium if benefit else 0) + gu_tax_borne)
+        pit = compute_pit([Person(salary=income_with_tax, personal=True)])
+        tax = r2(pit["item12_total_tax"])
+        gu_marginal = pit["marginal_rate"]
+        gu_rounds_detail.append({"round": i, "income_with_tax": income_with_tax, "tax": tax,
+                                 "increase": r2(tax - gu_tax_borne)})
+        if abs(tax - gu_tax_borne) <= 0.01:
+            gu_tax_borne, gu_converged = tax, True
+            break
+        gu_tax_borne = tax
+
+    gu_total_outlay = r2(premium + gu_tax_borne)
+    cit_with_all = compute_cit({"revenue": rev,
+                                "expenses": exp + (premium if deductible else 0) + (gu_tax_borne if deductible else 0),
+                                "capital_paid_up": cap})["tax_payable"]
+    gu_cit_saving = r2(cit_before - cit_with_all)
+    gu_net_cost = r2(gu_total_outlay - gu_cit_saving)
+
     checklist = [
         {"ok": deductible, "item": "จ่ายให้กรรมการ/พนักงาน \"ทุกคนเป็นการทั่วไป\" ตามระเบียบ/มติที่ประชุมของบริษัท (ไม่ใช่เฉพาะผู้บริหารคนใดคนหนึ่ง)"},
         {"ok": deductible, "item": "ระเบียบ/มติที่ประชุม + วัตถุประสงค์เพื่อผลประโยชน์ของบริษัท ไม่ใช่รายจ่ายส่วนตัวหรือให้โดยเสน่หา (มาตรา 65 ตรี (3),(13))"},
@@ -138,6 +167,10 @@ def compute_keyman(data: Dict[str, Any]) -> Dict[str, Any]:
         notes.append("ภาระภาษีบุคคลธรรมดาของบุคคลสำคัญสูงกว่าภาษีนิติบุคคลที่ประหยัดได้ → ต้นทุนสุทธิมากกว่าเบี้ยประกัน · ควรออกแบบเป็นสวัสดิการกลุ่ม/พิจารณาโครงสร้างให้เหมาะสม")
     if cit_saving > 0 and exec_tax_increase == 0:
         notes.append("บุคคลสำคัญมีเงินได้ไม่ถึงเกณฑ์เสียภาษี → เบี้ยที่จ่ายแทนยังไม่เกิดภาระภาษีบุคคลธรรมดา ทำให้ได้ประโยชน์ทางภาษีเต็มจำนวน")
+    if gu_tax_borne > 0:
+        notes.append(f"กรณีบริษัท \"ออกภาษีให้\" ด้วย: ต้องออกภาษีเงินได้บุคคลธรรมดาให้ทั้งสิ้น {gu_tax_borne:,.2f} บาท "
+                     f"(คำนวณเป็นทอด ๆ {len(gu_rounds_detail)} ทอด ตามคำสั่งกรมสรรพากรที่ ป. 96/2543) · "
+                     f"บริษัทหักได้ทั้งเบี้ยประกันและภาษีที่ออกให้ → ประหยัดภาษีนิติบุคคลรวม {gu_cit_saving:,.2f} บาท/ปี")
     notes.append("การหักภาษี ณ ที่จ่ายจาก \"ประโยชน์เพิ่ม\" ที่ไม่ใช่ตัวเงินเป็นเรื่องเฉพาะราย — ให้ตรวจกับสำนักงานสรรพากร (โทร. 1161) ก่อนนำส่ง")
     notes.append("วงเงินคุ้มครองที่แนะนำคือค่าสูงสุดของ 3 วิธี (ทดแทนกำไร · ต้นทุนทดแทน · ภาระผูกพัน) — บริษัทสามารถเลือกทำหลายกรมธรรม์รวมกันให้ครอบคลุมทุกด้านได้")
 
@@ -150,6 +183,16 @@ def compute_keyman(data: Dict[str, Any]) -> Dict[str, Any]:
         "cit_before": r2(cit_before), "cit_after": r2(cit_after), "cit_saving": cit_saving,
         "pit_before": r2(pit_before), "pit_after": r2(pit_after), "exec_tax_increase": exec_tax_increase,
         "net_cost": net_cost, "net_cost_per_cover": net_cost_per_cover,
+        "gu_tax_borne": r2(gu_tax_borne), "gu_total_outlay": gu_total_outlay,
+        "gu_cit_saving": gu_cit_saving, "gu_net_cost": gu_net_cost,
+        "gu_rounds": len(gu_rounds_detail), "gu_converged": gu_converged,
+        "gu_marginal_rate": gu_marginal,
+        "gu_employee_declared_income": r2(exec_income + (premium if benefit else 0) + gu_tax_borne),
+        "gu_employee_gets": r2(exec_income + (premium if benefit else 0)),
+        "gu_rounds_detail": gu_rounds_detail,
+        "gu_note": ("คำนวณเป็นทอด ๆ ตามคำสั่งกรมสรรพากรที่ ป. 96/2543 ข้อ 1(7),(8): นำภาษีที่บริษัทออกแทนให้ไปรวมเป็นเงินได้ "
+                    "ของกรรมการ/พนักงาน แล้วคำนวณภาษีใหม่ ทำซ้ำจนไม่มีภาษีที่ต้องออกแทนอีก · เงินค่าภาษีอากรที่ออกแทนให้ "
+                    "เป็นเงินได้พึงประเมินตามมาตรา 39 และเป็นรายจ่ายที่หักได้ของบริษัท (ไม่ต้องห้าม 65 ตรี (6) ตาม กค 0811/408)"),
         "result": ("ต้นทุนภาษีสุทธิเป็นศูนย์หรือติดลบ (ได้ประโยชน์ทางภาษีเต็มที่)" if net_cost <= 0
                    else f"ต้นทุนภาษีสุทธิ {net_cost:,.0f} บาท/ปี"),
         "checklist": checklist, "rules": rules, "notes": notes,
@@ -183,6 +226,19 @@ def format_report(r: Dict[str, Any]) -> str:
     b.append(f"      → ภาระภาษีบุคคลธรรมดาเพิ่มขึ้น {r['exec_tax_increase']:,.2f} บาท "
              f"{'(เบี้ยเป็นเงินได้ 40(1) ของกรรมการ/พนักงาน)' if r['benefit_to_executive'] else ''}")
     b.append(f"    → ต้นทุนภาษีสุทธิของเบี้ย {r['premium']:,.0f} บาท = {r['net_cost']:,.2f} บาท/ปี · {r['result']}")
+    b.append(line())
+    b.append(" 2.1) กรณีบริษัท \"ออกภาษีให้\" — คำนวณเป็นทอด ๆ (คำสั่งกรมสรรพากรที่ ป. 96/2543 ข้อ 1(7),(8))")
+    b.append(f"    เบี้ยประกัน {r['premium']:,.0f} + ภาษีที่บริษัทออกให้ {r['gu_tax_borne']:,.2f} = จ่ายจริง {r['gu_total_outlay']:,.2f} บาท")
+    b.append("    ลำดับทอด:")
+    for g in r["gu_rounds_detail"][:12]:
+        b.append(f"      ทอด {g['round']:>2}: เงินได้รวมภาษีที่ออกให้ {g['income_with_tax']:>14,.2f} → ภาษี {g['tax']:>12,.2f} "
+                 f"(เพิ่มขึ้น {g['increase']:>10,.2f})")
+    if len(r["gu_rounds_detail"]) > 12:
+        b.append(f"      … รวม {r['gu_rounds']} ทอด (บรรจบเมื่อไม่มีภาษีต้องออกให้เพิ่ม)")
+    b.append(f"    → ภาษีที่ต้องออกให้ทั้งสิ้น {r['gu_tax_borne']:,.2f} บาท (ขั้นภาษีสูงสุด {r['gu_marginal_rate'] * 100:.0f}%) "
+             f"· เงินได้ที่กรรมการ/พนักงานต้องยื่น {r['gu_employee_declared_income']:,.2f} บาท")
+    b.append(f"    → บริษัทหักได้ทั้งเบี้ยและภาษีที่ออกให้ ประหยัดภาษีนิติบุคคลรวม {r['gu_cit_saving']:,.2f} บาท · "
+             f"ต้นทุนสุทธิของบริษัท {r['gu_net_cost']:,.2f} บาท/ปี")
     b.append(line())
     b.append(" 3) เช็กลิสต์เงื่อนไข (ตามหนังสือตอบข้อหารือ)")
     for c in r["checklist"]:

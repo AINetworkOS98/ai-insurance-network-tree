@@ -145,6 +145,10 @@ export default function KeymanInsurance() {
                   <input type="checkbox" checked={input.benefit_to_executive !== false} onChange={(e) => set({ benefit_to_executive: e.target.checked })} className="mt-0.5" />
                   <span className="text-[11px] text-slate-600 leading-4">เบี้ยถือเป็น <b>เงินได้ 40(1)/(2) ของกรรมการ-พนักงาน</b><br /><span className="text-slate-400">ตามแนววินิจฉัยกรมสรรพากร (ต้องนำไปยื่น ภ.ง.ด.90/91)</span></span>
                 </label>
+                <label className="flex gap-2 items-start p-3 rounded-xl border border-gray-200 bg-white cursor-pointer">
+                  <input type="checkbox" checked={input.company_pays_exec_tax !== false} onChange={(e) => set({ company_pays_exec_tax: e.target.checked })} className="mt-0.5" />
+                  <span className="text-[11px] text-slate-600 leading-4">บริษัท <b>ออกภาษีเงินได้บุคคลธรรมดาให้</b> ด้วย<br /><span className="text-slate-400">คำนวณเป็นทอด ๆ จนไม่มีภาษีต้องออกแทนอีก (ป. 96/2543 ข้อ 1(7),(8))</span></span>
+                </label>
               </div>
             </div>
             <table className="w-full text-xs tabular-nums mt-3" id="keyman-tax-effect">
@@ -161,6 +165,77 @@ export default function KeymanInsurance() {
             <ul className="mt-3 space-y-1.5">
               {r.notes.map((nt) => <li key={nt} className="text-[11px] text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1.5 leading-4">⚠ {nt}</li>)}
             </ul>
+          </section>
+
+          <section className="card p-4 sm:p-5" id="keyman-grossup">
+            <h3 className="text-sm font-bold text-[#475569] mb-1">2.1) บริษัทออกภาษีให้ — คำนวณเป็นทอด ๆ (Gross-up)</h3>
+            <p className="text-[11px] text-slate-500 mb-3 leading-4">
+              ตาม<b>คำสั่งกรมสรรพากรที่ ป. 96/2543</b> ข้อ 1(7),(8): <i>“ให้นำเงินค่าภาษีที่นายจ้างออกแทนให้ไปรวมกับเงินเดือนหรือค่าจ้างที่ลูกจ้างได้รับในปีนั้น
+              แล้วคำนวณภาษีตามเกณฑ์ในมาตรา 48 (1) … จนกว่าจะไม่มีเงินค่าภาษีที่นายจ้างต้องออกแทนให้อีก”</i>{' '}
+              และ<b>มาตรา 39</b> นับ “เงินค่าภาษีอากรที่ผู้จ่ายเงินหรือผู้อื่นออกแทนให้” เป็นเงินได้พึงประเมินด้วย — ภาษีที่บริษัทออกให้จึงหักเป็นรายจ่ายได้ (ไม่ต้องห้าม มาตรา 65 ตรี (6) ตาม กค 0811/408)
+            </p>
+            {input.company_pays_exec_tax === false ? (
+              <div className="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                ปิดการคำนวณ “ออกภาษีให้” อยู่ — ติ๊กที่ช่องในหัวข้อ 2 เพื่อให้ระบบคำนวณภาษีทอดต่าง ๆ
+              </div>
+            ) : (
+              <>
+                <div className="grid sm:grid-cols-3 gap-3 mb-3">
+                  <div className="rounded-xl border border-rose-100 bg-rose-50 p-3">
+                    <div className="text-[11px] text-rose-700">ภาษีที่บริษัทต้องออกให้ทั้งสิ้น</div>
+                    <div className="text-xl font-bold text-rose-700">{b0(r.gu_tax_borne)} บาท</div>
+                    <div className="text-[10px] text-rose-600 mt-0.5">บรรจบใน {r.gu_rounds} ทอด · ขั้นภาษีสูงสุด {Math.round(r.gu_marginal_rate * 100)}%</div>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-white p-3">
+                    <div className="text-[11px] text-slate-500">บริษัทจ่ายจริงทั้งปี (เบี้ย + ภาษี)</div>
+                    <div className="text-xl font-bold text-slate-700">{b0(r.gu_total_outlay)} บาท</div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">เบี้ย {b0(r.premium)} + ภาษี {b0(r.gu_tax_borne)}</div>
+                  </div>
+                  <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3">
+                    <div className="text-[11px] text-emerald-700">หักได้ทั้งเบี้ย+ภาษี → ประหยัดภาษีนิติบุคคล</div>
+                    <div className="text-xl font-bold text-emerald-700">{b0(r.gu_cit_saving)} บาท</div>
+                    <div className="text-[10px] text-emerald-600 mt-0.5">ต้นทุนสุทธิของบริษัท {b0(r.gu_net_cost)} บาท/ปี</div>
+                  </div>
+                </div>
+                <div className="overflow-x-auto -mx-1 px-1">
+                  <table className="w-full text-[11px] min-w-[560px] tabular-nums" id="keyman-grossup-rounds">
+                    <thead>
+                      <tr className="text-slate-400 text-left border-b">
+                        <th className="py-1.5 pr-2 font-semibold">ทอดที่</th>
+                        <th className="py-1.5 pr-2 font-semibold">เงินได้ของกรรมการ/พนักงาน (รวมภาษีที่ออกให้ทอดก่อน ๆ)</th>
+                        <th className="py-1.5 pr-2 text-right font-semibold">ภาษีที่คำนวณได้</th>
+                        <th className="py-1.5 text-right font-semibold">ต้องออกให้เพิ่ม</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {r.gu_rounds_detail.slice(0, 12).map((g) => (
+                        <tr key={g.round} className="border-b border-dashed last:border-0">
+                          <td className="py-1 pr-2 text-slate-500">ทอด {g.round}</td>
+                          <td className="py-1 pr-2">{b2(g.income_with_tax)}</td>
+                          <td className="py-1 pr-2 text-right">{b2(g.tax)}</td>
+                          <td className={`py-1 text-right ${g.increase <= 0.01 ? 'text-emerald-600 font-semibold' : 'text-rose-600'}`}>
+                            {g.increase <= 0.01 ? '✓ ไม่มีอีกแล้ว' : `+${b2(g.increase)}`}
+                          </td>
+                        </tr>
+                      ))}
+                      {r.gu_rounds_detail.length > 12 && (
+                        <tr><td colSpan={4} className="py-1 text-slate-400">… แสดง 12 ทอดแรกจากทั้งหมด {r.gu_rounds} ทอด (บรรจบเมื่อไม่มีภาษีต้องออกให้เพิ่ม)</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mt-3 grid sm:grid-cols-2 gap-2 text-[11px]">
+                  <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 text-slate-700">
+                    <b>กรรมการ/พนักงาน</b> ได้รับประโยชน์เต็มมูลค่าเบี้ย {b0(r.gu_employee_gets - (input.executive_income || 0))} บาท
+                    (ภาษีส่วนตัวบริษัทออกให้ทั้งหมด) · แต่<b>ต้องนำเงินได้รวม {b0(r.gu_employee_declared_income)} บาท</b> ไปยื่น ภ.ง.ด.90/91
+                  </div>
+                  <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 text-slate-700">
+                    <b>บริษัท</b> จ่ายจริง {b0(r.gu_total_outlay)} บาท → หักเป็นค่าใช้จ่ายได้ทั้งจำนวน → รับรู้เป็นค่าใช้จ่ายหลังภาษี {b0(r.gu_net_cost)} บาท/ปี
+                    (ภาษีนิติบุคคลลดลง {b0(r.gu_cit_saving)} บาท)
+                  </div>
+                </div>
+              </>
+            )}
           </section>
 
           <section className="card p-4 sm:p-5">
@@ -226,6 +301,22 @@ export default function KeymanInsurance() {
             </table>
             <p className="text-[10px] text-slate-400 mt-2 leading-4">
               ผลทางภาษีอ้างเอนจินเดียวกับแท็บ “ภาษีนิติบุคคล” และ “ภาษีบุคคลธรรมดา” ของหน้านี้ จึงเทียบเลขกันได้ทันที
+            </p>
+          </div>
+
+          <div className="card p-4">
+            <h3 className="text-sm font-bold text-[#475569] mb-2">กรณีบริษัทออกภาษีให้ (ทอด ๆ)</h3>
+            <table className="w-full text-[11px] tabular-nums">
+              <tbody className="[&_td]:py-1">
+                <tr className="border-b"><td className="text-slate-500">เบี้ยประกัน/ปี</td><td className="text-right">{b0(r.premium)}</td></tr>
+                <tr className="border-b"><td className="text-slate-500">ภาษีที่บริษัทออกให้ ({r.gu_rounds} ทอด)</td><td className="text-right text-rose-600 font-semibold">{b0(r.gu_tax_borne)}</td></tr>
+                <tr className="border-b"><td className="text-slate-600 font-semibold">จ่ายจริงทั้งปี</td><td className="text-right font-semibold">{b0(r.gu_total_outlay)}</td></tr>
+                <tr className="border-b"><td className="text-slate-500">ประหยัดภาษีนิติบุคคล</td><td className="text-right text-emerald-700">−{b0(r.gu_cit_saving)}</td></tr>
+                <tr><td className="text-slate-700 font-semibold">ต้นทุนสุทธิของบริษัท</td><td className="text-right font-bold">{b0(r.gu_net_cost)}</td></tr>
+              </tbody>
+            </table>
+            <p className="text-[10px] text-slate-400 mt-2 leading-4">
+              วิธีคำนวณตามคำสั่งกรมสรรพากรที่ ป. 96/2543 ข้อ 1(7),(8) — นำภาษีที่ออกให้ไปรวมเป็นเงินได้แล้วคำนวณซ้ำจนไม่มีภาษีต้องออกเพิ่ม
             </p>
           </div>
 
