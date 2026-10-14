@@ -95,21 +95,39 @@ export default function TaxBaseTable() {
           <span className="text-[10px] text-slate-400">ความกว้าง = ช่วงเงินได้สุทธิ (บาท)</span>
         </div>
         <div className="flex h-14 w-full rounded-xl overflow-hidden border border-gray-100">
-          {ROWS.map((r) => (
-            <div
-              key={`band-${r.index}`}
-              title={`${r.rangeLabel} · ${Math.round(r.rate * 100)}%`}
-              style={{ width: `${(r.bandWidth / TOTAL_WIDTH) * 100}%`, backgroundColor: BAND_COLORS[r.index] }}
-              className="relative flex items-center justify-center group"
-            >
-              <span className={`text-[10px] sm:text-xs font-bold tabular-nums ${r.index <= 1 ? 'text-slate-500' : 'text-white'}`}>
-                {Math.round(r.rate * 100)}%
-              </span>
-            </div>
-          ))}
+          {ROWS.map((r) => {
+            const pct = (r.bandWidth / TOTAL_WIDTH) * 100;
+            return (
+              <div
+                key={`band-${r.index}`}
+                title={`${r.rangeLabel} · ${Math.round(r.rate * 100)}%`}
+                style={{ width: `${pct}%`, backgroundColor: BAND_COLORS[r.index] }}
+                className="relative flex items-center justify-center"
+              >
+                {pct >= 4 && (
+                  <span className={`text-[10px] sm:text-xs font-bold tabular-nums ${r.index <= 1 ? 'text-slate-500' : 'text-white'}`}>
+                    {Math.round(r.rate * 100)}%
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
         <div className="flex justify-between mt-1.5 text-[10px] text-slate-400 tabular-nums">
           <span>0</span><span>300K</span><span>750K</span><span>2M</span><span>5M ขึ้นไป</span>
+        </div>
+
+        {/* คำอธิบายสีของทุกขั้น (ขั้นเล็ก ๆ ที่แถบกว้างไม่พอก็อ่านได้จากตรงนี้) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2 mt-4">
+          {ROWS.map((r) => (
+            <div key={`legend-${r.index}`} className="flex items-center gap-2 text-[11px]">
+              <span className="h-2.5 w-2.5 rounded-sm shrink-0" style={{ backgroundColor: BAND_COLORS[r.index] }} />
+              <span className="tabular-nums text-slate-600">{r.rangeLabel}</span>
+              <span className="ml-auto font-semibold tabular-nums text-slate-500">
+                {r.rate === 0 ? 'ยกเว้น' : `${Math.round(r.rate * 100)}%`}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 
