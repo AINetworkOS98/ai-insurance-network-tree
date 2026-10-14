@@ -102,11 +102,14 @@ async function ensureChrome() {
     '--user-data-dir=C:/Users/User/cdp-flow', '--profile-directory=Default',
     `--remote-debugging-port=${CDP_PORT}`, '--remote-allow-origins=*', '--no-first-run',
     '--no-default-browser-check', '--window-size=1400,950',
+    // ซ่อนหน้าต่างไม่ให้รบกวนผู้ใช้: Chrome ยอมรับพิกัดลบ (ทดสอบแล้ว: เปิดที่ -26214,-26214
+    // ขณะที่ CDP ยังตอบ 200) ⇒ งานอัตโนมัติรันได้ครบโดยไม่มีหน้าต่างโผล่บนจอ
+    '--window-position=-32000,-32000',
     '--disable-features=DeviceBoundSessionCredentials,DeviceBoundSessions',
   ];
   try {
     const { spawn } = await import('node:child_process');
-    spawn(chrome, args, { detached: true, stdio: 'ignore', windowsHide: false }).unref();
+    spawn(chrome, args, { detached: true, stdio: 'ignore', windowsHide: true }).unref();
   } catch (e) { log('เปิด Chrome ไม่สำเร็จ: ' + e.message); }
   for (let i = 1; i <= 20; i++) { await sleep(2000); if (await probe()) { log(`CDP พร้อมหลัง ${i * 2} วิ`); return true; } }
   return false;

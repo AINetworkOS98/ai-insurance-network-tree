@@ -68,7 +68,7 @@ const server = http.createServer((req, res) => {
     }
 
     logLine((isRegister ? 'register-report' : 'run') + ' start ' + JSON.stringify(isRegister ? { days: Number(b.days) || 7 } : { post: !!b.post, skipGenerate: !!b.skipGenerate }));
-    const child = spawn(process.execPath, args, { cwd: REPO, env: { ...process.env, CDP_PORT: process.env.CDP_PORT || '9333' } });
+    const child = spawn(process.execPath, args, { cwd: REPO, windowsHide: true, env: { ...process.env, CDP_PORT: process.env.CDP_PORT || '9333' } });
     let out = '', err = '';
     const t = setTimeout(() => { try { child.kill('SIGKILL'); } catch { } logLine('timeout, killed'); }, 15 * 60 * 1000);
     child.stdout.on('data', (d) => { out += d.toString(); });
