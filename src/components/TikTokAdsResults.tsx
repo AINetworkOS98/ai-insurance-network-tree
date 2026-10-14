@@ -52,14 +52,10 @@ export default function TikTokAdsResults() {
     setTimeout(() => setApiMsg(''), 9000);
   }
 
-  const metrics: { label: string; value: string }[] = [
-    { label: L('ค่าใช้จ่าย (THB)', 'Spend (THB)'), value: c.metrics?.spendThb },
-    { label: 'Impressions', value: c.metrics?.impressions },
-    { label: 'Clicks', value: c.metrics?.clicks },
-    { label: 'CTR', value: c.metrics?.ctr },
-    { label: L('Conversions', 'Conversions'), value: c.metrics?.conversions },
-    { label: L('ต้นทุนต่อ Conversion (THB)', 'Cost per conversion (THB)'), value: c.metrics?.costPerConversion },
-  ].map((m) => ({ label: m.label, value: m.value === null || m.value === undefined || m.value === '' ? L('ยังไม่มีข้อมูล', 'No data yet') : String(m.value) }));
+  const metrics: { label: string; value: string }[] = (Array.isArray(c.metrics) ? c.metrics : []).map((m: Any) => ({
+    label: String(m.label || ''),
+    value: m.value === null || m.value === undefined || m.value === '' ? L('ยังไม่มีข้อมูล', 'No data yet') : String(m.value),
+  }));
 
   const chip = 'text-[11px] px-2.5 py-1 rounded-full border';
 
@@ -77,6 +73,16 @@ export default function TikTokAdsResults() {
           <div className="ml-auto flex items-center gap-2 flex-wrap">
             <span className={`${chip} ${statusStyle(c.status)} font-semibold`}>● {L(String(c.statusTh || c.status), String(c.status))}</span>
             <span className={`${chip} bg-white border-[#dbeafe] text-slate-600`}>🏦 {String(s.accountName || '')} · aadvid {String(s.advertiserId || '')}</span>
+            {s.accountSnapshot?.availableBalanceThb != null && (
+              <span className={`${chip} bg-emerald-50 border-emerald-200 text-emerald-700 font-semibold`}>
+                {L('ยอดคงเหลือ', 'Balance')} ฿{Number(s.accountSnapshot.availableBalanceThb).toLocaleString('th-TH')}
+              </span>
+            )}
+            {s.accountSnapshot?.todaySpendThb != null && (
+              <span className={`${chip} bg-[#eff6ff] border-[#dbeafe] text-sky-700 font-semibold`}>
+                {L('ใช้ไปวันนี้', 'Spent today')} ฿{Number(s.accountSnapshot.todaySpendThb).toLocaleString('th-TH')}
+              </span>
+            )}
           </div>
         </div>
 

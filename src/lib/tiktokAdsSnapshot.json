@@ -1,16 +1,17 @@
 {
-  "capturedAt": "2026-10-13T20:21:00+07:00",
-  "source": "TikTok Ads Manager (หน้า Campaigns) — อ่านด้วยตาจากบัญชีจริง เพราะบัญชีนี้ยังไม่มีสิทธิ์ Marketing API",
+  "capturedAt": "2026-10-14T09:12:00+07:00",
+  "source": "TikTok Ads Manager — หน้าจอ Campaigns + Dashboard ของบัญชีจริง (อ่านด้วยตา เพราะบัญชีนี้ยังไม่มีสิทธิ์ Marketing API) · ช่วงวันที่ของรายงาน: 7–14 ต.ค. 2026",
   "advertiserId": "7251807874932883457",
   "accountName": "ร้านค้าออนไลน์990704",
+  "accountSnapshot": { "availableBalanceThb": 225.38, "todaySpendThb": 60.83 },
   "managerUrl": "https://ads.tiktok.com/i18n/manage/campaign?aadvid=7251807874932883457",
   "totalCampaignsInAccount": 7,
   "campaign": {
     "name": "Traffic20261013194131",
     "objective": "TRAFFIC",
-    "objectiveTh": "ปริมาณการเข้าชม (Traffic)",
-    "status": "UNDER_REVIEW",
-    "statusTh": "รอ TikTok ตรวจสอบ (Under review)",
+    "objectiveTh": "ปริมาณการเข้าชมเว็บไซต์ (Traffic)",
+    "status": "ACTIVE",
+    "statusTh": "กำลังทำงาน (อนุมัติแล้ว)",
     "adName": "Ad 1 2026-10-13 20:02:16",
     "dailyBudgetThb": 200,
     "startDate": "2026-10-13",
@@ -21,22 +22,24 @@
     "placements": "TikTok + TikTok Ad Network",
     "location": "ประเทศไทย",
     "ageRange": "ทุกช่วงอายุ (ค่าเริ่มต้นของวิซาร์ด)",
-    "metrics": {
-      "spendThb": null,
-      "impressions": null,
-      "clicks": null,
-      "ctr": null,
-      "conversions": null,
-      "costPerConversion": null
-    },
-    "metricsNote": "แคมเปญเพิ่งส่งเข้าระบบและอยู่ระหว่างการตรวจสอบ — ยังไม่มีการใช้จ่าย ตัวเลขจะแสดงเมื่อแคมเปญเริ่มทำงาน (และ/หรือเมื่อบัญชีได้รับสิทธิ์ Marketing API ให้อ่านรายงานอัตโนมัติ)"
+    "metrics": [
+      { "label": "ค่าใช้จ่ายรวม (Spend)", "value": "174.62 THB" },
+      { "label": "ต้นทุนต่อคลิก (CPC)", "value": "0.37 THB" },
+      { "label": "CTR (อัตราคลิก)", "value": "6.77%" },
+      { "label": "CPM", "value": "24.84 THB" },
+      { "label": "จำนวนคลิก (Clicks)", "value": null },
+      { "label": "จำนวนการแสดง (Impressions)", "value": null }
+    ],
+    "metricsNote": "ตัวเลข 4 ตัวแรกอ่านจากหน้าจอ Campaigns จริงของ TikTok (ช่วง 7–14 ต.ค. 2026) · ช่องที่ยังไม่ได้อ่านจากหน้าจอแสดงว่า \"ยังไม่มีข้อมูล\" (ระบบไม่คำนวณย้อนกลับหรือเดาตัวเลขเอง) · ยอดคงเหลือบัญชี 225.38 THB และใช้ไปวันนี้ 60.83 THB (จากหน้า Dashboard)"
   },
   "evidence": [
-    { "file": "/ads/tiktok-ad-created-20261013.png", "caption": "กล่องยืนยันจาก TikTok: \"Ad created and in review.\"" },
-    { "file": "/ads/tiktok-campaigns-20261013.png", "caption": "หน้าจอ Campaigns จริงของบัญชี — แถวแรก Traffic20261013194131 สถานะ Under review" }
+    { "file": "/ads/tiktok-campaigns-active-20261014.png", "caption": "หน้าจอ Campaigns จริง — แคมเปญ Traffic20261013194131 สวิตช์เปิด (Active) · Spend 174.62 THB · CPC 0.37 THB · CTR 6.77%" },
+    { "file": "/ads/tiktok-campaigns-20261013.png", "caption": "ตอนสร้างเสร็จ (13 ต.ค.) — สถานะ Under review ก่อนได้รับการอนุมัติ" },
+    { "file": "/ads/tiktok-ad-created-20261013.png", "caption": "กล่องยืนยันจาก TikTok: \"Ad created and in review.\"" }
   ],
   "notes": [
-    "ตัวเลขโฆษณาชุดนี้ยังไม่ใช่ข้อมูลสดจาก API — ระบบไม่เดาและไม่สร้างตัวเลขเอง จึงแสดง \"ยังไม่มีข้อมูล\" ในช่องที่ยังไม่มีค่าจริง",
-    "เมื่อบัญชีได้รับสิทธิ์ Marketing API (TikTok ต้องอนุมัติ) ช่องตัวเลขเหล่านี้จะดึงอัตโนมัติจากรายงานของ TikTok"
+    "แคมเปญได้รับการอนุมัติแล้วและกำลังทำงานจริง — มีการใช้จ่ายเกิดขึ้นจริง (Spend 174.62 THB ในช่วง 7–14 ต.ค. 2026)",
+    "ตัวเลขชุดนี้ยังไม่ใช่ข้อมูลสดจาก API — เมื่อบัญชีได้รับสิทธิ์ Marketing API ช่องตัวเลขทั้งหมดจะดึงอัตโนมัติจากรายงานของ TikTok",
+    "ข้อความโฆษณาไม่มีคำรับประกันรายได้ · คลิปเป็นของเจ้าของบัญชีเอง · ไม่ได้ใช้ข้อมูลอ่อนไหวหรือกำหนดเป้าหมายแบบเลือกปฏิบัติ"
   ]
 }
