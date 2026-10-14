@@ -209,7 +209,8 @@ export default function TaxExamplesByOccupation() {
   const pageCount = Math.max(1, Math.ceil(ordered.length / PAGE_SIZE));
   const safePage = Math.min(Math.max(1, page), pageCount);
   const pageRows = ordered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const pageByTax = [...pageRows].sort((a, b) => b.r.tax_before_credit - a.r.tax_before_credit);
+  const pageByTax = [...pageRows].filter((o) => o.r.must_file)
+    .sort((a, b) => b.r.tax_before_credit - a.r.tax_before_credit);
   const fromNo = (safePage - 1) * PAGE_SIZE + 1;
   const toNo = Math.min(safePage * PAGE_SIZE, ordered.length);
   const top10 = compare.byTax.slice(0, 10);
