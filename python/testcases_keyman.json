@@ -1,0 +1,88 @@
+{
+  "meta": {
+    "purpose": "ชุดทดสอบมาตรฐานของโปรแกรมประกันคีย์แมน — ตัวเลข expect อ้างหนังสือตอบข้อหารือกรมสรรพากร + เอนจินภาษีนิติบุคคล/บุคคลธรรมดาของโปรเจกต์",
+    "used_by": [
+      "python/keyman_insurance.py --selftest",
+      "src/lib/tax/keymanSelftest.ts → GET /api/tax/keyman?selftest=1",
+      "scripts/keyman-selftest.mjs (เทียบเว็บจริงกับไฟล์นี้)"
+    ],
+    "year": 2568,
+    "rd_rulings": {
+      "กค 0706/5249": "บริษัทจ่ายเบี้ยประกันชีวิตแทนกรรมการ → หักได้ถ้าจ่ายกรรมการทุกคนเป็นการทั่วไป · เบี้ยเป็นเงินได้ 40(1) ของกรรมการ · สินไหมที่บริษัทรับเป็นรายได้ของบริษัท",
+      "กค 0706/8707": "จ่ายแทนกรรมการหักได้ · จ่ายแทนผู้ถือหุ้นหักไม่ได้ (มาตรา 65 ตรี (3)) · เงินซื้อหุ้นคืนจากทายาทเป็นรายจ่ายลงทุน หักไม่ได้ (65 ตรี (5))",
+      "กค 0702/9358": "เบี้ยที่จ่ายแทนกรรมการเพื่อประโยชน์ของบริษัท หักได้ (65 ตรี (3),(13)) · สินไหมที่ครอบครัว/ทายาทรับยกเว้นตามมาตรา 42(13)",
+      "กค 0811/408": "เบี้ย + ภาษีที่ออกให้เป็นเงินได้ 40(1) ของพนักงาน · สินไหมเพื่อละเมิด/เงินได้จากการประกันภัยยกเว้นตามมาตรา 42(13)",
+      "กค 0702/10407 / กค 0706/397": "จ่ายแทนพนักงานทุกคนตามระเบียบสวัสดิการ หักได้ · พนักงานมีเงินได้ 40(1) · ผลประโยชน์ที่พนักงาน/ทายาทรับยกเว้น 42(13)"
+    }
+  },
+  "cases": [
+    {
+      "name": "1) SME กำไร 1.5 ล้าน/ปี · ผู้บริหารได้ 2 ล้าน · จ่ายทุกคนตามระเบียบ (หักได้)",
+      "input": {
+        "profit_per_year": 1500000, "years_to_replace": 3, "successor_cost": 500000, "revenue_at_risk": 500000,
+        "guaranteed_debt": 2000000, "share_buyout": 3000000, "premium": 100000,
+        "deductible": true, "benefit_to_executive": true,
+        "company_revenue": 8000000, "company_expenses": 6500000, "company_capital": 3000000, "executive_income": 2000000
+      },
+      "expect": {
+        "profit_need": 4500000, "replacement_need": 1000000, "obligation_need": 5000000,
+        "recommended_cover": 5000000, "cover_per_premium": 50,
+        "cit_before": 180000, "cit_after": 165000, "cit_saving": 15000,
+        "pit_before": 325000, "pit_after": 350000, "exec_tax_increase": 25000,
+        "net_cost": 110000, "deductible": true, "benefit_to_executive": true
+      }
+    },
+    {
+      "name": "2) บริษัททั่วไป CIT 20% · ผู้บริหารได้ 1 ล้าน (ต้นทุนสุทธิ = เบี้ยพอดี)",
+      "input": {
+        "profit_per_year": 8000000, "years_to_replace": 3, "successor_cost": 1000000, "revenue_at_risk": 2000000,
+        "guaranteed_debt": 10000000, "share_buyout": 8000000, "premium": 100000,
+        "deductible": true, "benefit_to_executive": true,
+        "company_revenue": 50000000, "company_expenses": 42000000, "company_capital": 10000000, "executive_income": 1000000
+      },
+      "expect": {
+        "profit_need": 24000000, "replacement_need": 3000000, "obligation_need": 18000000,
+        "recommended_cover": 24000000, "cit_before": 1600000, "cit_after": 1580000, "cit_saving": 20000,
+        "exec_tax_increase": 20000, "net_cost": 100000, "net_cost_per_cover": 1
+      }
+    },
+    {
+      "name": "3) จ่ายเฉพาะผู้ถือหุ้นรายเดียว → หักค่าใช้จ่ายไม่ได้ (มาตรา 65 ตรี (3))",
+      "input": {
+        "profit_per_year": 1500000, "years_to_replace": 3, "successor_cost": 500000, "revenue_at_risk": 500000,
+        "guaranteed_debt": 2000000, "share_buyout": 3000000, "premium": 100000,
+        "deductible": false, "benefit_to_executive": true,
+        "company_revenue": 8000000, "company_expenses": 6500000, "company_capital": 3000000, "executive_income": 2000000
+      },
+      "expect": {
+        "recommended_cover": 5000000, "cit_before": 180000, "cit_after": 180000, "cit_saving": 0,
+        "exec_tax_increase": 25000, "net_cost": 125000, "deductible": false
+      }
+    },
+    {
+      "name": "4) บริษัทหักได้ · ผู้บริหารเงินได้ 150,000 (ไม่ถึงเกณฑ์เสียภาษี) → ได้ประโยชน์ทางภาษีเต็มจำนวน",
+      "input": {
+        "profit_per_year": 1500000, "years_to_replace": 3, "successor_cost": 500000, "revenue_at_risk": 500000,
+        "guaranteed_debt": 2000000, "share_buyout": 3000000, "premium": 100000,
+        "deductible": true, "benefit_to_executive": true,
+        "company_revenue": 8000000, "company_expenses": 6500000, "company_capital": 3000000, "executive_income": 150000
+      },
+      "expect": {
+        "cit_saving": 15000, "exec_tax_increase": 0, "net_cost": 85000, "recommended_cover": 5000000
+      }
+    },
+    {
+      "name": "5) ภาระผูกพันสูงกว่ากำไร → วงเงินแนะนำเลือกวิธีภาระผูกพัน",
+      "input": {
+        "profit_per_year": 1000000, "years_to_replace": 2, "successor_cost": 300000, "revenue_at_risk": 200000,
+        "guaranteed_debt": 5000000, "share_buyout": 4000000, "premium": 50000,
+        "deductible": true, "benefit_to_executive": true,
+        "company_revenue": 10000000, "company_expenses": 9000000, "company_capital": 2000000, "executive_income": 800000
+      },
+      "expect": {
+        "profit_need": 2000000, "replacement_need": 500000, "obligation_need": 9000000,
+        "recommended_cover": 9000000, "cover_method": "ภาระผูกพัน (หนี้ค้ำประกัน + ซื้อหุ้นคืนจากทายาท)"
+      }
+    }
+  ]
+}
