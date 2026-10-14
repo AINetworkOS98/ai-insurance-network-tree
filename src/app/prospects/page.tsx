@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import AdminRightsPanel from '@/components/AdminRightsPanel';
 import ThaiTaxCalculator from '@/components/tax/ThaiTaxCalculator';
+import TaxBaseTable from '@/components/tax/TaxBaseTable';
 
 // หน้า "สมาชิกทั่วไป" (เดิมชื่อ "ผู้สนใจ") — ฐานเดียวกับระบบสมาชิก (/api/members)
 // นิยาม: สมาชิกทั่วไป = ผู้ที่ยังอยู่ระดับตำแหน่ง 0 (ยังไม่เลื่อนเป็นตัวแทน)
@@ -161,7 +162,13 @@ export default function GeneralMembersPage(){
             </span>
           </div>
 
-          {view === 'tax' ? (<ThaiTaxCalculator/>) : (<>
+          {view === 'tax' ? (
+            <div className="space-y-4">
+              {/* ฐานภาษีบุคคลธรรมดา (ปีล่าสุด) — แสดงก่อนโปรแกรมคำนวณ */}
+              <TaxBaseTable/>
+              <ThaiTaxCalculator/>
+            </div>
+          ) : (<>
           {/* หัวหน้า */}
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-xl font-bold text-[#475569]">สมาชิกทั่วไป</h1>
