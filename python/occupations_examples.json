@@ -3405,6 +3405,6020 @@
         }
       ],
       "extra": {}
+    },
+    {
+      "id": "mkt_officer",
+      "job": "พนักงานการตลาดดิจิทัล (ประจำ)",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000 + สำรองเลี้ยงชีพ 5%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 540000,
+          "description": "เงินเดือน + โบนัส"
+        }
+      ],
+      "extra": {
+        "social_security": 9000,
+        "provident_fund": 27000
+      }
+    },
+    {
+      "id": "loan_analyst",
+      "job": "พนักงานวิเคราะห์สินเชื่อ",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000 + สำรองเลี้ยงชีพ 5%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 540000,
+          "description": "เงินเดือน"
+        }
+      ],
+      "extra": {
+        "social_security": 9000,
+        "provident_fund": 27000
+      }
+    },
+    {
+      "id": "nurse_aide_gov",
+      "job": "ผู้ช่วยพยาบาล (โรงพยาบาลรัฐ)",
+      "income_label": "40(1)",
+      "assume": "โสด · กบข. 3%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 300000,
+          "description": "ค่าจ้าง + ค่าเวร"
+        }
+      ],
+      "extra": {
+        "gpf": 9000
+      }
+    },
+    {
+      "id": "medical_records",
+      "job": "เจ้าหน้าที่เวชระเบียน",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 300000,
+          "description": "ค่าจ้างรายเดือน"
+        }
+      ],
+      "extra": {
+        "social_security": 9000
+      }
+    },
+    {
+      "id": "sso_officer",
+      "job": "เจ้าหน้าที่สำนักงานประกันสังคม",
+      "income_label": "40(1)",
+      "assume": "โสด · กบข. 3%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 420000,
+          "description": "เงินเดือน"
+        }
+      ],
+      "extra": {
+        "gpf": 12600
+      }
+    },
+    {
+      "id": "revenue_officer",
+      "job": "ข้าราชการกรมสรรพากร",
+      "income_label": "40(1)",
+      "assume": "โสด · กบข. 3%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 540000,
+          "description": "เงินเดือน + เงินประจำตำแหน่ง"
+        }
+      ],
+      "extra": {
+        "gpf": 16200
+      }
+    },
+    {
+      "id": "computer_teacher",
+      "job": "ครูสอนคอมพิวเตอร์ (โรงเรียนเอกชน)",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 420000,
+          "description": "เงินเดือน"
+        }
+      ],
+      "extra": {
+        "social_security": 9000
+      }
+    },
+    {
+      "id": "english_lecturer",
+      "job": "อาจารย์สอนภาษาอังกฤษ (มหาวิทยาลัยรัฐ)",
+      "income_label": "40(1)",
+      "assume": "โสด · กบข. 3%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 720000,
+          "description": "เงินเดือน + ค่าสอน"
+        }
+      ],
+      "extra": {
+        "gpf": 21600
+      }
+    },
+    {
+      "id": "public_health_academic",
+      "job": "นักวิชาการสาธารณสุข",
+      "income_label": "40(1)",
+      "assume": "โสด · กบข. 3%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 480000,
+          "description": "เงินเดือน"
+        }
+      ],
+      "extra": {
+        "gpf": 14400
+      }
+    },
+    {
+      "id": "policy_analyst",
+      "job": "นักวิเคราะห์นโยบายและแผน",
+      "income_label": "40(1)",
+      "assume": "โสด · กบข. 3%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 600000,
+          "description": "เงินเดือน"
+        }
+      ],
+      "extra": {
+        "gpf": 18000
+      }
+    },
+    {
+      "id": "power_engineer",
+      "job": "วิศวกรไฟฟ้า (การไฟฟ้า)",
+      "income_label": "40(1)",
+      "assume": "โสด · กบข. 3%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 780000,
+          "description": "เงินเดือน + ค่าตำแหน่ง"
+        }
+      ],
+      "extra": {
+        "gpf": 23400
+      }
+    },
+    {
+      "id": "mech_engineer_staff",
+      "job": "วิศวกรเครื่องกล (ประจำโรงงาน)",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000 + สำรองเลี้ยงชีพ 5%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 660000,
+          "description": "เงินเดือน"
+        }
+      ],
+      "extra": {
+        "social_security": 9000,
+        "provident_fund": 33000
+      }
+    },
+    {
+      "id": "site_supervisor",
+      "job": "ผู้ควบคุมงานก่อสร้าง",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000 + สำรองเลี้ยงชีพ 5%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 600000,
+          "description": "เงินเดือน + เบี้ยโครงการ"
+        }
+      ],
+      "extra": {
+        "social_security": 9000,
+        "provident_fund": 30000
+      }
+    },
+    {
+      "id": "foreman",
+      "job": "โฟร์แมนควบคุมงาน (ไซต์งาน)",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 480000,
+          "description": "ค่าจ้าง + เบี้ยเลี้ยง"
+        }
+      ],
+      "extra": {
+        "social_security": 9000
+      }
+    },
+    {
+      "id": "draftsman",
+      "job": "พนักงานเขียนแบบ (Draftsman)",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000 + สำรองเลี้ยงชีพ 5%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 420000,
+          "description": "เงินเดือน"
+        }
+      ],
+      "extra": {
+        "social_security": 9000,
+        "provident_fund": 21000
+      }
+    },
+    {
+      "id": "welder_staff",
+      "job": "ช่างเชื่อม (ประจำโรงงาน)",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 420000,
+          "description": "ค่าจ้าง + ค่าล่วงเวลา"
+        }
+      ],
+      "extra": {
+        "social_security": 9000
+      }
+    },
+    {
+      "id": "cnc_operator",
+      "job": "พนักงานควบคุมเครื่องจักร CNC",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 456000,
+          "description": "ค่าจ้าง + ค่าล่วงเวลา"
+        }
+      ],
+      "extra": {
+        "social_security": 9000
+      }
+    },
+    {
+      "id": "qc_officer",
+      "job": "พนักงานตรวจสอบคุณภาพ (QC)",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 360000,
+          "description": "ค่าจ้างรายเดือน"
+        }
+      ],
+      "extra": {
+        "social_security": 9000
+      }
+    },
+    {
+      "id": "warehouse_keeper",
+      "job": "พนักงานคลังพัสดุ",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 336000,
+          "description": "ค่าจ้างรายเดือน"
+        }
+      ],
+      "extra": {
+        "social_security": 9000
+      }
+    },
+    {
+      "id": "delivery_staff",
+      "job": "พนักงานจัดส่ง (ประจำบริษัท)",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 300000,
+          "description": "ค่าจ้าง + ค่าเที่ยว"
+        }
+      ],
+      "extra": {
+        "social_security": 9000
+      }
+    },
+    {
+      "id": "call_center",
+      "job": "พนักงานบริการลูกค้าทางโทรศัพท์",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 312000,
+          "description": "ค่าจ้างรายเดือน"
+        }
+      ],
+      "extra": {
+        "social_security": 9000
+      }
+    },
+    {
+      "id": "admin_officer",
+      "job": "เจ้าหน้าที่ธุรการ",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 300000,
+          "description": "ค่าจ้างรายเดือน"
+        }
+      ],
+      "extra": {
+        "social_security": 9000
+      }
+    },
+    {
+      "id": "ar_officer",
+      "job": "เจ้าหน้าที่บัญชีลูกหนี้",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000 + สำรองเลี้ยงชีพ 5%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 360000,
+          "description": "เงินเดือน"
+        }
+      ],
+      "extra": {
+        "social_security": 9000,
+        "provident_fund": 18000
+      }
+    },
+    {
+      "id": "tax_officer",
+      "job": "เจ้าหน้าที่ภาษี (ประจำบริษัท)",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000 + สำรองเลี้ยงชีพ 5%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 480000,
+          "description": "เงินเดือน"
+        }
+      ],
+      "extra": {
+        "social_security": 9000,
+        "provident_fund": 24000
+      }
+    },
+    {
+      "id": "audit_assistant",
+      "job": "ผู้ช่วยผู้สอบบัญชี",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000 + สำรองเลี้ยงชีพ 5%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 420000,
+          "description": "เงินเดือน"
+        }
+      ],
+      "extra": {
+        "social_security": 9000,
+        "provident_fund": 21000
+      }
+    },
+    {
+      "id": "exec_secretary",
+      "job": "เลขานุการผู้บริหาร",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000 + สำรองเลี้ยงชีพ 5%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 480000,
+          "description": "เงินเดือน"
+        }
+      ],
+      "extra": {
+        "social_security": 9000,
+        "provident_fund": 24000
+      }
+    },
+    {
+      "id": "retail_store_manager",
+      "job": "ผู้จัดการร้านค้าปลีก",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000 + สำรองเลี้ยงชีพ 5%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 600000,
+          "description": "เงินเดือน + โบนัส"
+        }
+      ],
+      "extra": {
+        "social_security": 9000,
+        "provident_fund": 30000
+      }
+    },
+    {
+      "id": "hotel_manager",
+      "job": "ผู้จัดการโรงแรม",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000 + สำรองเลี้ยงชีพ 5%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 840000,
+          "description": "เงินเดือน + ค่าบริการ"
+        }
+      ],
+      "extra": {
+        "social_security": 9000,
+        "provident_fund": 42000
+      }
+    },
+    {
+      "id": "production_manager",
+      "job": "ผู้จัดการฝ่ายผลิต",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000 + สำรองเลี้ยงชีพ 5%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 900000,
+          "description": "เงินเดือน + โบนัส"
+        }
+      ],
+      "extra": {
+        "social_security": 9000,
+        "provident_fund": 45000
+      }
+    },
+    {
+      "id": "purchasing_manager",
+      "job": "ผู้จัดการฝ่ายจัดซื้อ",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000 + สำรองเลี้ยงชีพ 5%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 720000,
+          "description": "เงินเดือน"
+        }
+      ],
+      "extra": {
+        "social_security": 9000,
+        "provident_fund": 36000
+      }
+    },
+    {
+      "id": "hr_manager",
+      "job": "ผู้จัดการฝ่ายบุคคล",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000 + สำรองเลี้ยงชีพ 5%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 660000,
+          "description": "เงินเดือน"
+        }
+      ],
+      "extra": {
+        "social_security": 9000,
+        "provident_fund": 33000
+      }
+    },
+    {
+      "id": "finance_manager",
+      "job": "ผู้จัดการฝ่ายการเงิน",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000 + สำรองเลี้ยงชีพ 5%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 960000,
+          "description": "เงินเดือน + โบนัส"
+        }
+      ],
+      "extra": {
+        "social_security": 9000,
+        "provident_fund": 48000
+      }
+    },
+    {
+      "id": "financial_analyst",
+      "job": "นักวิเคราะห์การเงิน",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000 + สำรองเลี้ยงชีพ 5%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 840000,
+          "description": "เงินเดือน + โบนัส"
+        }
+      ],
+      "extra": {
+        "social_security": 9000,
+        "provident_fund": 42000
+      }
+    },
+    {
+      "id": "stock_broker_staff",
+      "job": "นายหน้าซื้อขายหลักทรัพย์ (ประจำ)",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000 + สำรองเลี้ยงชีพ 5%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 1200000,
+          "description": "เงินเดือน + ค่านายหน้า"
+        }
+      ],
+      "extra": {
+        "social_security": 9000,
+        "provident_fund": 60000
+      }
+    },
+    {
+      "id": "bank_branch_staff",
+      "job": "เจ้าหน้าที่ธนาคาร (สาขา)",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000 + สำรองเลี้ยงชีพ 5%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 420000,
+          "description": "เงินเดือน"
+        }
+      ],
+      "extra": {
+        "social_security": 9000,
+        "provident_fund": 21000
+      }
+    },
+    {
+      "id": "bank_teller",
+      "job": "พนักงานเก็บเงิน (ธนาคาร)",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 360000,
+          "description": "ค่าจ้างรายเดือน"
+        }
+      ],
+      "extra": {
+        "social_security": 9000
+      }
+    },
+    {
+      "id": "insurance_sales_staff",
+      "job": "พนักงานขายประกัน (ประจำบริษัท)",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000 + สำรองเลี้ยงชีพ 5%",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 480000,
+          "description": "เงินเดือน + ค่าคอมมิชชัน"
+        }
+      ],
+      "extra": {
+        "social_security": 9000,
+        "provident_fund": 24000
+      }
+    },
+    {
+      "id": "dental_assistant",
+      "job": "ผู้ช่วยทันตแพทย์",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 300000,
+          "description": "ค่าจ้างรายเดือน"
+        }
+      ],
+      "extra": {
+        "social_security": 9000
+      }
+    },
+    {
+      "id": "radiology_tech",
+      "job": "พนักงานรังสีเทคนิค",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 480000,
+          "description": "เงินเดือน + ค่าเวร"
+        }
+      ],
+      "extra": {
+        "social_security": 9000
+      }
+    },
+    {
+      "id": "physio_staff",
+      "job": "เจ้าหน้าที่กายภาพบำบัด (ประจำ)",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 420000,
+          "description": "เงินเดือน"
+        }
+      ],
+      "extra": {
+        "social_security": 9000
+      }
+    },
+    {
+      "id": "truck_driver_staff",
+      "job": "พนักงานขับรถบรรทุก (ประจำบริษัท)",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 360000,
+          "description": "ค่าจ้าง + ค่าเที่ยว"
+        }
+      ],
+      "extra": {
+        "social_security": 9000
+      }
+    },
+    {
+      "id": "building_maintenance",
+      "job": "ช่างซ่อมบำรุงอาคาร (ประจำ)",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 360000,
+          "description": "ค่าจ้างรายเดือน"
+        }
+      ],
+      "extra": {
+        "social_security": 9000
+      }
+    },
+    {
+      "id": "hotel_housekeeper",
+      "job": "แม่บ้านโรงแรม (ประจำ)",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 264000,
+          "description": "ค่าจ้าง + ค่าบริการ"
+        }
+      ],
+      "extra": {
+        "social_security": 9000
+      }
+    },
+    {
+      "id": "hotel_laundry",
+      "job": "พนักงานซักรีดโรงแรม",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 264000,
+          "description": "ค่าจ้างรายเดือน"
+        }
+      ],
+      "extra": {
+        "social_security": 9000
+      }
+    },
+    {
+      "id": "park_worker",
+      "job": "พนักงานสวนสาธารณะ (เทศบาล)",
+      "income_label": "40(1)",
+      "assume": "โสด · ประกันสังคม 9,000",
+      "items": [
+        {
+          "category": "salary",
+          "amount": 240000,
+          "description": "ค่าจ้างรายเดือน"
+        }
+      ],
+      "extra": {
+        "social_security": 9000
+      }
+    },
+    {
+      "id": "lawn_care",
+      "job": "ช่างตัดหญ้า / จัดสวน (รับจ้าง)",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 300000,
+          "description": "ค่าจ้างตัดหญ้า/จัดสวน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "ac_cleaner",
+      "job": "ช่างล้างแอร์ (รับจ้าง)",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 480000,
+          "description": "ค่าล้าง/ซ่อมแอร์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "pc_repair_free",
+      "job": "ช่างซ่อมคอมพิวเตอร์ (อิสระ)",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 480000,
+          "description": "ค่าซ่อม + ค่าบริการ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "phone_repair_free",
+      "job": "ช่างซ่อมมือถือ (อิสระ)",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 420000,
+          "description": "ค่าซ่อมมือถือ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "wood_floor",
+      "job": "ช่างปูพื้นไม้ (รับจ้าง)",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 600000,
+          "description": "ค่าจ้างปูพื้น"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "roofer_free",
+      "job": "ช่างทำหลังคา (รับจ้างรายวัน)",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 480000,
+          "description": "ค่าจ้างทำหลังคา"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "painter_free",
+      "job": "ช่างทาสี (รับจ้าง)",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 360000,
+          "description": "ค่าจ้างทาสี"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "welder_free",
+      "job": "ช่างเชื่อมรับจ้าง",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 480000,
+          "description": "ค่าจ้างเชื่อม"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "lathe_operator",
+      "job": "ช่างกลึง / เจียรโลหะ",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 420000,
+          "description": "ค่าจ้างกลึงชิ้นงาน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "aluminium_glass",
+      "job": "ช่างตัดกระจก / อะลูมิเนียม",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 540000,
+          "description": "ค่าจ้างติดตั้ง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "cctv_installer",
+      "job": "ช่างติดตั้งกล้องวงจรปิด",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 480000,
+          "description": "ค่าติดตั้งกล้อง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "solar_installer_free",
+      "job": "ช่างติดตั้งโซลาร์เซลล์ (อิสระ)",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 720000,
+          "description": "ค่าติดตั้งโซลาร์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "washer_repair",
+      "job": "ช่างซ่อมเครื่องซักผ้า",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 420000,
+          "description": "ค่าซ่อม"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "fridge_repair",
+      "job": "ช่างซ่อมตู้เย็น",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 420000,
+          "description": "ค่าซ่อม"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "moto_repair",
+      "job": "ช่างซ่อมมอเตอร์ไซค์ (อิสระ)",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 360000,
+          "description": "ค่าซ่อม"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "bike_repair",
+      "job": "ช่างซ่อมจักรยาน",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 240000,
+          "description": "ค่าซ่อม"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "sewing_free",
+      "job": "ช่างเย็บผ้า (รับจ้าง)",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 300000,
+          "description": "ค่าจ้างเย็บผ้า"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "tailor_suit",
+      "job": "ช่างตัดเย็บชุดสูท (อิสระ)",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 600000,
+          "description": "ค่าจ้างตัดสูท"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "hair_stylist_free",
+      "job": "ช่างทำผมแฟชั่น (อิสระ)",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 540000,
+          "description": "ค่าบริการทำผม"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "barber_free",
+      "job": "ช่างตัดผมชาย (อิสระ)",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 360000,
+          "description": "ค่าบริการตัดผม"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "gel_nail",
+      "job": "ช่างทำเล็บเจล",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 420000,
+          "description": "ค่าบริการทำเล็บ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "lash_artist",
+      "job": "ช่างต่อขนตา",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 360000,
+          "description": "ค่าบริการต่อขนตา"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "eyebrow_tattoo",
+      "job": "ช่างสักคิ้ว / งานบิวตี้",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 720000,
+          "description": "ค่าบริการสักคิ้ว"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "dance_teacher",
+      "job": "ครูสอนเต้น",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 420000,
+          "description": "ค่าสอนเต้น"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "guitar_teacher",
+      "job": "ครูสอนกีตาร์",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 360000,
+          "description": "ค่าสอนดนตรี"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "english_tutor_private",
+      "job": "ครูสอนภาษาอังกฤษตัวต่อตัว",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 480000,
+          "description": "ค่าสอน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "math_tutor",
+      "job": "ติวเตอร์คณิตศาสตร์",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 600000,
+          "description": "ค่าสอน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "elder_caregiver",
+      "job": "พี่เลี้ยงผู้สูงอายุ",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 300000,
+          "description": "ค่าจ้างดูแล"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "baby_sitter",
+      "job": "ผู้ช่วยดูแลเด็กอ่อน",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 288000,
+          "description": "ค่าจ้างเลี้ยงเด็ก"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "gardener_free",
+      "job": "คนสวน (รับจ้างรายเดือน)",
+      "income_label": "40(2)",
+      "assume": "โสด · 40(2) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "service",
+          "amount": 264000,
+          "description": "ค่าจ้างรายเดือน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "cartoonist_royalty",
+      "job": "นักวาดการ์ตูน (ได้ค่าลิขสิทธิ์)",
+      "income_label": "40(3)",
+      "assume": "โสด · 40(3) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "royalty",
+          "amount": 480000,
+          "description": "ค่าลิขสิทธิ์การ์ตูน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "music_label_owner",
+      "job": "เจ้าของลิขสิทธิ์เพลง (ค่ายเพลง)",
+      "income_label": "40(3)",
+      "assume": "โสด · 40(3) เพดานหักเหมา 100,000",
+      "items": [
+        {
+          "category": "royalty",
+          "amount": 1800000,
+          "description": "ค่าลิขสิทธิ์เพลง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "book_rights_owner",
+      "job": "เจ้าของลิขสิทธิ์หนังสือ (สำนักพิมพ์)",
+      "income_label": "40(3)",
+      "assume": "โสด · 40(3) เพดานหักเหมา 100,000",
+      "items": [
+        {
+          "category": "royalty",
+          "amount": 960000,
+          "description": "ค่าลิขสิทธิ์หนังสือ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "fabric_designer",
+      "job": "นักออกแบบลายผ้า (ค่าลิขสิทธิ์)",
+      "income_label": "40(3)",
+      "assume": "โสด · 40(3) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "royalty",
+          "amount": 600000,
+          "description": "ค่าลิขสิทธิ์ลายพิมพ์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "recipe_owner",
+      "job": "เจ้าของสูตรอาหาร (ให้เช่าสูตร)",
+      "income_label": "40(3)",
+      "assume": "โสด · 40(3) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "royalty",
+          "amount": 720000,
+          "description": "ค่าสิทธิ์การใช้สูตร"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "stock_photo",
+      "job": "เจ้าของลิขสิทธิ์ภาพถ่าย (Stock)",
+      "income_label": "40(3)",
+      "assume": "โสด · 40(3) 50% ไม่เกิน 100,000",
+      "items": [
+        {
+          "category": "royalty",
+          "amount": 360000,
+          "description": "ค่าลิขสิทธิ์ภาพ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "foreign_dividend",
+      "job": "ผู้รับเงินปันผลหุ้นต่างประเทศ",
+      "income_label": "40(4)",
+      "assume": "โสด · 40(4) หักค่าใช้จ่ายไม่ได้",
+      "items": [
+        {
+          "category": "interest",
+          "amount": 1000000,
+          "description": "เงินปันผลหุ้นต่างประเทศ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "bond_interest",
+      "job": "ผู้รับดอกเบี้ยหุ้นกู้",
+      "income_label": "40(4)",
+      "assume": "โสด · 40(4) หักค่าใช้จ่ายไม่ได้",
+      "items": [
+        {
+          "category": "interest",
+          "amount": 700000,
+          "description": "ดอกเบี้ยหุ้นกู้"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "govbond_interest",
+      "job": "ผู้รับดอกเบี้ยพันธบัตรรัฐบาล",
+      "income_label": "40(4)",
+      "assume": "โสด · 40(4) หักค่าใช้จ่ายไม่ได้",
+      "items": [
+        {
+          "category": "interest",
+          "amount": 500000,
+          "description": "ดอกเบี้ยพันธบัตร"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "company_shareholder",
+      "job": "ผู้ถือหุ้นบริษัทจำกัด (เงินปันผล)",
+      "income_label": "40(4)",
+      "assume": "โสด · 40(4) หักค่าใช้จ่ายไม่ได้",
+      "items": [
+        {
+          "category": "interest",
+          "amount": 1500000,
+          "description": "เงินปันผล"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "rent_dormitory",
+      "job": "ให้เช่าหอพักนักเรียน",
+      "income_label": "40(5)",
+      "assume": "โสด · อาคาร 30%",
+      "items": [
+        {
+          "category": "rent",
+          "amount": 1800000,
+          "description": "ค่าเช่าหอพัก",
+          "variant": "building"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "rent_factory",
+      "job": "ให้เช่าโรงงาน",
+      "income_label": "40(5)",
+      "assume": "โสด · อาคาร 30%",
+      "items": [
+        {
+          "category": "rent",
+          "amount": 6000000,
+          "description": "ค่าเช่าโรงงาน",
+          "variant": "building"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "rent_container_yard",
+      "job": "ให้เช่าลานตู้คอนเทนเนอร์",
+      "income_label": "40(5)",
+      "assume": "โสด · ที่ดินอื่น 15%",
+      "items": [
+        {
+          "category": "rent",
+          "amount": 1200000,
+          "description": "ค่าเช่าลาน",
+          "variant": "other_land"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "rent_shop3",
+      "job": "ให้เช่าอาคารพาณิชย์ 3 ห้อง",
+      "income_label": "40(5)",
+      "assume": "โสด · อาคาร 30%",
+      "items": [
+        {
+          "category": "rent",
+          "amount": 1080000,
+          "description": "ค่าเช่าอาคารพาณิชย์",
+          "variant": "building"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "rent_house2",
+      "job": "ให้เช่าบ้านเดี่ยว 2 หลัง",
+      "income_label": "40(5)",
+      "assume": "โสด · อาคาร 30%",
+      "items": [
+        {
+          "category": "rent",
+          "amount": 720000,
+          "description": "ค่าเช่าบ้าน",
+          "variant": "building"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "rent_townhouse5",
+      "job": "ให้เช่าทาวน์เฮ้าส์ 5 หลัง",
+      "income_label": "40(5)",
+      "assume": "โสด · อาคาร 30%",
+      "items": [
+        {
+          "category": "rent",
+          "amount": 900000,
+          "description": "ค่าเช่าทาวน์เฮ้าส์",
+          "variant": "building"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "rent_farmland100",
+      "job": "ให้เช่าที่ดินเกษตร 100 ไร่",
+      "income_label": "40(5)",
+      "assume": "โสด · ที่ดินเกษตร 20%",
+      "items": [
+        {
+          "category": "rent",
+          "amount": 1200000,
+          "description": "ค่าเช่าที่ดินเกษตร",
+          "variant": "agri_land"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "rent_paddy",
+      "job": "ให้เช่านา",
+      "income_label": "40(5)",
+      "assume": "โสด · ที่ดินเกษตร 20%",
+      "items": [
+        {
+          "category": "rent",
+          "amount": 300000,
+          "description": "ค่าเช่านา",
+          "variant": "agri_land"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "rent_orchard",
+      "job": "ให้เช่าสวนผลไม้",
+      "income_label": "40(5)",
+      "assume": "โสด · ที่ดินเกษตร 20%",
+      "items": [
+        {
+          "category": "rent",
+          "amount": 600000,
+          "description": "ค่าเช่าสวน",
+          "variant": "agri_land"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "rent_small_office",
+      "job": "ให้เช่าอาคารสำนักงานเล็ก",
+      "income_label": "40(5)",
+      "assume": "โสด · อาคาร 30%",
+      "items": [
+        {
+          "category": "rent",
+          "amount": 600000,
+          "description": "ค่าเช่าสำนักงาน",
+          "variant": "building"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "rent_van4",
+      "job": "ให้เช่ารถตู้ 4 คัน",
+      "income_label": "40(5)",
+      "assume": "โสด · ยานพาหนะ 30%",
+      "items": [
+        {
+          "category": "rent",
+          "amount": 960000,
+          "description": "ค่าเช่ารถตู้",
+          "variant": "vehicle"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "rent_motorbike20",
+      "job": "ให้เช่ามอเตอร์ไซค์ 20 คัน",
+      "income_label": "40(5)",
+      "assume": "โสด · ยานพาหนะ 30%",
+      "items": [
+        {
+          "category": "rent",
+          "amount": 480000,
+          "description": "ค่าเช่ามอเตอร์ไซค์",
+          "variant": "vehicle"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "rent_crane",
+      "job": "ให้เช่าเครน / รถแบคโฮ",
+      "income_label": "40(5)",
+      "assume": "โสด · ยานพาหนะ 30%",
+      "items": [
+        {
+          "category": "rent",
+          "amount": 2400000,
+          "description": "ค่าเช่าเครื่องจักรกลหนัก",
+          "variant": "vehicle"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "rent_sound_system",
+      "job": "ให้เช่าเครื่องเสียงงานแสดง",
+      "income_label": "40(5)",
+      "assume": "โสด · ทรัพย์สินอื่น 10%",
+      "items": [
+        {
+          "category": "rent",
+          "amount": 360000,
+          "description": "ค่าเช่าเครื่องเสียง",
+          "variant": "other"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "rent_tent",
+      "job": "ให้เช่าเต็นท์ / โต๊ะเก้าอี้",
+      "income_label": "40(5)",
+      "assume": "โสด · ทรัพย์สินอื่น 10%",
+      "items": [
+        {
+          "category": "rent",
+          "amount": 720000,
+          "description": "ค่าเช่าอุปกรณ์งาน",
+          "variant": "other"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "rent_copier",
+      "job": "ให้เช่าเครื่องถ่ายเอกสาร",
+      "income_label": "40(5)",
+      "assume": "โสด · ทรัพย์สินอื่น 10%",
+      "items": [
+        {
+          "category": "rent",
+          "amount": 480000,
+          "description": "ค่าเช่าเครื่องถ่ายเอกสาร",
+          "variant": "other"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "rent_telecom_tower",
+      "job": "ให้เช่าเสาโทรคมนาคม",
+      "income_label": "40(5)",
+      "assume": "โสด · ทรัพย์สินอื่น 10%",
+      "items": [
+        {
+          "category": "rent",
+          "amount": 2400000,
+          "description": "ค่าเช่าเสาสัญญาณ",
+          "variant": "other"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "rent_billboard",
+      "job": "ให้เช่าที่ติดป้ายโฆษณา",
+      "income_label": "40(5)",
+      "assume": "โสด · ที่ดินอื่น 15%",
+      "items": [
+        {
+          "category": "rent",
+          "amount": 1500000,
+          "description": "ค่าเช่าที่ตั้งป้าย",
+          "variant": "other_land"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "rent_condo6",
+      "job": "ให้เช่าคอนโด 6 ยูนิต",
+      "income_label": "40(5)",
+      "assume": "โสด · อาคาร 30%",
+      "items": [
+        {
+          "category": "rent",
+          "amount": 1440000,
+          "description": "ค่าเช่าคอนโด",
+          "variant": "building"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "rent_warehouse2",
+      "job": "ให้เช่าโกดังสินค้า 2 แห่ง",
+      "income_label": "40(5)",
+      "assume": "โสด · อาคาร 30%",
+      "items": [
+        {
+          "category": "rent",
+          "amount": 3600000,
+          "description": "ค่าเช่าโกดัง",
+          "variant": "building"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "specialist_doctor",
+      "job": "แพทย์เฉพาะทาง (คลินิกส่วนตัว)",
+      "income_label": "40(6) โรคศิลปะ",
+      "assume": "โสด · โรคศิลปะ 60%",
+      "items": [
+        {
+          "category": "professional",
+          "amount": 3600000,
+          "description": "ค่าตรวจ/รักษาเฉพาะทาง",
+          "variant": "medical"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "orthodontist",
+      "job": "ทันตแพทย์เฉพาะทาง (จัดฟัน)",
+      "income_label": "40(6) โรคศิลปะ",
+      "assume": "โสด · โรคศิลปะ 60%",
+      "items": [
+        {
+          "category": "professional",
+          "amount": 2400000,
+          "description": "ค่าจัดฟัน",
+          "variant": "medical"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "ophthalmologist",
+      "job": "จักษุแพทย์",
+      "income_label": "40(6) โรคศิลปะ",
+      "assume": "โสด · โรคศิลปะ 60%",
+      "items": [
+        {
+          "category": "professional",
+          "amount": 3000000,
+          "description": "ค่าตรวจ/ผ่าตัดตา",
+          "variant": "medical"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "dermatologist",
+      "job": "แพทย์ผิวหนัง",
+      "income_label": "40(6) โรคศิลปะ",
+      "assume": "โสด · โรคศิลปะ 60%",
+      "items": [
+        {
+          "category": "professional",
+          "amount": 2700000,
+          "description": "ค่าตรวจ/หัตถการผิวหนัง",
+          "variant": "medical"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "anesthesiologist",
+      "job": "วิสัญญีแพทย์ (รับงานอิสระ)",
+      "income_label": "40(6) โรคศิลปะ",
+      "assume": "โสด · โรคศิลปะ 60%",
+      "items": [
+        {
+          "category": "professional",
+          "amount": 2400000,
+          "description": "ค่าวิสัญญี",
+          "variant": "medical"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "pediatrician",
+      "job": "กุมารแพทย์",
+      "income_label": "40(6) โรคศิลปะ",
+      "assume": "โสด · โรคศิลปะ 60%",
+      "items": [
+        {
+          "category": "professional",
+          "amount": 1800000,
+          "description": "ค่าตรวจเด็ก",
+          "variant": "medical"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "tax_accountant",
+      "job": "นักบัญชีภาษี (รับงานเอง)",
+      "income_label": "40(6) การบัญชี",
+      "assume": "โสด · การบัญชี 30%",
+      "items": [
+        {
+          "category": "professional",
+          "amount": 1200000,
+          "description": "ค่าที่ปรึกษาภาษี",
+          "variant": "other"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "tax_lawyer",
+      "job": "ที่ปรึกษากฎหมายภาษี",
+      "income_label": "40(6) กฎหมาย",
+      "assume": "โสด · กฎหมาย 30%",
+      "items": [
+        {
+          "category": "professional",
+          "amount": 1500000,
+          "description": "ค่าที่ปรึกษา",
+          "variant": "other"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "survey_engineer",
+      "job": "วิศวกรสำรวจ (ที่ปรึกษา)",
+      "income_label": "40(6) วิศวกรรม",
+      "assume": "โสด · วิศวกรรม 30%",
+      "items": [
+        {
+          "category": "professional",
+          "amount": 1440000,
+          "description": "ค่าสำรวจ/ออกแบบ",
+          "variant": "other"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "landscape_architect",
+      "job": "สถาปนิกภูมิทัศน์",
+      "income_label": "40(6) สถาปัตยกรรม",
+      "assume": "โสด · สถาปัตยกรรม 30%",
+      "items": [
+        {
+          "category": "professional",
+          "amount": 960000,
+          "description": "ค่าออกแบบภูมิทัศน์",
+          "variant": "other"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "contractor_hvac",
+      "job": "ผู้รับเหมางานระบบปรับอากาศ",
+      "income_label": "40(7)",
+      "assume": "โสด · รับเหมา 60%",
+      "items": [
+        {
+          "category": "contractor",
+          "amount": 2400000,
+          "description": "ค่าจ้างติดตั้งระบบแอร์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "contractor_plumbing",
+      "job": "ผู้รับเหมางานระบบสุขาภิบาล",
+      "income_label": "40(7)",
+      "assume": "โสด · รับเหมา 60%",
+      "items": [
+        {
+          "category": "contractor",
+          "amount": 3600000,
+          "description": "ค่าจ้างงานประปา"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "contractor_pool",
+      "job": "ผู้รับเหมางานสระว่ายน้ำ",
+      "income_label": "40(7)",
+      "assume": "โสด · รับเหมา 60%",
+      "items": [
+        {
+          "category": "contractor",
+          "amount": 1200000,
+          "description": "ค่าจ้างสร้างสระ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "contractor_roadwork",
+      "job": "ผู้รับเหมางานพื้นถนน",
+      "income_label": "40(7)",
+      "assume": "โสด · รับเหมา 60%",
+      "items": [
+        {
+          "category": "contractor",
+          "amount": 6000000,
+          "description": "ค่าจ้างงานถนน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "contractor_demolition",
+      "job": "ผู้รับเหมางานรื้อถอนอาคาร",
+      "income_label": "40(7)",
+      "assume": "โสด · รับเหมา 60%",
+      "items": [
+        {
+          "category": "contractor",
+          "amount": 2400000,
+          "description": "ค่าจ้างรื้อถอน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "contractor_turnkey",
+      "job": "ผู้รับเหมาตกแต่งภายใน (Turnkey)",
+      "income_label": "40(7)",
+      "assume": "โสด · รับเหมา 60%",
+      "items": [
+        {
+          "category": "contractor",
+          "amount": 4800000,
+          "description": "ค่าจ้างตกแต่งครบวงจร"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "contractor_solar_roof",
+      "job": "ผู้รับเหมาโซลาร์รูฟท็อป",
+      "income_label": "40(7)",
+      "assume": "โสด · รับเหมา 60%",
+      "items": [
+        {
+          "category": "contractor",
+          "amount": 3000000,
+          "description": "ค่าจ้างติดตั้งโซลาร์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "contractor_school_paint",
+      "job": "ผู้รับเหมางานทาสีโรงเรียน",
+      "income_label": "40(7)",
+      "assume": "โสด · รับเหมา 60%",
+      "items": [
+        {
+          "category": "contractor",
+          "amount": 960000,
+          "description": "ค่าจ้างทาสี"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "contractor_community_power",
+      "job": "ผู้รับเหมางานไฟฟ้าชุมชน",
+      "income_label": "40(7)",
+      "assume": "โสด · รับเหมา 60%",
+      "items": [
+        {
+          "category": "contractor",
+          "amount": 1800000,
+          "description": "ค่าจ้างวางระบบไฟฟ้า"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "contractor_concrete_cut",
+      "job": "ผู้รับเหมางานเจาะ/ตัดคอนกรีต",
+      "income_label": "40(7)",
+      "assume": "โสด · รับเหมา 60%",
+      "items": [
+        {
+          "category": "contractor",
+          "amount": 900000,
+          "description": "ค่าจ้างเจาะตัด"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "ice_shop",
+      "job": "เจ้าของร้านขายน้ำแข็ง",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (9))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2400000,
+          "variant": "general",
+          "description": "ยอดขายน้ำแข็ง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "rice_trader",
+      "job": "เจ้าของร้านขายข้าวสาร",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1800000,
+          "variant": "general",
+          "description": "ยอดขายข้าวสาร"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "beverage_shop",
+      "job": "เจ้าของร้านขายเครื่องดื่ม",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (9))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1200000,
+          "variant": "general",
+          "description": "ยอดขายเครื่องดื่ม"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "herbal_pharmacy",
+      "job": "เจ้าของร้านขายยาแผนโบราณ",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 960000,
+          "variant": "general",
+          "description": "ยอดขายยาแผนโบราณ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "small_pharmacy",
+      "job": "เจ้าของร้านขายยาแผนปัจจุบัน (ขนาดเล็ก)",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1800000,
+          "variant": "general",
+          "description": "ยอดขายยา"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "optician",
+      "job": "เจ้าของร้านขายแว่นตา",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1200000,
+          "variant": "general",
+          "description": "ยอดขายแว่นตา"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "watch_shop",
+      "job": "เจ้าของร้านขายนาฬิกา",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (13))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1800000,
+          "variant": "general",
+          "description": "ยอดขายนาฬิกา"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "sport_shop",
+      "job": "เจ้าของร้านขายเครื่องกีฬา",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1500000,
+          "variant": "general",
+          "description": "ยอดขายอุปกรณ์กีฬา"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "music_shop",
+      "job": "เจ้าของร้านขายเครื่องดนตรี",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1200000,
+          "variant": "general",
+          "description": "ยอดขายเครื่องดนตรี"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "stationery_shop",
+      "job": "เจ้าของร้านขายเครื่องเขียน",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (18))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 720000,
+          "variant": "general",
+          "description": "ยอดขายเครื่องเขียน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "souvenir_shop",
+      "job": "เจ้าของร้านขายของที่ระลึก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 900000,
+          "variant": "general",
+          "description": "ยอดขายของที่ระลึก"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "flower_shop",
+      "job": "เจ้าของร้านขายดอกไม้",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 720000,
+          "variant": "general",
+          "description": "ยอดขายดอกไม้"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "curtain_shop",
+      "job": "เจ้าของร้านขายผ้าม่าน",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (7))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 960000,
+          "variant": "general",
+          "description": "ยอดขายผ้าม่าน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "hardware_shop",
+      "job": "เจ้าของร้านขายอุปกรณ์ก่อสร้าง",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2400000,
+          "variant": "general",
+          "description": "ยอดขายอุปกรณ์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "agri_chem_shop",
+      "job": "เจ้าของร้านขายเคมีภัณฑ์เกษตร",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 3600000,
+          "variant": "general",
+          "description": "ยอดขายเคมีภัณฑ์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "fertilizer_shop",
+      "job": "เจ้าของร้านขายปุ๋ย",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2400000,
+          "variant": "general",
+          "description": "ยอดขายปุ๋ย"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "seed_shop",
+      "job": "เจ้าของร้านขายเมล็ดพันธุ์",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1800000,
+          "variant": "general",
+          "description": "ยอดขายเมล็ดพันธุ์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "perfume_shop",
+      "job": "เจ้าของร้านขายน้ำหอม",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 900000,
+          "variant": "general",
+          "description": "ยอดขายน้ำหอม"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "kitchenware_shop",
+      "job": "เจ้าของร้านขายเครื่องครัว",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1200000,
+          "variant": "general",
+          "description": "ยอดขายเครื่องครัว"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "furniture_shop",
+      "job": "เจ้าของร้านขายเฟอร์นิเจอร์",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (8))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2400000,
+          "variant": "general",
+          "description": "ยอดขายเฟอร์นิเจอร์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "carpet_shop",
+      "job": "เจ้าของร้านขายพรม/วอลเปเปอร์",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 960000,
+          "variant": "general",
+          "description": "ยอดขายพรม/วอลเปเปอร์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "jewelry_shop",
+      "job": "เจ้าของร้านขายเครื่องประดับ",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (13))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1800000,
+          "variant": "general",
+          "description": "ยอดขายเครื่องประดับ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "houseware_shop",
+      "job": "เจ้าของร้านขายของใช้ในบ้าน",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1200000,
+          "variant": "general",
+          "description": "ยอดขายของใช้ในบ้าน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "dry_food_shop",
+      "job": "เจ้าของร้านขายอาหารแห้ง",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1500000,
+          "variant": "general",
+          "description": "ยอดขายอาหารแห้ง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "dried_seafood_shop",
+      "job": "เจ้าของร้านขายอาหารทะเลแห้ง",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2400000,
+          "variant": "general",
+          "description": "ยอดขายอาหารทะเลแห้ง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "chicken_shop",
+      "job": "เจ้าของร้านขายไก่สด",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1800000,
+          "variant": "general",
+          "description": "ยอดขายไก่สด"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "pork_shop",
+      "job": "เจ้าของร้านขายหมูสด",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2400000,
+          "variant": "general",
+          "description": "ยอดขายหมูสด"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "organic_veg_shop",
+      "job": "เจ้าของร้านขายผักปลอดสาร",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1200000,
+          "variant": "general",
+          "description": "ยอดขายผัก"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "seasonal_fruit_shop",
+      "job": "เจ้าของร้านขายผลไม้ตามฤดูกาล",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1500000,
+          "variant": "general",
+          "description": "ยอดขายผลไม้"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "souvenir_food_shop",
+      "job": "เจ้าของร้านขายของฝาก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 900000,
+          "variant": "general",
+          "description": "ยอดขายของฝาก"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "thai_dessert_shop",
+      "job": "เจ้าของร้านขายขนมไทย",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (9))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1200000,
+          "variant": "general",
+          "description": "ยอดขายขนมไทย"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "sausage_shop",
+      "job": "เจ้าของร้านขายลูกชิ้น/ไส้กรอก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (9))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 960000,
+          "variant": "general",
+          "description": "ยอดขายลูกชิ้น/ไส้กรอก"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "mookata_shop",
+      "job": "เจ้าของร้านหมูกระทะ",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (9))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 3600000,
+          "variant": "general",
+          "description": "ยอดขายหมูกระทะ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "somtam_shop",
+      "job": "เจ้าของร้านส้มตำ",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (9))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1500000,
+          "variant": "general",
+          "description": "ยอดขายส้มตำ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "noodle_shop",
+      "job": "เจ้าของร้านก๋วยเตี๋ยว",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (9))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1800000,
+          "variant": "general",
+          "description": "ยอดขายก๋วยเตี๋ยว"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "chicken_rice_shop",
+      "job": "เจ้าของร้านข้าวมันไก่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (9))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1500000,
+          "variant": "general",
+          "description": "ยอดขายข้าวมันไก่"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "shabu_shop",
+      "job": "เจ้าของร้านชาบู",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (9))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 4800000,
+          "variant": "general",
+          "description": "ยอดขายชาบู"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "buffet_shop",
+      "job": "เจ้าของร้านบุฟเฟ่ต์",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (9))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 6000000,
+          "variant": "general",
+          "description": "ยอดขายบุฟเฟ่ต์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "liquor_shop",
+      "job": "เจ้าของร้านขายเครื่องดื่มแอลกอฮอล์",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (20))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 3600000,
+          "variant": "general",
+          "description": "ยอดขายเครื่องดื่ม"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "mid_cafe",
+      "job": "เจ้าของร้านกาแฟสด (ขนาดกลาง)",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (9))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2400000,
+          "variant": "general",
+          "description": "ยอดขายกาแฟ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "dessert_cafe",
+      "job": "เจ้าของคาเฟ่ / ร้านขนม",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (9))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1500000,
+          "variant": "general",
+          "description": "ยอดขายขนม/เครื่องดื่ม"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "pizza_franchise",
+      "job": "เจ้าของร้านพิซซ่า (แฟรนไชส์)",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (9))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 3000000,
+          "variant": "general",
+          "description": "ยอดขายพิซซ่า"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "fried_chicken_franchise",
+      "job": "เจ้าของร้านไก่ทอด (แฟรนไชส์)",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (9))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2400000,
+          "variant": "general",
+          "description": "ยอดขายไก่ทอด"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "bubble_tea_franchise",
+      "job": "เจ้าของร้านชานม (แฟรนไชส์)",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (9))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1800000,
+          "variant": "general",
+          "description": "ยอดขายชานม"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "catering_business",
+      "job": "เจ้าของธุรกิจ Catering",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (9))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 3000000,
+          "variant": "general",
+          "description": "ค่าจัดเลี้ยง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "cleaning_company",
+      "job": "เจ้าของธุรกิจทำความสะอาดอาคาร",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2400000,
+          "variant": "general",
+          "description": "ค่าบริการทำความสะอาด"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "security_company",
+      "job": "เจ้าของธุรกิจรักษาความปลอดภัย",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 4800000,
+          "variant": "general",
+          "description": "ค่าบริการ รปภ."
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "car_wash",
+      "job": "เจ้าของธุรกิจล้างรถ",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 960000,
+          "variant": "general",
+          "description": "ค่าบริการล้างรถ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "wedding_planner",
+      "job": "เจ้าของธุรกิจรับจัดงานแต่งงาน",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2400000,
+          "variant": "general",
+          "description": "ค่าจัดงานแต่ง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "wedding_photo_biz",
+      "job": "เจ้าของธุรกิจถ่ายภาพวิวาห์",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (4))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1200000,
+          "variant": "general",
+          "description": "ค่าถ่ายภาพ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "sign_maker",
+      "job": "เจ้าของธุรกิจรับทำป้ายโฆษณา",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (18))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1800000,
+          "variant": "general",
+          "description": "ค่างานป้าย"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "digital_print",
+      "job": "เจ้าของธุรกิจพิมพ์ระบบดิจิทัล",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (18))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1200000,
+          "variant": "general",
+          "description": "ค่างานพิมพ์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "web_agency",
+      "job": "เจ้าของธุรกิจทำเว็บไซต์",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2400000,
+          "variant": "general",
+          "description": "ค่าพัฒนาเว็บไซต์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "saas_owner",
+      "job": "เจ้าของธุรกิจซอฟต์แวร์ (SaaS)",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 6000000,
+          "variant": "general",
+          "description": "ค่าสมาชิกซอฟต์แวร์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "ecom_platform",
+      "job": "เจ้าของแพลตฟอร์มอีคอมเมิร์ซ",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 12000000,
+          "variant": "general",
+          "description": "ค่าธรรมเนียมแพลตฟอร์ม"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "online_ads_biz",
+      "job": "เจ้าของธุรกิจโฆษณาออนไลน์",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 3600000,
+          "variant": "general",
+          "description": "ค่านายหน้าค่าโฆษณา"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "logistics_biz",
+      "job": "เจ้าของธุรกิจรับจัดการขนส่ง",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (17))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 4800000,
+          "variant": "transport",
+          "description": "ค่าบริการขนส่ง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "trailer_biz",
+      "job": "เจ้าของธุรกิจรถพ่วง",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (17))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 3600000,
+          "variant": "transport",
+          "description": "ค่าบรรทุก"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "interprovince_transport",
+      "job": "เจ้าของธุรกิจขนส่งข้ามจังหวัด (10 คัน)",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (17))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 12000000,
+          "variant": "transport",
+          "description": "ค่าขนส่ง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "moving_service",
+      "job": "เจ้าของธุรกิจรับจ้างขนย้ายบ้าน",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (17))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1200000,
+          "variant": "transport",
+          "description": "ค่าบริการขนย้าย"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "cruise_biz",
+      "job": "เจ้าของธุรกิจเรือสำราญ",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (17))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 3000000,
+          "variant": "transport",
+          "description": "ค่าบริการท่องเที่ยวทางเรือ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "bus_biz",
+      "job": "เจ้าของธุรกิจรถทัวร์",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (17))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 9000000,
+          "variant": "transport",
+          "description": "ค่าโดยสาร/เช่าเหมา"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "language_school",
+      "job": "เจ้าของโรงเรียนสอนภาษา",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 3600000,
+          "variant": "general",
+          "description": "ค่าเล่าเรียน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "cooking_school",
+      "job": "เจ้าของโรงเรียนสอนทำอาหาร",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1800000,
+          "variant": "general",
+          "description": "ค่าเล่าเรียน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "kids_learning_center",
+      "job": "เจ้าของศูนย์การเรียนรู้เด็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1500000,
+          "variant": "general",
+          "description": "ค่าเล่าเรียน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "broiler_farm",
+      "job": "เจ้าของฟาร์มไก่เนื้อ",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 4800000,
+          "variant": "general",
+          "description": "ยอดขายไก่เนื้อ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "duck_farm",
+      "job": "เจ้าของฟาร์มเป็ด",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2400000,
+          "variant": "general",
+          "description": "ยอดขายเป็ด"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "pig_farm",
+      "job": "เจ้าของฟาร์มสุกร",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 6000000,
+          "variant": "general",
+          "description": "ยอดขายสุกร"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "goat_farm",
+      "job": "เจ้าของฟาร์มแพะ",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1800000,
+          "variant": "general",
+          "description": "ยอดขายแพะ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "beef_farm",
+      "job": "เจ้าของฟาร์มวัวเนื้อ",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 4800000,
+          "variant": "general",
+          "description": "ยอดขายวัวเนื้อ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "bee_farm",
+      "job": "เจ้าของฟาร์มผึ้ง",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 900000,
+          "variant": "general",
+          "description": "ยอดขายน้ำผึ้ง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "worm_farm",
+      "job": "เจ้าของฟาร์มไส้เดือน/ปุ๋ยชีวภาพ",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 720000,
+          "variant": "general",
+          "description": "ยอดขายปุ๋ยชีวภาพ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "longan_orchard",
+      "job": "เจ้าของสวนลำไย",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (16))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1800000,
+          "variant": "general",
+          "description": "ยอดขายลำไย"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "mangosteen_orchard",
+      "job": "เจ้าของสวนมังคุด",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (16))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1500000,
+          "variant": "general",
+          "description": "ยอดขายมังคุด"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "rambutan_orchard",
+      "job": "เจ้าของสวนเงาะ",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (16))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1200000,
+          "variant": "general",
+          "description": "ยอดขายเงาะ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "banana_farm",
+      "job": "เจ้าของสวนกล้วย",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (16))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 900000,
+          "variant": "general",
+          "description": "ยอดขายกล้วย"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "dragon_fruit_farm",
+      "job": "เจ้าของสวนแก้วมังกร",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (16))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1800000,
+          "variant": "general",
+          "description": "ยอดขายแก้วมังกร"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "sugarcane_farm",
+      "job": "เจ้าของไร่อ้อย",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 3600000,
+          "variant": "general",
+          "description": "ยอดขายอ้อย"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "cassava_farm",
+      "job": "เจ้าของไร่มันสำปะหลัง",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2400000,
+          "variant": "general",
+          "description": "ยอดขายมันสำปะหลัง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "corn_farm",
+      "job": "เจ้าของไร่ข้าวโพด",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1800000,
+          "variant": "general",
+          "description": "ยอดขายข้าวโพด"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "sea_salt_farm",
+      "job": "เจ้าของนาเกลือสมุทร",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2400000,
+          "variant": "general",
+          "description": "ยอดขายเกลือ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "oyster_farm",
+      "job": "เจ้าของฟาร์มหอยนางรม",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1500000,
+          "variant": "general",
+          "description": "ยอดขายหอยนางรม"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "seabass_farm",
+      "job": "เจ้าของฟาร์มปลากะพง",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2400000,
+          "variant": "general",
+          "description": "ยอดขายปลากะพง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "shrimp_farm",
+      "job": "เจ้าของฟาร์มกุ้งกุลาดำ",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 6000000,
+          "variant": "general",
+          "description": "ยอดขายกุ้ง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "fish_market",
+      "job": "เจ้าของแพปลา",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 4800000,
+          "variant": "general",
+          "description": "ยอดขายสัตว์น้ำ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "fish_sauce_factory",
+      "job": "เจ้าของโรงงานน้ำปลา",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 3600000,
+          "variant": "general",
+          "description": "ยอดขายน้ำปลา"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "snack_factory",
+      "job": "เจ้าของโรงงานทำขนม",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (9))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2400000,
+          "variant": "general",
+          "description": "ยอดขายขนม"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "noodle_factory",
+      "job": "เจ้าของโรงงานทำเส้นก๋วยเตี๋ยว",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 3000000,
+          "variant": "general",
+          "description": "ยอดขายเส้น"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "chili_paste_factory",
+      "job": "เจ้าของโรงงานทำน้ำพริก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (9))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1800000,
+          "variant": "general",
+          "description": "ยอดขายน้ำพริก"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "soap_factory",
+      "job": "เจ้าของโรงงานทำสบู่/แชมพู",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (11))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2400000,
+          "variant": "general",
+          "description": "ยอดขายสบู่/แชมพู"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "candle_factory",
+      "job": "เจ้าของโรงงานทำเทียน",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1200000,
+          "variant": "general",
+          "description": "ยอดขายเทียน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "paper_factory",
+      "job": "เจ้าของโรงงานทำกระดาษ",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (18))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 6000000,
+          "variant": "general",
+          "description": "ยอดขายกระดาษ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "bag_factory",
+      "job": "เจ้าของโรงงานเย็บกระเป๋า",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (7))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2400000,
+          "variant": "general",
+          "description": "ยอดขายกระเป๋า"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "hat_factory",
+      "job": "เจ้าของโรงงานทำหมวก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (7))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1800000,
+          "variant": "general",
+          "description": "ยอดขายหมวก"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "silverware_factory",
+      "job": "เจ้าของโรงงานทำเครื่องเงิน",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (13))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 3600000,
+          "variant": "general",
+          "description": "ยอดขายเครื่องเงิน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "diamond_cutting",
+      "job": "เจ้าของโรงงานเจียระไนเพชร",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (13))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 12000000,
+          "variant": "general",
+          "description": "ค่างานเจียระไน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "buddha_casting",
+      "job": "เจ้าของโรงหล่อพระ",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2400000,
+          "variant": "general",
+          "description": "ค่ารับหล่อพระ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "screen_print_biz",
+      "job": "เจ้าของธุรกิจสกรีนเสื้อ",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (18))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1200000,
+          "variant": "general",
+          "description": "ค่างานสกรีน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "vinyl_sign_biz",
+      "job": "เจ้าของธุรกิจทำป้ายไวนิล",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (18))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 960000,
+          "variant": "general",
+          "description": "ค่างานป้าย"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "metal_stamping",
+      "job": "เจ้าของธุรกิจปั๊มขึ้นรูปโลหะ",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 4800000,
+          "variant": "general",
+          "description": "ค่างานปั๊มโลหะ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "tiktok_shop_seller",
+      "job": "ขายของผ่าน TikTok Shop (ไม่มีหน้าร้าน)",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1800000,
+          "variant": "general",
+          "description": "ยอดขายผ่าน TikTok"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "shopee_seller",
+      "job": "ขายของผ่าน Shopee (ไม่มีหน้าร้าน)",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1500000,
+          "variant": "general",
+          "description": "ยอดขายผ่าน Shopee"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "lazada_seller",
+      "job": "ขายของผ่าน Lazada",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2400000,
+          "variant": "general",
+          "description": "ยอดขายผ่าน Lazada"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "fb_marketplace_seller",
+      "job": "ขายของผ่าน Facebook Marketplace",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 900000,
+          "variant": "general",
+          "description": "ยอดขายผ่าน FB"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "line_shop_seller",
+      "job": "ขายของผ่าน Line Shopping",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 720000,
+          "variant": "general",
+          "description": "ยอดขายผ่าน Line"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "ig_seller",
+      "job": "ขายของผ่าน Instagram",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1200000,
+          "variant": "general",
+          "description": "ยอดขายผ่าน IG"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "online_clothing",
+      "job": "ขายเสื้อผ้าออนไลน์",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (7))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1800000,
+          "variant": "general",
+          "description": "ยอดขายเสื้อผ้า"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "online_cosmetic",
+      "job": "ขายเครื่องสำอางออนไลน์",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2400000,
+          "variant": "general",
+          "description": "ยอดขายเครื่องสำอาง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "online_supplement",
+      "job": "ขายอาหารเสริมออนไลน์",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 3600000,
+          "variant": "general",
+          "description": "ยอดขายอาหารเสริม"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "online_baby_products",
+      "job": "ขายของใช้เด็กออนไลน์",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1200000,
+          "variant": "general",
+          "description": "ยอดขายสินค้าเด็ก"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "online_it_gear",
+      "job": "ขายอุปกรณ์ไอทีออนไลน์",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 3000000,
+          "variant": "general",
+          "description": "ยอดขายอุปกรณ์ไอที"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "online_plants",
+      "job": "ขายต้นไม้ออนไลน์",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 720000,
+          "variant": "general",
+          "description": "ยอดขายต้นไม้"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "online_imported_snack",
+      "job": "ขายขนมนำเข้าออนไลน์",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1500000,
+          "variant": "general",
+          "description": "ยอดขายขนมนำเข้า"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "online_handmade",
+      "job": "ขายสินค้าแฮนด์เมดออนไลน์",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 480000,
+          "variant": "general",
+          "description": "ยอดขายงานแฮนด์เมด"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "seo_service",
+      "job": "รับทำ SEO / การตลาดออนไลน์",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1800000,
+          "variant": "general",
+          "description": "ค่าบริการ SEO"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "social_content_service",
+      "job": "รับทำคอนเทนต์โซเชียล",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 960000,
+          "variant": "general",
+          "description": "ค่าบริการคอนเทนต์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "video_edit_service",
+      "job": "รับตัดต่อวิดีโอออนไลน์",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 720000,
+          "variant": "general",
+          "description": "ค่าบริการตัดต่อ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "graphic_service",
+      "job": "รับออกแบบกราฟิกออนไลน์",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 600000,
+          "variant": "general",
+          "description": "ค่าบริการออกแบบ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "page_admin",
+      "job": "เป็นแอดมินเพจ (รับจ้างประจำเพจ)",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 360000,
+          "variant": "general",
+          "description": "ค่าจ้างดูแลเพจ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "online_course_special",
+      "job": "ขายคอร์สเรียนออนไลน์เฉพาะทาง",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1200000,
+          "variant": "general",
+          "description": "ยอดขายคอร์ส"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "youtube_food",
+      "job": "ยูทูบเบอร์สายอาหาร",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1800000,
+          "variant": "general",
+          "description": "รายได้โฆษณา/สปอนเซอร์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "youtube_travel",
+      "job": "ยูทูบเบอร์สายท่องเที่ยว",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1200000,
+          "variant": "general",
+          "description": "รายได้โฆษณา"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "tiktoker_review",
+      "job": "TikToker สายรีวิว",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1500000,
+          "variant": "general",
+          "description": "ค่าจ้างรีวิว"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "game_streamer_pro",
+      "job": "สตรีมเมอร์เกมออนไลน์ (อาชีพ)",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60%",
+      "items": [
+        {
+          "category": "business",
+          "amount": 960000,
+          "variant": "general",
+          "description": "รายได้โดเนท/โฆษณา"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "ad_actor",
+      "job": "นักแสดงโฆษณาออนไลน์",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (1))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 600000,
+          "variant": "entertainer",
+          "description": "ค่าจ้างแสดงโฆษณา"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "pub_singer",
+      "job": "นักร้องในผับ / ร้านอาหาร",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (1))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 600000,
+          "variant": "entertainer",
+          "description": "ค่าจ้างร้องเพลง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "event_musician",
+      "job": "นักดนตรีงานอีเวนต์",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (1))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 720000,
+          "variant": "entertainer",
+          "description": "ค่าจ้างเล่นดนตรี"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "event_dj",
+      "job": "ดีเจงานอีเวนต์",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (1))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 960000,
+          "variant": "entertainer",
+          "description": "ค่าจ้างเปิดเพลง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "cover_dancer",
+      "job": "นักเต้น Cover Dance",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (1))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 360000,
+          "variant": "entertainer",
+          "description": "ค่าจ้างแสดง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "stage_actor",
+      "job": "นักแสดงละครเวที",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (1))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 480000,
+          "variant": "entertainer",
+          "description": "ค่าจ้างแสดง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "pro_footballer",
+      "job": "นักกีฬาฟุตบอลอาชีพ",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (1))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2400000,
+          "variant": "entertainer",
+          "description": "ค่าเบี้ยเลี้ยง/สัญญา"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "muay_thai_fighter",
+      "job": "นักกีฬามวยไทย",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (1))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1200000,
+          "variant": "entertainer",
+          "description": "ค่าตัว/เงินรางวัล"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "pro_tennis",
+      "job": "นักกีฬาเทนนิส",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (1))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 900000,
+          "variant": "entertainer",
+          "description": "เงินรางวัล/สปอนเซอร์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "pro_golfer",
+      "job": "นักกีฬากอล์ฟ",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (1))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1800000,
+          "variant": "entertainer",
+          "description": "เงินรางวัล/สปอนเซอร์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "esport_player",
+      "job": "นักกีฬาอีสปอร์ต",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% (ตารางที่ 2 ข้อ (1))",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1200000,
+          "variant": "entertainer",
+          "description": "ค่าจ้างทีม/เงินรางวัล"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "online_small-sm",
+      "job": "ขายของออนไลน์ (ร้านขนาดเล็ก) — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 540000,
+          "variant": "general",
+          "description": "ยอดขายทั้งปี"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "online_small-lg",
+      "job": "ขายของออนไลน์ (ร้านขนาดเล็ก) — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2640000,
+          "variant": "general",
+          "description": "ยอดขายทั้งปี"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "online_big-sm",
+      "job": "ขายของออนไลน์ (มาร์เก็ตเพลส) — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1080000,
+          "variant": "general",
+          "description": "ยอดขายทั้งปี"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "online_big-lg",
+      "job": "ขายของออนไลน์ (มาร์เก็ตเพลส) — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 5280000,
+          "variant": "general",
+          "description": "ยอดขายทั้งปี"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "live_seller-sm",
+      "job": "ขายของผ่านไลฟ์ / TikTok Shop — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 672000,
+          "variant": "general",
+          "description": "ยอดขายผ่านไลฟ์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "live_seller-lg",
+      "job": "ขายของผ่านไลฟ์ / TikTok Shop — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 3300000,
+          "variant": "general",
+          "description": "ยอดขายผ่านไลฟ์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "restaurant-sm",
+      "job": "เจ้าของร้านอาหาร — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 810000,
+          "variant": "general",
+          "description": "ยอดขายร้าน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "restaurant-lg",
+      "job": "เจ้าของร้านอาหาร — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 3960000,
+          "variant": "general",
+          "description": "ยอดขายร้าน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "coffee_shop-sm",
+      "job": "เจ้าของร้านกาแฟ — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 540000,
+          "variant": "general",
+          "description": "ยอดขายกาแฟ/เครื่องดื่ม"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "coffee_shop-lg",
+      "job": "เจ้าของร้านกาแฟ — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2640000,
+          "variant": "general",
+          "description": "ยอดขายกาแฟ/เครื่องดื่ม"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "grocery-sm",
+      "job": "เจ้าของร้านขายของชำ — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 324000,
+          "variant": "general",
+          "description": "ยอดขายร้าน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "grocery-lg",
+      "job": "เจ้าของร้านขายของชำ — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1584000,
+          "variant": "general",
+          "description": "ยอดขายร้าน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "market_vendor-sm",
+      "job": "พ่อค้าแม่ค้าในตลาด (แผงขาย) — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 324000,
+          "variant": "general",
+          "description": "ยอดขายรายวันรวมทั้งปี"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "market_vendor-lg",
+      "job": "พ่อค้าแม่ค้าในตลาด (แผงขาย) — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1584000,
+          "variant": "general",
+          "description": "ยอดขายรายวันรวมทั้งปี"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "salon-sm",
+      "job": "ช่างตัดผม / เจ้าของร้านเสริมสวย — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 216000,
+          "variant": "general",
+          "description": "ค่าบริการรายได้ทั้งปี"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "salon-lg",
+      "job": "ช่างตัดผม / เจ้าของร้านเสริมสวย — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1056000,
+          "variant": "general",
+          "description": "ค่าบริการรายได้ทั้งปี"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "car_repair-sm",
+      "job": "เจ้าของอู่ซ่อมรถ — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 810000,
+          "variant": "general",
+          "description": "ค่าซ่อม + ขายอะไหล่"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "car_repair-lg",
+      "job": "เจ้าของอู่ซ่อมรถ — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 3960000,
+          "variant": "general",
+          "description": "ค่าซ่อม + ขายอะไหล่"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "phone_repair-sm",
+      "job": "เจ้าของร้านซ่อมมือถือ / ไอที — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 432000,
+          "variant": "general",
+          "description": "ค่าซ่อม + ขายอุปกรณ์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "phone_repair-lg",
+      "job": "เจ้าของร้านซ่อมมือถือ / ไอที — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2112000,
+          "variant": "general",
+          "description": "ค่าซ่อม + ขายอุปกรณ์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "bakery-sm",
+      "job": "เจ้าของเบเกอรี / ร้านขนม — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 432000,
+          "variant": "general",
+          "description": "ยอดขายขนม/เค้ก"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "bakery-lg",
+      "job": "เจ้าของเบเกอรี / ร้านขนม — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2112000,
+          "variant": "general",
+          "description": "ยอดขายขนม/เค้ก"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "farmer_rice-sm",
+      "job": "เกษตรกร (ทำนา) — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 180000,
+          "variant": "general",
+          "description": "ขายข้าวเปลือก"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "farmer_rice-lg",
+      "job": "เกษตรกร (ทำนา) — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 882000,
+          "variant": "general",
+          "description": "ขายข้าวเปลือก"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "farmer_rubber-sm",
+      "job": "ชาวสวนยาง — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 270000,
+          "variant": "general",
+          "description": "ขายน้ำยาง/ยางแผ่น"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "farmer_rubber-lg",
+      "job": "ชาวสวนยาง — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1320000,
+          "variant": "general",
+          "description": "ขายน้ำยาง/ยางแผ่น"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "livestock-sm",
+      "job": "เจ้าของฟาร์มปศุสัตว์ / ไก่ — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 810000,
+          "variant": "general",
+          "description": "ขายไก่/สุกร"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "livestock-lg",
+      "job": "เจ้าของฟาร์มปศุสัตว์ / ไก่ — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 3960000,
+          "variant": "general",
+          "description": "ขายไก่/สุกร"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "fishery-sm",
+      "job": "ชาวประมง / เจ้าของฟาร์มกุ้ง — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 540000,
+          "variant": "general",
+          "description": "ขายผลผลิตสัตว์น้ำ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "fishery-lg",
+      "job": "ชาวประมง / เจ้าของฟาร์มกุ้ง — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2640000,
+          "variant": "general",
+          "description": "ขายผลผลิตสัตว์น้ำ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "pharmacist-sm",
+      "job": "เภสัชกร (เจ้าของร้านขายยา) — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 540000,
+          "variant": "general",
+          "description": "ยอดขายร้านยา"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "pharmacist-lg",
+      "job": "เภสัชกร (เจ้าของร้านขายยา) — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2640000,
+          "variant": "general",
+          "description": "ยอดขายร้านยา"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "vet-sm",
+      "job": "สัตวแพทย์ (คลินิกสัตว์) — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 540000,
+          "variant": "general",
+          "description": "ค่ารักษาสัตว์ + ขายสินค้า"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "vet-lg",
+      "job": "สัตวแพทย์ (คลินิกสัตว์) — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2640000,
+          "variant": "general",
+          "description": "ค่ารักษาสัตว์ + ขายสินค้า"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "rider-sm",
+      "job": "ไรเดอร์ / พนักงานส่งอาหาร–พัสดุ — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 132000,
+          "variant": "transport",
+          "description": "ค่าส่งอาหาร/พัสดุ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "rider-lg",
+      "job": "ไรเดอร์ / พนักงานส่งอาหาร–พัสดุ — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 660000,
+          "variant": "transport",
+          "description": "ค่าส่งอาหาร/พัสดุ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "taxi-sm",
+      "job": "คนขับแท็กซี่ / Grab / วินมอเตอร์ไซค์ — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 216000,
+          "variant": "transport",
+          "description": "ค่าโดยสารรวมทั้งปี"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "taxi-lg",
+      "job": "คนขับแท็กซี่ / Grab / วินมอเตอร์ไซค์ — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1056000,
+          "variant": "transport",
+          "description": "ค่าโดยสารรวมทั้งปี"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "truck_owner-sm",
+      "job": "เจ้าของรถบรรทุก (รับจ้างขนส่ง) — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 540000,
+          "variant": "transport",
+          "description": "ค่าจ้างขนส่ง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "truck_owner-lg",
+      "job": "เจ้าของรถบรรทุก (รับจ้างขนส่ง) — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2640000,
+          "variant": "transport",
+          "description": "ค่าจ้างขนส่ง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "singer-sm",
+      "job": "นักร้อง / นักดนตรี (รับจ้างแสดง) — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 540000,
+          "variant": "entertainer",
+          "description": "ค่าจ้างแสดง/เล่นดนตรี"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "singer-lg",
+      "job": "นักร้อง / นักดนตรี (รับจ้างแสดง) — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2640000,
+          "variant": "entertainer",
+          "description": "ค่าจ้างแสดง/เล่นดนตรี"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "actor-sm",
+      "job": "นักแสดงละคร / ภาพยนตร์ / โฆษณา — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 270000,
+          "variant": "entertainer",
+          "description": "ค่าจ้างแสดง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "actor-lg",
+      "job": "นักแสดงละคร / ภาพยนตร์ / โฆษณา — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1320000,
+          "variant": "entertainer",
+          "description": "ค่าจ้างแสดง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "athlete-sm",
+      "job": "นักกีฬาอาชีพ — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 672000,
+          "variant": "entertainer",
+          "description": "ค่าเบี้ยเลี้ยง/รางวัล/สปอนเซอร์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "athlete-lg",
+      "job": "นักกีฬาอาชีพ — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 3300000,
+          "variant": "entertainer",
+          "description": "ค่าเบี้ยเลี้ยง/รางวัล/สปอนเซอร์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "youtuber-sm",
+      "job": "ยูทูบเบอร์ / ครีเอเตอร์ออนไลน์ — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 432000,
+          "variant": "general",
+          "description": "รายได้โฆษณา/สปอนเซอร์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "youtuber-lg",
+      "job": "ยูทูบเบอร์ / ครีเอเตอร์ออนไลน์ — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2112000,
+          "variant": "general",
+          "description": "รายได้โฆษณา/สปอนเซอร์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "streamer-sm",
+      "job": "สตรีมเมอร์เกม / ไลฟ์ขายบริการ — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 324000,
+          "variant": "general",
+          "description": "รายได้โดเนท/โฆษณา"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "streamer-lg",
+      "job": "สตรีมเมอร์เกม / ไลฟ์ขายบริการ — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1584000,
+          "variant": "general",
+          "description": "รายได้โดเนท/โฆษณา"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "fitness_trainer-sm",
+      "job": "เทรนเนอร์ / เจ้าของยิม — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 324000,
+          "variant": "general",
+          "description": "ค่าสอน + ค่าสมาชิก"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "fitness_trainer-lg",
+      "job": "เทรนเนอร์ / เจ้าของยิม — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1584000,
+          "variant": "general",
+          "description": "ค่าสอน + ค่าสมาชิก"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "tutor_center-sm",
+      "job": "เจ้าของโรงเรียนกวดวิชา — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1080000,
+          "variant": "general",
+          "description": "ค่าลงทะเบียนเรียนทั้งปี"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "tutor_center-lg",
+      "job": "เจ้าของโรงเรียนกวดวิชา — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 5280000,
+          "variant": "general",
+          "description": "ค่าลงทะเบียนเรียนทั้งปี"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "daycare-sm",
+      "job": "เจ้าของสถานรับเลี้ยงเด็ก / ศูนย์เด็กเล็ก — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 540000,
+          "variant": "general",
+          "description": "ค่าดูแลเด็กทั้งปี"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "daycare-lg",
+      "job": "เจ้าของสถานรับเลี้ยงเด็ก / ศูนย์เด็กเล็ก — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2640000,
+          "variant": "general",
+          "description": "ค่าดูแลเด็กทั้งปี"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "laundry-sm",
+      "job": "เจ้าของร้านซักผ้า / ซักแห้ง — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 216000,
+          "variant": "general",
+          "description": "ค่าบริการซักผ้า"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "laundry-lg",
+      "job": "เจ้าของร้านซักผ้า / ซักแห้ง — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1056000,
+          "variant": "general",
+          "description": "ค่าบริการซักผ้า"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "cleaning_service-sm",
+      "job": "ธุรกิจทำความสะอาด / แม่บ้านบริษัท — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 270000,
+          "variant": "general",
+          "description": "ค่าบริการทำความสะอาด"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "cleaning_service-lg",
+      "job": "ธุรกิจทำความสะอาด / แม่บ้านบริษัท — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1320000,
+          "variant": "general",
+          "description": "ค่าบริการทำความสะอาด"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "import_ecom-sm",
+      "job": "นำเข้าสินค้าขายออนไลน์ (ธุรกิจ) — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1620000,
+          "variant": "general",
+          "description": "ยอดขายสินค้านำเข้า"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "import_ecom-lg",
+      "job": "นำเข้าสินค้าขายออนไลน์ (ธุรกิจ) — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 7920000,
+          "variant": "general",
+          "description": "ยอดขายสินค้านำเข้า"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "franchise_store-sm",
+      "job": "เจ้าของร้านสะดวกซื้อ (แฟรนไชส์) — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1620000,
+          "variant": "general",
+          "description": "ยอดขายแฟรนไชส์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "franchise_store-lg",
+      "job": "เจ้าของร้านสะดวกซื้อ (แฟรนไชส์) — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 7920000,
+          "variant": "general",
+          "description": "ยอดขายแฟรนไชส์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "supermarket-sm",
+      "job": "เจ้าของซูเปอร์มาร์เก็ต — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 5400000,
+          "variant": "general",
+          "description": "ยอดขายรวม"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "supermarket-lg",
+      "job": "เจ้าของซูเปอร์มาร์เก็ต — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 26400000,
+          "variant": "general",
+          "description": "ยอดขายรวม"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "construction_material_shop-sm",
+      "job": "เจ้าของร้านขายวัสดุก่อสร้าง — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2700000,
+          "variant": "general",
+          "description": "ยอดขายวัสดุ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "construction_material_shop-lg",
+      "job": "เจ้าของร้านขายวัสดุก่อสร้าง — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 13200000,
+          "variant": "general",
+          "description": "ยอดขายวัสดุ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "gold_shop-sm",
+      "job": "เจ้าของร้านทอง — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 5400000,
+          "variant": "general",
+          "description": "ยอดขายทองรูปพรรณ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "gold_shop-lg",
+      "job": "เจ้าของร้านทอง — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 26400000,
+          "variant": "general",
+          "description": "ยอดขายทองรูปพรรณ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "gas_station-sm",
+      "job": "เจ้าของปั๊มน้ำมัน — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 4050000,
+          "variant": "general",
+          "description": "ยอดขายน้ำมัน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "gas_station-lg",
+      "job": "เจ้าของปั๊มน้ำมัน — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 19800000,
+          "variant": "general",
+          "description": "ยอดขายน้ำมัน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "ice_factory-sm",
+      "job": "เจ้าของโรงงานน้ำแข็ง — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2160000,
+          "variant": "general",
+          "description": "ยอดขายน้ำแข็ง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "ice_factory-lg",
+      "job": "เจ้าของโรงงานน้ำแข็ง — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 10560000,
+          "variant": "general",
+          "description": "ยอดขายน้ำแข็ง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "food_factory-sm",
+      "job": "เจ้าของโรงงานแปรรูปอาหาร — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 5400000,
+          "variant": "general",
+          "description": "ยอดขายผลิตภัณฑ์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "food_factory-lg",
+      "job": "เจ้าของโรงงานแปรรูปอาหาร — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 26400000,
+          "variant": "general",
+          "description": "ยอดขายผลิตภัณฑ์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "dairy_farm-sm",
+      "job": "เจ้าของฟาร์มโคนม — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2700000,
+          "variant": "general",
+          "description": "ยอดขายน้ำนมดิบ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "dairy_farm-lg",
+      "job": "เจ้าของฟาร์มโคนม — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 13200000,
+          "variant": "general",
+          "description": "ยอดขายน้ำนมดิบ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "mushroom_farm-sm",
+      "job": "เจ้าของโรงเพาะเห็ด — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 540000,
+          "variant": "general",
+          "description": "ยอดขายเห็ด"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "mushroom_farm-lg",
+      "job": "เจ้าของโรงเพาะเห็ด — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2640000,
+          "variant": "general",
+          "description": "ยอดขายเห็ด"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "durian_orchard-sm",
+      "job": "เจ้าของสวนทุเรียน — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1350000,
+          "variant": "general",
+          "description": "ยอดขายทุเรียน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "durian_orchard-lg",
+      "job": "เจ้าของสวนทุเรียน — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 6600000,
+          "variant": "general",
+          "description": "ยอดขายทุเรียน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "coconut_grove-sm",
+      "job": "เจ้าของสวนมะพร้าว — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 408000,
+          "variant": "general",
+          "description": "ยอดขายมะพร้าว"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "coconut_grove-lg",
+      "job": "เจ้าของสวนมะพร้าว — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1980000,
+          "variant": "general",
+          "description": "ยอดขายมะพร้าว"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "salt_farm-sm",
+      "job": "ทำนาเกลือ — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 540000,
+          "variant": "general",
+          "description": "ยอดขายเกลือ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "salt_farm-lg",
+      "job": "ทำนาเกลือ — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2640000,
+          "variant": "general",
+          "description": "ยอดขายเกลือ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "fish_cage-sm",
+      "job": "เลี้ยงปลาในกระชัง — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 810000,
+          "variant": "general",
+          "description": "ยอดขายปลา"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "fish_cage-lg",
+      "job": "เลี้ยงปลาในกระชัง — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 3960000,
+          "variant": "general",
+          "description": "ยอดขายปลา"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "plant_shop-sm",
+      "job": "เจ้าของร้านขายต้นไม้ / ไม้ประดับ — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 324000,
+          "variant": "general",
+          "description": "ยอดขายต้นไม้"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "plant_shop-lg",
+      "job": "เจ้าของร้านขายต้นไม้ / ไม้ประดับ — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1584000,
+          "variant": "general",
+          "description": "ยอดขายต้นไม้"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "bubble_tea-sm",
+      "job": "เจ้าของร้านชานม / เครื่องดื่ม — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 408000,
+          "variant": "general",
+          "description": "ยอดขายเครื่องดื่ม"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "bubble_tea-lg",
+      "job": "เจ้าของร้านชานม / เครื่องดื่ม — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1980000,
+          "variant": "general",
+          "description": "ยอดขายเครื่องดื่ม"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "pizza_shop-sm",
+      "job": "เจ้าของร้านพิซซ่า / ฟาสต์ฟู้ด — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 540000,
+          "variant": "general",
+          "description": "ยอดขายร้าน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "pizza_shop-lg",
+      "job": "เจ้าของร้านพิซซ่า / ฟาสต์ฟู้ด — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2640000,
+          "variant": "general",
+          "description": "ยอดขายร้าน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "fruit_vendor-sm",
+      "job": "แม่ค้าขายผลไม้ในตลาด — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 270000,
+          "variant": "general",
+          "description": "ยอดขายผลไม้"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "fruit_vendor-lg",
+      "job": "แม่ค้าขายผลไม้ในตลาด — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1320000,
+          "variant": "general",
+          "description": "ยอดขายผลไม้"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "vegetable_vendor-sm",
+      "job": "ขายผักในตลาดสด — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 216000,
+          "variant": "general",
+          "description": "ยอดขายผัก"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "vegetable_vendor-lg",
+      "job": "ขายผักในตลาดสด — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1056000,
+          "variant": "general",
+          "description": "ยอดขายผัก"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "clothing_shop-sm",
+      "job": "เจ้าของร้านขายเสื้อผ้า — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 540000,
+          "variant": "general",
+          "description": "ยอดขายเสื้อผ้า"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "clothing_shop-lg",
+      "job": "เจ้าของร้านขายเสื้อผ้า — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2640000,
+          "variant": "general",
+          "description": "ยอดขายเสื้อผ้า"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "cosmetic_shop-sm",
+      "job": "เจ้าของร้านขายเครื่องสำอาง — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 672000,
+          "variant": "general",
+          "description": "ยอดขายเครื่องสำอาง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "cosmetic_shop-lg",
+      "job": "เจ้าของร้านขายเครื่องสำอาง — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 3300000,
+          "variant": "general",
+          "description": "ยอดขายเครื่องสำอาง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "pet_food_shop-sm",
+      "job": "เจ้าของร้านขายอาหารสัตว์ — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 810000,
+          "variant": "general",
+          "description": "ยอดขายอาหารสัตว์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "pet_food_shop-lg",
+      "job": "เจ้าของร้านขายอาหารสัตว์ — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 3960000,
+          "variant": "general",
+          "description": "ยอดขายอาหารสัตว์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "last_mile-sm",
+      "job": "ธุรกิจขนส่งพัสดุ (Last Mile) — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1080000,
+          "variant": "transport",
+          "description": "ค่าบริการส่งพัสดุ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "last_mile-lg",
+      "job": "ธุรกิจขนส่งพัสดุ (Last Mile) — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 5280000,
+          "variant": "transport",
+          "description": "ค่าบริการส่งพัสดุ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "school_van-sm",
+      "job": "ธุรกิจรถตู้รับส่งนักเรียน — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 408000,
+          "variant": "transport",
+          "description": "ค่าบริการรับส่ง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "school_van-lg",
+      "job": "ธุรกิจรถตู้รับส่งนักเรียน — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1980000,
+          "variant": "transport",
+          "description": "ค่าบริการรับส่ง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "boat_tour-sm",
+      "job": "ธุรกิจเรือท่องเที่ยว — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 672000,
+          "variant": "transport",
+          "description": "ค่าบริการนำเที่ยวทางเรือ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "boat_tour-lg",
+      "job": "ธุรกิจเรือท่องเที่ยว — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 3300000,
+          "variant": "transport",
+          "description": "ค่าบริการนำเที่ยวทางเรือ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "tow_truck-sm",
+      "job": "ธุรกิจรถยก / รถลากจูง — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 540000,
+          "variant": "transport",
+          "description": "ค่าบริการลากจูง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "tow_truck-lg",
+      "job": "ธุรกิจรถยก / รถลากจูง — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2640000,
+          "variant": "transport",
+          "description": "ค่าบริการลากจูง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "province_logistics-sm",
+      "job": "ธุรกิจขนส่งพัสดุระหว่างจังหวัด — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2700000,
+          "variant": "transport",
+          "description": "ค่าขนส่ง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "province_logistics-lg",
+      "job": "ธุรกิจขนส่งพัสดุระหว่างจังหวัด — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 13200000,
+          "variant": "transport",
+          "description": "ค่าขนส่ง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "driving_school-sm",
+      "job": "เจ้าของโรงเรียนสอนขับรถ — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 810000,
+          "variant": "general",
+          "description": "ค่าเรียนสอนขับรถ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "driving_school-lg",
+      "job": "เจ้าของโรงเรียนสอนขับรถ — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 3960000,
+          "variant": "general",
+          "description": "ค่าเรียนสอนขับรถ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "football_field-sm",
+      "job": "เจ้าของสนามฟุตบอลให้เช่า — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 540000,
+          "variant": "general",
+          "description": "ค่าเช่าสนาม"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "football_field-lg",
+      "job": "เจ้าของสนามฟุตบอลให้เช่า — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2640000,
+          "variant": "general",
+          "description": "ค่าเช่าสนาม"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "game_cafe-sm",
+      "job": "เจ้าของร้านเกม / อินเทอร์เน็ตคาเฟ่ — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 324000,
+          "variant": "general",
+          "description": "ค่าบริการรายชั่วโมง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "game_cafe-lg",
+      "job": "เจ้าของร้านเกม / อินเทอร์เน็ตคาเฟ่ — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1584000,
+          "variant": "general",
+          "description": "ค่าบริการรายชั่วโมง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "photo_shop-sm",
+      "job": "เจ้าของร้านถ่ายรูป / อัดรูป — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 216000,
+          "variant": "general",
+          "description": "ค่าบริการถ่ายภาพ/อัดรูป"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "photo_shop-lg",
+      "job": "เจ้าของร้านถ่ายรูป / อัดรูป — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1056000,
+          "variant": "general",
+          "description": "ค่าบริการถ่ายภาพ/อัดรูป"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "computer_repair_shop-sm",
+      "job": "เจ้าของร้านซ่อมคอมพิวเตอร์ — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 378000,
+          "variant": "general",
+          "description": "ค่าซ่อม + ขายอะไหล่"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "computer_repair_shop-lg",
+      "job": "เจ้าของร้านซ่อมคอมพิวเตอร์ — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1848000,
+          "variant": "general",
+          "description": "ค่าซ่อม + ขายอะไหล่"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "spa_shop-sm",
+      "job": "เจ้าของร้านสปา / ทำเล็บ — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 432000,
+          "variant": "general",
+          "description": "ค่าบริการ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "spa_shop-lg",
+      "job": "เจ้าของร้านสปา / ทำเล็บ — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2112000,
+          "variant": "general",
+          "description": "ค่าบริการ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "wholesale_produce-sm",
+      "job": "เจ้าของธุรกิจขายส่งผักผลไม้ — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2700000,
+          "variant": "general",
+          "description": "ยอดขายส่ง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "wholesale_produce-lg",
+      "job": "เจ้าของธุรกิจขายส่งผักผลไม้ — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 13200000,
+          "variant": "general",
+          "description": "ยอดขายส่ง"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "event_organizer-sm",
+      "job": "เจ้าของธุรกิจจัดงานอีเวนต์ — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1350000,
+          "variant": "general",
+          "description": "ค่าจัดงาน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "event_organizer-lg",
+      "job": "เจ้าของธุรกิจจัดงานอีเวนต์ — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 6600000,
+          "variant": "general",
+          "description": "ค่าจัดงาน"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "printing_house-sm",
+      "job": "เจ้าของธุรกิจพิมพ์ / สื่อสิ่งพิมพ์ — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1080000,
+          "variant": "general",
+          "description": "ค่างานพิมพ์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "printing_house-lg",
+      "job": "เจ้าของธุรกิจพิมพ์ / สื่อสิ่งพิมพ์ — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 5280000,
+          "variant": "general",
+          "description": "ค่างานพิมพ์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "garment_factory-sm",
+      "job": "เจ้าของโรงงานตัดเย็บเสื้อผ้า — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 1620000,
+          "variant": "general",
+          "description": "ค่างานตัดเย็บ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "garment_factory-lg",
+      "job": "เจ้าของโรงงานตัดเย็บเสื้อผ้า — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 7920000,
+          "variant": "general",
+          "description": "ค่างานตัดเย็บ"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "shoe_factory-sm",
+      "job": "เจ้าของโรงงานทำรองเท้า — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2160000,
+          "variant": "general",
+          "description": "ยอดขายรองเท้า"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "shoe_factory-lg",
+      "job": "เจ้าของโรงงานทำรองเท้า — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 10560000,
+          "variant": "general",
+          "description": "ยอดขายรองเท้า"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "furniture_factory-sm",
+      "job": "เจ้าของโรงงานเครื่องเรือน / เฟอร์นิเจอร์ — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 2700000,
+          "variant": "general",
+          "description": "ยอดขายเฟอร์นิเจอร์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "furniture_factory-lg",
+      "job": "เจ้าของโรงงานเครื่องเรือน / เฟอร์นิเจอร์ — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 13200000,
+          "variant": "general",
+          "description": "ยอดขายเฟอร์นิเจอร์"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "stone_mill-sm",
+      "job": "เจ้าของโรงโม่หิน / เหมือง — ขนาดเล็ก",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดเล็ก",
+      "items": [
+        {
+          "category": "business",
+          "amount": 5400000,
+          "variant": "general",
+          "description": "ยอดขายหิน/แร่"
+        }
+      ],
+      "extra": {}
+    },
+    {
+      "id": "stone_mill-lg",
+      "job": "เจ้าของโรงโม่หิน / เหมือง — ขนาดใหญ่",
+      "income_label": "40(8)",
+      "assume": "โสด · 40(8) หักเหมา 60% · ประมาณการระดับขนาดใหญ่",
+      "items": [
+        {
+          "category": "business",
+          "amount": 26400000,
+          "variant": "general",
+          "description": "ยอดขายหิน/แร่"
+        }
+      ],
+      "extra": {}
     }
   ]
 }
