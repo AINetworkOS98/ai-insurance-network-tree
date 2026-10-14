@@ -25,7 +25,7 @@ const PROJECT_SAMPLES: any[] = [
   {
     key:'retire', title:'โครงการเกษียณมั่นคง 60/60', tag:'วางแผนเกษียณ',
     goal:'มีเงินก้อนใช้ยามเกษียณ และมีทุนประกันชีวิตคุ้มครองระหว่างทาง',
-    planCode:'NJ', cover:1000000, payYears:'ชำระเบี้ย 10 ปี',
+    plans:['NJ'], cover:1000000, payYears:'ชำระเบี้ย 10 ปี',
     benefits:[
       'ทุนประกันชีวิต จ่ายให้ผู้รับผลประโยชน์เมื่อเสียชีวิตตลอดสัญญา',
       'ผลประโยชน์เกษียณ รับเงินก้อน/เงินรายปีเมื่อครบกำหนดแบบ',
@@ -36,7 +36,7 @@ const PROJECT_SAMPLES: any[] = [
   {
     key:'wealth', title:'โครงการสะสมทรัพย์ คุ้มทวี', tag:'สะสมทรัพย์',
     goal:'ออมระยะยาวรับเงินก้อน และมีความคุ้มครองชีวิตแบบทวีคูณ',
-    planCode:'PJ', cover:3000000, payYears:'ชำระเบี้ย 20 ปี',
+    plans:['PJ'], cover:3000000, payYears:'ชำระเบี้ย 20 ปี',
     benefits:[
       'ความคุ้มครองชีวิตแบบทวีคูณ (ทุนประกันสูงกว่าเบี้ยที่ชำระ)',
       'เงินครบสัญญา รับเงินก้อนเมื่อครบกำหนดสัญญา',
@@ -47,7 +47,7 @@ const PROJECT_SAMPLES: any[] = [
   {
     key:'tax', title:'โครงการวางแผนภาษี ทีแอลแพลน', tag:'ลดหย่อนภาษี',
     goal:'ใช้สิทธิลดหย่อนภาษีทุกปี พร้อมความคุ้มครองชีวิตระยะยาว',
-    planCode:'FA10', cover:1000000, payYears:'ชำระเบี้ย 10 ปี',
+    plans:['FA10'], cover:1000000, payYears:'ชำระเบี้ย 10 ปี',
     benefits:[
       'เบี้ยประกันชีวิตนำไปลดหย่อนภาษีได้ตามเพดานที่กำหนด',
       'ความคุ้มครองชีวิตตลอดระยะสัญญา',
@@ -58,10 +58,10 @@ const PROJECT_SAMPLES: any[] = [
   {
     key:'health', title:'โครงการสุขภาพ + อุบัติเหตุ', tag:'สัญญาเพิ่มเติม',
     goal:'เสริมความคุ้มครองค่ารักษาพยาบาลและอุบัติเหตุจากแบบประกันหลัก',
-    planCode:'', findCat:'เฮลท์', cover:500000, payYears:'ชำระเบี้ยรายปี',
+    plans:['HHE','TM1'], cover:500000, payYears:'ชำระเบี้ยรายปี',
     benefits:[
-      'ความคุ้มครองค่ารักษาพยาบาลตามแผนสุขภาพที่แนบ',
-      'ความคุ้มครองอุบัติเหตุ (PA) เสริมจากแบบหลัก',
+      'ความคุ้มครองค่ารักษาพยาบาลตามแผนสุขภาพที่แนบ (เฮลท์ ฟิต ซีลด์)',
+      'ความคุ้มครองอุบัติเหตุ/ค่ารักษาในโรงพยาบาล (พี.เอ. ฮอสพิทอล ซีลด์)',
       'ต่อกับแบบประกันชีวิตหลักได้ เพื่อให้ครบทุกความเสี่ยง',
       'เบี้ยสัญญาเพิ่มเติมขึ้นกับอายุและแผนที่เลือก',
     ],
@@ -288,10 +288,7 @@ export default function CommissionsPage(){
             </p>
             <div className="mt-3 grid md:grid-cols-2 gap-3">
               {PROJECT_SAMPLES.map((s:any, si:number)=>{
-                const prod = s.planCode
-                  ? products.find((p:any)=> p.c === s.planCode)
-                  : products.find((p:any)=> p.cat === s.findCat);
-                const v = prod?.v?.[0];
+                const found = (s.plans || []).map((c:string)=> products.find((p:any)=> p.c === c)).filter(Boolean);
                 return (
                   <div key={s.key} className="rounded-xl border p-3 bg-slate-50/60">
                     <div className="flex flex-wrap items-center gap-2">
@@ -301,7 +298,14 @@ export default function CommissionsPage(){
                     <div className="mt-1 font-semibold text-sm">{s.title}</div>
                     <p className="text-[11px] text-slate-600 mt-0.5">เป้าหมาย: {s.goal}</p>
                     <div className="mt-2 text-[11px] text-slate-700 space-y-0.5">
-                      <div>แบบประกันที่ใช้: <span className="font-mono font-bold">{prod?.c || '—'}</span> {prod?.n || ''}</div>
+                      <div>
+                        แบบประกันที่ใช้:{' '}
+                        {found.length === 0
+                          ? <span className="text-slate-400">— ไม่พบรหัสนี้ในตารางเวอร์ชันปัจจุบัน</span>
+                          : found.map((pr:any, i:number)=>(
+                              <span key={pr.c}>{i > 0 ? ' + ' : ''}<span className="font-mono font-bold">{pr.c}</span> {pr.n}</span>
+                            ))}
+                      </div>
                       <div>
                         ทุนประกันตัวอย่าง ฿{fmt(s.cover)} • {s.payYears}
                         {showExample && premium > 0 ? ` • เบี้ยตัวอย่าง ฿${fmt(premium)}/ปี` : ''}
@@ -313,19 +317,18 @@ export default function CommissionsPage(){
                         {s.benefits.map((b:string,i:number)=><li key={i}>{b}</li>)}
                       </ul>
                     </div>
-                    {showExample && v && (
-                      <div className="mt-2 rounded-lg bg-emerald-50 border border-emerald-100 p-2 text-[11px]">
-                        <span className="font-semibold text-emerald-800">ค่าคอมมิชชั่นตัวแทนตามตาราง ({prod.c}): </span>
-                        <span className="font-mono text-emerald-700">
-                          ปี 1 {v.y1 ?? '-'}% = ฿{fmt(bahtOf(v.y1))} · รวม 4 ปี ฿{fmt(bahtOf(v.y1)+bahtOf(v.y2)+bahtOf(v.y3)+bahtOf(v.y4))}
-                        </span>
-                      </div>
-                    )}
-                    {showExample && !v && (
-                      <div className="mt-2 text-[11px] text-slate-500">
-                        แนบเป็นสัญญาเพิ่มเติมกับแบบประกันหลัก — ไม่มีอัตราค่าคอมเดี่ยวในตารางหลัก (คิดตามแบบหลักที่แนบ)
-                      </div>
-                    )}
+                    {showExample && found.map((pr:any)=>{
+                      const v = pr.v?.[0];
+                      if(!v) return null;
+                      return (
+                        <div key={pr.c} className="mt-2 rounded-lg bg-emerald-50 border border-emerald-100 p-2 text-[11px]">
+                          <span className="font-semibold text-emerald-800">ค่าคอมมิชชั่นตัวแทนตามตาราง ({pr.c}): </span>
+                          <span className="font-mono text-emerald-700">
+                            ปี 1 {v.y1 ?? '-'}% = ฿{fmt(bahtOf(v.y1))} · รวม 4 ปี ฿{fmt(bahtOf(v.y1)+bahtOf(v.y2)+bahtOf(v.y3)+bahtOf(v.y4))}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               })}
