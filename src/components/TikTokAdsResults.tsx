@@ -12,17 +12,22 @@
 //  3) เมื่อบัญชีได้รับสิทธิ์ API แล้ว ปุ่ม "ดึงรายงานจาก API" จะทำงานได้ทันที (ตอนนี้จะบอกตรง ๆ ว่ายังไม่มีสิทธิ์)
 import { useState } from 'react';
 import { useT } from '@/i18n';
+import { useAdminMe } from '@/components/AdminRightsPanel';
 import snap from '@/lib/tiktokAdsSnapshot.json';
 
 type Any = Record<string, any>;
 
-export default function TikTokAdsResults() {
+export default function TikTokAdsResults({ adminOnly = false }: { adminOnly?: boolean }) {
   const { lang } = useT();
   const L = (th: string, en: string) => (lang === 'en' ? en : th);
+  const me = useAdminMe();
   const s: Any = snap as Any;
   const c: Any = s.campaign || {};
   const [busy, setBusy] = useState(false);
   const [apiMsg, setApiMsg] = useState('');
+
+  // ข้อมูลการใช้จ่าย/ยอดเงินโฆษณาเป็นข้อมูลการเงิน — ถ้าให้แสดงในหน้าที่คนนอกเข้าถึงได้ ให้เห็นเฉพาะผู้ดูแลระบบ
+  if (adminOnly && !me?.isAdmin) return null;
 
   const captured = (() => {
     try { return new Date(String(s.capturedAt)).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' }); }

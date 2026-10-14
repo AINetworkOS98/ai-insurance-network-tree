@@ -2,6 +2,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import TikTokAdsResults from '@/components/TikTokAdsResults';
 import Link from 'next/link';
 import { isAdminEmail } from '@/lib/access-rules';
 
@@ -332,6 +333,11 @@ function AdminContent() {
         <Sidebar />
         <main className="flex-1 p-6 space-y-6 bg-white">
           <h1 className="text-xl font-bold text-slate-800">ผู้ดูแลระบบ — Admin Dashboard</h1>
+
+          {/* ── การยิงโฆษณา TikTok + ยอดเงิน (คำสั่งเจ้าของระบบ 14 ต.ค. 2026) ──
+              ใช้คอมโพเนนต์เดียวกันกับหน้า /expand-team แต่ส่ง adminOnly เพื่อไม่ให้ข้อมูลการเงิน
+              ปรากฏกับผู้ที่ไม่ได้เป็นผู้ดูแลระบบ (หน้า /admin เป็นหน้าสาธารณะตาม middleware) */}
+          <TikTokAdsResults adminOnly />
 
           <div className="flex gap-3 mb-4">
             <button
