@@ -4,6 +4,7 @@ import Sidebar from '@/components/Sidebar';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import AdminRightsPanel from '@/components/AdminRightsPanel';
+import ThaiTaxCalculator from '@/components/tax/ThaiTaxCalculator';
 
 // หน้า "สมาชิกทั่วไป" (เดิมชื่อ "ผู้สนใจ") — ฐานเดียวกับระบบสมาชิก (/api/members)
 // นิยาม: สมาชิกทั่วไป = ผู้ที่ยังอยู่ระดับตำแหน่ง 0 (ยังไม่เลื่อนเป็นตัวแทน)
@@ -21,6 +22,8 @@ const STATUS_TH: Record<string, string> = {
 };
 
 export default function GeneralMembersPage(){
+  // สลับมุมมองในหน้าเดียว: เครื่องคำนวณภาษี (ค่าเริ่มต้น) / ทะเบียนสมาชิกทั่วไป
+  const [view, setView]=useState<'tax'|'members'>('tax');
   const [members, setMembers]=useState<Member[]>([]);
   const [q, setQ]=useState('');
   const [statusQ, setStatusQ]=useState('');
@@ -143,6 +146,22 @@ export default function GeneralMembersPage(){
       <div className="flex w-full">
         <Sidebar/>
         <main className="flex-1 p-6 space-y-6">
+          {/* ── เมนูในหน้าเดียว: เครื่องคำนวณภาษี (สมาชิกทั่วไปใช้ก่อน) / ทะเบียนสมาชิกทั่วไป ── */}
+          <div className="flex flex-wrap gap-2 items-center">
+            <button
+              onClick={()=>setView('tax')}
+              className={`px-4 py-2 rounded-full text-sm font-semibold border ${view==='tax' ? 'bg-[#475569] text-white border-[#475569]' : 'bg-white text-slate-600'}`}
+            >🧾 คำนวณภาษี (บุคคลธรรมดา)</button>
+            <button
+              onClick={()=>setView('members')}
+              className={`px-4 py-2 rounded-full text-sm font-semibold border ${view==='members' ? 'bg-[#475569] text-white border-[#475569]' : 'bg-white text-slate-600'}`}
+            >👥 ทะเบียนสมาชิกทั่วไป</button>
+            <span className="text-[11px] text-slate-400 ml-1">
+              เครื่องคำนวณภาษีอ้างอิงกรมสรรพากร ปีภาษี 2568 — ใช้ฟรีสำหรับสมาชิกทั่วไป
+            </span>
+          </div>
+
+          {view === 'tax' ? (<ThaiTaxCalculator/>) : (<>
           {/* หัวหน้า */}
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-xl font-bold text-[#475569]">สมาชิกทั่วไป</h1>
@@ -336,6 +355,7 @@ export default function GeneralMembersPage(){
               <Link href="/members" className="inline-block mt-2 text-xs text-sky-700 underline">ไปหน้าสมาชิกของฉัน →</Link>
             </div>
           </div>
+          </>)}
         </main>
       </div>
     </div>

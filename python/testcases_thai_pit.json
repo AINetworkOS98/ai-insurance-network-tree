@@ -1,0 +1,176 @@
+{
+  "meta": {
+    "purpose": "ชุดทดสอบมาตรฐานของโปรแกรมคำนวณภาษีเงินได้บุคคลธรรมดา — ตัวเลข 'expect' คำนวณด้วยมือตามหลักเกณฑ์กรมสรรพากร ปีภาษี 2568",
+    "used_by": [
+      "python/thai_tax_calculator.py --selftest",
+      "GET /api/tax/thai-pit?selftest=1 (เว็บจริง ai-insurance-network-tree.vercel.app)",
+      "scripts/thai-pit-selftest.mjs (เทียบผลเว็บจริงกับไฟล์นี้)"
+    ],
+    "year": 2568
+  },
+  "cases": [
+    {
+      "name": "1) พนักงานเงินเดือน 500,000/ปี + ประกันสังคม 9,000 (โสด)",
+      "persons": [{ "salary": 500000, "social_security": 9000 }],
+      "expect": {
+        "gross_total": 500000,
+        "expenses_total": 100000,
+        "income_after_expense": 400000,
+        "allowances_total": 69000,
+        "net_income": 331000,
+        "tax_by_bracket": 10600,
+        "tax_before_credit": 10600,
+        "net_payable": 10600,
+        "must_file": true
+      }
+    },
+    {
+      "name": "2) ปล่อยเช่าอสังหาริมทรัพย์ 1,000,000/ปี (หักเหมา 30%)",
+      "persons": [{ "rent": 1000000 }],
+      "expect": {
+        "gross_total": 1000000,
+        "expenses_total": 300000,
+        "allowances_total": 60000,
+        "net_income": 640000,
+        "tax_by_bracket": 48500,
+        "min_tax_05pct": 5000,
+        "min_tax_applied": false,
+        "tax_before_credit": 48500,
+        "net_payable": 48500
+      }
+    },
+    {
+      "name": "3) ภาษีขั้นต่ำ 0.5% (มาตรา 48(2)) — ธุรกิจ 400,000 หักตามจริง 380,000",
+      "persons": [{ "business": 400000, "actual_expense": { "business": 380000 } }],
+      "expect": {
+        "gross_total": 400000,
+        "expenses_total": 380000,
+        "net_income": 0,
+        "tax_by_bracket": 0,
+        "min_tax_05pct": 2000,
+        "min_tax_applied": true,
+        "tax_before_credit": 2000,
+        "net_payable": 2000
+      }
+    },
+    {
+      "name": "4) เงินเดือน 1,000,000 + บุตร 2 คน (คนที่ 2 เกิด 2565) + บริจาคการศึกษา 20,000",
+      "persons": [{
+        "salary": 1000000,
+        "children": 2,
+        "children_born_2561_plus": 1,
+        "donation_education": 20000
+      }],
+      "expect": {
+        "expenses_total": 100000,
+        "income_after_expense": 900000,
+        "allowances_total": 190000,
+        "net_income": 710000,
+        "tax_by_bracket": 59000,
+        "tax_before_credit": 59000,
+        "net_payable": 59000
+      }
+    },
+    {
+      "name": "5) อายุ 66 ปี เงินเดือน 400,000 — ยกเว้นเงินได้ผู้สูงอายุ 190,000",
+      "persons": [{ "salary": 400000, "senior_or_disabled_exemption": 190000 }],
+      "expect": {
+        "gross_total": 400000,
+        "expenses_total": 100000,
+        "exemptions_total": 190000,
+        "allowances_total": 60000,
+        "net_income": 50000,
+        "tax_before_credit": 0,
+        "net_payable": 0,
+        "must_file": true
+      }
+    },
+    {
+      "name": "6) ยื่นรวมกับคู่สมรส — 900,000 + 600,000 พร้อมลดหย่อนครบ",
+      "persons": [
+        {
+          "salary": 900000,
+          "life_insurance": 100000,
+          "social_security": 9000,
+          "home_loan_interest": 100000,
+          "donation_education": 20000
+        },
+        { "salary": 600000, "social_security": 9000, "provident_fund": 90000 }
+      ],
+      "expect": {
+        "gross_total": 1500000,
+        "expenses_total": 200000,
+        "income_after_expense": 1300000,
+        "allowances_total": 468000,
+        "net_income": 832000,
+        "tax_by_bracket": 81400,
+        "tax_before_credit": 81400,
+        "net_payable": 81400
+      }
+    },
+    {
+      "name": "7) โสด เงินเดือน 600,000 แต่ประกาศว่าคู่สมรสไม่มีเงินได้ (ลดหย่อน 60,000)",
+      "persons": [{ "salary": 600000, "spouse_no_income": true, "social_security": 9000 }],
+      "expect": {
+        "allowances_total": 129000,
+        "net_income": 371000,
+        "tax_before_credit": 14600,
+        "net_payable": 14600
+      }
+    },
+    {
+      "name": "8) เงินเดือน 800,000 + Easy E-Receipt 50,000 + เที่ยวเมืองรอง 20,000",
+      "persons": [{ "salary": 800000, "easy_e_receipt": 50000, "travel_secondary_city": 20000 }],
+      "expect": {
+        "allowances_total": 140000,
+        "net_income": 560000,
+        "tax_by_bracket": 36500,
+        "tax_before_credit": 36500
+      }
+    },
+    {
+      "name": "9) ยกเว้นค่าก่อสร้างบ้าน 3,500,000 (ล้านละหมื่น) + เงินเดือน 500,000",
+      "persons": [{ "salary": 500000, "home_construction_cost": 3500000 }],
+      "expect": {
+        "exemptions_total": 30000,
+        "income_after_expense": 400000,
+        "net_income": 310000,
+        "tax_by_bracket": 8500,
+        "tax_before_credit": 8500
+      }
+    },
+    {
+      "name": "10) เพดานประกันชีวิต+สุขภาพรวม 100,000 (100,000 + 25,000) เงินเดือน 700,000",
+      "persons": [{ "salary": 700000, "life_insurance": 100000, "health_insurance": 25000, "social_security": 9000 }],
+      "expect": {
+        "allowances_total": 169000,
+        "net_income": 431000,
+        "tax_by_bracket": 20600,
+        "tax_before_credit": 20600
+      }
+    },
+    {
+      "name": "11) เพดานกองทุนเกษียณรวม 500,000 (สำรองเลี้ยงชีพ 450,000 + RMF 300,000 + SSF 200,000)",
+      "persons": [{ "salary": 3000000, "provident_fund": 450000, "rmf": 300000, "ssf": 200000 }],
+      "expect": {
+        "allowances_total": 560000,
+        "net_income": 2340000,
+        "tax_by_bracket": 467000,
+        "tax_before_credit": 467000
+      }
+    },
+    {
+      "name": "12) เงินได้หลายประเภท — เงินเดือน 600,000 + รับจ้าง 200,000 + ค่าเช่า 300,000 (เพดานค่าใช้จ่าย 40(1)+(2) รวม 100,000)",
+      "persons": [{ "salary": 600000, "service": 200000, "rent": 300000 }],
+      "expect": {
+        "gross_total": 1100000,
+        "expenses_total": 190000,
+        "income_after_expense": 910000,
+        "allowances_total": 60000,
+        "net_income": 850000,
+        "tax_by_bracket": 85000,
+        "tax_before_credit": 85000
+      }
+    }
+  ]
+}
