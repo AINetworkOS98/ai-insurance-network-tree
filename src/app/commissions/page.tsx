@@ -9,17 +9,6 @@ const DEFAULT_PREMIUM = 100000;
 
 const fmt = (n:number)=> Number(n || 0).toLocaleString('th-TH');
 
-// อัตรา % พร้อมตัวอย่างจำนวนเงิน (บาท) จากสมมติฐานเบี้ยต่อปีที่ตั้งไว้ด้านบน
-function Rate({ pct, premium }:{ pct:any; premium:number }){
-  if(pct == null) return <>-</>;
-  return (
-    <>
-      {pct}%
-      {premium > 0 && <span className="block text-[10px] font-normal text-emerald-700">฿{fmt(Math.round(premium * Number(pct) / 100))}</span>}
-    </>
-  );
-}
-
 function condText(v:any){
   return [
     v.a ? `อายุ ${v.a[0]}–${v.a[1]}` : '',
@@ -40,6 +29,8 @@ export default function CommissionsPage(){
   const [checkRes, setCheckRes] = useState<any>(null);
 
   const premium = Math.max(0, Number(String(premiumInput).replace(/[^\d.]/g,'')) || 0);
+  // แปลงอัตรา % ของตาราง → ตัวอย่างจำนวนเงิน (บาท) จากสมมติฐานเบี้ยต่อปี
+  const bahtOf = (pct:any)=> Math.round(premium * Number(pct || 0) / 100);
 
   async function search(query:string, category:string){
     try{
@@ -160,7 +151,7 @@ export default function CommissionsPage(){
           )}
 
           <div className="space-y-2">
-            {products.slice(0,30).map((p:any)=>(
+            {products.slice(0,100).map((p:any,idx:number)=>(
               <div key={p.c} className="card p-4">
                 <div className="flex flex-wrap gap-2 items-center text-sm">
                   <span className="font-mono font-bold">{p.c}</span>
@@ -177,23 +168,40 @@ export default function CommissionsPage(){
                         : <><th className="py-1 pr-2 text-right">ปี 1</th></>}
                       </tr></thead>
                       <tbody>
-                        {p.v.map((v:any,i:number)=>{
-                          return (
-                            <tr key={i} className="border-b last:border-0">
-                              <td className="py-1 pr-2">{condText(v)}</td>
-                              <td className="py-1 pr-2 text-right font-mono font-bold"><Rate pct={v.y1} premium={showExample ? premium : 0}/></td>
-                              {data.tier!=='first_year' && <>
-                                <td className="py-1 pr-2 text-right font-mono"><Rate pct={v.y2} premium={premium}/></td>
-                                <td className="py-1 pr-2 text-right font-mono"><Rate pct={v.y3} premium={premium}/></td>
-                                <td className="py-1 pr-2 text-right font-mono"><Rate pct={v.y4} premium={premium}/></td>
-                                <td className="py-1 pr-2 text-right font-mono">{v.perf ?? '-'}</td>
-                                <td className="py-1 pr-2 text-right font-mono">{v.cp ?? '-'}</td>
-                              </>}
-                            </tr>
-                          );
-                        })}
+                        {p.v.map((v:any,i:number)=>(
+                          <tr key={i} className="border-b last:border-0">
+                            <td className="py-1 pr-2">{condText(v)}</td>
+                            <td className="py-1 pr-2 text-right font-mono font-bold">{v.y1 ?? '-'}{v.y1!=null?'%':''}</td>
+                            {data.tier!=='first_year' && <>
+                              <td className="py-1 pr-2 text-right font-mono">{v.y2 ?? '-'}{v.y2!=null?'%':''}</td>
+                              <td className="py-1 pr-2 text-right font-mono">{v.y3 ?? '-'}{v.y3!=null?'%':''}</td>
+                              <td className="py-1 pr-2 text-right font-mono">{v.y4 ?? '-'}{v.y4!=null?'%':''}</td>
+                              <td className="py-1 pr-2 text-right font-mono">{v.perf ?? '-'}</td>
+                              <td className="py-1 pr-2 text-right font-mono">{v.cp ?? '-'}</td>
+                            </>}
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
+                  </div>
+                )}
+                {showExample && Array.isArray(p.v) && p.v.length > 0 && (
+                  <div className="mt-2 rounded-xl bg-emerald-50 border border-emerald-100 p-2">
+                    <div className="text-[11px] font-semibold text-emerald-800">
+                      ตัวอย่างที่ {idx+1} — ค่าคอมที่ได้รับ (บาท) เมื่อเบี้ยประกันปีละ ฿{fmt(premium)}
+                    </div>
+                    <ul className="mt-1 space-y-0.5">
+                      {p.v.map((v:any,i:number)=>(
+                        <li key={i} className="text-[11px] text-slate-500">
+                          {condText(v)} →{' '}
+                          <span className="font-mono text-emerald-700">
+                            ปี 1 ฿{fmt(bahtOf(v.y1))}
+                            {data.tier!=='first_year' && ` · ปี 2 ฿${fmt(bahtOf(v.y2))} · ปี 3 ฿${fmt(bahtOf(v.y3))} · ปี 4+ ฿${fmt(bahtOf(v.y4))}`}
+                            {' · รวม 4 ปี '}<span className="font-bold">฿{fmt(bahtOf(v.y1)+bahtOf(v.y2)+bahtOf(v.y3)+bahtOf(v.y4))}</span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )}
               </div>
