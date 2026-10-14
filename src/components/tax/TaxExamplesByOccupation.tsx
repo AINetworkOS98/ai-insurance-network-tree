@@ -82,9 +82,10 @@ const MIXED: Array<{ label: string; extra: Partial<PitPerson>; note: string }> =
 ];
 
 export default function TaxExamplesByOccupation() {
-  /** แบ่งหน้า: แสดงหน้าละ 20 อาชีพ (ผู้ใช้ขอปุ่ม "หน้าถัดไป") */
+  /** แบ่งหน้า: แสดงหน้าละ 20 อาชีพ (ผู้ใช้ขอปุ่ม "หน้าถัดไป") + ช่องค้นหาอาชีพ */
   const PAGE_SIZE = 20;
   const [page, setPage] = useState(1);
+  const [q, setQ] = useState('');
 
   const occRows = useMemo(() => OCCUPATIONS.map((o) => {
     const r = run(o.items, o.extra);
@@ -406,7 +407,7 @@ export default function TaxExamplesByOccupation() {
             : ` (${compare.sameIncome.length} กลุ่ม)`}
         </h4>
         <div className="overflow-x-auto -mx-1 px-1">
-          <table className="w-full text-[11px] tabular-nums min-w-[720px]">
+          <table className="w-full text-[11px] tabular-nums min-w-[720px]" id="tax-same-income">
             <thead>
               <tr className="text-slate-400 text-left border-b">
                 <th className="py-2 pr-2 font-semibold text-right">รายได้เท่ากัน</th>
