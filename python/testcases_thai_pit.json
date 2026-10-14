@@ -66,7 +66,7 @@
       "expect": {
         "expenses_total": 100000,
         "income_after_expense": 900000,
-        "allowances_total": 190000,
+        "allowances_total": 150000,
         "net_income": 710000,
         "tax_by_bracket": 59000,
         "tax_before_credit": 59000,
@@ -102,8 +102,9 @@
       "expect": {
         "gross_total": 1500000,
         "expenses_total": 200000,
-        "income_after_expense": 1300000,
-        "allowances_total": 468000,
+        "section2_total": 80000,
+        "income_after_expense": 1220000,
+        "allowances_total": 348000,
         "net_income": 832000,
         "tax_by_bracket": 81400,
         "tax_before_credit": 81400,
@@ -134,7 +135,7 @@
       "name": "9) ยกเว้นค่าก่อสร้างบ้าน 3,500,000 (ล้านละหมื่น) + เงินเดือน 500,000",
       "persons": [{ "salary": 500000, "home_construction_cost": 3500000 }],
       "expect": {
-        "exemptions_total": 30000,
+        "allowances_total": 90000,
         "income_after_expense": 400000,
         "net_income": 310000,
         "tax_by_bracket": 8500,
@@ -155,7 +156,9 @@
       "name": "11) เพดานกองทุนเกษียณรวม 500,000 (สำรองเลี้ยงชีพ 450,000 + RMF 300,000 + SSF 200,000)",
       "persons": [{ "salary": 3000000, "provident_fund": 450000, "rmf": 300000, "ssf": 200000 }],
       "expect": {
-        "allowances_total": 560000,
+        "allowances_total": 120000,
+        "section2_total": 440000,
+        "income_after_expense": 2460000,
         "net_income": 2340000,
         "tax_by_bracket": 467000,
         "tax_before_credit": 467000
@@ -228,11 +231,70 @@
       "persons": [{ "salary": 2000000, "donation_education": 50000, "donation_general": 100000 }],
       "expect": {
         "income_after_expense": 1900000,
-        "base_after_allowances": 1840000,
-        "allowances_total": 260000,
+        "item3_balance": 1840000,
+        "allowances_total": 60000,
+        "item4_education_donation": 100000,
+        "item5_balance": 1740000,
+        "item6_general_donation": 100000,
         "net_income": 1640000,
         "tax_method1": 275000,
         "net_payable": 275000
+      }
+    },
+    {
+      "name": "17) แบบ ข้อ 2(1)(2): สำรองเลี้ยงชีพ 100,000 (10,000 แรกลดหย่อนข้อ 8 ที่เหลือยกเว้น) + กบข. 200,000",
+      "persons": [{ "salary": 1000000, "provident_fund": 100000, "gpf": 200000 }],
+      "expect": {
+        "section2_total": 290000,
+        "allowances_total": 70000,
+        "income_after_expense": 610000,
+        "net_income": 540000,
+        "tax_method1": 33500,
+        "net_payable": 33500
+      }
+    },
+    {
+      "name": "18) ใบแนบ ข้อ 5 วิชาชีพอิสระ — ประณีตศิลปกรรม หักค่าใช้จ่ายร้อยละ 60",
+      "persons": [{
+        "income_items": [{ "category": "professional", "amount": 500000, "variant": "fine_arts", "description": "ประณีตศิลปกรรม" }]
+      }],
+      "expect": {
+        "expenses_total": 300000,
+        "income_after_expense": 200000,
+        "net_income": 140000,
+        "tax_method1": 0,
+        "tax_before_credit": 0
+      }
+    },
+    {
+      "name": "19) ใบแนบ ข้อ 13/17/21: CCTV 80,000 + Easy E-Receipt 4 รายการรวม 65,000 (จำกัด 50,000) + งานศิลปะ 50,000",
+      "persons": [{
+        "salary": 1200000,
+        "cctv_amount": 80000,
+        "e_receipt_general": 30000,
+        "e_receipt_books": 10000,
+        "e_receipt_ebooks": 5000,
+        "e_receipt_otop": 20000,
+        "art_purchase": 50000
+      }],
+      "expect": {
+        "expenses_total": 100000,
+        "allowances_total": 240000,
+        "net_income": 860000,
+        "tax_method1": 87000,
+        "net_payable": 87000
+      }
+    },
+    {
+      "name": "20) แบบ ข้อ 11.13 เครดิตภาษีเงินได้จากต่างประเทศ 5,000 + หัก ณ ที่จ่าย 20,000",
+      "persons": [{ "salary": 700000, "withholding": 20000, "foreign_tax_credit": 5000 }],
+      "expect": {
+        "net_income": 540000,
+        "tax_method1": 33500,
+        "foreign_tax_credit": 5000,
+        "item14_after_foreign_credit": 28500,
+        "tax_credits": 20000,
+        "net_payable": 8500
       }
     }
   ]
