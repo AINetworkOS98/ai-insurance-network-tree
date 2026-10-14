@@ -164,12 +164,47 @@ def build() -> Dict[str, Any]:
         "same_income": same_income,
     }
 
+    # 3) หลักประกันลดหย่อนภาษี: สะสมทรัพย์ (7.1) / บำนาญ (7.3) / สุขภาพ (7.2)
+    ins_levels = [300_000, 480_000, 600_000, 1_000_000, 2_000_000, 5_000_000]
+
+    def ins_matrix(kind: str, premium: float, also_life: float = 0.0) -> List[Dict[str, Any]]:
+        item = {"savings": "7.1", "pension": "7.3", "health": "7.2"}[kind]
+        rows: List[Dict[str, Any]] = []
+        for inc in ins_levels:
+            pay = [it("salary", inc, "", "เงินได้พึงประเมิน")]
+            if kind == "pension":
+                w = run(pay, social_security=9000, pension_life_insurance=premium, life_insurance=also_life)
+                b = run(pay, social_security=9000, life_insurance=also_life) if also_life else run(pay, social_security=9000)
+            elif kind == "health":
+                w = run(pay, social_security=9000, health_insurance=premium, life_insurance=also_life)
+                b = run(pay, social_security=9000, life_insurance=also_life) if also_life else run(pay, social_security=9000)
+            else:
+                w = run(pay, social_security=9000, life_insurance=premium)
+                b = run(pay, social_security=9000)
+            allowed = next((a["amount"] for a in w["allowance_items"] if a.get("item") == item), 0.0)
+            rows.append({
+                "income": inc, "premium": premium, "allowed": round(allowed, 2),
+                "tax_before": b["tax_before_credit"], "tax_after": w["tax_before_credit"],
+                "saved": round(max(0.0, b["tax_before_credit"] - w["tax_before_credit"]), 2),
+                "marginal_rate": b["marginal_rate"], "net_income": w["net_income"],
+            })
+        return rows
+
+    insurance_tools = {
+        "limits": {"life_insurance": LIFE, "health_insurance": HEALTH, "life_health_combined": COMBINED,
+                   "pension_life": PENSION, "retirement_cap": LIM["retirement_cap"]},
+        "levels": ins_levels,
+        "savings": ins_matrix("savings", LIFE),
+        "pension": ins_matrix("pension", 150_000),
+        "health": ins_matrix("health", HEALTH),
+    }
+
     return {
         "year": DEFAULT_YEAR, "program": "tax_examples_by_occupation.py",
         "limits": {"life_insurance": LIFE, "health_insurance": HEALTH,
                    "life_health_combined": COMBINED, "pension_life": PENSION,
                    "child": CHILD, "retirement_cap": LIM["retirement_cap"]},
-        "occupations": occ, "income_compare": income_compare,
+        "occupations": occ, "income_compare": income_compare, "insurance_tools": insurance_tools,
         "table_a_income_levels": table_a,
         "table_b_premium_sizes": table_b, "table_c_common_mistakes": table_c,
     }
@@ -285,6 +320,30 @@ def print_income_compare(d: Dict[str, Any]) -> None:
     print()
 
 
+def print_insurance_tools(d: Dict[str, Any]) -> None:
+    t = d["insurance_tools"]
+    L = t["limits"]
+    print(_line("="))
+    print(" 3) หลักประกันลดหย่อนภาษี — ประกันชีวิตแบบสะสมทรัพย์ (ข้อ 7.1) · แบบบำนาญ (ข้อ 7.3) · ประกันสุขภาพ (ข้อ 7.2)")
+    print(f"    เพดาน: สะสมทรัพย์ {L['life_insurance']:,.0f} · สุขภาพ {L['health_insurance']:,.0f} "
+          f"(รวม 7.1+7.2 ไม่เกิน {L['life_health_combined']:,.0f}) · บำนาญ 15% ของเงินได้ ไม่เกิน {L['pension_life']:,.0f} "
+          f"(วงเงินเกษียณรวม {L['retirement_cap']:,.0f})")
+    print(_line("="))
+    for key, title in (("savings", "3.1 ประกันชีวิตแบบสะสมทรัพย์ (เบี้ย 100,000/ปี)"),
+                       ("pension", "3.2 ประกันชีวิตแบบบำนาญ (เบี้ย 150,000/ปี · เพดาน 15%)"),
+                       ("health", "3.3 ประกันสุขภาพ (เบี้ย 25,000/ปี)")):
+        rows = t[key]
+        print(f" {title}")
+        print(f"    {'เงินได้/ปี':>12}{'ลดหย่อนที่ใช้ได้จริง':>22}{'ภาษีก่อน':>12}{'ภาษีหลัง':>12}"
+              f"{'ประหยัดภาษี':>14}{'ขั้นภาษี':>10}")
+        for r in rows:
+            print(f"    {r['income']:>12,.0f}{r['allowed']:>22,.0f}{r['tax_before']:>12,.0f}"
+                  f"{r['tax_after']:>12,.0f}{r['saved']:>14,.0f}{r['marginal_rate'] * 100:>9.0f}%")
+        print(_line("-"))
+    print(" หมายเหตุ: ที่เงินได้ 300,000 บาท เงินได้สุทธิยังไม่ถึงเกณฑ์เสียภาษี → ไม่มีภาษีให้ประหยัด")
+    print()
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     data = build()
@@ -296,7 +355,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         i = argv.index("--only")
         only = argv[i + 1] if i + 1 < len(argv) else None
     jobs = [("1", print_occupations), ("1ข", print_income_compare), ("2ก", print_table_a),
-            ("2ข", print_table_b), ("2ค", print_table_c)]
+            ("2ข", print_table_b), ("2ค", print_table_c), ("3", print_insurance_tools)]
     for key, fn in jobs:
         if only is None or only == key:
             fn(data)

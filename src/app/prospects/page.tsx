@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import AdminRightsPanel from '@/components/AdminRightsPanel';
 import ThaiTaxCalculator from '@/components/tax/ThaiTaxCalculator';
 import TaxBaseTable from '@/components/tax/TaxBaseTable';
+import InsuranceTaxTools from '@/components/tax/InsuranceTaxTools';
 import TaxExamplesByOccupation from '@/components/tax/TaxExamplesByOccupation';
 
 // หน้า "สมาชิกทั่วไป" (เดิมชื่อ "ผู้สนใจ") — ฐานเดียวกับระบบสมาชิก (/api/members)
@@ -165,6 +166,8 @@ export default function GeneralMembersPage(){
 
           {view === 'tax' ? (
             <div className="space-y-4">
+              {/* 0) หลักประกันลดหย่อนภาษี (บนสุด ตามที่ผู้ใช้สั่ง) */}
+              <InsuranceTaxTools/>
               {/* 1) ฐานภาษีบุคคลธรรมดา (ปีล่าสุด) */}
               <TaxBaseTable/>
               {/* 2) โปรแกรมคำนวณภาษี */}
