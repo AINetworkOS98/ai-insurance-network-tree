@@ -7,7 +7,7 @@
  * (ไม่มีเลขที่พิมพ์ค้างไว้) — ถ้าแก้กติกาที่ thaiPit.ts ตัวเลขทั้งหมดจะเปลี่ยนตามทันที
  * เอกสารอ้างอิง: ภ.ง.ด.90 + ใบแนบลดหย่อน ข้อ 7.1–7.3 + คำชี้แจงการกรอก ภ.ง.ด.90 (ข้อ 7)
  */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import occFile from '../../../python/occupations_examples.json';
 import {
   computePit, DEFAULT_TAX_YEAR, LIM, TAX_BRACKETS,
@@ -82,6 +82,10 @@ const MIXED: Array<{ label: string; extra: Partial<PitPerson>; note: string }> =
 ];
 
 export default function TaxExamplesByOccupation() {
+  /** แบ่งหน้า: แสดงหน้าละ 20 อาชีพ (ผู้ใช้ขอปุ่ม "หน้าถัดไป") */
+  const PAGE_SIZE = 20;
+  const [page, setPage] = useState(1);
+
   const occRows = useMemo(() => OCCUPATIONS.map((o) => {
     const r = run(o.items, o.extra);
     const gross = r.gross_total;
@@ -180,6 +184,58 @@ export default function TaxExamplesByOccupation() {
 
   const maxBand = TAX_BRACKETS[TAX_BRACKETS.length - 1][1];
 
+  /* ── แบ่งหน้าอาชีพ ── */
+  const pageCount = Math.max(1, Math.ceil(occRows.length / PAGE_SIZE));
+  const safePage = Math.min(Math.max(1, page), pageCount);
+  const pageRows = occRows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const pageByTax = [...pageRows].sort((a, b) => b.r.tax_before_credit - a.r.tax_before_credit);
+  const fromNo = (safePage - 1) * PAGE_SIZE + 1;
+  const toNo = Math.min(safePage * PAGE_SIZE, occRows.length);
+  const top10 = compare.byTax.slice(0, 10);
+  const sameIncomeShown = compare.sameIncome.slice(0, 12);
+
+  const goPage = (p: number) => {
+    setPage(Math.min(Math.max(1, p), pageCount));
+    if (typeof document !== 'undefined') {
+      const el = document.getElementById('tax-examples');
+      if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 12, behavior: 'smooth' });
+    }
+  };
+
+  /** แถบแบ่งหน้า (ใช้ร่วมกันทั้งตารางอาชีพและกราฟเปรียบเทียบ) */
+  const Pager = ({ at }: { at: 'table' | 'chart' }) => {
+    const win = 2;
+    const pages: number[] = [];
+    for (let p = 1; p <= pageCount; p++) {
+      if (p === 1 || p === pageCount || Math.abs(p - safePage) <= win) pages.push(p);
+    }
+    const btn = 'px-3 py-1.5 rounded-full border text-[11px] font-semibold disabled:opacity-40 disabled:cursor-not-allowed';
+    return (
+      <div className={`flex flex-wrap items-center gap-2 ${at === 'chart' ? 'mt-3' : 'mt-4'}`}>
+        <button disabled={safePage <= 1} onClick={() => goPage(safePage - 1)} className={`${btn} border-gray-200 bg-white text-slate-600 hover:bg-sky-50`}>
+          ‹ หน้าก่อนหน้า
+        </button>
+        {pages.map((p, i) => (
+          <span key={p} className="flex items-center gap-2">
+            {i > 0 && p - pages[i - 1] > 1 && <span className="text-[11px] text-slate-300">…</span>}
+            <button onClick={() => goPage(p)}
+              className={`px-3 py-1.5 rounded-full border text-[11px] font-semibold tabular-nums ${p === safePage ? 'bg-[#475569] text-white border-[#475569]' : 'bg-white text-slate-600 border-gray-200 hover:bg-sky-50'}`}>
+              {p}
+            </button>
+          </span>
+        ))}
+        <button disabled={safePage >= pageCount} onClick={() => goPage(safePage + 1)}
+          className={`${btn} bg-[#475569] text-white border-[#475569] hover:opacity-90`}>
+          หน้าถัดไป ›
+        </button>
+        <span className="text-[11px] text-slate-400 ml-1 tabular-nums">
+          หน้า {safePage} จาก {pageCount} · แสดงอาชีพที่ {fromNo.toLocaleString('en-US')}–{toNo.toLocaleString('en-US')} จากทั้งหมด {occRows.length.toLocaleString('en-US')} อาชีพ
+        </span>
+      </div>
+    );
+  };
+
+
   return (
     <div className="space-y-4" id="tax-examples">
       {/* ── หัวข้อ ── */}
@@ -192,7 +248,8 @@ export default function TaxExamplesByOccupation() {
         <p className="text-xs text-slate-500 mt-2 leading-5">
           ทุกตัวเลขเป็น <b>ประมาณการ</b> จากรายได้ตัวอย่างตามอาชีพจริง (สมมติโสด ไม่มีบุตร) โดยใช้ค่าใช้จ่ายเหมาที่กฎหมายกำหนด
           และค่าลดหย่อนเฉพาะที่อาชีพนั้นมีจริง — ตัวเลขในตาราง <b>คำนวณใหม่ทุกครั้งที่เปิดหน้า</b> จากฟังก์ชัน <code>computePit()</code> ตัวเดียวกับโปรแกรมด้านบน
-          (ไม่ใช่เลขที่พิมพ์ค้างไว้) จึงตรงกับแบบ ภ.ง.ด.90 ข้อ 11 เสมอ
+          (ไม่ใช่เลขที่พิมพ์ค้างไว้) จึงตรงกับแบบ ภ.ง.ด.90 ข้อ 11 เสมอ ·
+          <b> ตารางและกราฟแบ่งหน้าละ 20 อาชีพ — ใช้ปุ่ม “หน้าถัดไป” ด้านล่างของแต่ละส่วน</b>
         </p>
       </div>
 
@@ -215,7 +272,7 @@ export default function TaxExamplesByOccupation() {
               </tr>
             </thead>
             <tbody>
-              {occRows.map((o) => (
+              {pageRows.map((o) => (
                 <tr key={o.id} className="border-b border-dashed last:border-0 align-top">
                   <td className="py-2 pr-2">
                     <div className="font-semibold text-slate-700">{o.job}</div>
@@ -246,6 +303,7 @@ export default function TaxExamplesByOccupation() {
           • เกณฑ์ต้องยื่นแบบ: เงินได้ 40(1) เกิน 60,000 บาท หรือเงินได้ประเภทอื่นรวมเกิน 120,000 บาท · เงินเดือนอย่างเดียวทั้งปี → ยื่น ภ.ง.ด.91 (แบบสั้น)<br/>
           • กรณีมีบุตร/คู่สมรส/ซื้อบ้าน/กองทุนเกษียณ ให้กรอกเพิ่มในโปรแกรมคำนวณด้านบนเพื่อดูผลจริงของตัวเอง
         </p>
+        <Pager at="table" />
       </div>
 
       {/* ── 1ข) เปรียบเทียบรายได้–ภาษี ทุกอาชีพที่ต้องยื่นแบบ ── */}
@@ -253,7 +311,7 @@ export default function TaxExamplesByOccupation() {
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-sm font-bold text-[#475569]">1ข) เปรียบเทียบรายได้–ภาษี ของทุกอาชีพที่ต้องยื่นแบบภาษี</h3>
           <span className="text-[11px] px-2 py-0.5 rounded-full border border-sky-100 bg-sky-50 text-sky-700">
-            {compare.filing.length} อาชีพ · เรียงจากภาษีมาก → น้อย
+            {compare.filing.length} อาชีพ · หน้านี้แสดง {pageByTax.length} อาชีพ (เรียงจากภาษีมาก → น้อย)
           </span>
         </div>
 
@@ -281,7 +339,7 @@ export default function TaxExamplesByOccupation() {
             <span className="text-slate-400">(แต่ละแท่งเทียบเป็นสัดส่วนกับค่าสูงสุดของตัวเอง — แท่งรายได้เต็ม = {baht0(compare.maxGross)} · แท่งภาษีเต็ม = {baht0(compare.maxTax)})</span>
           </div>
           <div className="space-y-2.5">
-            {compare.byTax.map((o) => (
+            {pageByTax.map((o) => (
               <div key={o.id} className="grid grid-cols-[minmax(110px,190px)_1fr_auto] gap-2 items-center">
                 <div className="text-[11px] text-slate-600 leading-3">{o.job}</div>
                 <div className="space-y-1">
@@ -302,11 +360,49 @@ export default function TaxExamplesByOccupation() {
               </div>
             ))}
           </div>
+          <Pager at="chart" />
+        </div>
+
+        {/* 10 อันดับภาษีสูงสุดจากทั้งหมด */}
+        <h4 className="text-xs font-bold text-[#475569] mt-5 mb-2">
+          1ข-2) 10 อันดับภาษีสูงสุดจากทั้งหมด {compare.filing.length} อาชีพ (คิดจากทุกหน้า)
+        </h4>
+        <div className="overflow-x-auto -mx-1 px-1">
+          <table className="w-full text-[11px] tabular-nums min-w-[560px]">
+            <thead>
+              <tr className="text-slate-400 text-left border-b">
+                <th className="py-2 pr-2 font-semibold">อันดับ · อาชีพ</th>
+                <th className="py-2 pr-2 font-semibold text-right">รายได้/ปี</th>
+                <th className="py-2 pr-2 font-semibold text-right">ภาษีที่ต้องชำระ</th>
+                <th className="py-2 pr-2 font-semibold text-right">อัตราเฉลี่ย</th>
+                <th className="py-2 font-semibold text-right">สัดส่วนของภาษีรวม</th>
+              </tr>
+            </thead>
+            <tbody>
+              {top10.map((o, i) => (
+                <tr key={o.id} className="border-b border-dashed last:border-0">
+                  <td className="py-2 pr-2 text-slate-700">
+                    <span className="text-slate-400 mr-1">{i + 1}.</span>{o.job}
+                    <span className="text-[10px] text-slate-400"> · {o.form}</span>
+                  </td>
+                  <td className="py-2 pr-2 text-right text-slate-600">{baht0(o.gross)}</td>
+                  <td className="py-2 pr-2 text-right font-semibold text-rose-600">{baht0(o.r.tax_before_credit)}</td>
+                  <td className="py-2 pr-2 text-right text-slate-500">{pct(o.eff)}</td>
+                  <td className="py-2 text-right text-slate-500">
+                    {compare.taxSum > 0 ? pct(o.r.tax_before_credit / compare.taxSum) : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         {/* รายได้เท่ากัน แต่ภาษีต่างกัน */}
         <h4 className="text-xs font-bold text-[#475569] mt-5 mb-2">
-          1ค) รายได้เท่ากัน แต่ภาษีต่างกัน — เพราะประเภทเงินได้/ค่าใช้จ่ายเหมาไม่เหมือนกัน ({compare.sameIncome.length} กลุ่ม)
+          1ค) รายได้เท่ากัน แต่ภาษีต่างกัน — เพราะประเภทเงินได้/ค่าใช้จ่ายเหมาไม่เหมือนกัน
+          {compare.sameIncome.length > sameIncomeShown.length
+            ? ` (แสดง 12 กลุ่มที่ต่างกันมากที่สุด จากทั้งหมด ${compare.sameIncome.length} กลุ่ม)`
+            : ` (${compare.sameIncome.length} กลุ่ม)`}
         </h4>
         <div className="overflow-x-auto -mx-1 px-1">
           <table className="w-full text-[11px] tabular-nums min-w-[720px]">
@@ -319,7 +415,7 @@ export default function TaxExamplesByOccupation() {
               </tr>
             </thead>
             <tbody>
-              {compare.sameIncome.map((g) => (
+              {sameIncomeShown.map((g) => (
                 <tr key={g.income} className="border-b border-dashed last:border-0 align-top">
                   <td className="py-2 pr-2 text-right text-slate-700 font-semibold">{baht0(g.income)}</td>
                   <td className="py-2 pr-2">
