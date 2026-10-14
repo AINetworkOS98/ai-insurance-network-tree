@@ -95,7 +95,10 @@
       "expect": {
         "gu_tax_borne": 495714.29, "gu_total_outlay": 595714.29, "gu_cit_saving": 89357.14,
         "gu_net_cost": 506357.15, "gu_converged": true, "gu_marginal_rate": 0.3,
-        "gu_employee_declared_income": 2595714.29, "gu_employee_gets": 2100000
+        "gu_employee_declared_income": 2595714.29, "gu_employee_gets": 2100000,
+        "bn_claim": 5000000, "bn_obligation": 5000000, "bn_cit_on_claim": 925000,
+        "bn_net_to_company": 4075000, "bn_net_to_family": 5000000,
+        "bn_cover_needed": 6156250, "bn_shortfall_company": 925000
       }
     },
     {

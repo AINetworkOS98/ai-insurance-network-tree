@@ -238,6 +238,77 @@ export default function KeymanInsurance() {
             )}
           </section>
 
+          <section className="card p-4 sm:p-5" id="keyman-beneficiary">
+            <h3 className="text-sm font-bold text-[#475569] mb-1">2.2) ผู้รับผลประโยชน์ — เลือกแบบไหน เสียภาษีอย่างไร</h3>
+            <p className="text-[11px] text-slate-500 mb-3 leading-4">
+              เงินค่าสินไหมจะไปถึง “มือใคร” ขึ้นอยู่กับผู้รับประโยชน์ในกรมธรรม์ และ<b>ภาษีต่างกันคนละมาตรา</b>:
+              บริษัทเป็นผู้รับ → สินไหมเป็น<b>รายได้</b>ของบริษัท (มาตรา 65) · ครอบครัว/ทายาทเป็นผู้รับ → เงินได้จากการประกันภัย<b>ยกเว้น</b>ภาษีเงินได้บุคคลธรรมดา (มาตรา 42(13))
+            </p>
+            <div className="grid sm:grid-cols-3 gap-3 mb-3">
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <div className="text-[11px] text-slate-500">บริษัทได้จริงหลังภาษีนิติบุคคล (วงเงิน {b0(r.bn_claim)})</div>
+                <div className="text-xl font-bold text-slate-700">{b0(r.bn_net_to_company)} บาท</div>
+                <div className="text-[10px] text-slate-400 mt-0.5">หักภาษีจากสินไหม {b0(r.bn_cit_on_claim)} บาท</div>
+              </div>
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3">
+                <div className="text-[11px] text-emerald-700">ทายาทได้เต็ม (ยกเว้นภาษี มาตรา 42(13))</div>
+                <div className="text-xl font-bold text-emerald-700">{b0(r.bn_net_to_family)} บาท</div>
+                <div className="text-[10px] text-emerald-600 mt-0.5">แต่เงินไม่เข้าระบบธุรกิจ</div>
+              </div>
+              <div className="rounded-xl border border-amber-100 bg-amber-50 p-3">
+                <div className="text-[11px] text-amber-700">วงเงินที่ต้องทำ เพื่อให้บริษัทได้เงินพอภาระผูกพัน {b0(r.bn_obligation)}</div>
+                <div className="text-xl font-bold text-amber-700">{b0(r.bn_cover_needed)} บาท</div>
+                <div className="text-[10px] text-amber-600 mt-0.5">
+                  {r.bn_shortfall_company > 0 ? `ถ้าทำแค่ ${b0(r.bn_claim)} จะขาด ${b0(r.bn_shortfall_company)} บาท` : 'วงเงินปัจจุบันเพียงพอแล้ว'}
+                </div>
+              </div>
+            </div>
+            <div className="overflow-x-auto -mx-1 px-1">
+              <table className="w-full text-[11px] min-w-[820px]" id="keyman-beneficiary-table">
+                <thead>
+                  <tr className="text-slate-400 text-left border-b">
+                    <th className="py-2 pr-2 font-semibold">ผู้รับผลประโยชน์</th>
+                    <th className="py-2 pr-2 font-semibold">ภาษีที่เกี่ยวข้อง</th>
+                    <th className="py-2 pr-2 text-right font-semibold">เงินที่ได้</th>
+                    <th className="py-2 pr-2 font-semibold">ใช้กับธุรกิจ</th>
+                    <th className="py-2 font-semibold">ข้อควรทำ / ข้อควรระวัง</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {r.bn_rows.map((row) => (
+                    <tr key={row.key} className="border-b border-dashed last:border-0 align-top">
+                      <td className="py-2 pr-2 text-slate-700 font-semibold">{row.who}</td>
+                      <td className="py-2 pr-2 text-slate-600">{row.tax}</td>
+                      <td className="py-2 pr-2 text-right tabular-nums">{b0(row.net)}</td>
+                      <td className="py-2 pr-2">
+                        <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold ${row.business_use.startsWith('ใช้ได้เต็ม') ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : row.business_use.startsWith('ใช้ได้บางส่วน') ? 'bg-amber-50 text-amber-700 border border-amber-100' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>
+                          {row.business_use}
+                        </span>
+                      </td>
+                      <td className="py-2 text-slate-600">{row.note}<div className="text-[10px] text-slate-400 mt-0.5">อ้างอิง: {row.refs}</div></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-3 grid sm:grid-cols-2 gap-2 text-[11px]">
+              <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 text-slate-700">
+                <b>ตามหลักการประกันชีวิต</b> — ต้อง <b>ระบุชื่อ "ผู้รับประโยชน์" ให้ชัดเจน</b> (และควรระบุ <b>ผู้รับประโยชน์สำรอง</b> ด้วย) ·
+                ผู้เอาประกันขอ<b>เปลี่ยนผู้รับประโยชน์ได้</b>ตลอดอายุกรมธรรม์ (เว้นแต่ผู้รับประโยชน์คนเดิมได้ถือเอาประโยชน์ตามกรมธรรม์แล้วและได้รับมอบกรมธรรม์ไป) ·
+                หาก<b>ไม่ระบุชื่อ</b> หรือผู้รับประโยชน์เสียชีวิตก่อน/พร้อมกับผู้เอาประกัน เงินจะ<b>ตกเป็นกองมรดก</b>ของผู้เอาประกัน ต้องผ่านการจัดการมรดก
+              </div>
+              <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 text-slate-700">
+                <b>ตามหลักเกณฑ์สรรพากร</b> — บริษัทซื้อประกันให้บุคคลสำคัญ ถือว่าบริษัทมี<b>ส่วนได้เสีย</b>และเป็นผู้เอาประกันภัยได้ ·
+                จ่ายเบี้ยให้กรรมการ/พนักงาน<b>ทุกคนเป็นการทั่วไปตามระเบียบ</b> → หักค่าใช้จ่ายได้ (ไม่ต้องห้าม 65 ตรี (3),(13)) ·
+                สินไหมที่ทายาทรับ <b>ยกเว้นภาษีเงินได้บุคคลธรรมดา มาตรา 42(13)</b> · สินไหมที่บริษัทรับเป็น<b>รายได้</b>และเงินที่ซื้อหุ้นคืนเป็น<b>รายจ่ายลงทุน หักไม่ได้ (65 ตรี (5))</b>
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-400 mt-2 leading-4">
+              หมายเหตุเรื่องภาษีการรับมรดก (พ.ร.บ.ภาษีการรับมรดก พ.ศ. 2558): ภาษีเกิดเมื่อมรดกที่ทายาทแต่ละคนได้รับจากเจ้ามรดกแต่ละราย<b>รวมกันเกิน 100 ล้านบาท</b> เสียเฉพาะส่วนที่เกิน —
+              สินไหมประกันชีวิตที่จ่ายตรงให้ผู้รับประโยชน์ที่ระบุชื่อโดยทั่วไปไม่นำมารวมเป็นทรัพย์มรดก แต่<b>หากเป็นกรณีบริษัท/ผู้อื่นเป็นผู้ชำระเบี้ยแทน</b> ควรให้ที่ปรึกษาตรวจข้อเท็จจริงกับสำนักงานสรรพากรก่อนวางแผน
+            </p>
+          </section>
+
           <section className="card p-4 sm:p-5">
             <h3 className="text-sm font-bold text-[#475569] mb-3">3) หลักเกณฑ์ภาษี แยกตามสถานการณ์ (จากหนังสือตอบข้อหารือ)</h3>
             <div className="overflow-x-auto -mx-1 px-1">
@@ -317,6 +388,23 @@ export default function KeymanInsurance() {
             </table>
             <p className="text-[10px] text-slate-400 mt-2 leading-4">
               วิธีคำนวณตามคำสั่งกรมสรรพากรที่ ป. 96/2543 ข้อ 1(7),(8) — นำภาษีที่ออกให้ไปรวมเป็นเงินได้แล้วคำนวณซ้ำจนไม่มีภาษีต้องออกเพิ่ม
+            </p>
+          </div>
+
+          <div className="card p-4">
+            <h3 className="text-sm font-bold text-[#475569] mb-2">ผู้รับผลประโยชน์ (Beneficiary)</h3>
+            <table className="w-full text-[11px] tabular-nums">
+              <tbody className="[&_td]:py-1">
+                <tr className="border-b"><td className="text-slate-500">วงเงินคุ้มครอง</td><td className="text-right">{b0(r.bn_claim)}</td></tr>
+                <tr className="border-b"><td className="text-slate-500">บริษัทได้หลังภาษีนิติบุคคล</td><td className="text-right font-semibold">{b0(r.bn_net_to_company)}</td></tr>
+                <tr className="border-b"><td className="text-slate-500">ทายาทได้ (ยกเว้นภาษี 42(13))</td><td className="text-right text-emerald-700 font-semibold">{b0(r.bn_net_to_family)}</td></tr>
+                <tr className="border-b"><td className="text-slate-500">ภาระผูกพันที่ต้องใช้เงิน</td><td className="text-right">{b0(r.bn_obligation)}</td></tr>
+                <tr className="border-b"><td className="text-slate-500">วงเงินที่ต้องทำ (ให้บริษัทพอใช้)</td><td className="text-right font-semibold text-amber-700">{b0(r.bn_cover_needed)}</td></tr>
+                <tr><td className="text-slate-700 font-semibold">เงินที่ยังขาด</td><td className="text-right font-bold text-rose-600">{b0(r.bn_shortfall_company)}</td></tr>
+              </tbody>
+            </table>
+            <p className="text-[10px] text-slate-400 mt-2 leading-4">
+              ถ้าต้องการให้ <b>บริษัท</b> ได้เงินหลังภาษีครบตามภาระผูกพัน ต้องทำวงเงินสูงกว่าภาระผูกพัน เพราะสินไหมเป็นรายได้ที่ต้องเสียภาษีนิติบุคคลก่อนนำไปใช้
             </p>
           </div>
 

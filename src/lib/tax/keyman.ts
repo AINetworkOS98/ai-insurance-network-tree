@@ -65,6 +65,11 @@ export type KeymanResult = {
   gu_employee_declared_income: number; gu_employee_gets: number;
   gu_rounds_detail: Array<{ round: number; income_with_tax: number; tax: number; increase: number }>;
   gu_note: string;
+  // ── ผู้รับผลประโยชน์ ──
+  bn_claim: number; bn_obligation: number; bn_cit_on_claim: number;
+  bn_net_to_company: number; bn_net_to_family: number;
+  bn_cover_needed: number; bn_shortfall_company: number;
+  bn_rows: Array<{ key: string; who: string; tax: string; net: number; business_use: string; note: string; refs: string }>;
   checklist: Array<{ ok: boolean; item: string }>;
   rules: Array<{ situation: string; deduct: string; income: string; claim: string; source: string }>;
   notes: string[];
@@ -145,6 +150,73 @@ export function computeKeyman(input: KeymanInput): KeymanResult {
   const grossUpCitSaving = r2(citBefore - citWithAll);
   const grossUpNetCost = r2(totalOutlay - grossUpCitSaving);
 
+  // ── ผู้รับผลประโยชน์ (Beneficiary) — ผลทางภาษีของเงินค่าสินไหม + วงเงินที่ต้องทำ ──
+  // บริษัทเป็นผู้รับประโยชน์: สินไหม = รายได้ของบริษัท (มาตรา 65) → ต้องเสียภาษีนิติบุคคลก่อนนำไปใช้
+  //   (กค 0706/5249 · กค 0706/8707) · เงินที่นำไปซื้อหุ้นคืนจากทายาท = รายจ่ายลงทุน หักไม่ได้ (65 ตรี (5))
+  // ครอบครัว/ทายาทเป็นผู้รับประโยชน์: เงินได้จากการประกันภัย/ค่าสินไหมทดแทน ยกเว้นภาษีเงินได้บุคคลธรรมดา (มาตรา 42(13))
+  //   (กค 0702/9358 · กค 0811/408) · เงินไม่เข้าระบบธุรกิจ → ต้องมีข้อตกลง/สัญญาซื้อขายหุ้นล่วงหน้า
+  const bnClaim = r2(recommended);
+  const citOnClaim = (cover: number) => r2(
+    computeCit({
+      revenue: num(input.company_revenue) + cover,
+      expenses: num(input.company_expenses),
+      capital_paid_up: num(input.company_capital),
+    }).tax_payable - citBefore,
+  );
+  const bnCitOnClaim = citOnClaim(bnClaim);
+  const bnNetToCompany = r2(bnClaim - bnCitOnClaim);
+  const bnNetToFamily = r2(bnClaim); // ยกเว้นภาษีเงินได้บุคคลธรรมดา ตามมาตรา 42(13)
+  const bnObligation = obligationNeed;
+  let bnCoverNeeded = 0;
+  if (bnObligation > 0) {
+    let lo = 0;
+    let hi = Math.max(bnObligation * 4, 1_000_000);
+    for (let i = 0; i < 80 && hi - lo > 1; i++) {
+      const mid = Math.floor((lo + hi) / 2);
+      if (r2(mid - citOnClaim(mid)) >= bnObligation) hi = mid; else lo = mid;
+    }
+    bnCoverNeeded = r2(hi);
+  }
+  const bnShortfallCompany = r2(Math.max(0, bnObligation - bnNetToCompany));
+
+  const bnRows: Array<{ key: string; who: string; tax: string; net: number; business_use: string; note: string; refs: string }> = [
+    {
+      key: 'company', who: 'บริษัท (ผู้เอาประกันภัย/นายจ้าง)',
+      tax: `สินไหมเป็น "รายได้" ของบริษัท ต้องนำไปรวมคำนวณกำไรสุทธิ → เสียภาษีนิติบุคคล (มาตรา 65) ประมาณ ${bnCitOnClaim.toLocaleString('en-US')} บาท`,
+      net: bnNetToCompany, business_use: 'ใช้ได้เต็มที่กับธุรกิจ',
+      note: 'เหมาะกับซื้อหุ้นคืนจากทายาท/ทดแทนกำไร/ค้ำสินเชื่อ — แต่เงินที่นำไปซื้อหุ้นคืนจากทายาทเป็น "รายจ่ายลงทุน" หักเป็นค่าใช้จ่ายไม่ได้ (มาตรา 65 ตรี (5)) และควรมีสัญญาซื้อขายหุ้น (Buy–Sell Agreement) ล่วงหน้า',
+      refs: 'กค 0706/5249 · กค 0706/8707',
+    },
+    {
+      key: 'family', who: 'ครอบครัว/ทายาทของบุคคลสำคัญ',
+      tax: `เงินค่าสินไหมทดแทน/เงินได้จากการประกันภัย ได้รับยกเว้นภาษีเงินได้บุคคลธรรมดา (มาตรา 42(13)) → ได้รับเต็ม ${bnNetToFamily.toLocaleString('en-US')} บาท`,
+      net: bnNetToFamily, business_use: 'ไม่เข้ากระเป๋าธุรกิจ',
+      note: 'เหมาะกับ "สวัสดิการครอบครัว" — ถ้าต้องการใช้เงินทุนเพื่อซื้อหุ้นคืน/พยุงธุรกิจ ควรทำสัญญาให้ทายาทนำเงินมาขายหุ้นคืน หรือระบุให้บริษัทเป็นผู้รับประโยชน์ส่วนนั้นแทน',
+      refs: 'กค 0702/9358 · กค 0811/408',
+    },
+    {
+      key: 'both', who: 'บริษัท + ทายาท (ระบุสัดส่วนในกรมธรรม์)',
+      tax: 'แยกตามสัดส่วน: ส่วนของบริษัทเป็นรายได้ (มาตรา 65) · ส่วนของทายาทยกเว้นตามมาตรา 42(13)',
+      net: bnNetToCompany, business_use: 'ใช้ได้บางส่วน',
+      note: 'โครงสร้างที่นิยมใช้กับ Buy–Sell: บริษัทได้เงินส่วนที่ต้องใช้ซื้อหุ้นคืน (หลังภาษี) ส่วนที่เหลือให้ทายาทโดยตรงแบบปลอดภาษี — ควรให้ทนายร่างสัญญาและแจ้งบริษัทประกันตอนทำ/แก้กรมธรรม์',
+      refs: 'กค 0706/5249 · กค 0702/9358',
+    },
+    {
+      key: 'insured', who: 'กรรมการ/พนักงาน (ผู้เอาประกันภัย) เอง',
+      tax: 'เงินที่ได้รับตามกรมธรรม์ (เงินจ่ายคืน/ครบกำหนดสัญญา/ความคุ้มครองชีวิต) ยกเว้นภาษีตามมาตรา 42(13) — แต่เบี้ยที่บริษัทจ่ายแทนเป็นเงินได้ 40(1) ของผู้เอาประกัน',
+      net: bnClaim, business_use: 'ไม่เข้ากระเป๋าธุรกิจ',
+      note: 'ใช้กับรูปแบบสวัสดิการพนักงาน (กค 0702/10407 · กค 0706/397) — บริษัทหักเบี้ยได้ถ้าจ่ายให้พนักงานทุกคนเป็นการทั่วไปตามระเบียบ',
+      refs: 'กค 0702/2795 · กค 0702/10407 · กค 0706/397',
+    },
+    {
+      key: 'none', who: 'ไม่ระบุชื่อ/ผู้รับประโยชน์เสียชีวิตก่อนหรือพร้อมกัน',
+      tax: 'ไม่มีการยกเว้นเป็นพิเศษ — เงินตกเป็นกองมรดกของผู้เอาประกันภัย ต้องผ่านการจัดการมรดก (ผู้จัดการมรดก/ทายาทโดยธรรม)',
+      net: 0, business_use: 'ใช้ไม่ได้ทันที',
+      note: 'ไม่ควรทำ: เงินจะล่าช้า เสี่ยงข้อพิพาท และอาจกระทบแผนธุรกิจ — ต้องระบุชื่อผู้รับประโยชน์และ "ผู้รับประโยชน์สำรอง" ให้ชัดเสมอ',
+      refs: 'พ.ร.บ.ประกันชีวิต พ.ศ. 2535 (บททั่วไปว่าด้วยผู้รับประโยชน์ — เงินตกกองมรดกเมื่อไม่มีผู้รับประโยชน์)',
+    },
+  ];
+
   const checklist = [
     { ok: deductible, item: 'จ่ายให้กรรมการ/พนักงาน "ทุกคนเป็นการทั่วไป" ตามระเบียบ/มติที่ประชุมของบริษัท (ไม่ใช่เฉพาะผู้บริหารคนใดคนหนึ่ง)' },
     { ok: deductible, item: 'ระเบียบ/มติที่ประชุม + วัตถุประสงค์เพื่อผลประโยชน์ของบริษัท ไม่ใช่รายจ่ายส่วนตัวหรือให้โดยเสน่หา (มาตรา 65 ตรี (3),(13))' },
@@ -201,6 +273,11 @@ export function computeKeyman(input: KeymanInput): KeymanResult {
     gu_employee_declared_income: r2(execIncome + (benefit ? premium : 0) + taxBorne),
     gu_employee_gets: r2(execIncome + (benefit ? premium : 0)), gu_rounds_detail: grossUpRounds,
     gu_note: 'คำนวณเป็นทอด ๆ ตามคำสั่งกรมสรรพากรที่ ป. 96/2543 ข้อ 1(7),(8): นำภาษีที่บริษัทออกแทนให้ไปรวมเป็นเงินได้ของกรรมการ/พนักงาน แล้วคำนวณภาษีใหม่ ทำซ้ำจนไม่มีภาษีที่ต้องออกแทนอีก · เงินค่าภาษีอากรที่ออกแทนให้เป็นเงินได้พึงประเมินตามมาตรา 39 และเป็นรายจ่ายที่หักได้ของบริษัท (ไม่ต้องห้าม 65 ตรี (6) ตาม กค 0811/408)',
+    // ── ผู้รับผลประโยชน์ ──
+    bn_claim: bnClaim, bn_obligation: r2(bnObligation),
+    bn_cit_on_claim: bnCitOnClaim, bn_net_to_company: bnNetToCompany, bn_net_to_family: bnNetToFamily,
+    bn_cover_needed: bnCoverNeeded, bn_shortfall_company: bnShortfallCompany,
+    bn_rows: bnRows,
     result: netCost <= 0 ? 'ต้นทุนภาษีสุทธิเป็นศูนย์หรือติดลบ (ได้ประโยชน์ทางภาษีเต็มที่)' : `ต้นทุนภาษีสุทธิ ${netCost.toLocaleString('en-US')} บาท/ปี`,
     checklist, rules, notes,
     sources: [
@@ -214,6 +291,9 @@ export function computeKeyman(input: KeymanInput): KeymanResult {
       'คำสั่งกรมสรรพากรที่ ป. 96/2543 (7 ก.พ. 2543) ข้อ 1(7),(8) วิธีคำนวณภาษีที่ "ออกให้" เป็นทอด ๆ: https://www.rd.go.th/3558.html',
       'ประมวลรัษฎากร มาตรา 39 — เงินค่าภาษีอากรที่ผู้จ่ายเงินหรือผู้อื่นออกแทนให้ เป็นเงินได้พึงประเมิน',
       'กค 0702(กม.05)/2394 (1 ธ.ค. 2551) กรณีบริษัทออกภาษีให้ — ภาษีที่ออกให้ถือเป็นเงินได้ประเภทเดียวกับเงินได้ที่ได้รับ (ภาษีทอดแรก): https://www.rd.go.th/39891.html',
+      'กค 0702/2795 (8 เม.ย. 2552) เงินได้จากการประกันภัยได้รับยกเว้นตามมาตรา 42(13): https://www.rd.go.th/41071.html',
+      'พ.ร.บ.ภาษีการรับมรดก พ.ศ. 2558 — เกณฑ์มูลค่ามรดกเกิน 100 ล้านบาทต่อเจ้ามรดกแต่ละราย: https://www.rd.go.th/fileadmin/user_upload/kormor/newlaw/m77_inheritance_tax.pdf',
+      'พระราชบัญญัติประกันชีวิต พ.ศ. 2535 (หลักเกณฑ์ผู้รับประโยชน์/เงินตกกองมรดกเมื่อไม่มีผู้รับประโยชน์)',
     ],
     disclaimer: 'เป็นการประมาณการเพื่อวางแผน ไม่ใช่การวินิจฉัยภาษีอย่างเป็นทางการ — ผลทางภาษีขึ้นอยู่กับข้อเท็จจริง (ระเบียบของบริษัท ผู้รับประโยชน์ วัตถุประสงค์) โปรดตรวจสอบกับสำนักงานสรรพากร (โทร. 1161) หรือผู้สอบบัญชี',
   };

@@ -15,7 +15,9 @@ FIELDS = ["profit_need", "replacement_need", "obligation_need", "recommended_cov
           "cit_before", "cit_after", "cit_saving", "pit_before", "pit_after", "exec_tax_increase",
           "net_cost", "net_cost_per_cover", "cover_method", "result",
           "gu_tax_borne", "gu_total_outlay", "gu_cit_saving", "gu_net_cost", "gu_rounds", "gu_converged",
-          "gu_marginal_rate", "gu_employee_declared_income", "gu_employee_gets"]
+          "gu_marginal_rate", "gu_employee_declared_income", "gu_employee_gets",
+          "bn_claim", "bn_obligation", "bn_cit_on_claim", "bn_net_to_company", "bn_net_to_family",
+          "bn_cover_needed", "bn_shortfall_company"]
 BOOLS = ["deductible", "benefit_to_executive"]
 
 checks, fails = 0, []
