@@ -19,6 +19,55 @@ function condText(v:any){
   ].filter(Boolean).join(' • ') || '-';
 }
 
+// ตัวอย่างโครงการประกัน — รูปแบบโครงการ + โครงสร้างการทำประกัน + ผลประโยชน์ที่ได้รับ
+// (รหัสแบบประกันผูกกับตารางค่าคอมมิชชั่นจริง เพื่อให้เห็นทั้งโครงสร้างและค่าคอมของตัวแทน)
+const PROJECT_SAMPLES: any[] = [
+  {
+    key:'retire', title:'โครงการเกษียณมั่นคง 60/60', tag:'วางแผนเกษียณ',
+    goal:'มีเงินก้อนใช้ยามเกษียณ และมีทุนประกันชีวิตคุ้มครองระหว่างทาง',
+    planCode:'NJ', cover:1000000, payYears:'ชำระเบี้ย 10 ปี',
+    benefits:[
+      'ทุนประกันชีวิต จ่ายให้ผู้รับผลประโยชน์เมื่อเสียชีวิตตลอดสัญญา',
+      'ผลประโยชน์เกษียณ รับเงินก้อน/เงินรายปีเมื่อครบกำหนดแบบ',
+      'ชำระเบี้ยจำกัดปี คุ้มครองยาวถึงวัยเกษียณ (60 ปี)',
+      'เบี้ยประกันชีวิตใช้สิทธิลดหย่อนภาษีตามเกณฑ์กรมสรรพากร',
+    ],
+  },
+  {
+    key:'wealth', title:'โครงการสะสมทรัพย์ คุ้มทวี', tag:'สะสมทรัพย์',
+    goal:'ออมระยะยาวรับเงินก้อน และมีความคุ้มครองชีวิตแบบทวีคูณ',
+    planCode:'PJ', cover:3000000, payYears:'ชำระเบี้ย 20 ปี',
+    benefits:[
+      'ความคุ้มครองชีวิตแบบทวีคูณ (ทุนประกันสูงกว่าเบี้ยที่ชำระ)',
+      'เงินครบสัญญา รับเงินก้อนเมื่อครบกำหนดสัญญา',
+      'มีเงินคืนระหว่างสัญญาตามแบบที่เลือก',
+      'ต่อสัญญาเพิ่มเติมสุขภาพ/อุบัติเหตุได้',
+    ],
+  },
+  {
+    key:'tax', title:'โครงการวางแผนภาษี ทีแอลแพลน', tag:'ลดหย่อนภาษี',
+    goal:'ใช้สิทธิลดหย่อนภาษีทุกปี พร้อมความคุ้มครองชีวิตระยะยาว',
+    planCode:'FA10', cover:1000000, payYears:'ชำระเบี้ย 10 ปี',
+    benefits:[
+      'เบี้ยประกันชีวิตนำไปลดหย่อนภาษีได้ตามเพดานที่กำหนด',
+      'ความคุ้มครองชีวิตตลอดระยะสัญญา',
+      'มีเงินคืน/เงินครบสัญญาตามแบบ (สะสมทรัพย์)',
+      'วางแผนได้ทั้งเป้าหมายภาษีและเป้าหมายออม',
+    ],
+  },
+  {
+    key:'health', title:'โครงการสุขภาพ + อุบัติเหตุ', tag:'สัญญาเพิ่มเติม',
+    goal:'เสริมความคุ้มครองค่ารักษาพยาบาลและอุบัติเหตุจากแบบประกันหลัก',
+    planCode:'', findCat:'เฮลท์', cover:500000, payYears:'ชำระเบี้ยรายปี',
+    benefits:[
+      'ความคุ้มครองค่ารักษาพยาบาลตามแผนสุขภาพที่แนบ',
+      'ความคุ้มครองอุบัติเหตุ (PA) เสริมจากแบบหลัก',
+      'ต่อกับแบบประกันชีวิตหลักได้ เพื่อให้ครบทุกความเสี่ยง',
+      'เบี้ยสัญญาเพิ่มเติมขึ้นกับอายุและแผนที่เลือก',
+    ],
+  },
+];
+
 export default function CommissionsPage(){
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('');
@@ -147,6 +196,9 @@ export default function CommissionsPage(){
               <p className="mt-2 text-[11px] text-slate-500">
                 ตัวอย่างเพื่อเทียบให้เห็นเป็นจำนวนเงิน — เบี้ยจริงขึ้นกับทุนประกัน อายุ และแผนที่เลือก (แก้ตัวเลขเบี้ยต่อปีด้านบนได้ ตัวอย่างทั้งหน้าจะคำนวณใหม่)
               </p>
+              <a href="#projects" className="inline-block mt-2 text-[11px] font-semibold text-navy underline">
+                ↓ ดูตัวอย่างโครงการประกัน + โครงสร้างผลประโยชน์ (ด้านล่าง)
+              </a>
             </div>
           )}
 
@@ -229,6 +281,60 @@ export default function CommissionsPage(){
               )}
             </div>
           )}
+          <div id="projects" className="card p-4 border-l-4 border-navy">
+            <h3 className="font-semibold text-sm">ตัวอย่างโครงการประกัน — รูปแบบโครงการ · โครงสร้าง · ผลประโยชน์</h3>
+            <p className="text-[11px] text-slate-500 mt-1">
+              ยกตัวอย่าง 4 โครงการที่ใช้คุยกับลูกค้าได้จริง: เป้าหมาย → แบบประกันที่ใช้ (รหัสเดียวกับตารางด้านบน) → โครงสร้างผลประโยชน์ → ค่าคอมมิชชั่นของตัวแทน
+            </p>
+            <div className="mt-3 grid md:grid-cols-2 gap-3">
+              {PROJECT_SAMPLES.map((s:any, si:number)=>{
+                const prod = s.planCode
+                  ? products.find((p:any)=> p.c === s.planCode)
+                  : products.find((p:any)=> p.cat === s.findCat);
+                const v = prod?.v?.[0];
+                return (
+                  <div key={s.key} className="rounded-xl border p-3 bg-slate-50/60">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-navy text-white">โครงการที่ {si+1}</span>
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-200">{s.tag}</span>
+                    </div>
+                    <div className="mt-1 font-semibold text-sm">{s.title}</div>
+                    <p className="text-[11px] text-slate-600 mt-0.5">เป้าหมาย: {s.goal}</p>
+                    <div className="mt-2 text-[11px] text-slate-700 space-y-0.5">
+                      <div>แบบประกันที่ใช้: <span className="font-mono font-bold">{prod?.c || '—'}</span> {prod?.n || ''}</div>
+                      <div>
+                        ทุนประกันตัวอย่าง ฿{fmt(s.cover)} • {s.payYears}
+                        {showExample && premium > 0 ? ` • เบี้ยตัวอย่าง ฿${fmt(premium)}/ปี` : ''}
+                      </div>
+                    </div>
+                    <div className="mt-2">
+                      <div className="text-[11px] font-semibold text-slate-700">โครงสร้างผลประโยชน์</div>
+                      <ul className="mt-1 space-y-0.5 list-disc pl-4 text-[11px] text-slate-600">
+                        {s.benefits.map((b:string,i:number)=><li key={i}>{b}</li>)}
+                      </ul>
+                    </div>
+                    {showExample && v && (
+                      <div className="mt-2 rounded-lg bg-emerald-50 border border-emerald-100 p-2 text-[11px]">
+                        <span className="font-semibold text-emerald-800">ค่าคอมมิชชั่นตัวแทนตามตาราง ({prod.c}): </span>
+                        <span className="font-mono text-emerald-700">
+                          ปี 1 {v.y1 ?? '-'}% = ฿{fmt(bahtOf(v.y1))} · รวม 4 ปี ฿{fmt(bahtOf(v.y1)+bahtOf(v.y2)+bahtOf(v.y3)+bahtOf(v.y4))}
+                        </span>
+                      </div>
+                    )}
+                    {showExample && !v && (
+                      <div className="mt-2 text-[11px] text-slate-500">
+                        แนบเป็นสัญญาเพิ่มเติมกับแบบประกันหลัก — ไม่มีอัตราค่าคอมเดี่ยวในตารางหลัก (คิดตามแบบหลักที่แนบ)
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <p className="mt-3 text-[11px] text-amber-700">
+              หมายเหตุ: ผลประโยชน์ที่แสดงเป็น <b>โครงสร้างตัวอย่าง</b> เพื่อให้เห็นภาพรวมการทำประกัน (ทุนประกัน/ระยะชำระเบี้ย/เบี้ยต่อปี เป็นค่าสมมติที่ปรับตามดีลจริงได้)
+              — ตัวเลขผลประโยชน์จริงต้องยืนยันกับตารางผลประโยชน์/เอกสารแบบประกันของบริษัท และใบเสนอขายที่ออกจากระบบก่อนยื่นลูกค้า
+            </p>
+          </div>
         </main>
       </div>
     </div>
