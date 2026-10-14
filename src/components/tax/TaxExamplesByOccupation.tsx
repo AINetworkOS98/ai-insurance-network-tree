@@ -1,0 +1,446 @@
+'use client';
+/**
+ * TaxExamplesByOccupation.tsx — ตัวอย่างการยื่นภาษีตามอาชีพ (ประมาณการรายได้)
+ * + เปรียบเทียบการลดหย่อนด้วยเบี้ยประกันชีวิต ตามหลักกฎหมายที่ถูกต้อง
+ * --------------------------------------------------------------------------
+ * ทุกตัวเลขในหน้านี้คำนวณสดจาก computePit() ตัวเดียวกับโปรแกรมคำนวณด้านบน
+ * (ไม่มีเลขที่พิมพ์ค้างไว้) — ถ้าแก้กติกาที่ thaiPit.ts ตัวเลขทั้งหมดจะเปลี่ยนตามทันที
+ * เอกสารอ้างอิง: ภ.ง.ด.90 + ใบแนบลดหย่อน ข้อ 7.1–7.3 + คำชี้แจงการกรอก ภ.ง.ด.90 (ข้อ 7)
+ */
+import { useMemo } from 'react';
+import {
+  computePit, DEFAULT_TAX_YEAR, LIM, TAX_BRACKETS,
+  type PitPerson, type PitIncomeItem, type PitResult, type IncomeKey,
+} from '@/lib/tax/thaiPit';
+
+const baht0 = (v: number) => Number(v || 0).toLocaleString('th-TH', { maximumFractionDigits: 0 });
+const pct = (v: number) => `${(v * 100).toFixed(2)}%`;
+
+const item = (category: IncomeKey, amount: number, variant?: string, description?: string): PitIncomeItem => ({
+  category, amount, variant: variant ?? '', description: description ?? '', expense_mode: 'standard',
+});
+const run = (items: PitIncomeItem[], extra: Partial<PitPerson> = {}): PitResult =>
+  computePit([{ personal: true, income_items: items, ...extra }], DEFAULT_TAX_YEAR);
+
+const formOf = (items: PitIncomeItem[], extra: Partial<PitPerson> = {}) => {
+  const cats = new Set(items.map((i) => i.category));
+  if (extra.personal_special || extra.spouse_no_income || extra.spouse_life_insurance || extra.children) return 'ภ.ง.ด.90';
+  return cats.size === 1 && cats.has('salary') ? 'ภ.ง.ด.91' : 'ภ.ง.ด.90';
+};
+
+/** อัตราภาษีที่ต้องเสียจริงของเงินได้ระดับนี้ (สำหรับอธิบาย "ประหยัดได้กี่บาทต่อเบี้ย 100) */
+const marginalBand = (r: PitResult) => r.marginal_rate;
+
+/* ───────────────────────── 1) ตัวอย่างตามอาชีพ ───────────────────────── */
+type Occ = {
+  id: string; job: string; form: string; items: PitIncomeItem[]; extra?: Partial<PitPerson>; assume: string;
+};
+
+const OCCUPATIONS: Occ[] = [
+  {
+    id: 'employee', job: 'พนักงานบริษัทเอกชน (เงินเดือน)', form: '40(1)',
+    items: [item('salary', 600_000, '', 'เงินเดือน + โบนัสปีละ 1 เดือน')],
+    extra: { social_security: 9_000, provident_fund: 30_000 },
+    assume: 'โสด · ประกันสังคม 9,000 · สำรองเลี้ยงชีพ 5% ของเงินเดือน (30,000) — ส่วน 10,000 แรกนับเป็นลดหย่อน ข้อ 8',
+  },
+  {
+    id: 'gov', job: 'ข้าราชการ / ครู (เงินเดือนราชการ)', form: '40(1)',
+    items: [item('salary', 480_000, '', 'เงินเดือนราชการ')],
+    extra: { gpf: 14_400 },
+    assume: 'โสด · กบข. 3% (14,400) · ไม่มีประกันสังคม (ใช้สิทธิ กบข. แทน)',
+  },
+  {
+    id: 'nurse', job: 'พยาบาล / บุคลากรสาธารณสุข', form: '40(1)',
+    items: [item('salary', 540_000, '', 'เงินเดือน + ค่าตอบแทนพิเศษ')],
+    extra: { gpf: 21_600, social_security: 9_000 },
+    assume: 'โสด · มีทั้งกองทุนสำรองเลี้ยงชีพและประกันสังคมในงานเดิม',
+  },
+  {
+    id: 'sales', job: 'พนักงานขาย (เงินเดือน + คอมมิชชัน)', form: '40(1)+40(2)',
+    items: [item('salary', 480_000, '', 'เงินเดือน'), item('service', 180_000, '', 'ค่าคอมมิชชัน')],
+    extra: { social_security: 9_000 },
+    assume: 'โสด · มีเงินได้ 2 ประเภท → ต้องยื่น ภ.ง.ด.90 · ค่าใช้จ่าย 40(1)+40(2) รวมกัน 50% ไม่เกิน 100,000',
+  },
+  {
+    id: 'doctor', job: 'แพทย์ / ทันตแพทย์ (คลินิกส่วนตัว)', form: '40(6)',
+    items: [item('professional', 2_400_000, 'medical', 'ค่ารักษาพยาบาลผู้ป่วยนอก')],
+    assume: 'โสด · วิชาชีพอิสระ "การประกอบโรคศิลปะ" หักค่าใช้จ่ายเหมา 60% (ใบแนบข้อ 5)',
+  },
+  {
+    id: 'engineer', job: 'วิศวกร / สถาปนิก (รับงานเอง)', form: '40(6)',
+    items: [item('professional', 1_200_000, 'other', 'ค่าออกแบบ/ควบคุมงาน')],
+    assume: 'โสด · วิศวกรรม/สถาปัตยกรรม หักเหมา 30% (หรือหักตามจริงได้)',
+  },
+  {
+    id: 'lawyer', job: 'ทนายความ / นักกฎหมาย', form: '40(6)',
+    items: [item('professional', 1_500_000, 'other', 'ค่าที่ปรึกษากฎหมาย')],
+    assume: 'โสด · กฎหมาย หักเหมา 30%',
+  },
+  {
+    id: 'accountant', job: 'นักบัญชี (CPA รับงานเอง)', form: '40(6)',
+    items: [item('professional', 1_000_000, 'other', 'ค่าทำบัญชี/ตรวจสอบ')],
+    assume: 'โสด · การบัญชี หักเหมา 30%',
+  },
+  {
+    id: 'agent', job: 'ตัวแทน / นายหน้าประกันชีวิต', form: '40(2)',
+    items: [item('service', 900_000, '', 'ค่านายหน้า/ค่าบริการ')],
+    assume: 'โสด · 40(2) หักเหมา 50% แต่ไม่เกิน 100,000 บาท',
+  },
+  {
+    id: 'freelance', job: 'ฟรีแลนซ์ (โปรแกรมเมอร์/กราฟิก)', form: '40(2)',
+    items: [item('service', 720_000, '', 'ค่าจ้างทำงานให้')],
+    assume: 'โสด · รับทำงานให้ → 40(2)',
+  },
+  {
+    id: 'online', job: 'ขายของออนไลน์ (ร้านค้าออนไลน์)', form: '40(8)',
+    items: [item('business', 1_200_000, 'general', 'ยอดขายทั้งปี')],
+    assume: 'โสด · 40(8) หักเหมาร้อยละ 60 ตามมาตรา 8 ทวิ (ไม่ต้องเก็บใบเสร็จ)',
+  },
+  {
+    id: 'restaurant', job: 'เจ้าของร้านอาหาร', form: '40(8)',
+    items: [item('business', 1_800_000, 'general', 'ยอดขายร้าน')],
+    assume: 'โสด · 40(8) เหมา 60% (กรณีไม่มีระบบบัญชี — ถ้ามีบัญชีหักตามจริงได้)',
+  },
+  {
+    id: 'rider', job: 'ไรเดอร์ / พนักงานส่งอาหาร–พัสดุ', form: '40(8)',
+    items: [item('business', 300_000, 'transport', 'ค่าส่งอาหาร/พัสดุ')],
+    assume: 'โสด · 40(8) ประเภทการขนส่ง หักเหมา 40% · ถือเป็นผู้มีเงินได้ · เงินได้ไม่ถึงเกณฑ์ 60,000/120,000',
+  },
+  {
+    id: 'landlord', job: 'เจ้าของบ้านให้เช่า / ที่ดินให้เช่า', form: '40(5)',
+    items: [item('rent', 600_000, 'building', 'ค่าเช่าบ้านให้เช่า')],
+    assume: 'โสด · ค่าเช่าอาคาร/โรงเรือน หักเหมา 30% (ที่ดินเกษตร 20% · ที่ดินอื่น 15% · ทรัพย์สินอื่น 10%)',
+  },
+  {
+    id: 'farmer', job: 'เกษตรกร (พืชผล/ปศุสัตว์)', form: '40(8)',
+    items: [item('business', 400_000, 'general', 'ขายพืชผล')],
+    assume: 'โสด · 40(8) หักเหมา 60% — เกษตรกรส่วนใหญ่เงินได้สุทธิไม่ถึงเกณฑ์ต้องเสียภาษี',
+  },
+  {
+    id: 'youtuber', job: 'ยูทูบเบอร์ / ครีเอเตอร์ออนไลน์', form: '40(8)',
+    items: [item('business', 960_000, 'general', 'รายได้โฆษณา/สปอนเซอร์')],
+    assume: 'โสด · 40(8) เหมา 60% (หรือหักตามจริงถ้าซื้ออุปกรณ์/จ้างทีม)',
+  },
+  {
+    id: 'writer', job: 'นักเขียน / ค่าแห่งลิขสิทธิ์', form: '40(3)',
+    items: [item('royalty', 500_000, '', 'ค่าลิขสิทธิ์หนังสือ')],
+    assume: 'โสด · 40(3) หักเหมา 50% ไม่เกิน 100,000',
+  },
+  {
+    id: 'technician', job: 'ช่างฝีมือ / ช่างไฟฟ้า รับเหมางาน', form: '40(7)',
+    items: [item('contractor', 900_000, '', 'ค่าจ้างรับเหมา')],
+    assume: 'โสด · 40(7) รับเหมาก่อสร้าง หักเหมา 60% · ถ้าเป็น 40(2) รับจ้างจะหัก 50% ไม่เกิน 100,000',
+  },
+  {
+    id: 'market', job: 'พ่อค้าแม่ค้าในตลาด (แผงขาย)', form: '40(8)',
+    items: [item('business', 720_000, 'general', 'ยอดขายรายวันรวมทั้งปี')],
+    assume: 'โสด · 40(8) เหมา 60% · มีภาษีหัก ณ ที่จ่ายกรณีขายให้หน่วยงานรัฐให้กรอกเพิ่ม',
+  },
+];
+
+/* ───────────────── 2) เปรียบเทียบลดหย่อนประกันชีวิต ───────────────── */
+const LIFE = LIM.life_insurance;          // 100,000 (ข้อ 7.1)
+const HEALTH = LIM.health_insurance;      // 25,000 (ข้อ 7.2)
+const COMBINED = LIM.life_health_combined; // 100,000 (7.1+7.2)
+const PENSION = LIM.pension_life;         // 200,000 (ข้อ 7.3)
+
+/** ตาราง A: ระดับเงินได้ × เบี้ยประกันชีวิต 100,000 (เต็มเพดาน) */
+const LEVELS = [300_000, 480_000, 600_000, 1_000_000, 2_000_000, 5_000_000];
+
+/** ตาราง B: เบี้ยที่จ่ายจริงต่าง ๆ ที่เงินได้ 1,000,000 */
+const PREMIUMS = [0, 12_000, 30_000, 60_000, 100_000, 150_000, 200_000];
+
+/** ตาราง C: กรณีที่คนมักเข้าใจผิด (เงินได้ 1,000,000) */
+const MIXED: Array<{ label: string; extra: Partial<PitPerson>; note: string }> = [
+  { label: 'ไม่ซื้อประกันเลย', extra: {}, note: 'ฐานเปรียบเทียบ' },
+  { label: `ประกันชีวิต ${baht0(LIFE)}`, extra: { life_insurance: LIFE }, note: `ใช้สิทธิได้เต็มเพดานข้อ 7.1` },
+  { label: `ประกันสุขภาพ ${baht0(HEALTH)} อย่างเดียว`, extra: { health_insurance: HEALTH }, note: 'ใช้สิทธิได้ 25,000 (ไม่เกินเพดานข้อ 7.2)' },
+  { label: `ชีวิต 60,000 + สุขภาพ ${baht0(HEALTH)}`, extra: { life_insurance: 60_000, health_insurance: HEALTH }, note: 'รวม 85,000 — ยังไม่ชนเพดานรวม' },
+  { label: `ชีวิต ${baht0(LIFE)} + สุขภาพ ${baht0(HEALTH)}`, extra: { life_insurance: LIFE, health_insurance: HEALTH }, note: `⚠️ จ่ายรวม 125,000 แต่ใช้สิทธิได้แค่ ${baht0(COMBINED)}` },
+  { label: `ชีวิตแบบบำนาญ 150,000`, extra: { pension_life_insurance: 150_000 }, note: 'ร้อยละ 15 ของเงินได้ (150,000) ไม่เกิน 200,000 · นับในวงเงินเกษียณ 500,000' },
+];
+
+export default function TaxExamplesByOccupation() {
+  const occRows = useMemo(() => OCCUPATIONS.map((o) => {
+    const r = run(o.items, o.extra);
+    const gross = r.gross_total;
+    return {
+      ...o,
+      formDoc: formOf(o.items, o.extra),
+      r,
+      gross,
+      eff: gross > 0 ? r.tax_before_credit / gross : 0,
+    };
+  }), []);
+
+  /** ตาราง A */
+  const tableA = useMemo(() => LEVELS.map((income) => {
+    const base: Partial<PitPerson> = { social_security: 9_000 };
+    const noIns = run([item('salary', income, '', 'เงินเดือน')], base);
+    const withIns = run([item('salary', income, '', 'เงินเดือน')], { ...base, life_insurance: LIFE });
+    const allowed = Math.min(LIFE, LIM.life_insurance);
+    return {
+      income, noIns, withIns,
+      saved: noIns.tax_before_credit - withIns.tax_before_credit,
+      savedPer100: allowed > 0 ? (noIns.tax_before_credit - withIns.tax_before_credit) / allowed : 0,
+      marginal: marginalBand(noIns),
+    };
+  }), []);
+
+  /** ตาราง B */
+  const tableB = useMemo(() => {
+    const income = 1_000_000;
+    const base: Partial<PitPerson> = { social_security: 9_000 };
+    const noIns = run([item('salary', income, '', 'เงินเดือน')], base);
+    return PREMIUMS.map((premium) => {
+      const r = run([item('salary', income, '', 'เงินเดือน')], { ...base, life_insurance: premium });
+      const usedItem = r.allowance_items.find((a) => a.item === '7.1');
+      const used = usedItem ? usedItem.amount : 0;
+      return {
+        premium, r, used,
+        saved: noIns.tax_before_credit - r.tax_before_credit,
+        wasted: Math.max(0, premium - used),
+        effective: premium > 0 ? (noIns.tax_before_credit - r.tax_before_credit) / premium : 0,
+      };
+    });
+  }, []);
+
+  /** ตาราง C */
+  const tableC = useMemo(() => {
+    const income = 1_000_000;
+    const base: Partial<PitPerson> = { social_security: 9_000 };
+    const noIns = run([item('salary', income, '', 'เงินเดือน')], base);
+    return MIXED.map((m) => {
+      const r = run([item('salary', income, '', 'เงินเดือน')], { ...base, ...m.extra });
+      const paidPremium =
+        Number(m.extra.life_insurance || 0) + Number(m.extra.health_insurance || 0) + Number(m.extra.pension_life_insurance || 0);
+      const used = ['7.1', '7.2', '7.3'].reduce((s, k) => {
+        const a = r.allowance_items.find((x) => x.item === k);
+        return s + (a ? a.amount : 0);
+      }, 0);
+      return {
+        ...m, r, paidPremium, used,
+        saved: noIns.tax_before_credit - r.tax_before_credit,
+      };
+    });
+  }, []);
+
+  const maxBand = TAX_BRACKETS[TAX_BRACKETS.length - 1][1];
+
+  return (
+    <div className="space-y-4" id="tax-examples">
+      {/* ── หัวข้อ ── */}
+      <div className="card p-4 sm:p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-lg font-bold text-[#475569]">ตัวอย่างการยื่นภาษีตามอาชีพ + การลดหย่อนด้วยประกันชีวิต</h2>
+          <span className="text-xs px-2 py-1 rounded-full border bg-white text-slate-500">ปีภาษี {DEFAULT_TAX_YEAR}</span>
+          <span className="text-xs px-2 py-1 rounded-full border border-sky-100 bg-sky-50 text-sky-700">คำนวณสดจากเอนจินเดียวกับโปรแกรมด้านบน</span>
+        </div>
+        <p className="text-xs text-slate-500 mt-2 leading-5">
+          ทุกตัวเลขเป็น <b>ประมาณการ</b> จากรายได้ตัวอย่างตามอาชีพจริง (สมมติโสด ไม่มีบุตร) โดยใช้ค่าใช้จ่ายเหมาที่กฎหมายกำหนด
+          และค่าลดหย่อนเฉพาะที่อาชีพนั้นมีจริง — ตัวเลขในตาราง <b>คำนวณใหม่ทุกครั้งที่เปิดหน้า</b> จากฟังก์ชัน <code>computePit()</code> ตัวเดียวกับโปรแกรมด้านบน
+          (ไม่ใช่เลขที่พิมพ์ค้างไว้) จึงตรงกับแบบ ภ.ง.ด.90 ข้อ 11 เสมอ
+        </p>
+      </div>
+
+      {/* ── ตารางอาชีพ ── */}
+      <div className="card p-4 sm:p-5">
+        <h3 className="text-sm font-bold text-[#475569] mb-3">1) ประมาณการภาษีตามอาชีพ ({OCCUPATIONS.length} อาชีพ)</h3>
+        <div className="overflow-x-auto -mx-1 px-1">
+          <table className="w-full text-[11px] tabular-nums min-w-[880px]">
+            <thead>
+              <tr className="text-slate-400 text-left border-b">
+                <th className="py-2 pr-2 font-semibold">อาชีพ</th>
+                <th className="py-2 pr-2 font-semibold">ประเภทเงินได้</th>
+                <th className="py-2 pr-2 font-semibold text-right">รายได้/ปี (ประมาณ)</th>
+                <th className="py-2 pr-2 font-semibold text-right">หักค่าใช้จ่าย</th>
+                <th className="py-2 pr-2 font-semibold text-right">ลดหย่อน</th>
+                <th className="py-2 pr-2 font-semibold text-right">เงินได้สุทธิ (ข้อ 11.7)</th>
+                <th className="py-2 pr-2 font-semibold text-right">ภาษีต้องชำระ</th>
+                <th className="py-2 pr-2 font-semibold text-right">อัตราเฉลี่ย</th>
+                <th className="py-2 font-semibold">แบบที่ยื่น</th>
+              </tr>
+            </thead>
+            <tbody>
+              {occRows.map((o) => (
+                <tr key={o.id} className="border-b border-dashed last:border-0 align-top">
+                  <td className="py-2 pr-2">
+                    <div className="font-semibold text-slate-700">{o.job}</div>
+                    <div className="text-[10px] text-slate-400 leading-3 mt-0.5 max-w-[300px]">{o.assume}</div>
+                  </td>
+                  <td className="py-2 pr-2 text-slate-500 whitespace-nowrap">{o.form}</td>
+                  <td className="py-2 pr-2 text-right text-slate-700">{baht0(o.gross)}</td>
+                  <td className="py-2 pr-2 text-right text-rose-600">−{baht0(o.r.expenses_total)}</td>
+                  <td className="py-2 pr-2 text-right text-rose-600">−{baht0(o.r.allowances_total)}</td>
+                  <td className="py-2 pr-2 text-right text-slate-700">{baht0(o.r.net_income)}</td>
+                  <td className="py-2 pr-2 text-right font-semibold text-slate-800">{baht0(o.r.tax_before_credit)}</td>
+                  <td className="py-2 pr-2 text-right text-slate-500">{pct(o.eff)}</td>
+                  <td className="py-2 whitespace-nowrap">
+                    <span className={`px-1.5 py-0.5 rounded border text-[10px] ${o.formDoc === 'ภ.ง.ด.91' ? 'bg-sky-50 border-sky-100 text-sky-700' : 'bg-slate-50 border-gray-200 text-slate-600'}`}>
+                      {o.formDoc}
+                    </span>
+                    <span className="block text-[10px] text-slate-400 mt-1">
+                      {o.r.must_file ? `ต้องยื่น (เกิน ${baht0(o.r.file_threshold)})` : 'ไม่ถึงเกณฑ์ต้องยื่น'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-[11px] text-slate-400 mt-3 leading-4">
+          • ค่าใช้จ่ายเป็นแบบ <b>เหมา</b> ตามอัตราที่กฎหมายกำหนด — ผู้ที่ทำบัญชีได้ (40(5)–(8)) เลือกหัก <b>ตามจริง</b> แทนได้ ถ้าสูงกว่า<br/>
+          • เกณฑ์ต้องยื่นแบบ: เงินได้ 40(1) เกิน 60,000 บาท หรือเงินได้ประเภทอื่นรวมเกิน 120,000 บาท · เงินเดือนอย่างเดียวทั้งปี → ยื่น ภ.ง.ด.91 (แบบสั้น)<br/>
+          • กรณีมีบุตร/คู่สมรส/ซื้อบ้าน/กองทุนเกษียณ ให้กรอกเพิ่มในโปรแกรมคำนวณด้านบนเพื่อดูผลจริงของตัวเอง
+        </p>
+      </div>
+
+      {/* ── เปรียบเทียบประกันชีวิต ── */}
+      <div className="card p-4 sm:p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-sm font-bold text-[#475569]">2) เปรียบเทียบการลดหย่อนด้วย “เบี้ยประกันชีวิต” ตามหลักกฎหมาย</h3>
+          <span className="text-[11px] text-slate-400">ใบแนบ ข้อ 7.1–7.3</span>
+        </div>
+
+        {/* กติกากฎหมาย */}
+        <div className="grid md:grid-cols-2 gap-3 mt-3">
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-3">
+            <div className="text-[11px] font-bold text-emerald-800 mb-1.5">เพดานที่กฎหมายให้ (ปีภาษี {DEFAULT_TAX_YEAR})</div>
+            <ul className="text-[11px] text-slate-600 leading-5 space-y-1">
+              <li><b>ข้อ 7.1 เบี้ยประกันชีวิต</b> — ตามที่จ่ายจริง แต่<b>ไม่เกิน {baht0(LIFE)} บาท</b> (ผู้เอาประกันต้องเป็นผู้มีเงินได้เอง)</li>
+              <li><b>ข้อ 7.2 เบี้ยประกันสุขภาพ</b> — <b>ไม่เกิน {baht0(HEALTH)} บาท</b> และเมื่อรวมกับข้อ 7.1 แล้ว<b>ต้องไม่เกิน {baht0(COMBINED)} บาท</b></li>
+              <li><b>ข้อ 7.3 เบี้ยประกันชีวิตแบบบำนาญ</b> — ร้อยละ 15 ของเงินได้ แต่<b>ไม่เกิน {baht0(PENSION)} บาท</b> และนับรวมในวงเงินกลุ่มเกษียณ 500,000 บาท</li>
+              <li><b>คู่สมรสที่ไม่มีเงินได้</b> — เบี้ยประกันชีวิตของคู่สมรส หักได้ไม่เกิน 10,000 บาท</li>
+            </ul>
+          </div>
+          <div className="rounded-2xl border border-amber-100 bg-amber-50/40 p-3">
+            <div className="text-[11px] font-bold text-amber-800 mb-1.5">เงื่อนไขที่ต้องครบจึงจะใช้สิทธิได้</div>
+            <ul className="text-[11px] text-slate-600 leading-5 space-y-1">
+              <li>กรมธรรม์ประกันชีวิตต้องมี<b>กำหนดเวลาคุ้มครองตั้งแต่ 10 ปีขึ้นไป</b> (แบบบำนาญ: จ่ายเบี้ยต่อเนื่อง ≥ 10 ปี และรับบำนาญตั้งแต่อายุ 55–85 ปี)</li>
+              <li>ต้องจ่ายเบี้ยให้<b>บริษัทประกันชีวิต/วินาศภัยที่ประกอบกิจการในราชอาณาจักร</b> และมีหลักฐานจากผู้รับประกันภัย</li>
+              <li>ใช้สิทธิซ้ำไม่ได้ — เบี้ยที่จ่ายเพื่อผู้อื่น (เช่น บุตร) ไม่นับเป็นของตนเอง (ยกเว้นกรณีคู่สมรสที่ไม่มีเงินได้ 10,000 บาท)</li>
+              <li>ประหยัดภาษีจริง = เบี้ย × <b>อัตราภาษีขั้นสูงสุดของผู้จ่าย</b> — ถ้าอยู่ฐาน {baht0(TAX_BRACKETS[0][0])} แรกยกเว้นภาษี ประกันไม่ช่วยประหยัด (ดูตาราง 2ก.)</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* ตาราง 2ก. */}
+        <h4 className="text-xs font-bold text-[#475569] mt-5 mb-2">2ก. ประหยัดภาษีได้เท่าไร — ตามระดับเงินได้ (เบี้ยประกันชีวิต {baht0(LIFE)} เต็มเพดาน)</h4>
+        <div className="overflow-x-auto -mx-1 px-1">
+          <table className="w-full text-[11px] tabular-nums min-w-[700px]">
+            <thead>
+              <tr className="text-slate-400 text-left border-b">
+                <th className="py-2 pr-2 font-semibold text-right">เงินได้/ปี (40(1))</th>
+                <th className="py-2 pr-2 font-semibold text-right">ภาษีก่อนใช้สิทธิ</th>
+                <th className="py-2 pr-2 font-semibold text-right">ลดหย่อนประกันที่ได้จริง</th>
+                <th className="py-2 pr-2 font-semibold text-right">ภาษีหลังใช้สิทธิ</th>
+                <th className="py-2 pr-2 font-semibold text-right">ประหยัดภาษี</th>
+                <th className="py-2 font-semibold text-right">คิดเป็น % ของเบี้ย</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tableA.map((x) => (
+                <tr key={x.income} className="border-b border-dashed last:border-0">
+                  <td className="py-2 pr-2 text-right text-slate-700">{baht0(x.income)}</td>
+                  <td className="py-2 pr-2 text-right">{baht0(x.noIns.tax_before_credit)}</td>
+                  <td className="py-2 pr-2 text-right text-emerald-700">
+                    {baht0(Math.min(LIFE, LIM.life_insurance))}
+                    <span className="block text-[10px] text-slate-400">ขั้นภาษี {Math.round(x.marginal * 100)}%</span>
+                  </td>
+                  <td className="py-2 pr-2 text-right">{baht0(x.withIns.tax_before_credit)}</td>
+                  <td className="py-2 pr-2 text-right font-semibold text-emerald-700">{baht0(x.saved)}</td>
+                  <td className="py-2 text-right text-slate-500">{x.income > 0 ? pct(x.savedPer100) : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-[11px] text-slate-400 mt-2 leading-4">
+          ⚠️ เงินได้ 300,000 บาท: เงินได้สุทธิหลังหักค่าใช้จ่ายและลดหย่อนพื้นฐานยังไม่ถึงเกณฑ์เสียภาษี → <b>ไม่มีภาษีให้ประหยัดเลย</b>
+          (การซื้อประกันเพื่อลดภาษีจะคุ้มเมื่ออยู่ในฐานภาษี 10% ขึ้นไป)
+        </p>
+
+        {/* ตาราง 2ข. */}
+        <h4 className="text-xs font-bold text-[#475569] mt-5 mb-2">2ข. จ่ายเบี้ยเกินเพดาน = ใช้สิทธิไม่ได้เพิ่ม (เงินได้ 1,000,000 บาท)</h4>
+        <div className="overflow-x-auto -mx-1 px-1">
+          <table className="w-full text-[11px] tabular-nums min-w-[700px]">
+            <thead>
+              <tr className="text-slate-400 text-left border-b">
+                <th className="py-2 pr-2 font-semibold text-right">เบี้ยที่จ่ายจริง</th>
+                <th className="py-2 pr-2 font-semibold text-right">ลดหย่อนได้จริง (ข้อ 7.1)</th>
+                <th className="py-2 pr-2 font-semibold text-right">ใช้สิทธิไม่ได้</th>
+                <th className="py-2 pr-2 font-semibold text-right">ภาษีต้องชำระ</th>
+                <th className="py-2 pr-2 font-semibold text-right">ประหยัดภาษี</th>
+                <th className="py-2 font-semibold text-right">ผลตอบแทนภาษีต่อเบี้ย</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tableB.map((x) => (
+                <tr key={x.premium} className="border-b border-dashed last:border-0">
+                  <td className="py-2 pr-2 text-right text-slate-700">{baht0(x.premium)}</td>
+                  <td className="py-2 pr-2 text-right text-emerald-700">{baht0(x.used)}</td>
+                  <td className={`py-2 pr-2 text-right ${x.wasted > 0 ? 'text-rose-600 font-semibold' : 'text-slate-300'}`}>
+                    {x.wasted > 0 ? baht0(x.wasted) : '—'}
+                  </td>
+                  <td className="py-2 pr-2 text-right">{baht0(x.r.tax_before_credit)}</td>
+                  <td className="py-2 pr-2 text-right font-semibold text-emerald-700">{baht0(x.saved)}</td>
+                  <td className="py-2 text-right text-slate-500">{x.premium > 0 ? pct(x.effective) : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-[11px] text-slate-400 mt-2 leading-4">
+          จ่าย 200,000 บาท ใช้สิทธิได้แค่ {baht0(LIM.life_insurance)} บาท — ส่วนเกินไม่ได้ลดหย่อน และ<b>ไม่ได้คืนภาษีเพิ่ม</b>
+          (ถ้าต้องการลดหย่อนมากกว่านี้ ต้องใช้เครื่องมือเกษียณ เช่น ข้อ 7.3 บำนาญ · ข้อ 10 RMF · ข้อ 23 SSF ซึ่งมีเพดานของตัวเอง)
+        </p>
+
+        {/* ตาราง 2ค. */}
+        <h4 className="text-xs font-bold text-[#475569] mt-5 mb-2">2ค. ประกันชีวิต + ประกันสุขภาพ: รวมกันไม่เกิน {baht0(COMBINED)} บาท (เงินได้ 1,000,000 บาท)</h4>
+        <div className="overflow-x-auto -mx-1 px-1">
+          <table className="w-full text-[11px] tabular-nums min-w-[760px]">
+            <thead>
+              <tr className="text-slate-400 text-left border-b">
+                <th className="py-2 pr-2 font-semibold">กรณี</th>
+                <th className="py-2 pr-2 font-semibold text-right">เบี้ยที่จ่ายรวม</th>
+                <th className="py-2 pr-2 font-semibold text-right">ลดหย่อนที่ใช้ได้ (7.1+7.2+7.3)</th>
+                <th className="py-2 pr-2 font-semibold text-right">ภาษีต้องชำระ</th>
+                <th className="py-2 pr-2 font-semibold text-right">ประหยัดภาษี</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tableC.map((x) => (
+                <tr key={x.label} className="border-b border-dashed last:border-0 align-top">
+                  <td className="py-2 pr-2">
+                    <div className="font-semibold text-slate-700">{x.label}</div>
+                    <div className="text-[10px] text-slate-400 leading-3 mt-0.5">{x.note}</div>
+                  </td>
+                  <td className="py-2 pr-2 text-right">{baht0(x.paidPremium)}</td>
+                  <td className="py-2 pr-2 text-right text-emerald-700 font-semibold">{baht0(x.used)}</td>
+                  <td className="py-2 pr-2 text-right">{baht0(x.r.tax_before_credit)}</td>
+                  <td className="py-2 pr-2 text-right text-emerald-700">{baht0(x.saved)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-3 text-[11px] text-amber-800 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 leading-4">
+          <b>จุดที่คนมักเข้าใจผิด:</b> คิดว่าซื้อประกันชีวิต 100,000 + ประกันสุขภาพ 25,000 = ลดหย่อนได้ 125,000 —
+          ตามประกาศอธิบดีกรมสรรพากรเกี่ยวกับภาษีเงินได้ (ฉบับที่ 301) ระบุว่าเมื่อรวมเบี้ยประกันชีวิต (ข้อ 7.1) กับเบี้ยประกันสุขภาพ (ข้อ 7.2) แล้ว
+          <b> ต้องไม่เกิน {baht0(COMBINED)} บาท</b> → จ่าย 125,000 แต่ใช้สิทธิได้ {baht0(COMBINED)} (ส่วนเกิน 25,000 ไม่ได้ใช้)
+          และตามคำชี้แจงการกรอก ภ.ง.ด.90 ข้อ 7.6 กรณีมีเบี้ยประกันชีวิตแบบบำนาญ ให้ใช้สิทธิ 7.1 ให้เต็ม {baht0(LIFE)} บาทก่อน แล้วส่วนที่เหลือจึงกรอกเป็นแบบบำนาญ (ข้อ 7.3)
+        </div>
+      </div>
+
+      <div className="card p-4 text-[11px] text-slate-400 leading-5">
+        <div className="font-bold text-slate-500 mb-1">แหล่งอ้างอิงของเกณฑ์ทั้งหมดในหน้านี้</div>
+        • ใบแนบแสดงรายละเอียดรายการลดหย่อนและยกเว้น (ข้อ 7. เบี้ยประกันชีวิต / 7.1–7.3) — แนบในหน้า “เอกสารที่ใช้ยื่นภาษี” ด้านบน<br/>
+        • คำชี้แจงการกรอกแบบ ภ.ง.ด.90 ปีภาษี {DEFAULT_TAX_YEAR} — ข้อ 7.6 การใช้สิทธิเบี้ยประกันชีวิตแบบบำนาญ · ข้อ 7.7 หลักฐานจากผู้รับประกันภัย<br/>
+        • อัตราภาษีขั้นบันได 8 ขั้น (สูงสุด {pct(maxBand)}) ตามมาตรา 48(1) แห่งประมวลรัษฎากร — ดูตารางฐานภาษีด้านบน<br/>
+        • ค่าใช้จ่ายเหมาแยกประเภทเงินได้ มาตรา 42 ทวิ–46 และมาตรา 8 ทวิ ·{' '}
+        <a className="underline decoration-slate-300 hover:text-sky-700" href="https://www.rd.go.th/67335.html" target="_blank" rel="noreferrer">ไฟล์ราชการทั้งหมดที่ rd.go.th</a><br/>
+        ตัวเลขทั้งหมดเป็น<b>การประมาณการเพื่อวางแผนภาษี</b> · กรณีมีสิทธิพิเศษเฉพาะราย โทร. 1161 (สรรพากร)
+      </div>
+    </div>
+  );
+}

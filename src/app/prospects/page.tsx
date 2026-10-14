@@ -7,6 +7,7 @@ import AdminRightsPanel from '@/components/AdminRightsPanel';
 import ThaiTaxCalculator from '@/components/tax/ThaiTaxCalculator';
 import TaxBaseTable from '@/components/tax/TaxBaseTable';
 import OfficialTaxDocs from '@/components/tax/OfficialTaxDocs';
+import TaxExamplesByOccupation from '@/components/tax/TaxExamplesByOccupation';
 
 // หน้า "สมาชิกทั่วไป" (เดิมชื่อ "ผู้สนใจ") — ฐานเดียวกับระบบสมาชิก (/api/members)
 // นิยาม: สมาชิกทั่วไป = ผู้ที่ยังอยู่ระดับตำแหน่ง 0 (ยังไม่เลื่อนเป็นตัวแทน)
@@ -171,6 +172,8 @@ export default function GeneralMembersPage(){
               <OfficialTaxDocs/>
               {/* 3) โปรแกรมคำนวณภาษี */}
               <ThaiTaxCalculator/>
+              {/* 4) ตัวอย่างการยื่นภาษีตามอาชีพ + เปรียบเทียบลดหย่อนประกันชีวิต (ล่างสุด) */}
+              <TaxExamplesByOccupation/>
             </div>
           ) : (<>
           {/* หัวหน้า */}
