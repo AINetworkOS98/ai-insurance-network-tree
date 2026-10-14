@@ -40,17 +40,19 @@
       }
     },
     {
-      "name": "3) ภาษีขั้นต่ำ 0.5% (มาตรา 48(2)) — ธุรกิจ 400,000 หักตามจริง 380,000",
+      "name": "3) ภาษีวิธีที่ 2 คำนวณได้ไม่เกิน 5,000 → ได้รับยกเว้น ใช้วิธีที่ 1 (หมายเหตุท้ายแบบข้อ 9)",
       "persons": [{ "business": 400000, "actual_expense": { "business": 380000 } }],
       "expect": {
         "gross_total": 400000,
         "expenses_total": 380000,
         "net_income": 0,
         "tax_by_bracket": 0,
-        "min_tax_05pct": 2000,
-        "min_tax_applied": true,
-        "tax_before_credit": 2000,
-        "net_payable": 2000
+        "tax_method1": 0,
+        "tax_method2": 2000,
+        "method2_applies": true,
+        "min_tax_applied": false,
+        "tax_before_credit": 0,
+        "net_payable": 0
       }
     },
     {
@@ -170,6 +172,67 @@
         "net_income": 850000,
         "tax_by_bracket": 85000,
         "tax_before_credit": 85000
+      }
+    },
+    {
+      "name": "13) ภาษีวิธีที่ 2 ใช้จริง (คำนวณได้เกิน 5,000): ธุรกิจ 3,000,000 หักตามจริง 2,900,000",
+      "persons": [{ "business": 3000000, "actual_expense": { "business": 2900000 } }],
+      "expect": {
+        "gross_total": 3000000,
+        "expenses_total": 2900000,
+        "net_income": 40000,
+        "tax_method1": 0,
+        "tax_method2": 15000,
+        "min_tax_applied": true,
+        "tax_before_credit": 15000,
+        "net_payable": 15000
+      }
+    },
+    {
+      "name": "14) เงินได้รายแหล่ง + ค่าเช่าแยกประเภท (อาคาร 30% / ที่ดินเกษตร 20%) + ภาษีหัก ณ ที่จ่ายรายแหล่ง",
+      "persons": [{
+        "income_items": [
+          { "category": "rent", "amount": 600000, "variant": "building", "description": "อาคารพาณิชย์" },
+          { "category": "rent", "amount": 400000, "variant": "agri_land", "description": "ที่ดินเกษตร" },
+          { "category": "salary", "amount": 240000, "withholding": 5000 }
+        ]
+      }],
+      "expect": {
+        "gross_total": 1240000,
+        "expenses_total": 360000,
+        "income_after_expense": 880000,
+        "allowances_total": 60000,
+        "net_income": 820000,
+        "tax_method1": 79000,
+        "tax_method2": 5000,
+        "min_tax_applied": false,
+        "tax_before_credit": 79000,
+        "tax_credits": 5000,
+        "net_payable": 74000
+      }
+    },
+    {
+      "name": "15) เพดานค่าใช้จ่าย 40(3) ค่าแห่งลิขสิทธิ์ เหมา 50% ไม่เกิน 100,000",
+      "persons": [{ "royalty": 500000 }],
+      "expect": {
+        "gross_total": 500000,
+        "expenses_total": 100000,
+        "income_after_expense": 400000,
+        "net_income": 340000,
+        "tax_method1": 11500,
+        "tax_before_credit": 11500
+      }
+    },
+    {
+      "name": "16) ลำดับเงินบริจาคตามแบบ (ข้อ 4 การศึกษา 2 เท่า ก่อน → ข้อ 6 บริจาคทั่วไป)",
+      "persons": [{ "salary": 2000000, "donation_education": 50000, "donation_general": 100000 }],
+      "expect": {
+        "income_after_expense": 1900000,
+        "base_after_allowances": 1840000,
+        "allowances_total": 260000,
+        "net_income": 1640000,
+        "tax_method1": 275000,
+        "net_payable": 275000
       }
     }
   ]
