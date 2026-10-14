@@ -324,7 +324,7 @@ def print_insurance_tools(d: Dict[str, Any]) -> None:
     t = d["insurance_tools"]
     L = t["limits"]
     print(_line("="))
-    print(" 3) หลักประกันลดหย่อนภาษี — ประกันชีวิตแบบสะสมทรัพย์ (ข้อ 7.1) · แบบบำนาญ (ข้อ 7.3) · ประกันสุขภาพ (ข้อ 7.2)")
+    print(" 3) ประกันลดหย่อนภาษี — ประกันชีวิตแบบสะสมทรัพย์ (ข้อ 7.1) · แบบบำนาญ (ข้อ 7.3) · ประกันสุขภาพ (ข้อ 7.2)")
     print(f"    เพดาน: สะสมทรัพย์ {L['life_insurance']:,.0f} · สุขภาพ {L['health_insurance']:,.0f} "
           f"(รวม 7.1+7.2 ไม่เกิน {L['life_health_combined']:,.0f}) · บำนาญ 15% ของเงินได้ ไม่เกิน {L['pension_life']:,.0f} "
           f"(วงเงินเกษียณรวม {L['retirement_cap']:,.0f})")

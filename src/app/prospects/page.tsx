@@ -166,7 +166,7 @@ export default function GeneralMembersPage(){
 
           {view === 'tax' ? (
             <div className="space-y-4">
-              {/* 0) หลักประกันลดหย่อนภาษี (บนสุด ตามที่ผู้ใช้สั่ง) */}
+              {/* 0) ประกันลดหย่อนภาษี (บนสุด ตามที่ผู้ใช้สั่ง) */}
               <InsuranceTaxTools/>
               {/* 1) ฐานภาษีบุคคลธรรมดา (ปีล่าสุด) */}
               <TaxBaseTable/>
