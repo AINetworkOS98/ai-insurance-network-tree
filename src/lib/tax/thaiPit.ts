@@ -73,9 +73,26 @@ export const VARIANT_RATES: Partial<Record<IncomeKey, Record<string, { rate: num
   },
   business: {
     general: { rate: 0.6, label: 'ธุรกิจ/พาณิชย์/เกษตร/อุตสาหกรรม/อื่น ๆ (ร้อยละ 60)' },
-    transport: { rate: 0.4, label: 'การขนส่ง (ร้อยละ 40)' },
+    transport: { rate: 0.6, label: 'การขนส่งหรือรับจ้างด้วยยานพาหนะ (ร้อยละ 60)' },
+    entertainer: { rate: 0.6, label: 'นักแสดง นักร้อง นักดนตรี นักกีฬาอาชีพ (ร้อยละ 60 ส่วนไม่เกิน 300,000 · ร้อยละ 40 ส่วนที่เกิน · รวมไม่เกิน 600,000)' },
   },
 };
+
+/** กติกาพิเศษท้ายตารางที่ 2 ของคำชี้แจง ภ.ง.ด.90 — ข้อ (1) นักแสดง/นักกีฬาอาชีพ */
+export const ENTERTAINER_RULE = { tier: 300_000, tier1_rate: 0.6, tier2_rate: 0.4, cap: 600_000 };
+
+/**
+ * ค่าใช้จ่ายเหมาของกลุ่มเงินได้หนึ่ง ๆ
+ * ปกติ = เงินได้ × อัตรา · ยกเว้น 40(8) ประเภทนักแสดง/นักกีฬาอาชีพ ที่ใช้สองขั้นตามตารางที่ 2
+ */
+export function flatExpense(category: IncomeKey, variant: string, gross: number, rate: number): number {
+  if (category === 'business' && variant === 'entertainer') {
+    const t1 = Math.min(gross, ENTERTAINER_RULE.tier) * ENTERTAINER_RULE.tier1_rate;
+    const t2 = Math.max(0, gross - ENTERTAINER_RULE.tier) * ENTERTAINER_RULE.tier2_rate;
+    return Math.min(t1 + t2, ENTERTAINER_RULE.cap);
+  }
+  return gross * rate;
+}
 
 /** เพดานและเงื่อนไขตามเอกสารปีภาษี 2568 */
 export const LIM = {
@@ -526,7 +543,7 @@ export function progressiveTax(netIncome: number): { tax: number; steps: Bracket
 
 /** ค่าใช้จ่าย (แบบ ข้อ 5 + ใบแนบข้อ 2/4/5/6/7) */
 export function computeExpenses(items: ResolvedItem[]): { lines: ExpenseLine[]; total: number } {
-  const groups = new Map<string, { category: IncomeKey; how: string; rate: number | null; gross: number; ded: number }>();
+  const groups = new Map<string, { category: IncomeKey; variant: string; how: string; rate: number | null; gross: number; ded: number; actual: number }>();
   for (const it of items) {
     if (it.amount <= 0) continue;
     let rate: number | null;
@@ -539,13 +556,18 @@ export function computeExpenses(items: ResolvedItem[]): { lines: ExpenseLine[]; 
       how = `ตามจริง (จ่ายจริง ${it.actual_expense.toLocaleString('en-US')} บาท)`;
     } else {
       rate = itemRate(it);
-      how = `ร้อยละ ${Math.round(rate * 100)}${it.variant ? ` · ${itemRateLabel(it)}` : ''}`;
+      how = it.category === 'business' && it.variant === 'entertainer'
+        ? 'ร้อยละ 60 (ส่วนไม่เกิน 300,000) + ร้อยละ 40 (ส่วนที่เกิน) · รวมไม่เกิน 600,000'
+        : `ร้อยละ ${Math.round(rate * 100)}${it.variant ? ` · ${itemRateLabel(it)}` : ''}`;
     }
-    const key = `${it.category}::${how}`;
-    const g = groups.get(key) ?? { category: it.category, how, rate, gross: 0, ded: 0 };
+    const key = `${it.category}::${it.variant || ''}::${how}`;
+    const g = groups.get(key) ?? { category: it.category, variant: it.variant || '', rate, how, gross: 0, ded: 0, actual: 0 };
     g.gross += it.amount;
-    g.ded += rate === null ? Math.min(it.actual_expense, it.amount) : it.amount * rate;
+    if (rate === null) g.actual += Math.min(it.actual_expense, it.amount);
     groups.set(key, g);
+  }
+  for (const g of groups.values()) {
+    g.ded = g.rate === null ? g.actual : flatExpense(g.category, g.variant, g.gross, g.rate);
   }
 
   const all = Array.from(groups.values());

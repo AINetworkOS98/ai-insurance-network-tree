@@ -81,7 +81,8 @@ VARIANT_RATES: Dict[str, Dict[str, Dict[str, Any]]] = {
     },
     "business": {
         "general":   {"rate": 0.60, "label": "ธุรกิจ/พาณิชย์/เกษตร/อุตสาหกรรม/อื่น ๆ (ร้อยละ 60)"},
-        "transport": {"rate": 0.40, "label": "การขนส่ง (ร้อยละ 40)"},
+        "transport": {"rate": 0.60, "label": "การขนส่งหรือรับจ้างด้วยยานพาหนะ (ร้อยละ 60)"},
+        "entertainer": {"rate": 0.60, "label": "นักแสดง นักร้อง นักดนตรี นักกีฬาอาชีพ (ร้อยละ 60 ส่วนไม่เกิน 300,000 · ร้อยละ 40 ส่วนที่เกิน · รวมไม่เกิน 600,000)"},
     },
 }
 
@@ -424,8 +425,25 @@ def progressive_tax(net_income: float) -> Dict[str, Any]:
     return {"tax": round(tax, 2), "steps": steps, "marginal_rate": steps[-1]["rate"] if steps else 0.0}
 
 
+# กติกาพิเศษท้ายตารางที่ 2 ของคำชี้แจง ภ.ง.ด.90 — ข้อ (1) นักแสดง/นักกีฬาอาชีพ
+ENTERTAINER_RULE = {"tier": 300_000, "tier1_rate": 0.60, "tier2_rate": 0.40, "cap": 600_000}
+
+
+def flat_expense(category: str, variant: str, gross: float, rate: float) -> float:
+    """ค่าใช้จ่ายเหมาของกลุ่มเงินได้หนึ่ง ๆ (ปกติ = gross × rate)
+
+    ยกเว้น 40(8) ประเภทนักแสดง/นักร้อง/นักดนตรี/นักกีฬาอาชีพ ที่ตารางที่ 2 กำหนดเป็นสองขั้น:
+    ร้อยละ 60 ของส่วนไม่เกิน 300,000 + ร้อยละ 40 ของส่วนที่เกิน และรวมกันไม่เกิน 600,000 บาท
+    """
+    if category == "business" and variant == "entertainer":
+        t1 = min(gross, ENTERTAINER_RULE["tier"]) * ENTERTAINER_RULE["tier1_rate"]
+        t2 = max(0.0, gross - ENTERTAINER_RULE["tier"]) * ENTERTAINER_RULE["tier2_rate"]
+        return min(t1 + t2, ENTERTAINER_RULE["cap"])
+    return gross * rate
+
+
 def compute_expenses(items: List[IncomeItem]) -> Dict[str, Any]:
-    groups: Dict[Tuple[str, str], Dict[str, Any]] = {}
+    groups: Dict[Tuple[str, str, str], Dict[str, Any]] = {}
     for it in items:
         if it.amount <= 0:
             continue
@@ -435,10 +453,19 @@ def compute_expenses(items: List[IncomeItem]) -> Dict[str, Any]:
             rate, how = None, f"ตามจริง (จ่ายจริง {it.actual_expense:,.0f} บาท)"
         else:
             rate = it.rate()
-            how = f"ร้อยละ {int(round(rate * 100))}" + (f" · {it.rate_label()}" if it.variant else "")
-        g = groups.setdefault((it.category, how), {"category": it.category, "how": how, "rate": rate, "gross": 0.0, "ded": 0.0})
+            if it.category == "business" and it.variant == "entertainer":
+                how = "ร้อยละ 60 (ส่วนไม่เกิน 300,000) + ร้อยละ 40 (ส่วนที่เกิน) · รวมไม่เกิน 600,000"
+            else:
+                how = f"ร้อยละ {int(round(rate * 100))}" + (f" · {it.rate_label()}" if it.variant else "")
+        g = groups.setdefault((it.category, it.variant or "", how),
+                              {"category": it.category, "variant": it.variant or "", "how": how,
+                               "rate": rate, "gross": 0.0, "ded": 0.0, "actual": 0.0})
         g["gross"] += it.amount
-        g["ded"] += min(it.actual_expense, it.amount) if rate is None else it.amount * rate
+        if rate is None:
+            g["actual"] += min(it.actual_expense, it.amount)
+
+    for g in groups.values():
+        g["ded"] = g["actual"] if g["rate"] is None else flat_expense(g["category"], g["variant"], g["gross"], g["rate"])
 
     cap12 = sum(g["ded"] for g in groups.values() if g["category"] in ("salary", "service"))
     if cap12 > SHARED_CAP_1_2:

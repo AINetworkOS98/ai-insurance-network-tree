@@ -8,6 +8,7 @@
  * เอกสารอ้างอิง: ภ.ง.ด.90 + ใบแนบลดหย่อน ข้อ 7.1–7.3 + คำชี้แจงการกรอก ภ.ง.ด.90 (ข้อ 7)
  */
 import { useMemo } from 'react';
+import occFile from '../../../python/occupations_examples.json';
 import {
   computePit, DEFAULT_TAX_YEAR, LIM, TAX_BRACKETS,
   type PitPerson, type PitIncomeItem, type PitResult, type IncomeKey,
@@ -36,107 +37,27 @@ type Occ = {
   id: string; job: string; form: string; items: PitIncomeItem[]; extra?: Partial<PitPerson>; assume: string;
 };
 
-const OCCUPATIONS: Occ[] = [
-  {
-    id: 'employee', job: 'พนักงานบริษัทเอกชน (เงินเดือน)', form: '40(1)',
-    items: [item('salary', 600_000, '', 'เงินเดือน + โบนัสปีละ 1 เดือน')],
-    extra: { social_security: 9_000, provident_fund: 30_000 },
-    assume: 'โสด · ประกันสังคม 9,000 · สำรองเลี้ยงชีพ 5% ของเงินเดือน (30,000) — ส่วน 10,000 แรกนับเป็นลดหย่อน ข้อ 8',
-  },
-  {
-    id: 'gov', job: 'ข้าราชการ / ครู (เงินเดือนราชการ)', form: '40(1)',
-    items: [item('salary', 480_000, '', 'เงินเดือนราชการ')],
-    extra: { gpf: 14_400 },
-    assume: 'โสด · กบข. 3% (14,400) · ไม่มีประกันสังคม (ใช้สิทธิ กบข. แทน)',
-  },
-  {
-    id: 'nurse', job: 'พยาบาล / บุคลากรสาธารณสุข', form: '40(1)',
-    items: [item('salary', 540_000, '', 'เงินเดือน + ค่าตอบแทนพิเศษ')],
-    extra: { gpf: 21_600, social_security: 9_000 },
-    assume: 'โสด · มีทั้งกองทุนสำรองเลี้ยงชีพและประกันสังคมในงานเดิม',
-  },
-  {
-    id: 'sales', job: 'พนักงานขาย (เงินเดือน + คอมมิชชัน)', form: '40(1)+40(2)',
-    items: [item('salary', 480_000, '', 'เงินเดือน'), item('service', 180_000, '', 'ค่าคอมมิชชัน')],
-    extra: { social_security: 9_000 },
-    assume: 'โสด · มีเงินได้ 2 ประเภท → ต้องยื่น ภ.ง.ด.90 · ค่าใช้จ่าย 40(1)+40(2) รวมกัน 50% ไม่เกิน 100,000',
-  },
-  {
-    id: 'doctor', job: 'แพทย์ / ทันตแพทย์ (คลินิกส่วนตัว)', form: '40(6)',
-    items: [item('professional', 2_400_000, 'medical', 'ค่ารักษาพยาบาลผู้ป่วยนอก')],
-    assume: 'โสด · วิชาชีพอิสระ "การประกอบโรคศิลปะ" หักค่าใช้จ่ายเหมา 60% (ใบแนบข้อ 5)',
-  },
-  {
-    id: 'engineer', job: 'วิศวกร / สถาปนิก (รับงานเอง)', form: '40(6)',
-    items: [item('professional', 1_200_000, 'other', 'ค่าออกแบบ/ควบคุมงาน')],
-    assume: 'โสด · วิศวกรรม/สถาปัตยกรรม หักเหมา 30% (หรือหักตามจริงได้)',
-  },
-  {
-    id: 'lawyer', job: 'ทนายความ / นักกฎหมาย', form: '40(6)',
-    items: [item('professional', 1_500_000, 'other', 'ค่าที่ปรึกษากฎหมาย')],
-    assume: 'โสด · กฎหมาย หักเหมา 30%',
-  },
-  {
-    id: 'accountant', job: 'นักบัญชี (CPA รับงานเอง)', form: '40(6)',
-    items: [item('professional', 1_000_000, 'other', 'ค่าทำบัญชี/ตรวจสอบ')],
-    assume: 'โสด · การบัญชี หักเหมา 30%',
-  },
-  {
-    id: 'agent', job: 'ตัวแทน / นายหน้าประกันชีวิต', form: '40(2)',
-    items: [item('service', 900_000, '', 'ค่านายหน้า/ค่าบริการ')],
-    assume: 'โสด · 40(2) หักเหมา 50% แต่ไม่เกิน 100,000 บาท',
-  },
-  {
-    id: 'freelance', job: 'ฟรีแลนซ์ (โปรแกรมเมอร์/กราฟิก)', form: '40(2)',
-    items: [item('service', 720_000, '', 'ค่าจ้างทำงานให้')],
-    assume: 'โสด · รับทำงานให้ → 40(2)',
-  },
-  {
-    id: 'online', job: 'ขายของออนไลน์ (ร้านค้าออนไลน์)', form: '40(8)',
-    items: [item('business', 1_200_000, 'general', 'ยอดขายทั้งปี')],
-    assume: 'โสด · 40(8) หักเหมาร้อยละ 60 ตามมาตรา 8 ทวิ (ไม่ต้องเก็บใบเสร็จ)',
-  },
-  {
-    id: 'restaurant', job: 'เจ้าของร้านอาหาร', form: '40(8)',
-    items: [item('business', 1_800_000, 'general', 'ยอดขายร้าน')],
-    assume: 'โสด · 40(8) เหมา 60% (กรณีไม่มีระบบบัญชี — ถ้ามีบัญชีหักตามจริงได้)',
-  },
-  {
-    id: 'rider', job: 'ไรเดอร์ / พนักงานส่งอาหาร–พัสดุ', form: '40(8)',
-    items: [item('business', 300_000, 'transport', 'ค่าส่งอาหาร/พัสดุ')],
-    assume: 'โสด · 40(8) ประเภทการขนส่ง หักเหมา 40% · ถือเป็นผู้มีเงินได้ · เงินได้ไม่ถึงเกณฑ์ 60,000/120,000',
-  },
-  {
-    id: 'landlord', job: 'เจ้าของบ้านให้เช่า / ที่ดินให้เช่า', form: '40(5)',
-    items: [item('rent', 600_000, 'building', 'ค่าเช่าบ้านให้เช่า')],
-    assume: 'โสด · ค่าเช่าอาคาร/โรงเรือน หักเหมา 30% (ที่ดินเกษตร 20% · ที่ดินอื่น 15% · ทรัพย์สินอื่น 10%)',
-  },
-  {
-    id: 'farmer', job: 'เกษตรกร (พืชผล/ปศุสัตว์)', form: '40(8)',
-    items: [item('business', 400_000, 'general', 'ขายพืชผล')],
-    assume: 'โสด · 40(8) หักเหมา 60% — เกษตรกรส่วนใหญ่เงินได้สุทธิไม่ถึงเกณฑ์ต้องเสียภาษี',
-  },
-  {
-    id: 'youtuber', job: 'ยูทูบเบอร์ / ครีเอเตอร์ออนไลน์', form: '40(8)',
-    items: [item('business', 960_000, 'general', 'รายได้โฆษณา/สปอนเซอร์')],
-    assume: 'โสด · 40(8) เหมา 60% (หรือหักตามจริงถ้าซื้ออุปกรณ์/จ้างทีม)',
-  },
-  {
-    id: 'writer', job: 'นักเขียน / ค่าแห่งลิขสิทธิ์', form: '40(3)',
-    items: [item('royalty', 500_000, '', 'ค่าลิขสิทธิ์หนังสือ')],
-    assume: 'โสด · 40(3) หักเหมา 50% ไม่เกิน 100,000',
-  },
-  {
-    id: 'technician', job: 'ช่างฝีมือ / ช่างไฟฟ้า รับเหมางาน', form: '40(7)',
-    items: [item('contractor', 900_000, '', 'ค่าจ้างรับเหมา')],
-    assume: 'โสด · 40(7) รับเหมาก่อสร้าง หักเหมา 60% · ถ้าเป็น 40(2) รับจ้างจะหัก 50% ไม่เกิน 100,000',
-  },
-  {
-    id: 'market', job: 'พ่อค้าแม่ค้าในตลาด (แผงขาย)', form: '40(8)',
-    items: [item('business', 720_000, 'general', 'ยอดขายรายวันรวมทั้งปี')],
-    assume: 'โสด · 40(8) เหมา 60% · มีภาษีหัก ณ ที่จ่ายกรณีขายให้หน่วยงานรัฐให้กรอกเพิ่ม',
-  },
-];
+type RawOcc = {
+  id: string; job: string; income_label: string; assume: string;
+  items: Array<{ category: string; amount: number; variant?: string; description?: string }>;
+  extra?: Partial<PitPerson>;
+};
+
+/** รายการอาชีพ: อ่านจาก python/occupations_examples.json — ไฟล์เดียวกับโปรแกรม Python */
+const OCCUPATIONS: Occ[] = (occFile as unknown as { occupations: RawOcc[] }).occupations.map((o) => ({
+  id: o.id,
+  job: o.job,
+  form: o.income_label,
+  assume: o.assume,
+  items: o.items.map((i) => ({
+    category: i.category as IncomeKey,
+    amount: i.amount,
+    variant: i.variant ?? '',
+    description: i.description ?? '',
+    expense_mode: 'standard',
+  })),
+  extra: o.extra ?? {},
+}));
 
 /* ───────────────── 2) เปรียบเทียบลดหย่อนประกันชีวิต ───────────────── */
 const LIFE = LIM.life_insurance;          // 100,000 (ข้อ 7.1)
