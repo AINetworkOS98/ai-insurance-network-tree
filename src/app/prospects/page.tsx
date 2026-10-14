@@ -8,6 +8,7 @@ import ThaiTaxCalculator from '@/components/tax/ThaiTaxCalculator';
 import TaxBaseTable from '@/components/tax/TaxBaseTable';
 import InsuranceTaxTools from '@/components/tax/InsuranceTaxTools';
 import TaxExamplesByOccupation from '@/components/tax/TaxExamplesByOccupation';
+import CorporateTaxCalculator from '@/components/tax/CorporateTaxCalculator';
 
 // หน้า "สมาชิกทั่วไป" (เดิมชื่อ "ผู้สนใจ") — ฐานเดียวกับระบบสมาชิก (/api/members)
 // นิยาม: สมาชิกทั่วไป = ผู้ที่ยังอยู่ระดับตำแหน่ง 0 (ยังไม่เลื่อนเป็นตัวแทน)
@@ -25,8 +26,8 @@ const STATUS_TH: Record<string, string> = {
 };
 
 export default function GeneralMembersPage(){
-  // สลับมุมมองในหน้าเดียว: เครื่องคำนวณภาษี (ค่าเริ่มต้น) / ทะเบียนสมาชิกทั่วไป
-  const [view, setView]=useState<'tax'|'members'>('tax');
+  // สลับมุมมองในหน้าเดียว: ภาษีบุคคลธรรมดา (ค่าเริ่มต้น) / ภาษีนิติบุคคล / ทะเบียนสมาชิกทั่วไป
+  const [view, setView]=useState<'tax'|'cit'|'members'>('tax');
   const [members, setMembers]=useState<Member[]>([]);
   const [q, setQ]=useState('');
   const [statusQ, setStatusQ]=useState('');
@@ -154,13 +155,17 @@ export default function GeneralMembersPage(){
             <button
               onClick={()=>setView('tax')}
               className={`px-4 py-2 rounded-full text-sm font-semibold border ${view==='tax' ? 'bg-[#475569] text-white border-[#475569]' : 'bg-white text-slate-600'}`}
-            >🧾 คำนวณภาษี (บุคคลธรรมดา)</button>
+            >🧾 ภาษีบุคคลธรรมดา</button>
+            <button
+              onClick={()=>setView('cit')}
+              className={`px-4 py-2 rounded-full text-sm font-semibold border ${view==='cit' ? 'bg-[#475569] text-white border-[#475569]' : 'bg-white text-slate-600'}`}
+            >🏢 ภาษีนิติบุคคล</button>
             <button
               onClick={()=>setView('members')}
               className={`px-4 py-2 rounded-full text-sm font-semibold border ${view==='members' ? 'bg-[#475569] text-white border-[#475569]' : 'bg-white text-slate-600'}`}
             >👥 ทะเบียนสมาชิกทั่วไป</button>
             <span className="text-[11px] text-slate-400 ml-1">
-              เครื่องคำนวณภาษีอ้างอิงกรมสรรพากร ปีภาษี 2568 — ใช้ฟรีสำหรับสมาชิกทั่วไป
+              เครื่องคำนวณภาษี (บุคคลธรรมดา + นิติบุคคล) อ้างอิงกรมสรรพากร ปีภาษี/รอบบัญชี 2568 — ใช้ฟรีสำหรับสมาชิกทั่วไป
             </span>
           </div>
 
@@ -174,6 +179,11 @@ export default function GeneralMembersPage(){
               <ThaiTaxCalculator/>
               {/* 3) ตัวอย่างการยื่นภาษีตามอาชีพ + เปรียบเทียบลดหย่อนประกันชีวิต (ล่างสุด) */}
               <TaxExamplesByOccupation/>
+            </div>
+          ) : view === 'cit' ? (
+            <div className="space-y-4">
+              {/* ภาษีนิติบุคคล — ต่อจากแท็บภาษีบุคคลธรรมดา */}
+              <CorporateTaxCalculator/>
             </div>
           ) : (<>
           {/* หัวหน้า */}

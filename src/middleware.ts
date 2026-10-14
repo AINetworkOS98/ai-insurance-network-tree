@@ -66,6 +66,7 @@ const PUBLIC_API = [
   '/api/n8n/watch', // ตัวตรวจจับ workflow n8n ส่งข้อมูลเข้า — route บังคับ Authorization: Bearer CRON_SECRET เอง (หน้าอ่านใช้ /api/n8n/workflows ซึ่งต้องล็อกอิน)
   '/api/activity', // เรดาร์กิจกรรม/รายงานสมาชิก — route ตรวจสิทธิ์เอง (สมาชิก หรือ Bearer CRON_SECRET สำหรับ n8n)
   '/api/tax/thai-pit', // เครื่องคำนวณภาษีเงินได้บุคคลธรรมดา (กรมสรรพากร) — คิดเลขล้วน ไม่แตะฐานข้อมูล/ข้อมูลสมาชิก
+  '/api/tax/thai-cit', // เครื่องคำนวณภาษีเงินได้นิติบุคคล (กรมสรรพากร) — คิดเลขล้วน ไม่แตะฐานข้อมูล/ข้อมูลสมาชิก
 ];
 
 const PUBLIC_PAGES = [

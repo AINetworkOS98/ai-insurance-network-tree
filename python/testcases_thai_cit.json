@@ -1,0 +1,88 @@
+{
+  "meta": {
+    "purpose": "ชุดทดสอบมาตรฐานของเครื่องคำนวณภาษีเงินได้นิติบุคคล — ตัวเลข 'expect' คำนวณตามเกณฑ์กรมสรรพากร (rd.go.th/841) รอบระยะเวลาบัญชี 2568",
+    "used_by": [
+      "python/thai_cit_calculator.py --selftest",
+      "GET /api/tax/thai-cit?selftest=1 (เว็บจริง ai-insurance-network-tree.vercel.app)",
+      "scripts/thai-cit-selftest.mjs (เทียบผลเว็บจริงกับไฟล์นี้)"
+    ],
+    "year": 2568,
+    "rates": {
+      "standard": "ร้อยละ 20 ของกำไรสุทธิ (มาตรา 67)",
+      "sme": "ทุนจดทะเบียนชำระแล้ว ≤ 5,000,000 และรายได้ขายสินค้า/ให้บริการ ≤ 30,000,000 → กำไรสุทธิไม่เกิน 300,000 ยกเว้น · 300,001–3,000,000 ร้อยละ 15 · เกิน 3,000,000 ร้อยละ 20"
+    }
+  },
+  "cases": [
+    {
+      "name": "1) SME รายได้ 8 ล้าน กำไร 1.5 ล้าน (ทุน 3 ล้าน): 300,000 แรกยกเว้น + 1.2 ล้าน × 15%",
+      "input": { "revenue": 8000000, "expenses": 6500000, "capital_paid_up": 3000000 },
+      "expect": {
+        "taxable_profit": 1500000, "is_sme": true,
+        "tax_sme": 180000, "tax_standard": 300000, "tax_payable": 180000,
+        "saving_vs_standard": 120000, "half_year_due": 90000, "net_payable": 180000
+      }
+    },
+    {
+      "name": "2) นิติบุคคลทั่วไป รายได้ 50 ล้าน กำไร 8 ล้าน (ทุน 10 ล้าน): 20%",
+      "input": { "revenue": 50000000, "expenses": 42000000, "capital_paid_up": 10000000 },
+      "expect": {
+        "taxable_profit": 8000000, "is_sme": false,
+        "tax_standard": 1600000, "tax_payable": 1600000, "saving_vs_standard": 0,
+        "half_year_due": 800000, "net_payable": 1600000
+      }
+    },
+    {
+      "name": "3) SME กำไร 250,000 (ไม่เกิน 300,000) → ยกเว้นภาษี",
+      "input": { "revenue": 5000000, "expenses": 4750000, "capital_paid_up": 1000000 },
+      "expect": { "taxable_profit": 250000, "is_sme": true, "tax_payable": 0, "net_payable": 0 }
+    },
+    {
+      "name": "4) SME กำไร 3.5 ล้าน → เข้าทั้ง 3 ขั้น (ยกเว้น 300,000 · 15% ถึง 3 ล้าน · 20% ส่วนเกิน)",
+      "input": { "revenue": 25000000, "expenses": 21500000, "capital_paid_up": 4000000 },
+      "expect": { "taxable_profit": 3500000, "is_sme": true, "tax_sme": 505000, "tax_standard": 700000, "tax_payable": 505000 }
+    },
+    {
+      "name": "5) รายได้ 35 ล้าน เกินเกณฑ์ SME → อัตราคงที่ 20%",
+      "input": { "revenue": 35000000, "expenses": 33000000, "capital_paid_up": 3000000 },
+      "expect": { "taxable_profit": 2000000, "is_sme": false, "tax_standard": 400000, "tax_payable": 400000 }
+    },
+    {
+      "name": "6) ทุนจดทะเบียนชำระแล้ว 6 ล้าน เกินเกณฑ์ SME → 20%",
+      "input": { "revenue": 20000000, "expenses": 18000000, "capital_paid_up": 6000000 },
+      "expect": { "taxable_profit": 2000000, "is_sme": false, "tax_payable": 400000 }
+    },
+    {
+      "name": "7) หักขาดทุนยกมา 200,000 + บริจาค 100,000 (หักได้ไม่เกิน 2% ของกำไรสุทธิ 300,000 = 6,000)",
+      "input": { "revenue": 10000000, "expenses": 9500000, "loss_carry_forward": 200000, "donations": 100000, "capital_paid_up": 2000000 },
+      "expect": {
+        "profit_before_loss": 500000, "loss_carry_forward": 200000, "profit_after_loss": 300000,
+        "donations_allowed": 6000, "taxable_profit": 294000, "is_sme": true, "tax_payable": 0
+      }
+    },
+    {
+      "name": "8) SME กำไร 1.5 ล้าน + หัก ณ ที่จ่าย 5,000 + จ่าย ภ.ง.ด.51 แล้ว 90,000",
+      "input": { "revenue": 8000000, "expenses": 6500000, "capital_paid_up": 3000000, "withholding": 5000, "pnd51_paid": 90000 },
+      "expect": { "tax_payable": 180000, "withholding": 5000, "pnd51_paid": 90000, "net_payable": 85000 }
+    },
+    {
+      "name": "9) ครึ่งปี ภ.ง.ด.51 = ร้อยละ 50 ของภาษีประมาณการ (บริษัททั่วไป ภาษี 1.6 ล้าน → 800,000)",
+      "input": { "revenue": 50000000, "expenses": 42000000, "capital_paid_up": 10000000 },
+      "expect": { "tax_payable": 1600000, "half_year_due": 800000 }
+    },
+    {
+      "name": "10) ขาดทุน กำไรสุทธิติดลบ → ไม่มีภาษีต้องชำระ",
+      "input": { "revenue": 4000000, "expenses": 4500000, "capital_paid_up": 2000000 },
+      "expect": { "profit_before_loss": 0, "taxable_profit": 0, "tax_payable": 0, "net_payable": 0 }
+    },
+    {
+      "name": "11) SME กำไร 10 ล้าน (ทุน 5 ล้านเต็มเกณฑ์ รายได้ 30 ล้านเต็มเกณฑ์) → ยังเป็น SME",
+      "input": { "revenue": 30000000, "expenses": 20000000, "capital_paid_up": 5000000 },
+      "expect": { "taxable_profit": 10000000, "is_sme": true, "tax_sme": 1805000, "tax_standard": 2000000, "tax_payable": 1805000 }
+    },
+    {
+      "name": "12) รายได้อื่นรวม (ดอกเบี้ยรับ 200,000) ไม่นับเป็นรายได้ขายสินค้า/ให้บริการในการทดสอบเกณฑ์ SME",
+      "input": { "revenue": 29000000, "other_income": 200000, "expenses": 20000000, "capital_paid_up": 5000000 },
+      "expect": { "total_revenue": 29200000, "is_sme": true, "taxable_profit": 9200000, "tax_payable": 1645000 }
+    }
+  ]
+}
