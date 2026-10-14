@@ -58,6 +58,7 @@ export const NAV_ENTRIES: NavEntry[] = [
 
   // ── ผู้ดูแลระบบ (Admin + akarapol.pro798@gmail.com) — ต่อจากหน้าแรก ─────────
   { href: '/admin', section: 'admin', label: 'ผู้ดูแลระบบ (Admin Dashboard)', key: 'sb_admin', icon: '🛡', minRank: 0, adminOnly: true },
+  { href: '/admin/ops', section: 'admin', label: 'ศูนย์ควบคุม AI (ทุกระบบ)', icon: '🛰', minRank: 0, adminOnly: true },
   { href: '/admin/messages', section: 'admin', label: 'ข้อความระบบ', key: 'sb_admin_messages', icon: '✉', minRank: 0, adminOnly: true },
   { href: '/admin/reports', section: 'admin', label: 'รายงานผู้ดูแล', key: 'sb_admin_reports', icon: '▤', minRank: 0, adminOnly: true },
   { href: '/admin/support', section: 'admin', label: 'ช่วยเหลือ/ร้องเรียน', key: 'sb_admin_support', icon: '🆘', minRank: 0, adminOnly: true },
