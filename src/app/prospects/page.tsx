@@ -27,8 +27,38 @@ const STATUS_TH: Record<string, string> = {
 };
 
 export default function GeneralMembersPage(){
-  // สลับมุมมองในหน้าเดียว: ภาษีบุคคลธรรมดา (ค่าเริ่มต้น) / ภาษีนิติบุคคล / ทะเบียนสมาชิกทั่วไป
-  const [view, setView]=useState<'tax'|'cit'|'keyman'|'members'>('tax');
+  // สลับมุมมองในหน้าเดียว: ภาษีบุคคลธรรมดา (ค่าเริ่มต้น) / ภาษีนิติบุคคล / ประกันคีย์แมน / ทะเบียนสมาชิกทั่วไป
+  type View = 'tax'|'cit'|'keyman'|'members';
+  const [view, setView]=useState<View>('tax');
+  // ── URL ของแต่ละแท็บ: ?tab=pit | cit | keyman | members (เปิด/แชร์ลิงก์แล้วเข้าถูกแท็บ) ──
+  const TAB_URL: Record<View,string> = { tax:'pit', cit:'cit', keyman:'keyman', members:'members' };
+  const viewFromUrl = (): View => {
+    if (typeof window === 'undefined') return 'tax';
+    const t = new URLSearchParams(window.location.search).get('tab') || '';
+    return t === 'cit' ? 'cit' : t === 'keyman' ? 'keyman' : t === 'members' ? 'members' : 'tax';
+  };
+  const [tabUrl, setTabUrl] = useState<string>('');
+  const goTab = (v: View) => {
+    setView(v);
+    if (typeof window === 'undefined') return;
+    const u = new URL(window.location.href);
+    u.searchParams.set('tab', TAB_URL[v]);
+    window.history.pushState(null, '', u.pathname + u.search + u.hash);
+    setTabUrl(u.pathname + u.search);
+  };
+  useEffect(() => {
+    const v = viewFromUrl();
+    setView(v);
+    if (typeof window !== 'undefined') {
+      const u = new URL(window.location.href);
+      if (!u.searchParams.get('tab')) { u.searchParams.set('tab', TAB_URL[v]); window.history.replaceState(null, '', u.pathname + u.search + u.hash); }
+      setTabUrl(u.pathname + u.search);
+    }
+    const onPop = () => setView(viewFromUrl());
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [members, setMembers]=useState<Member[]>([]);
   const [q, setQ]=useState('');
   const [statusQ, setStatusQ]=useState('');
@@ -153,24 +183,29 @@ export default function GeneralMembersPage(){
         <main className="flex-1 p-6 space-y-6">
           {/* ── เมนูในหน้าเดียว: เครื่องคำนวณภาษี (สมาชิกทั่วไปใช้ก่อน) / ทะเบียนสมาชิกทั่วไป ── */}
           <div className="flex flex-wrap gap-2 items-center">
-            <button
-              onClick={()=>setView('tax')}
-              className={`px-4 py-2 rounded-full text-sm font-semibold border ${view==='tax' ? 'bg-[#475569] text-white border-[#475569]' : 'bg-white text-slate-600'}`}
-            >🧾 ภาษีบุคคลธรรมดา</button>
-            <button
-              onClick={()=>setView('cit')}
-              className={`px-4 py-2 rounded-full text-sm font-semibold border ${view==='cit' ? 'bg-[#475569] text-white border-[#475569]' : 'bg-white text-slate-600'}`}
-            >🏢 ภาษีนิติบุคคล</button>
-            <button
-              onClick={()=>setView('keyman')}
-              className={`px-4 py-2 rounded-full text-sm font-semibold border ${view==='keyman' ? 'bg-[#475569] text-white border-[#475569]' : 'bg-white text-slate-600'}`}
-            >🛡 ประกันคีย์แมน (Keyman)</button>
-            <button
-              onClick={()=>setView('members')}
-              className={`px-4 py-2 rounded-full text-sm font-semibold border ${view==='members' ? 'bg-[#475569] text-white border-[#475569]' : 'bg-white text-slate-600'}`}
-            >👥 ทะเบียนสมาชิกทั่วไป</button>
+            {([['tax','pit','🧾 ภาษีบุคคลธรรมดา'],['cit','cit','🏢 ภาษีนิติบุคคล'],['keyman','keyman','🛡 ประกันคีย์แมน (Keyman)'],['members','members','👥 ทะเบียนสมาชิกทั่วไป']] as Array<[View,string,string]>).map(([key,slug,label]) => (
+              <a
+                key={key}
+                href={`?tab=${slug}`}
+                onClick={(e)=>{ e.preventDefault(); goTab(key); }}
+                title={`ลิงก์แท็บนี้: /prospects?tab=${slug}`}
+                className={`px-4 py-2 rounded-full text-sm font-semibold border ${view===key ? 'bg-[#475569] text-white border-[#475569]' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+              >{label}</a>
+            ))}
             <span className="text-[11px] text-slate-400 ml-1">
               เครื่องคำนวณภาษี (บุคคลธรรมดา + นิติบุคคล) อ้างอิงกรมสรรพากร ปีภาษี/รอบบัญชี 2568 — ใช้ฟรีสำหรับสมาชิกทั่วไป
+            </span>
+          </div>
+          {/* ── URL ของแท็บปัจจุบัน (เปิด/แชร์ลิงก์แล้วเข้าถูกแท็บทันที) ── */}
+          <div className="flex flex-wrap items-center gap-2 text-[11px]" id="tab-url">
+            <span className="text-slate-400">ลิงก์แท็บนี้:</span>
+            <code className="px-2 py-1 rounded-lg border bg-slate-50 text-slate-600 select-all">{tabUrl || '/prospects'}</code>
+            <button
+              onClick={() => { if (typeof navigator !== 'undefined' && tabUrl) navigator.clipboard?.writeText(`${window.location.origin}${tabUrl}`); }}
+              className="px-2.5 py-1 rounded-full border bg-white text-slate-600 font-semibold hover:bg-slate-50"
+            >⧉ คัดลอกลิงก์แท็บ</button>
+            <span className="text-slate-400">
+              {view==='tax' ? 'ภาษีบุคคลธรรมดา' : view==='cit' ? 'ภาษีนิติบุคคล' : view==='keyman' ? 'ประกันคีย์แมน (Keyman)' : 'ทะเบียนสมาชิกทั่วไป'}
             </span>
           </div>
 
