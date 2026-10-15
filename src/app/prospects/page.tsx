@@ -54,7 +54,10 @@ export default function GeneralMembersPage(){
       if (!u.searchParams.get('tab')) { u.searchParams.set('tab', TAB_URL[v]); window.history.replaceState(null, '', u.pathname + u.search + u.hash); }
       setTabUrl(u.pathname + u.search);
     }
-    const onPop = () => setView(viewFromUrl());
+    const onPop = () => {
+      setView(viewFromUrl());
+      if (typeof window !== 'undefined') setTabUrl(window.location.pathname + window.location.search);
+    };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
     // eslint-disable-next-line react-hooks/exhaustive-deps
