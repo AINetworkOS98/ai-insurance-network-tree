@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import Net1x5Autopilot from '@/components/Net1x5Autopilot';
-import Net1x5MembersBoard from '@/components/Net1x5MembersBoard';
+import Net1x5MemberLayers from '@/components/Net1x5MemberLayers';
 import Net1x5Universe from '@/components/Net1x5Universe';
 
 // ระบบบริหารเครือข่าย 1 แตก 5 — เชื่อมต่อสายงานทุกระดับอัตโนมัติ
@@ -112,8 +112,8 @@ export default function Net1x5AutopilotPage() {
             <Net1x5Autopilot />
           </div>
 
-          {/* 2) สมาชิก 1 แตก 5 — ผังผู้แนะนำ 1 → 5 ครบทุกช่อง (สมาชิกจริง) */}
-          {panel === 'members' && <Net1x5MembersBoard />}
+          {/* 2) สมาชิก 1 แตก 5 — ผังผู้แนะนำ 1 → 5 เป็นชั้น ๆ (สมาชิกจริง) */}
+          {panel === 'members' && <Net1x5MemberLayers />}
 
           {/* 3) จักรวาลการสร้างเครือข่าย (ข้อมูลจริง) — ส่วนเดิมของหน้า แสดงเมื่อเลือกแท็บนี้ */}
           {panel === 'cosmic' && <Net1x5Universe />}
