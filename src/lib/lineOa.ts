@@ -174,6 +174,19 @@ export async function saveConfig(patch: Record<string, any>, updatedBy?: string 
   for (const k of numKeys) if (patch[k] !== undefined) data[k] = Math.max(1, Math.min(720, Number(patch[k]) || 24));
   for (const k of jsonKeys) if (patch[k] !== undefined) data[k] = normalizeMessages(patch[k]) as any;
   for (const k of strArrKeys) if (Array.isArray(patch[k])) data[k] = patch[k].map((s: any) => String(s).trim()).filter(Boolean).slice(0, 20);
+  // ── AI ตอบกลับอัตโนมัติ (Hermes + DeepSeek) ──
+  if (typeof patch.aiEnabled === 'boolean') data.aiEnabled = patch.aiEnabled;
+  if (patch.aiMode === 'all' || patch.aiMode === 'fallback') data.aiMode = patch.aiMode;
+  if (typeof patch.aiSystemPrompt === 'string') data.aiSystemPrompt = patch.aiSystemPrompt.slice(0, 8000);
+  if (typeof patch.aiKnowledge === 'string') data.aiKnowledge = patch.aiKnowledge.slice(0, 20000);
+  if (typeof patch.aiProvider === 'string') data.aiProvider = patch.aiProvider.trim().slice(0, 40) || null;
+  if (typeof patch.aiModel === 'string') data.aiModel = patch.aiModel.trim().slice(0, 80) || null;
+  if (patch.aiMaxChars !== undefined) data.aiMaxChars = Math.max(120, Math.min(3000, Number(patch.aiMaxChars) || 900));
+  if (patch.aiTemperature !== undefined) data.aiTemperature = Math.max(0, Math.min(1, Number(patch.aiTemperature) || 0));
+  if (patch.aiPerHour !== undefined) data.aiPerHour = Math.max(1, Math.min(200, Number(patch.aiPerHour) || 20));
+  if (Array.isArray(patch.aiHandoffKeywords)) data.aiHandoffKeywords = patch.aiHandoffKeywords.map((s: any) => String(s).trim()).filter(Boolean).slice(0, 20);
+  if (patch.aiHandoffMessage !== undefined) data.aiHandoffMessage = normalizeMessages(patch.aiHandoffMessage) as any;
+  if (patch.aiFailMessage !== undefined) data.aiFailMessage = normalizeMessages(patch.aiFailMessage) as any;
   if (typeof patch.defaultRichMenuId === 'string' || patch.defaultRichMenuId === null) data.defaultRichMenuId = patch.defaultRichMenuId || null;
   if (updatedBy) data.updatedBy = updatedBy;
   return (prisma as any).lineOaConfig.update({ where: { id: 'default' }, data });

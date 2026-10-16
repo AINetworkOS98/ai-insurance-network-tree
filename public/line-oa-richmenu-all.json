@@ -1,0 +1,89 @@
+{
+  "size": {
+    "width": 2500,
+    "height": 1686
+  },
+  "selected": true,
+  "name": "เมนูหลัก — ทุกเมนูของระบบ",
+  "chatBarText": "เมนูระบบ",
+  "areas": [
+    {
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 833,
+        "height": 843
+      },
+      "action": {
+        "type": "uri",
+        "uri": "https://ai-insurance-network-tree.vercel.app/"
+      },
+      "label_th": "หน้าแรก"
+    },
+    {
+      "bounds": {
+        "x": 833,
+        "y": 0,
+        "width": 834,
+        "height": 843
+      },
+      "action": {
+        "type": "uri",
+        "uri": "https://ai-insurance-network-tree.vercel.app/recruit"
+      },
+      "label_th": "สมัครเป็นตัวแทน"
+    },
+    {
+      "bounds": {
+        "x": 1667,
+        "y": 0,
+        "width": 833,
+        "height": 843
+      },
+      "action": {
+        "type": "uri",
+        "uri": "https://ai-insurance-network-tree.vercel.app/financial-freedom"
+      },
+      "label_th": "อิสรภาพทางการเงิน"
+    },
+    {
+      "bounds": {
+        "x": 0,
+        "y": 843,
+        "width": 833,
+        "height": 843
+      },
+      "action": {
+        "type": "uri",
+        "uri": "https://ai-insurance-network-tree.vercel.app/expand-team"
+      },
+      "label_th": "ช่องขยายทีมงาน"
+    },
+    {
+      "bounds": {
+        "x": 833,
+        "y": 843,
+        "width": 834,
+        "height": 843
+      },
+      "action": {
+        "type": "message",
+        "text": "สอบถามรายได้และค่าคอมมิชชั่น"
+      },
+      "label_th": "สอบถามรายได้"
+    },
+    {
+      "bounds": {
+        "x": 1667,
+        "y": 843,
+        "width": 833,
+        "height": 843
+      },
+      "action": {
+        "type": "message",
+        "text": "เมนูทั้งหมด"
+      },
+      "label_th": "เมนูทั้งหมด"
+    }
+  ]
+}

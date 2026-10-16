@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import LineOaAiPanel from '@/components/LineOaAiPanel';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +17,7 @@ type Msg = { type: 'text'; text: string } | { type: 'image'; originalContentUrl:
 const TABS = [
   { id: 'welcome', label: '👋 ข้อความต้อนรับ' },
   { id: 'rules', label: '🤖 ตอบกลับอัตโนมัติ' },
+  { id: 'ai', label: '🧠 AI ตอบอัตโนมัติ' },
   { id: 'richmenu', label: '🎛 ริชเมนู' },
   { id: 'followers', label: '👥 ผู้ติดตาม / บรอดแคสต์' },
   { id: 'settings', label: '🔌 เชื่อมต่อ / สถานะ' },
@@ -33,6 +35,10 @@ const KIND_LABEL: Record<string, { t: string; c: string }> = {
   fallback: { t: 'ข้อความสำรอง', c: 'bg-amber-100 text-amber-700' },
   offline: { t: 'นอกเวลาทำการ', c: 'bg-indigo-100 text-indigo-700' },
   welcome: { t: 'ต้อนรับสมาชิกใหม่', c: 'bg-violet-100 text-violet-700' },
+  ai: { t: 'AI ตอบ', c: 'bg-fuchsia-100 text-fuchsia-700' },
+  'ai-fail': { t: 'AI ตอบไม่ได้ (ใช้ข้อความสำรอง)', c: 'bg-rose-100 text-rose-700' },
+  'ai-limit': { t: 'ครบโควตา AI/ชั่วโมง', c: 'bg-amber-100 text-amber-700' },
+  handoff: { t: 'ขอคุยกับเจ้าหน้าที่', c: 'bg-violet-100 text-violet-700' },
   greet: { t: 'ทักทาย', c: 'bg-violet-100 text-violet-700' },
   broadcast: { t: 'บรอดแคสต์', c: 'bg-slate-100 text-slate-600' },
   test: { t: 'ทดสอบ', c: 'bg-slate-100 text-slate-600' },
@@ -521,6 +527,9 @@ export default function LineOaStudioPage() {
             </div>
           </div>
         )}
+
+        {/* ── 2.5) AI ตอบกลับอัตโนมัติ (Hermes + DeepSeek) ─────────────── */}
+        {!loading && tab === 'ai' && <LineOaAiPanel onSaved={load} />}
 
         {/* ── 3) ริชเมนู ───────────────────────────────────────────────── */}
         {!loading && tab === 'richmenu' && (

@@ -13,6 +13,7 @@ import {
   getLineProfile, upsertFollower, touchFollowerMessage, logLine, setUserRichMenu, previewText,
   type LineRuleLike,
 } from '@/lib/lineOa';
+import { aiSettings, isHandoff, generateAiReply } from '@/lib/lineOaAi';
 import { prisma } from '@/lib/prisma';
 
 export const runtime = 'nodejs';
@@ -89,14 +90,37 @@ export async function POST(req: NextRequest) {
           decision = { kind: 'fallback', messages: (notice || []).slice(0, 2), note: 'ข้อความชนิดอื่น' } as any;
         }
 
-        if (decision.messages.length && replyToken) {
-          const r = await replyToLine(replyToken, decision.messages);
+        // ── AI ตอบกลับอัตโนมัติ (Hermes + DeepSeek) ─────────────────────
+        //   โหมด fallback = ตอบเมื่อไม่มีกฎเข้าเงื่อนไข · โหมด all = AI ตอบทุกข้อความ (ยกเว้นคำลัด "เมนู")
+        //   ถ้า AI ล่ม/ครบโควตาต่อชั่วโมง → ส่งข้อความสำรองแทน (ไม่ปล่อยให้ลูกค้าเงียบ)
+        let kind: string = decision.kind;
+        let messages: any[] = decision.messages;
+        let aiMeta: any = null;
+        const ai = aiSettings(cfg);
+        if (text && ai.enabled) {
+          const handoff = isHandoff(text, ai.handoffKeywords);
+          const wantAi = ai.mode === 'all' ? decision.kind !== 'menu' : decision.kind === 'none';
+          if (handoff) {
+            kind = 'handoff'; messages = ai.handoffMessages; aiMeta = { route: 'handoff' };
+            if (userId) await upsertFollower(userId, { tag: 'ต้องการเจ้าหน้าที่' });
+          } else if (wantAi) {
+            const r = await generateAiReply({ lineUserId: userId, text, cfg });
+            aiMeta = { route: r.source, provider: r.provider || null, model: r.model || null, ms: r.ms, error: r.error || null };
+            if (r.ok) { kind = 'ai'; messages = r.messages; }
+            else if (r.source === 'limit') { kind = 'ai-limit'; messages = r.messages.length ? r.messages : ai.failMessages; }
+            else { kind = 'ai-fail'; messages = r.messages.length ? r.messages : ai.failMessages; }
+          }
+        }
+
+        if (messages.length && replyToken) {
+          const r = await replyToLine(replyToken, messages);
           await logLine({
-            direction: 'OUT', lineUserId: userId, text: previewText(decision.messages),
-            matchKind: decision.kind, ruleId: decision.rule?.id || null, ruleName: decision.rule?.name || null,
+            direction: 'OUT', lineUserId: userId, text: previewText(messages),
+            matchKind: kind, ruleId: decision.rule?.id || null,
+            ruleName: aiMeta ? [aiMeta.provider, aiMeta.model].filter(Boolean).join('/') || null : (decision.rule?.name || null),
             ok: r.ok, error: r.error || null,
           });
-          if (decision.rule) {
+          if (decision.rule && kind === decision.kind) {
             await (prisma as any).lineReplyRule.update({
               where: { id: decision.rule.id },
               data: { hits: { increment: 1 }, lastHitAt: new Date() },
@@ -104,9 +128,9 @@ export async function POST(req: NextRequest) {
             if (decision.rule.tag && userId) await upsertFollower(userId, { tag: decision.rule.tag });
             if (decision.rule.richMenuId && userId) await setUserRichMenu(userId, decision.rule.richMenuId);
           }
-          results.push({ type: 'message', userId, matched: decision.kind, rule: decision.rule?.name || null, replied: r.ok });
+          results.push({ type: 'message', userId, matched: kind, rule: decision.rule?.name || null, ai: aiMeta, replied: r.ok });
         } else {
-          results.push({ type: 'message', userId, matched: decision.kind, replied: false, note: 'ไม่มีข้อความตอบกลับ/ไม่มี replyToken' });
+          results.push({ type: 'message', userId, matched: kind, ai: aiMeta, replied: false, note: 'ไม่มีข้อความตอบกลับ/ไม่มี replyToken' });
         }
         continue;
       }

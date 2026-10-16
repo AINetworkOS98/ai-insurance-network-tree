@@ -1981,6 +1981,19 @@ model LineOaConfig {
   offlineMessages   Json     @default("[]") @map("offline_messages")
   // ริชเมนูที่ตั้งเป็นค่าเริ่มต้น (เก็บ id ฝั่ง LINE เพื่อตรวจว่ายังมีอยู่จริง)
   defaultRichMenuId String?  @map("default_rich_menu_id")
+  // ── AI ตอบกลับอัตโนมัติ (ควบคุมด้วย Hermes + โมเดล DeepSeek) ─────────────
+  aiEnabled         Boolean  @default(false) @map("ai_enabled")
+  aiMode            String   @default("fallback") @map("ai_mode") // fallback = ตอบเมื่อไม่เข้ากฎ | all = AI ตอบทุกข้อความ
+  aiSystemPrompt    String?  @db.Text @map("ai_system_prompt")
+  aiKnowledge       String?  @db.Text @map("ai_knowledge") // ฐานความรู้ที่ AI ใช้อ้างอิง (วางข้อความได้เลย)
+  aiProvider        String?  @map("ai_provider") // ว่าง = ใช้ค่ายที่ระบบเลือกอัตโนมัติ (DeepSeek ก่อน)
+  aiModel           String?  @map("ai_model")    // ว่าง = ใช้รุ่นเริ่มต้นของค่ายนั้น
+  aiMaxChars        Int      @default(900) @map("ai_max_chars")
+  aiTemperature     Float    @default(0.3) @map("ai_temperature")
+  aiPerHour         Int      @default(20) @map("ai_per_hour") // จำกัดจำนวนคำตอบ AI ต่อผู้ใช้ต่อชั่วโมง
+  aiHandoffKeywords String[] @default(["คุยกับเจ้าหน้าที่", "เจ้าหน้าที่", "คนจริง", "ขอคุยกับคน"]) @map("ai_handoff_keywords")
+  aiHandoffMessage  Json     @default("[]") @map("ai_handoff_message")
+  aiFailMessage     Json     @default("[]") @map("ai_fail_message")
   updatedBy         String?  @db.Uuid @map("updated_by")
   updatedAt         DateTime @updatedAt @db.Timestamptz @map("updated_at")
   createdAt         DateTime @default(now()) @db.Timestamptz @map("created_at")

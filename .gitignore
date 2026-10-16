@@ -25,3 +25,6 @@ tmp/hpanel-env-full.mjs
 # ── วิดีโอ: ไฟล์กลางที่สร้างใหม่ได้ (สคริปต์: video/financial-freedom/render.mjs) ──
 video/financial-freedom/out/
 video/financial-freedom/fonts/
+
+# โปรไฟล์ชั่วคราวของ headless Chrome (ห้าม commit)
+public/.chrome-shot*/
