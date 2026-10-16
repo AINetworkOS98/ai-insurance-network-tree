@@ -30,11 +30,9 @@ const slugToPanel = (s: string | null): HomePanelId | null =>
   s === 'members' ? 'members' : s === 'cosmic' ? 'cosmic' : s === 'shortcuts' ? 'shortcuts' : null;
 
 export default function HomePanel({ defaultPanel = 'cosmic' }: { defaultPanel?: HomePanelId }) {
-  // ค่าเริ่มต้น = อ่านจาก URL ก่อน (?tab=) ถ้าไม่มีจึงใช้ค่าที่หน้าส่งมา / จักรวาลของเครือข่าย
-  const [panel, setPanelState] = useState<HomePanelId>(() => {
-    if (typeof window === 'undefined') return defaultPanel;
-    return slugToPanel(new URLSearchParams(window.location.search).get('tab')) || defaultPanel;
-  });
+  // ค่าเริ่มต้น = ค่าที่หน้าส่งมา (SSR) แล้ว useEffect จะอ่าน ?tab= จาก URL มาทับ
+  // (ไม่ใช้ lazy initializer อ่าน window ตอน hydrate เพราะจะทำให้ HTML จากเซิร์ฟเวอร์กับฝั่งเบราว์เซอร์ไม่ตรงกัน)
+  const [panel, setPanelState] = useState<HomePanelId>(defaultPanel);
   const [tabUrl, setTabUrl] = useState<string>('');
 
   const goTab = (id: HomePanelId) => {
