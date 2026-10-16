@@ -339,7 +339,7 @@ export default function LineOaStudioPage() {
   return (
     <div className="flex w-full">
       <Sidebar />
-      <main className="flex-1 p-4 md:p-6 bg-white min-h-screen">
+      <main className="flex-1 p-3 sm:p-4 md:p-6 pb-24 lg:pb-6 bg-white min-h-screen min-w-0">
         <Header />
         <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
           <div>
@@ -365,20 +365,21 @@ export default function LineOaStudioPage() {
           {data?.lineError && <span className="px-2 py-1 rounded-full bg-rose-50 text-rose-600">{data.lineError}</span>}
         </div>
 
-        {/* แท็บ */}
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
+        {/* แท็บ — บนมือถือเลื่อนซ้าย/ขวาได้ และตรึงไว้ด้านบนขณะเลื่อนดูเนื้อหา */}
+        <div className="sticky top-0 z-20 -mx-3 sm:-mx-4 px-3 sm:px-4 py-2 mb-3 bg-white/95 backdrop-blur border-b border-[#eef6ff] flex gap-2 overflow-x-auto">
           {TABS.map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)}
-              className={'whitespace-nowrap px-3 py-2 rounded-xl text-sm border ' + (tab === t.id ? 'bg-sky-600 text-white border-sky-600' : 'bg-[#f0f7ff] text-slate-600 border-[#dbeafe]')}>
+              className={'whitespace-nowrap px-3 py-2.5 rounded-xl text-[13px] sm:text-sm border shrink-0 ' + (tab === t.id ? 'bg-sky-600 text-white border-sky-600' : 'bg-[#f0f7ff] text-slate-600 border-[#dbeafe]')}>
               {t.label}
             </button>
           ))}
         </div>
 
-        {loading && <div className="text-sm text-slate-500 py-8 text-center">กำลังโหลด…</div>}
+        {loading && !data && <div className="text-sm text-slate-500 py-8 text-center">กำลังโหลด…</div>}
+        {loading && !!data && <div className="text-[11px] text-sky-600 py-1">↻ กำลังอัปเดตข้อมูล…</div>}
 
         {/* ── 1) ข้อความต้อนรับ ─────────────────────────────────────────── */}
-        {!loading && tab === 'welcome' && (
+        {!!data && tab === 'welcome' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="card p-4 space-y-4">
               <div className="flex items-center justify-between">
@@ -445,7 +446,7 @@ export default function LineOaStudioPage() {
         )}
 
         {/* ── 2) ตอบกลับอัตโนมัติ ───────────────────────────────────────── */}
-        {!loading && tab === 'rules' && (
+        {!!data && tab === 'rules' && (
           <div className="space-y-4">
             <div className="card p-4">
               <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
@@ -529,10 +530,10 @@ export default function LineOaStudioPage() {
         )}
 
         {/* ── 2.5) AI ตอบกลับอัตโนมัติ (Hermes + DeepSeek) ─────────────── */}
-        {!loading && tab === 'ai' && <LineOaAiPanel onSaved={load} />}
+        {!!data && tab === 'ai' && <LineOaAiPanel onSaved={load} />}
 
         {/* ── 3) ริชเมนู ───────────────────────────────────────────────── */}
-        {!loading && tab === 'richmenu' && (
+        {!!data && tab === 'richmenu' && (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             <div className="card p-4 space-y-3">
               <div className="font-semibold text-sm text-slate-800">สร้างริชเมนูใหม่ (ระบบวาดภาพให้เอง → อัปโหลดขึ้น LINE)</div>
@@ -560,16 +561,16 @@ export default function LineOaStudioPage() {
               <div className="space-y-2 max-h-[46vh] overflow-y-auto pr-1">
                 {rmTiles.map((t, i) => (
                   <div key={i} className="rounded-xl border border-[#dbeafe] bg-white p-2 grid grid-cols-12 gap-2 items-center">
-                    <input value={t.emoji} onChange={(e) => { const n = [...rmTiles]; n[i] = { ...t, emoji: e.target.value }; setRmTiles(n); }} className="col-span-2 px-2 py-1 rounded-lg border border-[#dbeafe] text-center" />
-                    <input value={t.title} onChange={(e) => { const n = [...rmTiles]; n[i] = { ...t, title: e.target.value }; setRmTiles(n); }} className="col-span-4 px-2 py-1 rounded-lg border border-[#dbeafe] text-sm" placeholder="หัวข้อ" />
-                    <input value={t.action} onChange={(e) => { const n = [...rmTiles]; n[i] = { ...t, action: e.target.value }; setRmTiles(n); }} className="col-span-6 px-2 py-1 rounded-lg border border-[#dbeafe] text-xs" placeholder="ข้อความ/ลิงก์ที่จะส่งเมื่อกด" />
-                    <input value={t.sub || ''} onChange={(e) => { const n = [...rmTiles]; n[i] = { ...t, sub: e.target.value }; setRmTiles(n); }} className="col-span-5 px-2 py-1 rounded-lg border border-[#dbeafe] text-xs" placeholder="คำอธิบายย่อย" />
-                    <select value={t.uri ? 'uri' : (t.actionType || 'message')} onChange={(e) => { const n = [...rmTiles]; n[i] = { ...t, actionType: e.target.value, uri: e.target.value === 'uri' ? (t.uri || 'https://') : undefined }; setRmTiles(n); }} className="col-span-3 px-2 py-1 rounded-lg border border-[#dbeafe] text-xs">
+                    <input value={t.emoji} onChange={(e) => { const n = [...rmTiles]; n[i] = { ...t, emoji: e.target.value }; setRmTiles(n); }} className="col-span-2 px-2 py-1.5 rounded-lg border border-[#dbeafe] text-center" />
+                    <input value={t.title} onChange={(e) => { const n = [...rmTiles]; n[i] = { ...t, title: e.target.value }; setRmTiles(n); }} className="col-span-10 sm:col-span-4 px-2 py-1.5 rounded-lg border border-[#dbeafe] text-sm" placeholder="หัวข้อ" />
+                    <input value={t.action} onChange={(e) => { const n = [...rmTiles]; n[i] = { ...t, action: e.target.value }; setRmTiles(n); }} className="col-span-12 sm:col-span-6 px-2 py-1.5 rounded-lg border border-[#dbeafe] text-xs" placeholder="ข้อความ/ลิงก์ที่จะส่งเมื่อกด" />
+                    <input value={t.sub || ''} onChange={(e) => { const n = [...rmTiles]; n[i] = { ...t, sub: e.target.value }; setRmTiles(n); }} className="col-span-12 sm:col-span-5 px-2 py-1.5 rounded-lg border border-[#dbeafe] text-xs" placeholder="คำอธิบายย่อย" />
+                    <select value={t.uri ? 'uri' : (t.actionType || 'message')} onChange={(e) => { const n = [...rmTiles]; n[i] = { ...t, actionType: e.target.value, uri: e.target.value === 'uri' ? (t.uri || 'https://') : undefined }; setRmTiles(n); }} className="col-span-6 sm:col-span-3 px-2 py-1.5 rounded-lg border border-[#dbeafe] text-xs">
                       <option value="message">ส่งข้อความ</option>
                       <option value="uri">เปิดลิงก์</option>
                       <option value="postback">postback</option>
                     </select>
-                    <div className="col-span-4 text-[10px] text-slate-400 font-mono">{t.width}×{t.height} @ {t.x},{t.y}</div>
+                    <div className="col-span-6 sm:col-span-4 text-[10px] text-slate-400 font-mono">{t.width}×{t.height} @ {t.x},{t.y}</div>
                   </div>
                 ))}
               </div>
@@ -609,7 +610,7 @@ export default function LineOaStudioPage() {
         )}
 
         {/* ── 4) ผู้ติดตาม / บรอดแคสต์ ─────────────────────────────────── */}
-        {!loading && tab === 'followers' && (
+        {!!data && tab === 'followers' && (
           <div className="space-y-4">
             <div className="card p-4">
               <div className="font-semibold text-sm text-slate-800 mb-2">ส่งข้อความ (push) — นับโควตารายเดือน {data?.quota?.limit ? `ใช้ ${data.quota.used}/${data.quota.limit}` : ''}</div>
@@ -642,7 +643,7 @@ export default function LineOaStudioPage() {
                     <input defaultValue={f.tag || ''} onBlur={async (e) => {
                       await fetch('/api/admin/line-oa/followers', { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: f.id, tag: e.target.value }) });
                       flash('✅ บันทึกป้ายแล้ว');
-                    }} placeholder="ป้าย" className="w-32 px-2 py-1 rounded-lg border border-[#dbeafe] text-xs" />
+                    }} placeholder="ป้าย" className="w-full sm:w-32 px-2 py-1.5 rounded-lg border border-[#dbeafe] text-xs" />
                   </div>
                 ))}
                 {!followers.length && <div className="text-sm text-slate-500 text-center py-6">ยังไม่มีผู้ติดตามในระบบ — เมื่อมีคนแอด OA และทัก ระบบจะบันทึกอัตโนมัติ</div>}
@@ -667,7 +668,7 @@ export default function LineOaStudioPage() {
         )}
 
         {/* ── 5) เชื่อมต่อ / สถานะ ─────────────────────────────────────── */}
-        {!loading && tab === 'settings' && (
+        {!!data && tab === 'settings' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="card p-4 space-y-3">
               <div className="font-semibold text-sm text-slate-800">Webhook (ประตูรับข้อความจาก LINE)</div>
