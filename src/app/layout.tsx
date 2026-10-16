@@ -3,6 +3,7 @@ import "./globals.css";
 import Script from "next/script";
 import VisitorCounter from "@/components/VisitorCounter";
 import UtmCapture from "@/components/UtmCapture";
+import AutoTranslate from "@/components/AutoTranslate";
 
 export const metadata: Metadata = {
   title: "AI Insurance Network Tree — ระบบบริหารเครือข่ายตัวแทน",
@@ -18,6 +19,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full flex flex-col bg-soft-white text-slate-medium font-sans antialiased" style={{fontFamily:"'Sarabun','Noto Sans Thai',sans-serif"}}>
         {children}
         <VisitorCounter />
+        {/* ทำให้ทุกหน้าเป็นสากล: สลับข้อความไทย→อังกฤษตามเมนูภาษา (ไม่แตะหน้าตาเดิม) */}
+        <AutoTranslate />
         {/* เก็บที่มาแคมเปญ (UTM / ttclid) ไว้ทั้ง session เพื่อแนบไปกับฟอร์มลีด */}
         <UtmCapture />
         {/* สคริปต์เก็บข้อมูลผู้เข้าชม — ทำงานเฉพาะเมื่อผู้ใช้กด "ยินยอม" เท่านั้น */}

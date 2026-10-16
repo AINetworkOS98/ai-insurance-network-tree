@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>AI Insurance Network Tree — International 30s (source)</title>
+<style>
+  /* ฟอนต์ถูกฝังเป็น data-URI โดย render.mjs (ไม่ต้องโหลดจากเน็ตตอนเรนเดอร์) */
+  @font-face { font-family: 'InterVar'; src: url(__INTER__) format('truetype'); font-weight: 100 900; font-display: block; }
+  @font-face { font-family: 'ThaiVar'; src: url(__THAI__) format('truetype'); font-weight: 100 900; font-display: block; }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+  body { font-family: 'InterVar', 'ThaiVar', system-ui, sans-serif; color: #eaf4ff; -webkit-font-smoothing: antialiased; }
+  .stage { position: relative; width: 1920px; height: 1080px; padding: 96px 150px; display: flex; flex-direction: column; justify-content: center; }
+
+  /* ── กรอบอ้างอิง: แบรนด์ · ความคืบหน้า · นาฬิกา ── */
+  .brand { position: absolute; left: 150px; top: 84px; display: flex; align-items: center; gap: 18px; }
+  .brand .dot { width: 14px; height: 14px; border-radius: 50%; background: #67e8f9; box-shadow: 0 0 22px #22d3ee; }
+  .brand .txt { font-size: 24px; font-weight: 700; letter-spacing: 0.34em; text-transform: uppercase; color: #bcd7f5; }
+  .brand .sep { width: 60px; height: 1px; background: rgba(255,255,255,0.28); }
+  .brand .sub { font-size: 22px; font-weight: 600; letter-spacing: 0.16em; color: #7fb4e8; }
+
+  .dots { position: absolute; left: 150px; bottom: 84px; display: flex; gap: 12px; }
+  .dots i { display: block; width: 34px; height: 6px; border-radius: 99px; background: rgba(255,255,255,0.16); }
+  .dots i.on { background: #67e8f9; box-shadow: 0 0 18px rgba(103,232,249,0.8); width: 74px; }
+
+  .clock { position: absolute; right: 150px; bottom: 78px; font-size: 24px; font-weight: 700; letter-spacing: 0.22em; color: #86a8cc; }
+
+  /* ── องค์ประกอบข้อความ (อังกฤษเป็นหลัก · ไทยเป็นบรรทัดรอง) ── */
+  .kicker { font-size: 28px; font-weight: 800; letter-spacing: 0.4em; text-transform: uppercase; color: #67e8f9; }
+  .kicker.gold { color: #fcd34d; }
+  h1 { font-size: 150px; font-weight: 800; line-height: 1.02; letter-spacing: -0.025em; }
+  h2 { font-size: 104px; font-weight: 800; line-height: 1.06; letter-spacing: -0.018em; }
+  .en { font-weight: 800; }
+  .th { font-family: 'ThaiVar', 'InterVar', sans-serif; font-weight: 600; color: #9fc0e2; }
+  .lede { font-size: 42px; font-weight: 500; color: #b9d3ef; line-height: 1.45; }
+  .th-line { margin-top: 20px; font-size: 40px; }
+  .rule { width: 210px; height: 8px; border-radius: 99px; background: linear-gradient(90deg, #67e8f9, #c4b5fd); box-shadow: 0 0 34px rgba(103,232,249,0.55); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 48px; }
+  .chip { display: flex; align-items: center; gap: 16px; padding: 20px 34px; border-radius: 999px; border: 1px solid rgba(148,197,255,0.34); background: rgba(12,32,66,0.55); font-size: 33px; font-weight: 600; color: #e3f0ff; }
+  .chip b { display: block; width: 12px; height: 12px; border-radius: 50%; background: #7dd3fc; box-shadow: 0 0 16px rgba(125,211,252,0.9); }
+
+  .stepBadge { width: 132px; height: 132px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 62px; font-weight: 800; color: #08111f; background: linear-gradient(140deg, #fde68a, #fca55a); box-shadow: 0 0 60px rgba(252,211,77,0.45); }
+  .stepHead { display: flex; align-items: center; gap: 36px; }
+
+  .url { display: inline-flex; align-items: center; gap: 16px; margin-top: 46px; padding: 20px 34px; border-radius: 999px; border: 1px dashed rgba(148,197,255,0.55); background: rgba(10,26,54,0.55); font-size: 30px; font-weight: 700; letter-spacing: 0.04em; color: #cfe6ff; }
+  .url span { color: #67e8f9; }
+
+  .watermark { position: absolute; right: 110px; bottom: 40px; font-size: 520px; font-weight: 800; line-height: 0.8; letter-spacing: -0.06em; color: rgba(122,176,255,0.10); }
+
+  .glow { position: absolute; border-radius: 50%; filter: blur(90px); }
+
+  /* การ์ดสรุป */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 50px; }
+  .card { border-radius: 30px; border: 1px solid rgba(148,197,255,0.26); background: linear-gradient(160deg, rgba(16,40,80,0.72), rgba(8,18,40,0.42)); padding: 36px 40px; display: flex; gap: 28px; align-items: flex-start; }
+  .card .n { font-size: 52px; font-weight: 800; color: #fcd34d; min-width: 80px; }
+  .card .t { font-size: 40px; font-weight: 700; line-height: 1.2; }
+  .card .e { font-size: 23px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: #7fb4e8; margin-bottom: 8px; }
+
+  .cta { display: inline-flex; align-items: center; gap: 22px; margin-top: 54px; padding: 30px 52px; border-radius: 999px; background: linear-gradient(120deg, rgba(56,189,248,0.22), rgba(167,139,250,0.22)); border: 1px solid rgba(148,197,255,0.4); font-size: 40px; font-weight: 700; }
+  .fine { margin-top: 42px; font-size: 25px; font-weight: 500; color: #91a9c4; max-width: 1500px; line-height: 1.5; }
+
+  .langs { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
+  .langs i { font-style: normal; padding: 12px 22px; border-radius: 999px; border: 1px solid rgba(148,197,255,0.3); background: rgba(12,32,66,0.5); font-size: 26px; font-weight: 600; color: #d7e8fb; }
+</style>
+</head>
+<body>
+<div class="stage" id="stage"></div>
+<script>
+const P = new URLSearchParams(location.search);
+const S = Number(P.get('scene') || 0);
+
+const SITE = 'ai-insurance-network-tree.vercel.app';
+
+/* เนื้อหาตรงกับหน้าเว็บจริง (3 ขั้นตอนในหน้า /financial-freedom · ระบบ 1 แตก 5 · คลังความสามารถจริง) */
+const STEPS = [
+  { n: '01', en: 'Become a Prospective Agent', th: 'สมัครเป็นตัวแทน (ผู้มุ่งหวัง)',
+    lede: 'Start the agent path online — no paperwork queue at the branch.',
+    chips: ['Online application', 'Auto lead scoring', 'Recruiter notified'], url: '/recruit' },
+  { n: '02', en: 'Register Your Interest', th: 'สมัครแสดงความสนใจ',
+    lede: 'Complete the expression-of-interest form so the next step can continue.',
+    chips: ['Guided form', 'Progress tracking', 'Team assignment'], url: '/register' },
+  { n: '03', en: 'Submit Your Payment Receipt', th: 'ส่งใบเสร็จรับเงิน',
+    lede: 'Upload the receipt once — the system reads it and closes the loop.',
+    chips: ['Receipt scanning', 'Instant validation', 'Rank & commission'], url: '/documents' },
+];
+
+const FEATURES = [
+  { n: '①', en: 'AI LEAD SCORING', t: 'Every lead from your invite link is scored and routed automatically.' },
+  { n: '②', en: '1-TO-5 AUTOPILOT', t: 'One agent opens 5 slots — the next layer unlocks when the layer is complete.' },
+  { n: '③', en: 'RECEIPT INTELLIGENCE', t: 'Premium receipts are read and matched to real periods, not counted by hand.' },
+  { n: '④', en: '17 LANGUAGES', t: 'Thai, English, Chinese, Japanese and 13 more — built for an international team.' },
+];
+
+const BRAND = `<div class="brand"><span class="dot"></span><span class="txt">AI Insurance Network Tree</span><span class="sep"></span><span class="sub">Agent Network Platform</span></div>`;
+
+function dots(active) {
+  return `<div class="dots">${Array.from({ length: 7 }, (_, i) => `<i class="${i === active ? 'on' : ''}"></i>`).join('')}</div>`;
+}
+function clock(t) { return `<div class="clock">${t}</div>`; }
+function glows() {
+  return `<div class="glow" style="left:-160px;top:-120px;width:900px;height:900px;background:rgba(34,211,238,0.16)"></div>
+          <div class="glow" style="right:-200px;bottom:-260px;width:1100px;height:1100px;background:rgba(139,92,246,0.16)"></div>`;
+}
+
+function render() {
+  const stage = document.getElementById('stage');
+  if (S === 0) {
+    stage.innerHTML = glows() + BRAND + `
+      <div class="kicker">Agent Network Platform</div>
+      <h1 style="margin-top:30px"><span class="en">Financial Freedom,</span><br><span class="en" style="color:#7dd3fc">step by step.</span></h1>
+      <div class="th th-line">อิสรภาพทางการเงิน — เริ่มจากก้าวแรกที่ชัดเจน</div>
+      <div style="display:flex;align-items:center;gap:34px;margin-top:44px">
+        <div class="rule"></div>
+        <div class="lede">3 STEPS · 1-TO-5 NETWORK · 30 SECONDS</div>
+      </div>
+      <div class="langs"><i>🇹🇭 ไทย</i><i>🇬🇧 English</i><i>🇨🇳 中文</i><i>🇯🇵 日本語</i><i>🇰🇷 한국어</i><i>+ 12 more</i></div>` + dots(0) + clock('00:00');
+  } else if (S >= 1 && S <= 3) {
+    const s = STEPS[S - 1];
+    stage.innerHTML = glows() + BRAND + `
+      <div class="stepHead"><div class="stepBadge">${s.n}</div>
+        <div><div class="kicker">Step ${s.n} of 03</div><div style="font-size:28px;font-weight:700;letter-spacing:0.22em;color:#9fc4ea;margin-top:8px">${SITE}</div></div>
+      </div>
+      <h2 style="margin-top:42px">${s.en}</h2>
+      <div class="th th-line" style="font-size:38px">${s.th}</div>
+      <div class="lede" style="margin-top:22px;font-size:38px">${s.lede}</div>
+      <div class="chips">${s.chips.map((c) => `<div class="chip"><b></b>${c}</div>`).join('')}</div>
+      <div class="url">Open <span>${s.url}</span> on ${SITE}</div>
+      <div class="watermark">${s.n}</div>` + dots(S) + clock(['00:00', '00:05', '00:10', '00:15'][S]);
+  } else if (S === 4) {
+    stage.innerHTML = glows() + BRAND + `
+      <div class="kicker">The 1-to-5 Network Engine</div>
+      <h2 style="margin-top:26px">One person opens 5 slots. Complete, and the next layer unlocks.</h2>
+      <div class="grid" style="grid-template-columns:repeat(5,1fr);gap:18px;margin-top:44px">
+        ${[[1, 'Layer 1'], [5, 'Layer 2'], [25, 'Layer 3'], [125, 'Layer 4'], [625, 'Layer 5']]
+          .map(([n, l], i) => `<div class="card" style="flex-direction:column;gap:6px;padding:26px 18px;align-items:center;text-align:center;${i === 0 ? 'border-color:rgba(252,211,77,0.5)' : ''}"><div class="n" style="min-width:0;font-size:46px">${n}</div><div style="font-size:24px;font-weight:700;color:#8fb4d8">${l}</div></div>`).join('')}
+      </div>
+      <div class="lede" style="margin-top:34px;font-size:36px">Live tree, slot status, rotation and promotion — driven by verified premium receipts, not manual counting.</div>
+      <div class="th th-line" style="font-size:32px">โครงสร้าง 1 → 5 → 25 → 125 → 625 เป็นแบบแผนของระบบ · ตัวเลขจริงมาจากใบเสร็จที่ตรวจแล้ว</div>` + dots(4) + clock('00:20');
+  } else if (S === 5) {
+    stage.innerHTML = glows() + BRAND + `
+      <div class="kicker gold" style="margin-top:34px">One Platform</div>
+      <h2 style="margin-top:22px">Everything the network needs, in one system.</h2>
+      <div class="grid">
+        ${FEATURES.map((f) => `<div class="card"><div class="n">${f.n}</div><div><div class="e">${f.en}</div><div class="t" style="font-size:34px">${f.t}</div></div></div>`).join('')}
+      </div>` + dots(5) + clock('00:24');
+  } else {
+    stage.innerHTML = glows() + BRAND + `
+      <div class="kicker gold" style="margin-top:34px">Start Today</div>
+      <h2 style="margin-top:22px">Your network starts with step one.</h2>
+      <div class="th th-line" style="font-size:38px">เริ่มจากขั้นแรกวันนี้ — สมัครเป็นตัวแทนผ่านระบบออนไลน์</div>
+      <div class="cta"><span style="width:16px;height:16px;border-radius:50%;background:#7dd3fc;box-shadow:0 0 20px #38bdf8"></span>${SITE}</div>
+      <div class="fine">General guidance only — no income, commission, return, approval or timeline is guaranteed. Results depend on individual performance and company rules. Figures shown in the network scenes are illustrative, not real members.</div>
+      <div class="fine" style="font-size:24px">เนื้อหาเป็นแนวทางปฏิบัติทั่วไป ไม่ใช่การรับประกันรายได้ ผลลัพธ์ธุรกิจ หรือผลตอบแทนการลงทุน</div>` + dots(6) + clock('00:28');
+  }
+  document.title = 'scene ' + S;
+  window.__ready = true;
+}
+render();
+</script>
+</body>
+</html>

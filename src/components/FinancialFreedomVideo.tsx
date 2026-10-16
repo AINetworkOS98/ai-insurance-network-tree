@@ -2,9 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Script from 'next/script';
+import { useT } from '@/i18n';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FinancialFreedomVideo — วิดีโอ + ระบบ AI Video Intelligence (หน้า /financial-freedom)
+//
+// 🌐 ฉบับสากล (international):
+//   • เลือกไฟล์วิดีโอตามภาษาที่ผู้ใช้เลือกจากเมนูภาษา (LanguageMenu ของแอป)
+//     - ไทย   → /financial-freedom.mp4      (ฉบับไทยเดิม)
+//     - อื่น ๆ → /financial-freedom-intl.mp4 (ฉบับสากล · อังกฤษเป็นหลัก + บรรทัดไทย)
+//   • มีคำบรรยาย .vtt สองภาษา (EN/TH) เปิด-ปิดได้จากปุ่ม CC ในตัวเล่น
+//   • เนื้อหาตรงกับหน้าเว็บจริง: 3 ขั้นตอน (สมัครตัวแทน → แสดงความสนใจ → ส่งใบเสร็จ) + ระบบ 1 แตก 5
 //
 // หน้าที่:
 //   • เล่นวิดีโอแนะนำเส้นทางอิสรภาพทางการเงิน (ไม่แตะหน้าตาเดิมของหน้า — เป็น section เพิ่ม)
@@ -31,7 +39,43 @@ declare global {
 
 const PAGE = '/financial-freedom';
 const VIDEO_ID = 'financial-freedom-video';
-const SRC = '/financial-freedom.mp4';
+
+type Edition = { src: string; poster: string; subEn: string; subTh: string };
+
+// ฉบับสากล (อังกฤษเป็นหลัก) — ใช้เมื่อเลือกภาษาใด ๆ ที่ไม่ใช่ไทย
+const INTL: Edition = {
+  src: '/financial-freedom-intl.mp4',
+  poster: '/financial-freedom-intl-poster.jpg',
+  subEn: '/videos/financial-freedom-intl.en.vtt',
+  subTh: '/videos/financial-freedom-intl.th.vtt',
+};
+
+// ฉบับไทย (เดิม)
+const TH_ED: Edition = {
+  src: '/financial-freedom.mp4',
+  poster: '/financial-freedom-poster.jpg',
+  subEn: '/videos/financial-freedom-intl.en.vtt',
+  subTh: '/videos/financial-freedom-intl.th.vtt',
+};
+
+const COPY = {
+  th: {
+    badge: '🎥 วิดีโอสรุปเส้นทาง · 30 SECONDS',
+    title: 'ดูภาพรวมก่อนตัดสินใจ',
+    sub: 'THAI EDITION · 1080P',
+    desc:
+      'คลิป 30 วินาที สรุป 3 ขั้นตอนจริงของระบบ (สมัครตัวแทน → แสดงความสนใจ → ส่งใบเสร็จ) พร้อมระบบ 1 แตก 5 — กด CC ในตัวเล่นเพื่อเปิดคำบรรยาย EN/TH',
+    hint: '💬 คำบรรยาย EN/TH เปิดได้ที่ปุ่ม CC · 🌐 เลือกภาษาอื่นที่เมนูมุมขวาบนเพื่อดูฉบับสากล',
+  },
+  en: {
+    badge: '🎥 30-SECOND OVERVIEW · INTERNATIONAL EDITION',
+    title: 'See the whole journey first',
+    sub: 'EN PRIMARY · TH SUBTITLES · 1080P',
+    desc:
+      'A 30-second walkthrough of the real 3-step journey (become a prospective agent → register your interest → submit your receipt) and the 1-to-5 network engine — press CC for English or Thai subtitles.',
+    hint: '💬 Subtitles EN/TH via the CC button · 🌐 Switch to ไทย in the language menu for the Thai edition.',
+  },
+};
 
 export default function FinancialFreedomVideo() {
   const videoRef = useRef<HTMLVideoElement | null>(null);

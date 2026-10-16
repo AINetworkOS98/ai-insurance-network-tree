@@ -20,7 +20,9 @@ const REPO = resolve(HERE, '..', '..');
 const OUT = join(HERE, 'out');
 const FONTS = join(HERE, 'fonts');
 const BUILD_HTML = join(OUT, '_build.html');
-const TARGET = join(REPO, 'public', 'financial-freedom.mp4');
+// แหล่งฉาก + ไฟล์ปลายทาง เลือกได้ผ่าน env (ใช้สร้างเวอร์ชันสากลโดยไม่ทับไฟล์ไทย)
+const SLIDES_FILE = process.env.SLIDES_FILE || 'slides.html';
+const TARGET = join(REPO, 'public', process.env.OUT_MP4 || 'financial-freedom.mp4');
 
 const CHROME = process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const FFMPEG = process.env.FFMPEG || 'ffmpeg';
@@ -72,7 +74,7 @@ function ensureFonts() {
 function buildHtml(fonts) {
   mkdirSync(OUT, { recursive: true });
   const b64 = (p) => `data:font/ttf;base64,${readFileSync(p).toString('base64')}`;
-  const html = readFileSync(join(HERE, 'slides.html'), 'utf-8')
+  const html = readFileSync(join(HERE, SLIDES_FILE), 'utf-8')
     .replace('__INTER__', b64(fonts.inter))
     .replace('__THAI__', b64(fonts.thai));
   writeFileSync(BUILD_HTML, html, 'utf-8');
