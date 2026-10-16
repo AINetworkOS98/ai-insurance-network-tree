@@ -15,12 +15,12 @@ const SLUG = process.argv[2] || process.env.QR_SLUG || 'contact';
 const SITE = process.env.QR_SITE || 'https://ai-insurance-network-tree.vercel.app';
 const DESKTOP = execFileSync('powershell', ['-NoProfile', '-Command',
   "[Environment]::GetFolderPath('Desktop')"], { encoding: 'utf8' }).trim();
-const OUT = path.join(DESKTOP, 'QR-AITREE');
+const OUT = process.env.QR_OUT_DIR || path.join(DESKTOP, 'QR-AITREE');
 mkdirSync(OUT, { recursive: true });
 
 const spec = JSON.parse(readFileSync(path.join(OUT, 'spec.json'), 'utf8'));
 const qrB64 = readFileSync(path.join(OUT, spec.big_png)).toString('base64');
-const SHORT_READABLE = `${SITE.replace('https://', '')}/contact`;
+const SHORT_READABLE = spec.payload.replace('https://', '').replace('http://', '');
 const CTA = spec.cta;
 const TODAY = new Date().toISOString().slice(0, 10);
 
@@ -105,9 +105,34 @@ function posterHtml(qrMm) {
   </body></html>`;
 }
 
+function cardNameHtml(qrMm) {
+  return `<!doctype html><html lang="th"><head><meta charset="utf-8"><style>${baseCss}
+  body { width:85mm; height:55mm; padding:6mm 7mm; display:flex; gap:6mm; align-items:center; }
+  .left { flex:1 1 auto; }
+  .brand { font-size:3.2mm; letter-spacing:.08em; text-transform:uppercase; font-weight:700; color:#2b6cb0; }
+  h1 { font-size:5.6mm; margin-top:2mm; line-height:1.25; }
+  .sub { font-size:3.2mm; color:#41506b; margin-top:2mm; line-height:1.5; }
+  .qrwrap { width:${qrMm}mm; height:${qrMm}mm; flex:0 0 ${qrMm}mm; }
+  .cta { font-size:2.9mm; text-align:center; margin-top:1.6mm; font-weight:700; }
+  .url { font-size:2.6mm; text-align:center; margin-top:.8mm; }
+  </style></head><body>
+    <div class="left">
+      <div class="brand">AI Insurance Network Tree</div>
+      <h1>ติดต่อทีมงาน / สมัครเป็นตัวแทน</h1>
+      <div class="sub">สแกนแล้วส่งคำถามได้ทันที ทีมงานตอบกลับพร้อม AI ผู้ช่วยอัตโนมัติ</div>
+    </div>
+    <div>
+      <div class="qrwrap"><img src="data:image/png;base64,${qrB64}"></div>
+      <div class="cta">${CTA}</div>
+      <div class="url">${SHORT_READABLE}</div>
+    </div>
+  </body></html>`;
+}
+
 const jobs = [
   { name: `qr-${SLUG}-card-a6-300dpi.png`, html: cardHtml(30), wmm: 105, hmm: 148 },
   { name: `qr-${SLUG}-poster-a4-300dpi.png`, html: posterHtml(50), wmm: 210, hmm: 297 },
+  { name: `qr-${SLUG}-businesscard-300dpi.png`, html: cardNameHtml(Number(process.env.QR_CARD_QR_MM || 20)), wmm: 85, hmm: 55 },
 ];
 
 const NODE_DPI = 300, CSS_DPI = 96;

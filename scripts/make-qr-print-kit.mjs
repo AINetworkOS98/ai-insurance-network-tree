@@ -20,13 +20,15 @@ import path from 'node:path';
 
 const SLUG = process.argv[2] || process.env.QR_SLUG || 'contact';
 const SITE = process.env.QR_SITE || 'https://ai-insurance-network-tree.vercel.app';
-const PAYLOAD = `${SITE}/q/${SLUG}`;
+// ปลายทางที่ encode: ปกติ = ลิงก์สั้นของเราเอง (/q/<slug>)
+// ถ้าตั้ง QR_PAYLOAD มา (เช่นลิงก์สั้นภายนอกสำหรับพิมพ์เล็ก) ใช้ค่านั้นแทน
+const PAYLOAD = process.env.QR_PAYLOAD || `${SITE}/q/${SLUG}`;
 const CTA = { contact: 'สแกนเพื่อติดต่อทีมงาน', recruit: 'สแกนเพื่อสมัครเป็นตัวแทน' };
 const ctaText = CTA[SLUG.split('-')[0]] || CTA.contact;
 
 const DESKTOP = execFileSync('powershell', ['-NoProfile', '-Command',
   "[Environment]::GetFolderPath('Desktop')"], { encoding: 'utf8' }).trim();
-const OUT = path.join(DESKTOP, 'QR-AITREE');
+const OUT = process.env.QR_OUT_DIR || path.join(DESKTOP, 'QR-AITREE');
 mkdirSync(OUT, { recursive: true });
 
 const DARK = '#0b2b5b';

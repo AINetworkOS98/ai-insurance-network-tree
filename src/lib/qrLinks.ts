@@ -23,6 +23,18 @@ export const QR_SITE =
 
 export const QR_CAMPAIGN = 'aitree-offline-2026';
 
+// ── ลิงก์สั้นภายนอก (ใช้เฉพาะงานพิมพ์ที่เล็กมาก) ──────────────────────────────
+// โดเมน *.vercel.app ทำให้ลิงก์ยาว 54 ตัวอักษร (เวอร์ชัน 5 · 37 โมดูล) → พิมพ์เล็กกว่านี้ไม่ไหว
+// ลิงก์สั้นภายนอกจะชี้กลับมาที่ /q/<slug> ของเราเสมอ → UTM ยังประกอบที่เดียว (ไฟล์นี้) ไม่ซ้ำที่
+//   https://da.gd/U6psx  → /q/contact        (19 ตัวอักษร · 25 โมดูล · ขนาดเล็กสุด 13.2 มม.)
+//   https://da.gd/CvcrA0 → /q/contact-flyer  (งานพิมพ์ A5)
+// ข้อควรระวัง: เป็นบริการภายนอก (ถ้าปิด = ลายพิมพ์แล้วตาย) — ทางที่ยั่งยืนคือซื้อโดเมนสั้นของเราเอง
+// แล้วชี้ /q/* มาที่โดเมนนั้น (ห้ามใช้ TinyURL แบบไม่ล็อกอิน: มันแทรก hop ผ่าน redirect.viglink.com)
+export const QR_EXTERNAL_SHORT: Record<string, string> = {
+  contact: 'https://da.gd/U6psx',
+  'contact-flyer': 'https://da.gd/CvcrA0',
+};
+
 export type QrTarget = {
   /** ปลายทางจริงในเว็บ */
   path: string;
