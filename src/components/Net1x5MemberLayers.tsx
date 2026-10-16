@@ -401,10 +401,18 @@ export default function Net1x5MemberLayers() {
           </span>
         </div>
 
+        {inTreeCount === 0 && (
+          <div className="mt-3 rounded-2xl border border-[#c8a84e]/40 bg-[#c8a84e]/10 px-3 py-2 text-[11px] text-[#f2e3b0] leading-relaxed">
+            🌱 ผังนี้ยังว่าง (ยังไม่มีสมาชิกถูกจัดเข้าผัง) — สิ่งที่เห็นคือ <b>โครงสร้างตามกติกา 1:{branchLimit}</b> ชั้น 1 = {th(branchLimit)} ช่อง ·
+            ชั้น 2 = {th(Math.pow(branchLimit, 2))} · ชั้น 3 = {th(Math.pow(branchLimit, 3))} ตำแหน่ง (ยังไม่มีสมาชิกจริงในช่องใด) ·
+            เมื่อสมาชิกสมัครและถูกอนุมัติเป็นตัวแทน วงจรอัตโนมัติจะจัดเข้าช่องว่างตามลำดับ แล้วชื่อสมาชิกจริงจะขึ้นในผังนี้ทันที
+          </div>
+        )}
+
         {/* ── ผังเป็นชั้น ๆ (SVG) ── */}
         <div className="mt-3 rounded-2xl border border-sky-400/20 bg-[#040b16] overflow-hidden">
           <div className="overflow-auto max-h-[78vh]">
-            <svg viewBox={`${-GUTTER} -140 ${viewW} ${viewH}`} style={{ width: `${zoom * 100}%`, height: 'auto', minWidth: '100%' }} role="img" aria-label="ผังสมาชิก 1 แตก 5 เป็นชั้น ๆ (ข้อมูลจริง)">
+            <svg viewBox={`${-GUTTER} -140 ${viewW} ${viewH}`} style={{ width: `${zoom * 100}%`, height: 'auto', minWidth: zoom >= 1 ? `${Math.round(Math.min(viewW, 6000) * 0.5)}px` : undefined }} role="img" aria-label="ผังสมาชิก 1 แตก 5 เป็นชั้น ๆ (ข้อมูลจริง)">
               <defs>
                 <linearGradient id="n1x5Edge" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#f2c15a" stopOpacity="0.85" />
