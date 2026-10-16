@@ -9,7 +9,7 @@
  * ● Header/Sidebar ไม่ได้อยู่ในนี้ — หน้าเจ้าบ้านเป็นคนวาง (กันซ้อนกันสองชั้น)
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import AIIntelligentSearch from '@/components/AIIntelligentSearch';
 import CosmicNetwork from '@/components/CosmicNetwork';
@@ -19,15 +19,61 @@ import { LiveStamp } from '@/components/LiveStamp';
 export type HomePanelId = 'members' | 'cosmic' | 'shortcuts';
 
 // เรียงแท็บ: สมาชิก 1 แตก 5 (สร้างก่อน) → จักรวาลของเครือข่าย → ทางลัดเข้าระบบ
-const PANEL_TABS: { id: HomePanelId; label: string; icon: string }[] = [
-  { id: 'members',   label: 'สมาชิก 1 แตก 5',      icon: '👥' },
-  { id: 'cosmic',    label: 'จักรวาลของเครือข่าย', icon: '🌌' },
-  { id: 'shortcuts', label: 'ทางลัดเข้าระบบ',      icon: '🧭' },
+const PANEL_TABS: { id: HomePanelId; label: string; icon: string; hint: string }[] = [
+  { id: 'members',   label: 'สมาชิก 1 แตก 5',      icon: '👥', hint: 'ผังสมาชิก 1 แตก 5 เป็นชั้น ๆ (ข้อมูลจริง)' },
+  { id: 'cosmic',    label: 'จักรวาลของเครือข่าย', icon: '🌌', hint: 'ฉาก 3 มิติของเครือข่าย 1 แตก 5 (ลากหมุน · คลิกดูข้อมูล)' },
+  { id: 'shortcuts', label: 'ทางลัดเข้าระบบ',      icon: '🧭', hint: 'ปุ่มลัดไปหน้าที่ใช้บ่อย' },
 ];
 
+// แต่ละแท็บมี URL ของตัวเอง (/ 、/?tab=members | cosmic | shortcuts) — เปิด/แชร์ลิงก์แล้วเข้าถูกแท็บ กด back/forward ได้
+const slugToPanel = (s: string | null): HomePanelId | null =>
+  s === 'members' ? 'members' : s === 'cosmic' ? 'cosmic' : s === 'shortcuts' ? 'shortcuts' : null;
+
 export default function HomePanel({ defaultPanel = 'cosmic' }: { defaultPanel?: HomePanelId }) {
-  // ค่าเริ่มต้น = จักรวาลของเครือข่าย (รันก่อน) · กดปุ่มเพื่อสลับไปทางลัดเข้าระบบ
-  const [panel, setPanel] = useState<HomePanelId>(defaultPanel);
+  // ค่าเริ่มต้น = อ่านจาก URL ก่อน (?tab=) ถ้าไม่มีจึงใช้ค่าที่หน้าส่งมา / จักรวาลของเครือข่าย
+  const [panel, setPanelState] = useState<HomePanelId>(() => {
+    if (typeof window === 'undefined') return defaultPanel;
+    return slugToPanel(new URLSearchParams(window.location.search).get('tab')) || defaultPanel;
+  });
+  const [tabUrl, setTabUrl] = useState<string>('');
+
+  const goTab = (id: HomePanelId) => {
+    setPanelState(id);
+    if (typeof window === 'undefined') return;
+    const u = new URL(window.location.href);
+    if (id === defaultPanel) u.searchParams.delete('tab'); else u.searchParams.set('tab', id);
+    window.history.pushState(null, '', u.pathname + u.search + u.hash);
+    setTabUrl(u.pathname + u.search);
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    // เปิดหน้ามาแล้วไม่มี ?tab= ให้เติมค่าเริ่มต้นลง URL ทันที (แชร์ลิงก์ได้เสมอ)
+    const u = new URL(window.location.href);
+    const p = slugToPanel(u.searchParams.get('tab')) || defaultPanel;
+    if (!u.searchParams.get('tab')) {
+      if (p === defaultPanel) { setTabUrl(u.pathname + u.search); }
+      else { u.searchParams.set('tab', p); window.history.replaceState(null, '', u.pathname + u.search + u.hash); setTabUrl(u.pathname + u.search); }
+    } else {
+      setTabUrl(u.pathname + u.search);
+    }
+    setPanelState(p);
+    const onPop = () => {
+      setPanelState(slugToPanel(new URLSearchParams(window.location.search).get('tab')) || defaultPanel);
+      setTabUrl(window.location.pathname + window.location.search);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const activeTab = PANEL_TABS.find(t => t.id === panel) || PANEL_TABS[1];
+
+  // URL ของแต่ละแท็บ (ใช้กับ href จริง เพื่อให้คลิกขวา/คัดลอกลิงก์ได้)
+  const urlFor = (id: HomePanelId) => {
+    const base = typeof window === 'undefined' ? '/' : window.location.pathname;
+    return id === defaultPanel ? base : `${base}?tab=${id}`;
+  };
 
   const shortcuts = [
     { href: '/tree',       title: 'ผังเครือข่าย 1 แตก 5',   desc: 'ดูผังสายงานกว้าง 5 คน',                  icon: '🌳' },
@@ -54,15 +100,17 @@ export default function HomePanel({ defaultPanel = 'cosmic' }: { defaultPanel?: 
                 <LiveStamp />
               </div>
             </div>
-            {/* ── ปุ่มสลับ: จักรวาลของเครือข่าย ⇄ ทางลัดเข้าระบบ (จักรวาลรันก่อน) ── */}
-            <div className="mt-4 flex items-center justify-center gap-2 max-w-[760px] mx-auto">
+            {/* ── ปุ่มสลับแท็บ: สมาชิก 1 แตก 5 ⇄ จักรวาลของเครือข่าย ⇄ ทางลัดเข้าระบบ (แท็บละ URL) ── */}
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2 max-w-[760px] mx-auto">
               {PANEL_TABS.map((tab) => {
                 const active = panel === tab.id;
+                const href = tab.id === defaultPanel ? urlFor(defaultPanel) : `?tab=${tab.id}`;
                 return (
-                  <button
+                  <a
                     key={tab.id}
-                    type="button"
-                    onClick={() => setPanel(tab.id)}
+                    href={href}
+                    title={tab.hint}
+                    onClick={(e) => { e.preventDefault(); goTab(tab.id); }}
                     aria-pressed={active}
                     className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-semibold transition ${
                       active
@@ -72,9 +120,21 @@ export default function HomePanel({ defaultPanel = 'cosmic' }: { defaultPanel?: 
                   >
                     <span>{tab.icon}</span>
                     {tab.label}
-                  </button>
+                  </a>
                 );
               })}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-[11px] max-w-[760px] mx-auto">
+              <span className="text-slate-400">ลิงก์แท็บนี้:</span>
+              <code className="px-2 py-1 rounded-lg border border-slate-200 bg-white text-slate-600 select-all">
+                {tabUrl || `/${defaultPanel === 'cosmic' ? '' : `?tab=${defaultPanel}`}`}
+              </code>
+              <button
+                type="button"
+                onClick={() => { if (typeof navigator !== 'undefined' && tabUrl) navigator.clipboard?.writeText(`${window.location.origin}${tabUrl}`); }}
+                className="px-2.5 py-1 rounded-full border border-slate-200 bg-white text-slate-600 font-semibold hover:bg-slate-50"
+              >⧉ คัดลอกลิงก์แท็บ</button>
+              <span className="text-slate-400 hidden sm:inline">{activeTab.hint}</span>
             </div>
 
             {panel === 'members' ? (
@@ -103,7 +163,7 @@ export default function HomePanel({ defaultPanel = 'cosmic' }: { defaultPanel?: 
               <div className="mt-3">
                 <div className="flex items-center justify-between max-w-[760px] mx-auto">
                   <span className="text-xs font-semibold text-slate-500">ทางลัดเข้าระบบ</span>
-                  <button onClick={() => setPanel('cosmic')} className="text-[11px] text-slate-400 hover:text-slate-600">กลับไปจักรวาล</button>
+                  <button onClick={() => goTab('cosmic')} className="text-[11px] text-slate-400 hover:text-slate-600">กลับไปจักรวาล</button>
                 </div>
                 <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-2 max-w-[760px] mx-auto">
                   {shortcuts.map(s => (
