@@ -13,7 +13,7 @@
  * ● ตัวเลขทุกตัวประเมินสดจากฐานข้อมูล — สมาชิกที่ยังไม่ถูกจัดเข้าผังแสดงในส่วน “รอจัดเข้าช่องว่าง 1:5” ด้านล่าง
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const REFRESH_MS = 8000;
 const LAYER_Y = 200;      // ระยะห่างแนวตั้งระหว่างชั้น (หน่วยในกรอบ SVG)
@@ -133,6 +133,8 @@ export default function Net1x5MemberLayers({ embedded = false }: { embedded?: bo
   const [zoom, setZoom] = useState(1);
   const [showSlots, setShowSlots] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
+  const [full, setFull] = useState(false);                                  // โหมดขยายเต็มช่อง/เต็มจอของผัง
+  const wrapRef = useRef<HTMLDivElement | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -157,6 +159,31 @@ export default function Net1x5MemberLayers({ embedded = false }: { embedded?: bo
     const t = setInterval(load, REFRESH_MS);
     return () => clearInterval(t);
   }, [auto, load]);
+
+  // ── โหมดขยายเต็มช่อง/เต็มจอของผัง (ปุ่ม ⛶) ──
+  // ใช้ Fullscreen API บนกล่องผัง + คลาส fallback (fixed inset-0 z สูงสุด) เมื่อเบราว์เซอร์ไม่อนุญาต
+  // · ต้องมี z สูงกว่าปุ่มลอยของ Sidebar/Header · ออกได้ด้วย Esc หรือกดปุ่มย่อกลับ
+  const toggleFull = useCallback(() => {
+    setFull((on) => {
+      const next = !on;
+      try {
+        if (next) wrapRef.current?.requestFullscreen?.().catch(() => {});
+        else if (typeof document !== 'undefined' && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      } catch { /* เบราว์เซอร์ไม่อนุญาต — ใช้คลาส fixed แทน */ }
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const onFs = () => { if (typeof document !== 'undefined' && !document.fullscreenElement) setFull(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setFull(false); };
+    document.addEventListener('fullscreenchange', onFs);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFs);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, []);
 
   const members = useMemo(() => state?.members || [], [state]);
   const checks = useMemo(() => state?.checks || [], [state]);
@@ -407,6 +434,10 @@ export default function Net1x5MemberLayers({ embedded = false }: { embedded?: bo
           <span className="tabular-nums text-sky-100/90 w-14 text-center">{Math.round(zoom * 100)}%</span>
           <button onClick={() => setZoom((z) => Math.min(4, +(z + 0.25).toFixed(2)))} className="px-2.5 py-1 rounded-full border border-sky-400/30 bg-white/5">＋</button>
           <button onClick={() => setZoom(1)} className="px-2.5 py-1 rounded-full border border-sky-400/30 bg-white/5">พอดีจอ</button>
+          <button onClick={toggleFull} title="ขยายผังให้เต็มช่อง/เต็มจอ (Esc เพื่อย่อกลับ)"
+            className="px-2.5 py-1 rounded-full border border-[#c8a84e]/60 bg-[#c8a84e]/15 text-[#f2e3b0] font-semibold">
+            {full ? '⤢ ย่อกลับ' : '⛶ ขยายเต็มช่อง'}
+          </button>
           <label className="flex items-center gap-1.5 ml-1">
             <input type="checkbox" checked={showSlots} onChange={(e) => setShowSlots(e.target.checked)} /> แสดงช่องว่างที่รอสมาชิกใหม่
           </label>
@@ -436,8 +467,22 @@ export default function Net1x5MemberLayers({ embedded = false }: { embedded?: bo
         )}
 
         {/* ── ผังเป็นชั้น ๆ (SVG) ── */}
-        <div className="mt-3 rounded-2xl border border-sky-400/20 bg-[#040b16] overflow-hidden">
-          <div className="overflow-auto max-h-[78vh]">
+        <div
+          ref={wrapRef}
+          className={
+            full
+              ? 'fixed inset-0 z-[2147483647] flex flex-col gap-2 bg-[#040b16] p-3'
+              : 'mt-3 rounded-2xl border border-sky-400/20 bg-[#040b16] overflow-hidden'
+          }
+        >
+          {full && (
+            <div className="flex flex-wrap items-center gap-2 text-xs shrink-0">
+              <span className="font-semibold text-[#f2e3b0]">⛶ ผังสมาชิก 1 แตก 5 — โหมดเต็มจอ</span>
+              <span className="text-sky-200/70">ลาก/เลื่อนในกรอบได้ · ปุ่ม − ＋ พอดีจอ ใช้ได้ตามเดิม</span>
+              <button onClick={toggleFull} className="ml-auto rounded-full border border-[#c8a84e]/60 bg-[#c8a84e]/15 px-3 py-1 font-semibold text-[#f2e3b0]">⤢ ย่อกลับ (Esc)</button>
+            </div>
+          )}
+          <div className={full ? 'flex-1 min-h-0 overflow-auto rounded-xl border border-sky-400/20' : 'overflow-auto max-h-[78vh]'}>
             <svg viewBox={`${-GUTTER} -140 ${viewW} ${viewH}`} style={{ width: `${zoom * 100}%`, height: 'auto', minWidth: zoom >= 1 ? `${Math.round(Math.min(viewW, 6000) * 0.5)}px` : undefined }} role="img" aria-label="ผังสมาชิก 1 แตก 5 เป็นชั้น ๆ (ข้อมูลจริง)">
               <defs>
                 <linearGradient id="n1x5Edge" x1="0" y1="0" x2="0" y2="1">
