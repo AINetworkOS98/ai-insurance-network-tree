@@ -20,7 +20,7 @@ import path from 'node:path';
 const ROOT = 'C:/Users/User/ai-insurance-network-tree';
 const SCOPE = 'team_t41HGRNCDiFbVMyeBXlD0xXK';
 const FILE = process.env.LINE_ENV_FILE || path.join(ROOT, '.env.line');
-const KEYS = ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_TARGET_ID'];
+const KEYS = ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_TARGET_ID', 'LINE_CHANNEL_SECRET'];
 
 const args = process.argv.slice(2);
 const DRY = args.includes('--dry');

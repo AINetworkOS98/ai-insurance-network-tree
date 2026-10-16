@@ -1955,3 +1955,93 @@ model N8nWorkflowWatch {
   @@index([lastSeenAt])
   @@map("n8n_workflow_watch")
 }
+
+// ── LINE OA Studio: ข้อความต้อนรับ · ตอบกลับอัตโนมัติ · ริชเมนู ────────────────
+// ใช้โดย: /admin/line-oa (หน้าจัดการ) และ /api/line/webhook (รับ event จาก LINE)
+// หมายเหตุ: เก็บเฉพาะข้อมูลที่ LINE ส่งมา (userId/ชื่อที่แสดง) — ไม่เก็บข้อมูลอ่อนไหว/การเงิน (PDPA)
+model LineOaConfig {
+  id                String   @id @default("default") // singleton
+  // ข้อความต้อนรับ (ส่งเมื่อมีคนแอดเพื่อน/กดเพิ่มเพื่อน)
+  welcomeEnabled    Boolean  @default(true) @map("welcome_enabled")
+  welcomeMessages   Json     @default("[]") @map("welcome_messages")
+  // ข้อต้อนรับในแชท (เมื่อทักครั้งแรกในรอบเวลาที่กำหนด)
+  greetEnabled      Boolean  @default(false) @map("greet_enabled")
+  greetMessages     Json     @default("[]") @map("greet_messages")
+  greetEveryHours   Int      @default(24) @map("greet_every_hours")
+  // ตอบกลับอัตโนมัติ
+  autoReplyEnabled  Boolean  @default(true) @map("auto_reply_enabled")
+  fallbackEnabled   Boolean  @default(false) @map("fallback_enabled")
+  fallbackMessages  Json     @default("[]") @map("fallback_messages")
+  menuKeywords      String[] @default(["เมนู", "menu"]) @map("menu_keywords")
+  menuMessages      Json     @default("[]") @map("menu_messages")
+  // นอกเวลาทำการ
+  offlineEnabled    Boolean  @default(false) @map("offline_enabled")
+  offlineStart      String   @default("18:00") @map("offline_start")
+  offlineEnd        String   @default("08:30") @map("offline_end")
+  offlineMessages   Json     @default("[]") @map("offline_messages")
+  // ริชเมนูที่ตั้งเป็นค่าเริ่มต้น (เก็บ id ฝั่ง LINE เพื่อตรวจว่ายังมีอยู่จริง)
+  defaultRichMenuId String?  @map("default_rich_menu_id")
+  updatedBy         String?  @db.Uuid @map("updated_by")
+  updatedAt         DateTime @updatedAt @db.Timestamptz @map("updated_at")
+  createdAt         DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  @@map("line_oa_config")
+}
+
+model LineReplyRule {
+  id         String    @id @default(uuid()) @db.Uuid
+  name       String
+  enabled    Boolean   @default(true)
+  priority   Int       @default(100) // เลขน้อย = ตรวจก่อน
+  matchType  String    @default("CONTAINS") @map("match_type") // EXACT | CONTAINS | STARTS_WITH | REGEX
+  keywords   String[]  @default([])
+  messages   Json      @default("[]")
+  richMenuId String?   @map("rich_menu_id") // สลับริชเมนูให้ผู้ใช้รายนี้เมื่อเข้าเงื่อนไข
+  tag        String? // ติดป้ายผู้ติดตามเพื่อทำกลุ่ม (เช่น สนใจสมัคร)
+  hits       Int       @default(0)
+  lastHitAt  DateTime? @map("last_hit_at") @db.Timestamptz
+  createdAt  DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt  DateTime  @updatedAt @db.Timestamptz @map("updated_at")
+
+  @@index([enabled, priority])
+  @@map("line_reply_rule")
+}
+
+model LineFollower {
+  id            String    @id @default(uuid()) @db.Uuid
+  lineUserId    String    @unique @map("line_user_id")
+  displayName   String?   @map("display_name")
+  pictureUrl    String?   @map("picture_url")
+  statusMessage String?   @map("status_message")
+  followed      Boolean   @default(true)
+  blocked       Boolean   @default(false)
+  source        String? // follow | message | manual
+  tag           String?
+  note          String?
+  messageCount  Int       @default(0) @map("message_count")
+  lastMessageAt DateTime? @map("last_message_at") @db.Timestamptz
+  followedAt    DateTime  @default(now()) @map("followed_at") @db.Timestamptz
+  unfollowedAt  DateTime? @map("unfollowed_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @db.Timestamptz @map("updated_at")
+
+  @@index([followed])
+  @@map("line_follower")
+}
+
+model LineMessageLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  direction  String // IN | OUT
+  lineUserId String?  @map("line_user_id")
+  type       String   @default("text")
+  text       String?  @db.Text
+  matchKind  String?  @map("match_kind") // welcome | greet | rule | menu | fallback | offline | broadcast | test
+  ruleId     String?  @map("rule_id")
+  ruleName   String?  @map("rule_name")
+  ok         Boolean  @default(true)
+  error      String?
+  createdAt  DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  @@index([createdAt])
+  @@index([lineUserId, createdAt])
+  @@map("line_message_log")
+}

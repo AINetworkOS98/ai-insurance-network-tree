@@ -62,6 +62,8 @@ export const NAV_ENTRIES: NavEntry[] = [
   { href: '/admin/messages', section: 'admin', label: 'ข้อความระบบ', key: 'sb_admin_messages', icon: '✉', minRank: 0, adminOnly: true },
   { href: '/admin/reports', section: 'admin', label: 'รายงานผู้ดูแล', key: 'sb_admin_reports', icon: '▤', minRank: 0, adminOnly: true },
   { href: '/admin/support', section: 'admin', label: 'ช่วยเหลือ/ร้องเรียน', key: 'sb_admin_support', icon: '🆘', minRank: 0, adminOnly: true },
+  // LINE OA Studio — ข้อความต้อนรับ · ตอบกลับอัตโนมัติ · ริชเมนู · ผู้ติดตาม (ทำงานผ่าน Messaging API จริง)
+  { href: '/admin/line-oa', section: 'admin', label: 'LINE OA Studio', icon: '💬', minRank: 0, adminOnly: true },
   { href: '/admin/consent', section: 'admin', label: 'ความยินยอม (PDPA)', key: 'sb_admin_consent', icon: '📜', minRank: 0, adminOnly: true },
   { href: '/admin/backup', section: 'admin', label: 'สำรองข้อมูล', key: 'sb_admin_backup', icon: '💾', minRank: 0, adminOnly: true },
 

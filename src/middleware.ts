@@ -61,6 +61,9 @@ const PUBLIC_API = [
   '/api/videos', // ช่องดูวีดีโอ TikTok แบบสุ่มต่อเนื่อง — route ตรวจสิทธิ์เอง (next/played เปิดสาธารณะ, add/list ต้องมี Bearer)
   // เส้นทางสำหรับระบบอัตโนมัติ: route ตรวจสิทธิ์เอง (ผู้ดูแล หรือ Bearer CRON_SECRET) — ถ้าไม่มีสิทธิ์ตอบ 401
   '/api/line',
+  '/api/line/webhook', // ประตูรับ event จาก LINE (Messaging API) — ตรวจลายเซ็น X-Line-Signature เองใน route ไม่มี cookie/Bearer ของเรา
+  '/api/admin/line-oa', // LINE OA Studio — route ตรวจสิทธิ์เอง (ผู้ดูแลที่ล็อกอิน หรือ Bearer CRON_SECRET) เพื่อให้ระบบอัตโนมัติตั้ง webhook/ริชเมนูได้
+
   '/api/net/1x5', // ระบบบริหารเครือข่าย 1 แตก 5 (ข้อมูลจริง) — route ตรวจสิทธิ์เอง (สมาชิก/ผู้ดูแล/Bearer CRON_SECRET สำหรับ n8n)
   '/api/automation', // สถานะระบบอัตโนมัติ n8n ที่แสดงบนหน้าเว็บ — อ่านอย่างเดียว ไม่มีข้อมูลส่วนบุคคล (route ไม่แตะข้อมูลสำคัญ)
   '/api/n8n/watch', // ตัวตรวจจับ workflow n8n ส่งข้อมูลเข้า — route บังคับ Authorization: Bearer CRON_SECRET เอง (หน้าอ่านใช้ /api/n8n/workflows ซึ่งต้องล็อกอิน)
