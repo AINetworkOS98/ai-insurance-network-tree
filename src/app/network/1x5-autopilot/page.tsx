@@ -4,7 +4,6 @@ import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import Net1x5Autopilot from '@/components/Net1x5Autopilot';
 import Net1x5MemberLayers from '@/components/Net1x5MemberLayers';
-import HomePanel from '@/components/HomePanel';
 import Net1x5Universe from '@/components/Net1x5Universe';
 
 // ระบบบริหารเครือข่าย 1 แตก 5 — เชื่อมต่อสายงานทุกระดับอัตโนมัติ
@@ -15,21 +14,20 @@ import Net1x5Universe from '@/components/Net1x5Universe';
 // ── แท็บในหน้าเดียว (สไตล์เดียวกับแท็บของหน้าแรก/หน้าสมาชิกทั่วไป) ──
 //   1) ระบบ 1 แตก 5 อัตโนมัติ = แดชบอร์ดวงจร 7 ขั้น (ค่าเริ่มต้น)
 //   2) สมาชิก 1 แตก 5        = ผังผู้แนะนำ 1 → 5 ครบทุกช่อง (สมาชิกจริงอยู่ในช่องไหนของใคร)
-//   3) หน้าแรก               = ค้นหาด้วย AI อัจฉริยะ + ทางลัดเข้าระบบ (คอมโพเนนต์ HomePanel ตัวเดียวกับหน้า /)
-//   4) จักรวาลของเครือข่าย    = ฉาก 3 มิติของสมาชิกจริง (ส่วนเดิมท้ายหน้าของเดิม)
-// ทุกแท็บมี URL ของตัวเอง (?tab=sys|members|home|cosmic) เปิด/แชร์ลิงก์แล้วเข้าถูกแท็บ และกด back/forward ได้
+//   3) จักรวาลของเครือข่าย    = ฉาก 3 มิติของสมาชิกจริง (ส่วนเดิมท้ายหน้าของเดิม)
+// ทุกแท็บมี URL ของตัวเอง (?tab=sys|members|cosmic) เปิด/แชร์ลิงก์แล้วเข้าถูกแท็บ และกด back/forward ได้
+// หมายเหตุ: แท็บ “หน้าแรก” ไม่ขึ้นในหน้านี้ (ตามที่ผู้ใช้สั่ง) — เนื้อหาหน้าแรกอยู่ที่หน้า / เท่านั้น
 // ของเดิมไม่ถูกนำออก: แดชบอร์ดยัง mount ไว้เสมอ (ซ่อนด้วย CSS เมื่ออยู่แท็บอื่น) เพื่อให้ตัวเฝ้าความสดของข้อมูลทำงานต่อ
-type Panel = 'sys' | 'members' | 'home' | 'cosmic';
+type Panel = 'sys' | 'members' | 'cosmic';
 
 const TABS: Array<{ id: Panel; slug: string; label: string; hint: string }> = [
   { id: 'sys', slug: 'sys', label: '🧬 ระบบ 1 แตก 5 อัตโนมัติ', hint: 'แดชบอร์ดวงจร 7 ขั้น (ตรวจใบเสร็จ → คัดออก → เลื่อนตำแหน่ง → จัดสายงาน 1:5)' },
   { id: 'members', slug: 'members', label: '👥 สมาชิก 1 แตก 5', hint: 'ผังผู้แนะนำ 1 → 5 เป็นชั้น ๆ · สมาชิกจริงอยู่ในช่องไหนของใคร' },
-  { id: 'home', slug: 'home', label: '🏠 หน้าแรก', hint: 'ค้นหาด้วย AI อัจฉริยะ + ทางลัดเข้าระบบ (เนื้อหาหน้าแรกตัวเดียวกับ /)' },
   { id: 'cosmic', slug: 'cosmic', label: '🪐 จักรวาลของเครือข่าย', hint: 'ฉาก 3 มิติของสมาชิกจริงในผัง 1:5 (ลากหมุน · คลิกดูข้อมูล)' },
 ];
 
 const slugToPanel = (s: string | null): Panel =>
-  s === 'members' ? 'members' : s === 'home' ? 'home' : s === 'cosmic' ? 'cosmic' : 'sys';
+  s === 'members' ? 'members' : s === 'cosmic' ? 'cosmic' : 'sys';
 
 export default function Net1x5AutopilotPage() {
   const [panel, setPanel] = useState<Panel>('sys');
@@ -118,14 +116,7 @@ export default function Net1x5AutopilotPage() {
           {/* 2) สมาชิก 1 แตก 5 — ผังผู้แนะนำ 1 → 5 เป็นชั้น ๆ (สมาชิกจริง) */}
           {panel === 'members' && <Net1x5MemberLayers />}
 
-          {/* 3) หน้าแรก — ค้นหาด้วย AI อัจฉริยะ + ทางลัดเข้าระบบ (คอมโพเนนต์ตัวเดียวกับหน้า /) */}
-          {panel === 'home' && (
-            <div className="flex flex-col bg-white min-h-[70vh]">
-              <HomePanel defaultPanel="cosmic" />
-            </div>
-          )}
-
-          {/* 4) จักรวาลการสร้างเครือข่าย (ข้อมูลจริง) — ส่วนเดิมของหน้า แสดงเมื่อเลือกแท็บนี้ */}
+          {/* 3) จักรวาลการสร้างเครือข่าย (ข้อมูลจริง) — ส่วนเดิมของหน้า แสดงเมื่อเลือกแท็บนี้ */}
           {panel === 'cosmic' && <Net1x5Universe />}
         </main>
       </div>
