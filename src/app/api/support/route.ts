@@ -94,6 +94,26 @@ export async function POST(req: NextRequest) {
     const adminEmailList = ['akarapol.pro798@gmail.com'];
     const time = new Date(ticket.createdAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
     const adminSubject = `📩 Support Ticket ใหม่: ${ticket.subject}`;
+
+    // ── เด้งเข้า LINE ทันที (ใช้ตัวเดียวกับใบสมัครตัวแทน) ──
+    let line: { configured: boolean; sent: boolean; error?: string | null } = { configured: false, sent: false };
+    try {
+      const { sendLineAlert, appBase } = await import('@/lib/lineAlert');
+      const text = [
+        '📩 มีข้อความติดต่อใหม่ (Support)',
+        `หัวข้อ: ${ticket.subject}`,
+        `จาก: ${ticket.name}`,
+        ticket.phone ? `โทร: ${ticket.phone}` : null,
+        ticket.lineId ? `LINE ID: ${ticket.lineId}` : null,
+        `ข้อความ: ${String(ticket.message).slice(0, 400)}`,
+        `เวลา: ${time}`,
+        '',
+        `เปิดดู/ตอบกลับ: ${appBase()}/admin/support`,
+      ].filter(Boolean).join('\n');
+      line = await sendLineAlert({ text, refId: ticket.id, kind: 'support' });
+    } catch (e: any) {
+      line = { configured: false, sent: false, error: String(e?.message || e).slice(0, 200) };
+    }
     const adminHtml = `<div style="font-family:sans-serif;max-width:600px">
       <h3 style="margin:0 0 12px">มีผู้ใช้ส่ง Support Ticket ใหม่</h3>
       <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
@@ -145,6 +165,7 @@ export async function POST(req: NextRequest) {
         status: ticket.status,
         createdAt: ticket.createdAt,
       },
+      line,
     });
   } catch (e: any) {
     console.error('Support ticket create error:', e);

@@ -34,6 +34,15 @@ export function thaiTime(d: Date = new Date()): string {
 export function thaiDateTimeFull(d: Date = new Date()): string {
   return `${thaiDateFull(d)} เวลา ${thaiTime(d)} น.`;
 }
+/** 08:55:30 (มีวินาที — ใช้กับนาฬิกาที่เดินจริง) */
+export function thaiTimeSec(d: Date = new Date()): string {
+  const t = nowBkk(d);
+  return `${pad2(t.getUTCHours())}:${pad2(t.getUTCMinutes())}:${pad2(t.getUTCSeconds())}`;
+}
+/** 12 ตุลาคม 2569 (วันจันทร์) เวลา 08:55:30 น. */
+export function thaiDateTimeLong(d: Date = new Date()): string {
+  return `${thaiDateFull(d)} (วัน${thaiDayName(d)}) เวลา ${thaiTimeSec(d)} น.`;
+}
 /** วันในสัปดาห์ เช่น จันทร์ */
 export function thaiDayName(d: Date = new Date()): string { return TH_DAYS[nowBkk(d).getUTCDay()]; }
 /** เดือนปัจจุบันแบบ YYYY-MM (ค.ศ.) สำหรับงวดผลงาน */

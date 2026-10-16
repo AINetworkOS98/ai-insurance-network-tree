@@ -259,6 +259,24 @@ export async function POST(req: NextRequest) {
     tlSmart = { queued: false, sent: false, configured: false, error: String(e?.message || e).slice(0, 200) };
   }
 
+  // ── แจ้งเตือนทันที: LINE + กระดิ่งในแอป (ไม่บล็อกการบันทึกใบสมัครถ้าส่งไม่สำเร็จ) ──
+  let notify: Record<string, any> = { line: { configured: false, sent: false }, inApp: { notified: 0 } };
+  try {
+    const { notifyNewRecruitApplication } = await import('@/lib/recruitNotify');
+    notify = await notifyNewRecruitApplication({
+      prospect: { id: saved.id, prospectId: saved.prospectId, firstName, lastName },
+      phone: saved.phone,
+      email: saved.email,
+      sponsorCode: refCode,
+      queueRef: agentCodeIssued,
+      province: saved.province,
+      occupation: saved.occupation,
+      isUpdate: Boolean(existing),
+    });
+  } catch (e: any) {
+    notify = { line: { configured: false, sent: false, error: String(e?.message || e).slice(0, 200) }, inApp: { notified: 0 } };
+  }
+
   return NextResponse.json({
     ok: true,
     prospectId: saved.prospectId,
@@ -272,6 +290,7 @@ export async function POST(req: NextRequest) {
     agentCodeSource: 'tl_smart',
     agentCodeNote: 'เลขตัวแทนจริงออกโดยระบบ TL SMART — กรอกข้อมูลเข้า TL SMART แล้วระบบจะคืนเลขมาให้ (ดูคิวที่ /api/tl-smart/queue)',
     tlSmart,
+    notify,
     message: tlSmart.sent
       ? 'ส่งใบสมัครเรียบร้อย — ส่งข้อมูลเข้า TL SMART แล้ว รอเลขตัวแทนจากระบบบริษัท'
       : 'ส่งใบสมัครเรียบร้อย — เข้าคิวส่งเข้า TL SMART แล้ว (ยังไม่เชื่อมต่อปลายทาง) ทีมงานจะติดต่อกลับตามช่องทางที่ให้ไว้',

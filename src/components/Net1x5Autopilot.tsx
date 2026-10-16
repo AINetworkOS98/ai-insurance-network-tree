@@ -1,6 +1,8 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useNow } from '@/components/LiveStamp';
+import { thaiDateTimeFull, thaiDateTimeLong, thaiTimeSec } from '@/lib/now';
 
 type Step = { step: number; key: string; label: string; status: 'ok' | 'warn' | 'skipped' | 'error'; count: number; detail: string; items?: any[] };
 type State = {
@@ -53,6 +55,8 @@ export default function Net1x5Autopilot() {
   const [auto, setAuto] = useState(true);
   const [rules, setRules] = useState<any>(null);
   const timer = useRef<any>(null);
+  // นาฬิกาไทยที่เดินจริง (วินาที) — ให้วัน/เดือน/ปี/เวลา บนหน้านี้เป็นปัจจุบันเสมอ
+  const now = useNow(1000);
 
   const load = useCallback(async () => {
     try {

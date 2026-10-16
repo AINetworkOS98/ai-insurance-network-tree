@@ -1,0 +1,683 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>AI Insurance Network Tree — 1x5 Autopilot (9:16 promo)</title>
+<style>
+  @font-face{font-family:'Thai';src:url(data:font/ttf;base64,__THAI__) format('truetype');font-weight:100 900;font-display:block}
+  @font-face{font-family:'Inter';src:url(data:font/ttf;base64,__INTER__) format('truetype');font-weight:100 900;font-display:block}
+  html,body{margin:0;padding:0;background:#040b16;overflow:hidden}
+  canvas{display:block;width:1080px;height:1920px}
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+/* =========================================================================
+   AI Insurance Network Tree — 1x5 Autopilot
+   วิดีโอโปรโมต 9:16 (1080x1920) 60 วินาที · 30fps
+   เรนเดอร์แบบกำหนดเวลาได้ (deterministic): window.renderAt(t) วาดเฟรมที่เวลา t
+   ========================================================================= */
+const W = 1080, H = 1920, TAU = Math.PI * 2, FPS = 30, DUR = 60;
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+
+const clamp = (v, a, b) => v < a ? a : (v > b ? b : v);
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = t => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
+const easeOut = t => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
+const easeInOut = t => { t = clamp(t, 0, 1); return t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; };
+const rngOf = seed => { let a = seed | 0; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; };
+
+/* ---------- สี ---------- */
+const GOLD = '242,193,90', GOLD_L = '255,226,150', BLUE = '86,168,255', BLUE_L = '150,214,255',
+      CYAN = '120,230,255', WHITE = '235,245,255';
+
+/* ---------- แคช sprite แสงเรือง ---------- */
+const glowCache = new Map();
+function glowSprite(rgb, size = 256) {
+  const k = rgb + '|' + size; let c = glowCache.get(k); if (c) return c;
+  c = document.createElement('canvas'); c.width = c.height = size;
+  const g = c.getContext('2d'), r = size / 2;
+  const grd = g.createRadialGradient(r, r, 0, r, r, r);
+  grd.addColorStop(0.00, `rgba(${rgb},0.95)`);
+  grd.addColorStop(0.14, `rgba(${rgb},0.55)`);
+  grd.addColorStop(0.34, `rgba(${rgb},0.20)`);
+  grd.addColorStop(0.62, `rgba(${rgb},0.06)`);
+  grd.addColorStop(1.00, `rgba(${rgb},0)`);
+  g.fillStyle = grd; g.fillRect(0, 0, size, size);
+  glowCache.set(k, c); return c;
+}
+function glow(x, y, r, rgb, a = 1) {
+  if (r <= 0 || a <= 0.003) return;
+  const s = glowSprite(rgb);
+  ctx.globalAlpha *= a;
+  ctx.drawImage(s, x - r, y - r, r * 2, r * 2);
+  ctx.globalAlpha /= a;
+}
+function dot(x, y, r, rgb, a = 1) { glow(x, y, r * 3.2, rgb, a * 0.8); ctx.globalAlpha *= a; ctx.fillStyle = `rgba(${rgb},1)`; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); ctx.globalAlpha /= a; }
+
+/* ---------- ตัวอักษร ---------- */
+function setFont(size, weight, family) { ctx.font = `${weight} ${size}px ${family}, 'Inter', 'Leelawadee UI', 'Tahoma', sans-serif`; }
+function txt(s, x, y, { size = 48, weight = 700, family = 'Thai', color = 'rgba(235,245,255,.96)', align = 'left', ls = 0, shadow = 0, alpha = 1, shadowColor = '0,0,0', maxWidth = 0 } = {}) {
+  setFont(size, weight, family);
+  if ('letterSpacing' in ctx) ctx.letterSpacing = ls + 'px';
+  if (maxWidth > 0) {                       // ย่อขนาดอัตโนมัติให้พอดีกรอบ (ข้อความไทยยาว ๆ ต้องไม่ล้นจอ)
+    const w = ctx.measureText(s).width;
+    if (w > maxWidth) { const k = maxWidth / w; setFont(size * k, weight, family); if ('letterSpacing' in ctx) ctx.letterSpacing = (ls * k) + 'px'; }
+  }
+  ctx.textAlign = align; ctx.textBaseline = 'alphabetic';
+  ctx.globalAlpha *= alpha;
+  if (shadow > 0) { ctx.shadowColor = `rgba(${shadowColor},${0.75 * alpha})`; ctx.shadowBlur = shadow; ctx.shadowOffsetY = shadow * 0.25; }
+  ctx.fillStyle = color; ctx.fillText(s, x, y);
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  ctx.globalAlpha /= alpha;
+}
+function measure(s, size, weight, family, ls = 0) { setFont(size, weight, family); if ('letterSpacing' in ctx) ctx.letterSpacing = ls + 'px'; const w = ctx.measureText(s).width; if ('letterSpacing' in ctx) ctx.letterSpacing = '0px'; return w; }
+function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+function pill(x, y, w, h, rgb, a = 1, r = null) { ctx.globalAlpha *= a; ctx.fillStyle = `rgba(${rgb},1)`; roundRect(x, y, w, h, r === null ? h / 2 : r); ctx.fill(); ctx.globalAlpha /= a; }
+
+/* ---------- ฟิล์มเกรน ---------- */
+const grain = (() => { const s = 220, c = document.createElement('canvas'); c.width = c.height = s; const g = c.getContext('2d'), d = g.createImageData(s, s), r = rngOf(7); for (let i = 0; i < d.data.length; i += 4) { const v = 90 + r() * 100; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 26; } g.putImageData(d, 0, 0); return c; })();
+
+/* ---------- สื่อจริงจากหน้าเว็บ ---------- */
+const IMG = {};
+[['netex', '__IMG_NETEX__'], ['landing', '__IMG_LANDING__'], ['ai', '__IMG_AI__'], ['logo', '__IMG_LOGO__']].forEach(([k, src]) => { const im = new Image(); im.src = src; IMG[k] = im; });
+
+/* =========================================================================
+   องค์ประกอบฉาก
+   ========================================================================= */
+/* --- ฉาก 1: โลกเครือข่ายดิจิทัล + กล้องเคลื่อนเข้าจุดศูนย์กลาง --- */
+const S1 = (() => {
+  const r = rngOf(11), nodes = [], N = 210;
+  for (let i = 0; i < N; i++) {
+    const rad = 220 + Math.pow(r(), 0.55) * 1320;
+    const ang = r() * TAU;
+    nodes.push({
+      x: Math.cos(ang) * rad, y: Math.sin(ang) * rad * 0.72,
+      z: (r() - 0.5) * 1500 - 120,
+      gold: r() < 0.34, ph: r() * TAU, s: 2.6 + r() * 4.2,
+    });
+  }
+  const edges = [];
+  for (let i = 0; i < nodes.length; i++) {
+    const d = nodes.map((n, j) => ({ j, dd: (n.x - nodes[i].x) ** 2 + (n.y - nodes[i].y) ** 2 + (n.z - nodes[i].z) ** 2 }))
+      .filter(o => o.j !== i).sort((a, b) => a.dd - b.dd).slice(0, 3);
+    d.forEach(o => { if (o.j > i) edges.push([i, o.j]); });
+  }
+  return { nodes, edges };
+})();
+
+function scene1(t, u) {
+  const camZ = lerp(2450, 700, easeInOut(u));
+  const rotY = lerp(-0.42, 0.10, easeInOut(u));
+  const fov = 980, cx = 540, cy = 880;
+  const proj = p => {
+    const x = p.x * Math.cos(rotY) - p.z * Math.sin(rotY);
+    const z = p.x * Math.sin(rotY) + p.z * Math.cos(rotY);
+    const d = Math.max(90, camZ - z), s = fov / d;
+    return { x: cx + x * s, y: cy + p.y * s, s, d };
+  };
+  const P = S1.nodes.map(proj);
+  // เงา/เรืองพื้นหลัง
+  ctx.globalCompositeOperation = 'lighter';
+  glow(cx, cy, 640 + 90 * Math.sin(t * 0.9), BLUE, 0.34);
+  glow(cx, cy, 400 + 60 * Math.sin(t * 1.3 + 1), GOLD, 0.22);
+  // เส้นเชื่อมแสงทอง-น้ำเงิน
+  ctx.lineCap = 'round';
+  for (const [a, b] of S1.edges) {
+    const A = P[a], B = P[b];
+    if (A.s < 0.05 || B.s < 0.05) continue;
+    if ((A.x + B.x) / 2 < -300 || (A.x + B.x) / 2 > W + 300) continue;
+    const dep = clamp((A.s + B.s) / 2 * (camZ / 900) * 0.75, 0.06, 1.35);
+    const warm = S1.nodes[a].gold || S1.nodes[b].gold;
+    const g = ctx.createLinearGradient(A.x, A.y, B.x, B.y);
+    g.addColorStop(0, `rgba(${warm ? GOLD : BLUE},${0.42 * dep})`);
+    g.addColorStop(0.5, `rgba(${warm ? GOLD_L : BLUE_L},${0.60 * dep})`);
+    g.addColorStop(1, `rgba(${warm ? GOLD : BLUE},${0.42 * dep})`);
+    ctx.strokeStyle = g; ctx.lineWidth = clamp(1.9 * dep, 0.6, 3.4);
+    ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke();
+  }
+  // โหนด
+  S1.nodes.forEach((n, i) => {
+    const p = P[i]; if (p.x < -260 || p.x > W + 260 || p.y < -260 || p.y > H + 260) return;
+    const dep = clamp(p.s * camZ / 1000, 0.12, 1.8);
+    const pul = 0.66 + 0.34 * Math.sin(t * 2.1 + n.ph);
+    const rgb = n.gold ? GOLD_L : BLUE_L;
+    dot(p.x, p.y, n.s * clamp(p.s, 0.24, 2.1), rgb, clamp(dep * pul, 0, 1));
+  });
+  // จุดศูนย์กลางสว่าง (โอกาส/การเติบโต)
+  const core = 1 + 0.06 * Math.sin(t * 1.7);
+  const cr = lerp(70, 190, easeOut(u)) * core;
+  glow(cx, cy, cr * 3.4, GOLD, 0.46);
+  glow(cx, cy, cr * 1.7, GOLD_L, 0.8);
+  dot(cx, cy, 12 * core, '255,250,235', 0.95);
+  // ลำแสง volumetric จากศูนย์กลาง
+  for (let i = 0; i < 9; i++) {
+    const a = i / 9 * TAU + t * 0.14, len = 700 + 260 * Math.sin(t * 0.5 + i);
+    const g = ctx.createLinearGradient(cx, cy, cx + Math.cos(a) * len, cy + Math.sin(a) * len);
+    g.addColorStop(0, `rgba(${GOLD_L},0.13)`); g.addColorStop(1, `rgba(${GOLD_L},0)`);
+    ctx.strokeStyle = g; ctx.lineWidth = 26 + 12 * Math.sin(t + i);
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * len, cy + Math.sin(a) * len); ctx.stroke();
+  }
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+/* --- ฉาก 2: โครงสร้าง 1x5 Network Tree เติบโตเป็นชั้น ๆ --- */
+const S2 = (() => {
+  const r = rngOf(23);
+  const head = { x: 0, y: -355, z: 0 };
+  const mem = [];
+  for (let i = 0; i < 5; i++) {
+    const k = i - 2;
+    mem.push({ x: k * 296, y: 40 + Math.abs(k) * 96, z: 0, i });
+  }
+  const gen3 = [];
+  mem.forEach((m, mi) => { for (let c = 0; c < 2; c++) gen3.push({ x: m.x + (c ? 86 : -86), y: m.y + 268, z: -30, p: mi }); });
+  const gen4 = [];
+  for (let i = 0; i < 22; i++) gen4.push({ x: (r() - 0.5) * 1380, y: 440 + r() * 110, z: -160 });
+  return { head, mem, gen3, gen4 };
+})();
+
+function scene2(t, u) {
+  const camZ = lerp(1620, 1390, easeInOut(u)), fov = 1000, cx = 540, cy = 900;
+  const proj = p => { const d = Math.max(80, camZ - p.z), s = fov / d; return { x: cx + p.x * s, y: cy + p.y * s, s }; };
+  const hP = proj(S2.head), mP = S2.mem.map(proj), g3P = S2.gen3.map(proj), g4P = S2.gen4.map(proj);
+  const appear = (t0, d = 0.6) => smooth((t - t0) / d);   // 0..1
+  const u2 = clamp(u, 0, 1);
+  // แท่นวงแหวนเรืองแสง
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 3; i++) {
+    const rr = 300 + i * 210 + Math.sin(t * 0.6 + i) * 10;
+    ctx.strokeStyle = `rgba(${BLUE},${0.10 - i * 0.02})`; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.ellipse(cx, cy + 210, rr, rr * 0.30, 0, 0, TAU); ctx.stroke();
+  }
+  // ชั้นที่ 4 (เงาแห่งการขยายต่อ)
+  const a4 = appear(8.4, 1.6);
+  if (a4 > 0.01) g4P.forEach((p, i) => { const k = clamp(a4 * 1.4 - (i % 7) * 0.06, 0, 1); dot(p.x, p.y, 4.2, BLUE, 0.30 * k); });
+  // ชั้นที่ 3
+  const a3 = appear(5.6, 1.4);
+  if (a3 > 0.01) {
+    S2.gen3.forEach((g, i) => {
+      const p = g3P[i], par = mP[g.p];
+      const k = clamp(a3 * 1.5 - (i % 5) * 0.05, 0, 1);
+      if (k <= 0.01) return;
+      ctx.strokeStyle = `rgba(${GOLD},${0.32 * k})`; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.moveTo(par.x, par.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+      glow(p.x, p.y, 46, GOLD, 0.42 * k);
+      ctx.globalAlpha *= k;
+      ctx.fillStyle = 'rgba(12,30,54,0.92)'; ctx.beginPath(); ctx.arc(p.x, p.y, 15, 0, TAU); ctx.fill();
+      ctx.strokeStyle = `rgba(${GOLD_L},0.85)`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.x, p.y, 15, 0, TAU); ctx.stroke();
+      personGlyph(p.x, p.y, 0.45, GOLD_L);
+      ctx.globalAlpha /= k;
+    });
+  }
+  // ลิงก์หัวหน้า → สมาชิก 5 คน (วาดทีละเส้น พร้อม pulse วิ่ง)
+  S2.mem.forEach((m, i) => {
+    const p = mP[i], k = appear(1.5 + i * 0.55, 0.7);
+    if (k <= 0.01) return;
+    const x1 = hP.x, y1 = hP.y, x2 = lerp(hP.x, p.x, k), y2 = lerp(hP.y, p.y, k);
+    const g = ctx.createLinearGradient(x1, y1, x2, y2);
+    g.addColorStop(0, `rgba(${GOLD_L},0.85)`); g.addColorStop(1, `rgba(${BLUE_L},0.55)`);
+    ctx.strokeStyle = g; ctx.lineWidth = 3.1; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    for (let q = 0; q < 2; q++) {
+      const ph = ((t * 0.5 + i * 0.17 + q * 0.5) % 1);
+      if (ph > k) continue;
+      const px = lerp(hP.x, p.x, ph), py = lerp(hP.y, p.y, ph);
+      dot(px, py, 6.5, GOLD_L, 0.95);
+    }
+  });
+  // สมาชิก 5 คน
+  S2.mem.forEach((m, i) => {
+    const p = mP[i], k = appear(1.9 + i * 0.55, 0.6);
+    if (k <= 0.01) return;
+    ctx.globalAlpha *= k;
+    const R = 46;
+    ctx.fillStyle = 'rgba(10,26,48,0.92)'; ctx.beginPath(); ctx.arc(p.x, p.y, R, 0, TAU); ctx.fill();
+    ctx.strokeStyle = `rgba(${GOLD},0.85)`; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.arc(p.x, p.y, R, 0, TAU); ctx.stroke();
+    glow(p.x, p.y, R * 2.4, GOLD, 0.35);
+    personGlyph(p.x, p.y, 1.0, GOLD_L);
+    const lb = 'สมาชิก ' + (i + 1);
+    const w = measure(lb, 34, 600, 'Thai') + 34;
+    pill(p.x - w / 2, p.y + R + 16, w, 50, '6,18,36', 0.86);
+    txt(lb, p.x, p.y + R + 51, { size: 34, weight: 600, align: 'center', color: 'rgba(240,248,255,.95)' });
+    ctx.globalAlpha /= k;
+  });
+  // หัวหน้าทีม (บนสุด)
+  const kh = appear(0.5, 0.8);
+  if (kh > 0.01) {
+    ctx.globalAlpha *= kh;
+    const R = 62;
+    glow(hP.x, hP.y, R * 3.2, GOLD_L, 0.5);
+    ctx.fillStyle = 'rgba(14,34,62,0.95)'; ctx.beginPath(); ctx.arc(hP.x, hP.y, R, 0, TAU); ctx.fill();
+    ctx.strokeStyle = `rgba(${GOLD_L},0.95)`; ctx.lineWidth = 3.4; ctx.beginPath(); ctx.arc(hP.x, hP.y, R, 0, TAU); ctx.stroke();
+    personGlyph(hP.x, hP.y, 1.3, GOLD_L);
+    const lb = 'หัวหน้าทีม';
+    const w = measure(lb, 40, 700, 'Thai') + 44;
+    pill(hP.x - w / 2, hP.y - R - 74, w, 58, '10,24,46', 0.92);
+    txt(lb, hP.x, hP.y - R - 32, { size: 40, weight: 700, align: 'center', color: `rgba(${GOLD_L},1)` });
+    ctx.globalAlpha /= kh;
+  }
+  // ป้ายอธิบายการขยายชั้น
+  const ac = appear(6.6, 1.0);
+  if (ac > 0.01) txt('ขยายเครือข่ายออกไปเป็นชั้น ๆ อย่างเป็นระเบียบ', cx + 330, cy + 690, { size: 32, weight: 500, align: 'right', color: `rgba(${BLUE_L},${0.85 * ac})` });
+  ctx.globalCompositeOperation = 'source-over';
+  void u2;
+}
+function personGlyph(x, y, s, rgb) {
+  ctx.save();
+  ctx.fillStyle = `rgba(${rgb},0.95)`;
+  ctx.beginPath(); ctx.arc(x, y - 10 * s, 9.5 * s, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x - 16 * s, y + 16 * s); ctx.quadraticCurveTo(x, y - 4 * s, x + 16 * s, y + 16 * s); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+/* --- ฉาก 3: Dashboard บริหารทีม (ภาพจริง + ภาพจำลองที่กำกับชัด) --- */
+const DASH_ROWS = ['สมาชิก 1', 'สมาชิก 2', 'สมาชิก 3', 'สมาชิก 4', 'สมาชิก 5'];
+const CHIP = [['ติดตามแล้ว', '120,230,180'], ['รอดำเนินการ', '255,205,120']];
+const CARD_W = 880, CARD_H = 1080, CARD_Y = 400;
+
+function drawDeviceCard(x, y, w, h, a) {
+  ctx.globalAlpha *= a;
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.65)'; ctx.shadowBlur = 60; ctx.shadowOffsetY = 26;
+  ctx.fillStyle = 'rgba(8,20,38,0.96)'; roundRect(x, y, w, h, 42); ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = `rgba(${BLUE_L},0.28)`; ctx.lineWidth = 2; roundRect(x, y, w, h, 42); ctx.stroke();
+  ctx.globalAlpha /= a;
+}
+function urlBadge(x, y, url, a) {
+  ctx.globalAlpha *= a;
+  const w = measure(url, 27, 500, 'Inter') + 46;
+  pill(x, y, w, 46, '6,16,32', 0.92, 23);
+  ctx.fillStyle = `rgba(${CYAN},0.9)`; ctx.beginPath(); ctx.arc(x + 22, y + 23, 5.5, 0, TAU); ctx.fill();
+  txt(url, x + 38, y + 32, { size: 27, weight: 500, family: 'Inter', color: `rgba(${BLUE_L},0.95)` });
+  ctx.globalAlpha /= a;
+}
+function drawShot(img, x, y, w, h, focus, a, zoom = 1) {
+  if (!img.complete || !img.naturalWidth) return;
+  ctx.globalAlpha *= a;
+  const iw = img.naturalWidth, ih = img.naturalHeight;
+  const srcW = iw / zoom, sx = (iw - srcW) / 2;
+  const srcH = Math.min(ih, srcW * (h / w));
+  const sy = clamp(focus * (ih - srcH), 0, ih - srcH);
+  ctx.save(); roundRect(x, y, w, h, 30); ctx.clip();
+  ctx.drawImage(img, sx, sy, srcW, srcH, x, y, w, h);
+  ctx.restore();
+  ctx.globalAlpha /= a;
+}
+function drawMockDash(x, y, w, h, a, t) {
+  ctx.globalAlpha *= a;
+  roundRect(x, y, w, h, 30); ctx.save(); ctx.clip();
+  // พื้นหลัง UI
+  const g = ctx.createLinearGradient(x, y, x + w, y + h);
+  g.addColorStop(0, '#071427'); g.addColorStop(1, '#0a1c33');
+  ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+  const pad = 40;
+  // แถบหัว
+  ctx.fillStyle = 'rgba(255,255,255,0.05)'; roundRect(x + pad, y + pad - 12, w - pad * 2, 74, 20); ctx.fill();
+  txt('แดชบอร์ดทีม', x + pad + 24, y + pad + 36, { size: 34, weight: 700, color: 'rgba(235,245,255,.95)' });
+  ['255,120,120', '255,205,120', '120,230,180'].forEach((c, i) => { ctx.fillStyle = `rgba(${c},0.75)`; ctx.beginPath(); ctx.arc(x + w - pad - 24 - i * 30, y + pad + 25, 9, 0, TAU); ctx.fill(); });
+  // การ์ดสถิติ 3 ใบ (ไม่แสดงตัวเลขจริง)
+  const tiles = [['สมาชิกในทีม', 0], ['งานติดตามวันนี้', 1], ['ผู้มุ่งหวังใหม่', 2]];
+  const tw = (w - pad * 2 - 24) / 3;
+  tiles.forEach(([lb], i) => {
+    const tx = x + pad + i * (tw + 12);
+    ctx.fillStyle = 'rgba(255,255,255,0.045)'; roundRect(tx, y + pad + 84, tw, 140, 22); ctx.fill();
+    ctx.strokeStyle = 'rgba(150,214,255,0.16)'; ctx.lineWidth = 1.4; roundRect(tx, y + pad + 84, tw, 140, 22); ctx.stroke();
+    txt('—', tx + 24, y + pad + 148, { size: 42, weight: 700, family: 'Inter', color: `rgba(${GOLD_L},0.85)` });
+    txt(lb, tx + 24, y + pad + 190, { size: 25, weight: 500, color: 'rgba(190,215,245,.8)', maxWidth: tw - 40 });
+  });
+  // กราฟเส้นแบบนามธรรม (ไม่ผูกกับตัวเลขจริง)
+  const gy = y + pad + 252, gh = 150, gw = w - pad * 2;
+  ctx.fillStyle = 'rgba(255,255,255,0.04)'; roundRect(x + pad, gy, gw, gh, 22); ctx.fill();
+  txt('แนวโน้มการติดตามงาน', x + pad + 24, gy + 44, { size: 27, weight: 600, color: 'rgba(200,222,250,.85)' });
+  ctx.save(); ctx.beginPath(); ctx.rect(x + pad, gy, gw, gh); ctx.clip();
+  ctx.beginPath();
+  for (let i = 0; i <= 40; i++) {
+    const px = x + pad + i / 40 * gw;
+    const py = gy + gh - 34 - (Math.sin(i * 0.32) * 0.5 + 0.5) * (gh - 88) * (0.45 + i / 40 * 0.5);
+    i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+  }
+  ctx.strokeStyle = `rgba(${GOLD},0.9)`; ctx.lineWidth = 4; ctx.stroke();
+  ctx.lineTo(x + pad + gw, gy + gh - 12); ctx.lineTo(x + pad, gy + gh - 12); ctx.closePath();
+  const fill = ctx.createLinearGradient(0, gy, 0, gy + gh);
+  fill.addColorStop(0, `rgba(${GOLD},0.28)`); fill.addColorStop(1, `rgba(${GOLD},0)`);
+  ctx.fillStyle = fill; ctx.fill();
+  ctx.restore();
+  // แถบแท่งเทียบ (นามธรรม)
+  const by = gy + gh + 22;
+  for (let i = 0; i < 12; i++) {
+    const bh = 26 + (Math.sin(i * 1.1) * 0.5 + 0.5) * 88;
+    ctx.fillStyle = i % 3 === 0 ? `rgba(${GOLD},0.75)` : `rgba(${BLUE},0.55)`;
+    roundRect(x + pad + i * 58, by + 108 - bh, 34, bh, 12); ctx.fill();
+  }
+  // รายชื่อสมาชิก + สถานะติดตามงาน
+  const ry = by + 138;
+  txt('รายชื่อสมาชิก · สถานะติดตามงาน', x + pad, ry, { size: 28, weight: 600, color: 'rgba(200,222,250,.85)' });
+  DASH_ROWS.forEach((nm, i) => {
+    const yy = ry + 18 + i * 72;
+    if (yy > y + h - 62) return;
+    ctx.fillStyle = 'rgba(255,255,255,0.04)'; roundRect(x + pad, yy, w - pad * 2, 66, 18); ctx.fill();
+    ctx.fillStyle = 'rgba(10,26,48,0.95)'; ctx.beginPath(); ctx.arc(x + pad + 36, yy + 33, 19, 0, TAU); ctx.fill();
+    ctx.strokeStyle = `rgba(${GOLD},0.7)`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x + pad + 36, yy + 33, 19, 0, TAU); ctx.stroke();
+    personGlyph(x + pad + 36, yy + 34, 0.52, GOLD_L);
+    txt(nm, x + pad + 72, yy + 42, { size: 28, weight: 600, color: 'rgba(232,242,255,.92)' });
+    const [lb, c] = CHIP[i % 2];
+    const cw = measure(lb, 24, 600, 'Thai') + 44;
+    pill(x + w - pad - cw - 16, yy + 14, cw, 40, c, 0.20);
+    txt(lb, x + w - pad - cw / 2 - 16, yy + 41, { size: 24, weight: 600, align: 'center', color: `rgba(${c},0.95)` });
+  });
+  void t;
+  ctx.restore();
+  ctx.globalAlpha /= a;
+}
+function scene3(t, u) {
+  const pan = easeInOut(u) * 2;               // 0 → 2 (เลื่อนผ่าน 3 การ์ด)
+  const cx0 = 540, gap = CARD_W + 90;
+  const draw = (i, fn) => {
+    const dx = (i - pan) * gap;
+    const dist = Math.abs(dx);
+    const a = clamp(1 - dist / (gap * 0.92), 0, 1) ** 0.7;
+    if (a <= 0.02) return;
+    const x = cx0 + dx - CARD_W / 2;
+    drawDeviceCard(x, CARD_Y, CARD_W, CARD_H, a);
+    fn(x, a);
+  };
+  // 1) หน้าจอจำลอง (กำกับชัดว่าเป็นภาพจำลอง)
+  draw(0, (x, a) => {
+    drawMockDash(x + 14, CARD_Y + 14, CARD_W - 28, CARD_H - 96, a, t);
+    urlBadge(x + 30, CARD_Y + CARD_H - 72, 'ภาพจำลองหน้าจอ · ไม่ใช่ข้อมูลจริง', a);
+  });
+  // 2) หน้าจริง: โครงสร้าง 1x5
+  draw(1, (x, a) => {
+    drawShot(IMG.netex, x + 14, CARD_Y + 14, CARD_W - 28, CARD_H - 96, 0.30, a, 1.30);
+    urlBadge(x + 30, CARD_Y + CARD_H - 72, 'ai-insurance-network-tree.vercel.app/network-example', a);
+  });
+  // 3) หน้าจริง: แดชบอร์ดจำลองสถานการณ์ของระบบ
+  draw(2, (x, a) => {
+    drawShot(IMG.landing, x + 14, CARD_Y + 14, CARD_W - 28, CARD_H - 96, 0.44, a, 1.35);
+    urlBadge(x + 30, CARD_Y + CARD_H - 72, 'ai-insurance-network-tree.vercel.app', a);
+  });
+  // ตัวชี้การ์ด
+  for (let i = 0; i < 3; i++) {
+    const on = clamp(1 - Math.abs(i - pan) * 1.4, 0.25, 1);
+    pill(540 - 34 + i * 26, CARD_Y + CARD_H + 26, 18, 8, on > 0.9 ? GOLD : BLUE_L, on);
+  }
+}
+
+/* --- ฉาก 4: ผู้ช่วย AI + Workflow Automation --- */
+const STEPS = ['เก็บข้อมูล', 'AI วิเคราะห์', 'จัดลำดับงาน', 'ตัวแทนตัดสินใจ'];
+function scene4(t, u) {
+  // การ์ดหน้าจริง: หน้าผู้ช่วย AI ของระบบ
+  const cw = 880, ch = 700, cx0 = 540 - cw / 2, cy0 = 430;
+  const a = 1;
+  drawDeviceCard(cx0, cy0, cw, ch, a);
+  drawShot(IMG.ai, cx0 + 14, cy0 + 14, cw - 28, ch - 92, 0.0, a, 1.05);
+  urlBadge(cx0 + 30, cy0 + ch - 68, 'ai-insurance-network-tree.vercel.app/search_landing', a);
+  // ป้ายกำกับตัวอย่าง
+  txt('ตัวอย่างการใช้งาน · ภาพจำลอง', cx0 + cw, cy0 + ch + 44, { size: 26, weight: 500, align: 'right', color: 'rgba(180,208,240,.8)' });
+  // Workflow chain
+  const y = 1250, pw = 226, gap = 34, total = pw * 4 + gap * 3;
+  let x = 540 - total / 2;
+  STEPS.forEach((lb, i) => {
+    const k = smooth((u - (0.28 + i * 0.09)) / 0.22);
+    if (k <= 0.01) { x += pw + gap; return; }
+    ctx.globalAlpha *= k;
+    const lift = (1 - easeOut(k)) * 26;
+    ctx.save();
+    ctx.shadowColor = `rgba(${GOLD},0.35)`; ctx.shadowBlur = 26;
+    ctx.fillStyle = 'rgba(9,22,42,0.95)'; roundRect(x, y + lift, pw, 150, 24); ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = `rgba(${GOLD_L},0.45)`; ctx.lineWidth = 1.6; roundRect(x, y + lift, pw, 150, 24); ctx.stroke();
+    txt(String(i + 1).padStart(2, '0'), x + 22, y + lift + 44, { size: 26, weight: 700, family: 'Inter', ls: 2, color: `rgba(${GOLD_L},0.9)` });
+    const line = lb.split(/(?=ผู้ตัดสินใจ)/);
+    const l1 = lb === 'ตัวแทนตัดสินใจ' ? 'ตัวแทน' : line[0];
+    const l2 = lb === 'ตัวแทนตัดสินใจ' ? 'ตัดสินใจ' : '';
+    txt(l1, x + 22, y + lift + 92, { size: 33, weight: 700, color: 'rgba(235,245,255,.96)' });
+    if (l2) txt(l2, x + 22, y + lift + 130, { size: 33, weight: 700, color: 'rgba(235,245,255,.96)' });
+    glow(x + pw - 34, y + lift + 40, 60, i === 3 ? GOLD : BLUE, 0.5);
+    dot(x + pw - 34, y + lift + 40, 6, i === 3 ? GOLD_L : BLUE_L, 0.95);
+    ctx.globalAlpha /= k;
+    // ลูกศรเชื่อม + pulse
+    if (i < 3) {
+      const ax = x + pw, ay = y + 75, bx = x + pw + gap, kk = smooth((u - (0.34 + i * 0.09)) / 0.2);
+      if (kk > 0.01) {
+        ctx.globalAlpha *= kk;
+        ctx.strokeStyle = `rgba(${CYAN},0.55)`; ctx.lineWidth = 2.4;
+        ctx.beginPath(); ctx.moveTo(ax + 5, ay); ctx.lineTo(bx - 9, ay); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(bx - 9, ay); ctx.lineTo(bx - 17, ay - 6); ctx.moveTo(bx - 9, ay); ctx.lineTo(bx - 17, ay + 6); ctx.stroke();
+        const ph = (t * 0.9 + i * 0.3) % 1;
+        dot(lerp(ax + 5, bx - 9, ph), ay, 5, CYAN, 0.9);
+        ctx.globalAlpha /= kk;
+      }
+    }
+    x += pw + gap;
+  });
+}
+
+/* --- ฉาก 5: เครือข่ายเติบโตต่อเนื่อง + ปิดท้ายแบรนด์ --- */
+const S5 = (() => {
+  const r = rngOf(53), nodes = [];
+  // โครงข่ายเติบโตแบบวงแหวน: แต่ละวงเชื่อมกับโหนดในวงก่อนหน้า
+  let prev = [{ x: 0, y: 0, ring: -1 }];
+  for (let ring = 0; ring < 7; ring++) {
+    const n = 6 + ring * 4, rad = 130 + ring * 118;
+    const cur = [];
+    for (let i = 0; i < n; i++) {
+      const ang = i / n * TAU + ring * 0.35;
+      const px = Math.cos(ang) * rad, py = Math.sin(ang) * rad * 0.66;
+      const par = prev[Math.floor(r() * prev.length)];
+      cur.push({ x: px, y: py, par, gold: r() < 0.22, order: nodes.length, ph: r() * TAU });
+      nodes.push(cur[cur.length - 1]);
+    }
+    prev = cur;
+  }
+  return nodes;
+})();
+function scene5(t, u) {
+  const N = S5.length;
+  const grow = clamp(u / 0.46, 0, 1);            // เฟสเติบโต
+  const endA = smooth((u - 0.52) / 0.16);        // เฟสปิดท้ายแบรนด์
+  ctx.globalCompositeOperation = 'lighter';
+  if (endA < 0.98) {
+    ctx.globalAlpha *= (1 - endA * 0.85);
+    S5.forEach((n, i) => {
+      const k = smooth((grow * N - n.order) / 6);
+      if (k <= 0.01) return;
+      const spin = t * 0.06, x = 540 + (n.x * Math.cos(spin) - 0), y = 830 + n.y;
+      if (n.par && k > 0.05) {
+        const pk = smooth((grow * N - n.par.order) / 6);
+        if (pk > 0.05) {
+          ctx.strokeStyle = `rgba(${n.gold ? GOLD : BLUE},${0.22 * Math.min(k, pk)})`; ctx.lineWidth = 1.2;
+          ctx.beginPath(); ctx.moveTo(540 + n.par.x * Math.cos(spin), 830 + n.par.y); ctx.lineTo(x, y); ctx.stroke();
+        }
+      }
+      dot(x, y, n.gold ? 6.4 : 4.6, n.gold ? GOLD_L : BLUE_L, 0.55 + 0.35 * Math.sin(t * 2 + n.ph) * k);
+    });
+    // คลื่นการเติบโต
+    for (let w = 0; w < 3; w++) {
+      const wp = ((t * 0.34 + w / 3) % 1);
+      const rr = 90 + wp * 900, aa = (1 - wp) * 0.22 * (1 - endA);
+      ctx.strokeStyle = `rgba(${wp > 0.5 ? GOLD : CYAN},${aa})`; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(540, 830, rr, rr * 0.62, 0, 0, TAU); ctx.stroke();
+    }
+    // ทีมทำงานร่วมกันอย่างมืออาชีพ
+    const teamA = smooth((u - 0.16) / 0.2) * (1 - endA);
+    if (teamA > 0.02) {
+      ctx.globalAlpha *= teamA;
+      for (let i = 0; i < 5; i++) {
+        const kk = smooth((u - (0.16 + i * 0.035)) / 0.16);
+        const px = 540 + (i - 2) * 190, py = 1330 + Math.sin(t * 1.1 + i) * 7;
+        ctx.globalAlpha *= kk;
+        glow(px, py, 92, GOLD, 0.22);
+        ctx.fillStyle = 'rgba(10,26,48,0.9)'; ctx.beginPath(); ctx.arc(px, py, 56, 0, TAU); ctx.fill();
+        ctx.strokeStyle = `rgba(${GOLD_L},0.7)`; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(px, py, 56, 0, TAU); ctx.stroke();
+        personGlyph(px, py, 1.25, GOLD_L);
+        ctx.globalAlpha /= kk;
+      }
+      ctx.globalAlpha /= teamA;
+    }
+    ctx.globalAlpha /= (1 - endA * 0.85);
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  // ---- ปิดท้าย: โลโก้ + ชื่อแบรนด์ ----
+  if (endA > 0.01) {
+    ctx.globalAlpha *= endA;
+    ctx.fillStyle = `rgba(3,9,18,${0.72 * endA})`; ctx.fillRect(0, 0, W, H);
+    const ly = 560 + (1 - easeOut(endA)) * 24;
+    const logoSize = 300;
+    if (IMG.logo.complete && IMG.logo.naturalWidth) {
+      const lw = logoSize, lh = logoSize * IMG.logo.naturalHeight / IMG.logo.naturalWidth;
+      glow(540, ly + lh / 2, 340, GOLD, 0.36 * endA);
+      ctx.save(); roundRect(540 - lw / 2, ly, lw, lh, 66); ctx.clip();
+      ctx.drawImage(IMG.logo, 540 - lw / 2, ly, lw, lh); ctx.restore();
+      ctx.strokeStyle = `rgba(${GOLD_L},0.85)`; ctx.lineWidth = 3; roundRect(540 - lw / 2, ly, lw, lh, 66); ctx.stroke();
+    }
+    txt('AI INSURANCE NETWORK TREE', 540, ly + 470, { size: 62, weight: 800, family: 'Inter', align: 'center', ls: 5, color: `rgba(236,246,255,${0.98})`, shadow: 26 });
+    const bw = measure('1x5 AUTOPILOT', 92, 800, 'Inter', 10) + 96;
+    const by = ly + 540;
+    pill(540 - bw / 2, by, bw, 128, GOLD, 0.16);
+    ctx.strokeStyle = `rgba(${GOLD_L},0.75)`; ctx.lineWidth = 2.4; roundRect(540 - bw / 2, by, bw, 128, 64); ctx.stroke();
+    txt('1x5 AUTOPILOT', 540, by + 88, { size: 92, weight: 800, family: 'Inter', align: 'center', ls: 10, color: `rgba(${GOLD_L},1)`, shadow: 30, shadowColor: '20,10,0' });
+    txt('เริ่มต้นสร้างระบบทีมประกันชีวิตของคุณ', 540, by + 236, { size: 46, weight: 600, align: 'center', color: 'rgba(226,240,255,.96)', shadow: 18 });
+    const uw = measure('ai-insurance-network-tree.vercel.app', 30, 500, 'Inter') + 60;
+    pill(540 - uw / 2, by + 286, uw, 62, '8,20,38', 0.95);
+    ctx.fillStyle = `rgba(${CYAN},0.95)`; ctx.beginPath(); ctx.arc(540 - uw / 2 + 28, by + 317, 6.5, 0, TAU); ctx.fill();
+    txt('ai-insurance-network-tree.vercel.app', 540 - uw / 2 + 48, by + 328, { size: 30, weight: 500, family: 'Inter', color: `rgba(${BLUE_L},0.98)` });
+    txt('ตัวอย่างการทำงานด้วยระบบและผู้ช่วย AI · แนวทางปฏิบัติ ไม่ใช่การรับประกันรายได้หรือผลตอบแทน', 540, by + 430, { size: 25, weight: 400, align: 'center', color: 'rgba(180,205,235,.72)' });
+    ctx.globalAlpha /= endA;
+  }
+}
+
+/* =========================================================================
+   พื้นหลังร่วม + ตัวอักษรบนจอ + เฟรม
+   ========================================================================= */
+const STARS = (() => { const r = rngOf(97), a = []; for (let i = 0; i < 110; i++) a.push({ x: r() * W, y: r() * H, r: 0.8 + r() * 2.2, sp: 0.06 + r() * 0.22, ph: r() * TAU }); return a; })();
+
+function backdrop(t) {
+  const g = ctx.createLinearGradient(0, 0, W * 0.35, H);
+  g.addColorStop(0, '#061529'); g.addColorStop(0.42, '#04101f'); g.addColorStop(1, '#02080f');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = 'lighter';
+  const drift = Math.sin(t * 0.12) * 0.5 + 0.5;
+  glow(lerp(280, 800, drift), lerp(520, 700, 1 - drift), 900, '30,90,175', 0.30);
+  glow(lerp(830, 300, drift), lerp(1420, 1250, drift), 820, '16,52,110', 0.34);
+  glow(540, 1780 + Math.sin(t * 0.3) * 30, 640, GOLD, 0.055);
+  // ลำแสง volumetric เอียง
+  for (let i = 0; i < 4; i++) {
+    const off = (t * 18 + i * 340) % 1600 - 260;
+    const g2 = ctx.createLinearGradient(off, 0, off + 520, H);
+    g2.addColorStop(0, 'rgba(120,190,255,0)'); g2.addColorStop(0.5, 'rgba(120,190,255,0.035)'); g2.addColorStop(1, 'rgba(120,190,255,0)');
+    ctx.fillStyle = g2;
+    ctx.save(); ctx.translate(off, 0); ctx.rotate(-0.18); ctx.fillRect(0, -200, 300, H + 400); ctx.restore();
+  }
+  // อนุภาคลอย
+  STARS.forEach(s => {
+    const y = (s.y - t * s.sp * 40) % H, yy = y < 0 ? y + H : y;
+    const a = 0.20 + 0.35 * (Math.sin(t * 1.4 + s.ph) * 0.5 + 0.5);
+    dot(s.x + Math.sin(t * 0.2 + s.ph) * 12, yy, s.r, s.r > 2.2 ? GOLD_L : BLUE_L, a);
+  });
+  // ตาราง perspective จาง ๆ
+  ctx.strokeStyle = 'rgba(90,150,230,0.055)'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 14; i++) { const x = i / 14 * W; ctx.beginPath(); ctx.moveTo(540 + (x - 540) * 0.35, 1230); ctx.lineTo(x, H); ctx.stroke(); }
+  for (let i = 1; i <= 8; i++) { const y = 1230 + Math.pow(i / 8, 2.2) * (H - 1230); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+/* ช่วงเวลาแต่ละฉาก (วินาที) */
+const SCENES = [
+  { id: 1, s: 0.0, e: 8.5, body: scene1 },
+  { id: 2, s: 8.2, e: 20.6, body: scene2 },
+  { id: 3, s: 20.2, e: 35.6, body: scene3 },
+  { id: 4, s: 35.2, e: 48.6, body: scene4 },
+  { id: 5, s: 48.2, e: 60.0, body: scene5 },
+];
+const RAMP = 0.7;
+function weightOf(sc, t) {
+  const a = smooth((t - sc.s) / RAMP);
+  const b = 1 - smooth((t - (sc.e - RAMP)) / RAMP);
+  return clamp(Math.min(a, b), 0, 1);
+}
+/* ข้อความบนจอต่อฉาก: [kicker, หัวเรื่อง] ช่วงเวลากำกับที่ลิสต์ */
+const COPY = {
+  1: [null, [['THE NEW ERA OF LIFE INSURANCE', 'ธุรกิจประกันชีวิตยุคใหม่', 0.6, 4.4], ['AI INSURANCE NETWORK TREE', 'สร้างทีมให้เติบโตด้วย AI', 4.6, 8.6]]],
+  2: [null, [['1x5 NETWORK', '1x5 NETWORK', 8.6, 14.0], ['CONNECT · SYSTEMIZE · GROW', 'เชื่อมโยงทีม วางระบบ สร้างการเติบโต', 14.0, 20.6]]],
+  3: [null, [['TEAM DASHBOARD', 'เห็นภาพรวมทีมได้ชัดเจน', 20.6, 27.6], ['TRACK · FOLLOW · MANAGE', 'ติดตามงานอย่างเป็นระบบ', 27.6, 35.4]]],
+  4: [null, [['AI ASSISTANT + AUTOMATION', 'เปลี่ยนงานซ้ำ ๆ ให้เป็นระบบ', 35.4, 41.8], ['HUMAN IN CONTROL', 'ใช้ AI ช่วยเพิ่มประสิทธิภาพการทำงาน', 41.8, 48.4]]],
+  5: [null, [['GROW YOUR TEAM WITH AI', 'เริ่มต้นสร้างระบบทีมประกันชีวิตของคุณ', 48.6, 55.4]]],
+};
+function headline(scId, t, alpha) {
+  const list = COPY[scId][1]; if (!list) return;
+  list.forEach(([kicker, h1, t0, t1]) => {
+    const a = smooth((t - t0) / 0.6) * (1 - smooth((t - (t1 - 0.6)) / 0.6));
+    if (a <= 0.01) return;
+    ctx.globalAlpha *= a * alpha;
+    const cy = 268;
+    const bigLatin = /^[0-9][\x20-\x7E]*$/.test(kicker);
+    if (bigLatin) {
+      glow(540, cy + 66, 420, GOLD, 0.16);
+      txt(kicker, 540, cy + 96, { size: 84, weight: 800, family: 'Inter', align: 'center', ls: 6, color: `rgba(${GOLD_L},1)`, shadow: 34, shadowColor: '10,20,40', maxWidth: 940 });
+      if (h1 !== kicker) txt(h1, 540, cy + 174, { size: 62, weight: 700, align: 'center', color: 'rgba(238,247,255,.98)', shadow: 34, shadowColor: '4,10,24', maxWidth: 940 });
+    } else {
+      txt(kicker, 540, cy + 8, { size: 25, weight: 600, family: 'Inter', align: 'center', ls: 7, color: `rgba(${GOLD_L},0.95)`, maxWidth: 900 });
+      ctx.fillStyle = `rgba(${GOLD},0.85)`; ctx.fillRect(540 - 46, cy + 30, 92, 3);
+      txt(h1, 540, cy + 116, { size: 68, weight: 700, align: 'center', color: 'rgba(238,247,255,.98)', shadow: 34, shadowColor: '4,10,24', maxWidth: 940 });
+    }
+    ctx.globalAlpha /= a * alpha;
+  });
+}
+
+function overlay() {
+  // เกรนฟิล์ม
+  ctx.globalAlpha = 0.5;
+  const ox = Math.floor(Math.random() * 220) - 110, oy = Math.floor(Math.random() * 220) - 110;
+  for (let y = 0; y < H; y += 220) for (let x = 0; x < W; x += 220) ctx.drawImage(grain, x + ox, y + oy);
+  ctx.globalAlpha = 1;
+  // ขอบมืดแบบภาพยนตร์
+  const vg = ctx.createRadialGradient(540, 900, 380, 540, 900, 1250);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(0.7, 'rgba(0,0,0,0.28)'); vg.addColorStop(1, 'rgba(0,0,0,0.72)');
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+  // กรอบบน/ล่างจางเพื่อพื้นที่ปลอดภัยของ UI แพลตฟอร์ม
+  const tg = ctx.createLinearGradient(0, 0, 0, 300); tg.addColorStop(0, 'rgba(2,6,12,0.75)'); tg.addColorStop(1, 'rgba(2,6,12,0)');
+  ctx.fillStyle = tg; ctx.fillRect(0, 0, W, 300);
+  const bg2 = ctx.createLinearGradient(0, H - 420, 0, H); bg2.addColorStop(0, 'rgba(2,6,12,0)'); bg2.addColorStop(1, 'rgba(2,6,12,0.72)');
+  ctx.fillStyle = bg2; ctx.fillRect(0, H - 420, W, 420);
+}
+
+window.renderAt = function (t) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+  backdrop(t);
+  const ws = SCENES.map(s => weightOf(s, t));
+  const sum = ws.reduce((a, b) => a + b, 0) || 1;
+  SCENES.forEach((sc, i) => {
+    const w = ws[i]; if (w <= 0.005) return;
+    const alpha = ws.length > 1 ? w / Math.max(1, sum) : w;
+    const u = clamp((t - sc.s) / (sc.e - sc.s), 0, 1);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    sc.body(t, u);
+    ctx.restore();
+  });
+  SCENES.forEach((sc, i) => { if (ws[i] > 0.005) headline(sc.id, t, ws[i] / Math.max(1, sum)); });
+  overlay();
+  // แถบความคืบหน้า
+  pill(0, 1862, Math.max(6, 1080 * (t / DUR)), 10, GOLD, 0.85, 5);
+  return true;
+};
+
+window.__ready = async function () {
+  await Promise.all(Object.values(IMG).map(im => im.decode().catch(() => { })));
+  await document.fonts.load('700 68px Thai', 'ทดสอบ');
+  await document.fonts.load('800 92px Inter', 'AI');
+  await document.fonts.ready;
+  return { ok: true, imgs: Object.fromEntries(Object.entries(IMG).map(([k, im]) => [k, im.naturalWidth + 'x' + im.naturalHeight])), fonts: document.fonts.size };
+};
+window.DUR = DUR; window.FPS = FPS;
+renderAt(0);
+</script>
+</body>
+</html>

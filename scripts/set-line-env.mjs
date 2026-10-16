@@ -70,11 +70,11 @@ for (const env of TARGETS) {
   for (const k of KEYS) {
     try {
       // ส่งค่าผ่าน stdin เท่านั้น — ไม่ปรากฏใน command line / log
-      execFileSync('npx', ['vercel', 'env', 'add', k, env, '--force', '--scope', SCOPE], {
+      // ใช้ CLI ในเครื่อง (npx vercel ใช้ไม่ได้บนเครื่องนี้ — เคยพัง)
+      execFileSync(process.execPath, [path.join(ROOT, 'node_modules/vercel/dist/vc.js'), 'env', 'add', k, env, '--force', '--scope', SCOPE], {
         cwd: ROOT,
         input: vals[k] + '\n',
         stdio: ['pipe', 'pipe', 'pipe'],
-        shell: process.platform === 'win32',
       });
       console.log(`✓ ${k} → ${env}`);
       done++;

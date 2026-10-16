@@ -19,6 +19,7 @@ import { POSITIONS, nextQualification, positionName, type PositionCode } from '@
 import { ADMIN_EMAILS } from '@/lib/access-rules';
 import { checkPositionEligibility } from '@/lib/positions';
 import { findNextPlacementSlotDB } from '@/lib/tree';
+import { bangkokParts, pad2, thaiDateLabel, THAI_MONTHS, toThaiYear, BKK_OFFSET_MS } from '@/lib/thaiTime';
 
 export const NET1X5_SETTINGS_KEY = 'net1x5';
 export const BRANCH_LIMIT_DEFAULT = 5; // 1 แตก 5 (ตายตัวตามสเปก — ค่าใน DB ใช้เพื่อยืนยันเท่านั้น)
@@ -47,7 +48,10 @@ export interface Net1x5Rules {
 }
 
 export function currentPeriod(d = new Date()): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  // ⚠ เซิร์ฟเวอร์ Vercel รันเป็น UTC → ต้องคิดเป็น "เวลาไทย" (UTC+7) เสมอ
+  //    ไม่งั้นช่วง 00:00–07:00 น. ของไทย รอบ (YYYY-MM) จะยังเป็นเดือนก่อนหน้า = ข้อมูลไม่เป็นปัจจุบัน
+  const p = bangkokParts(d);
+  return `${p.year}-${pad2(p.month)}`;
 }
 
 export function defaultRules(d = new Date()): Net1x5Rules {
@@ -352,14 +356,20 @@ export async function collectNetwork(): Promise<{ members: NetMember[]; nodeByUs
 export function computeDeadline(rules: Net1x5Rules, now = new Date()) {
   const [y, m] = (rules.period || currentPeriod(now)).split('-').map(Number);
   const day = Math.min(rules.deadlineDayOfMonth, 28);
-  const base = new Date(Date.UTC(y, (m || 1) - 1, day, rules.deadlineHour, 0, 0));
-  const at = new Date(base.getTime() + rules.receiptDeadlineDays * 86400000);
+  // ⚠ วัน/เวลาที่ประกาศต้องเป็น "เวลาไทย" ไม่ใช่ UTC — เดิมสร้างจาก Date.UTC ตรง ๆ
+  //    ทำให้กำหนดส่ง 18:00 กลายเป็น 01:00 ของวันถัดไปตามเวลาไทย (คลาด 7 ชั่วโมง)
+  const base = Date.UTC(y, (m || 1) - 1, day, rules.deadlineHour, 0, 0) - BKK_OFFSET_MS;
+  const at = new Date(base + rules.receiptDeadlineDays * 86400000);
   const daysLeft = Math.ceil((at.getTime() - now.getTime()) / 86400000);
+  const p = bangkokParts(at);
+  const hh = pad2(p.hour);
+  const mm = pad2(p.minute);
+  const periodLabel = `${THAI_MONTHS[(m || 1) - 1]} ${toThaiYear(y)}`;
   return {
     iso: at.toISOString(),
     daysLeft,
     passed: at.getTime() < now.getTime(),
-    label: `กำหนดส่งใบเสร็จ/ปิดเงื่อนไขรอบ ${rules.period}: วันที่ ${at.getDate()}/${at.getMonth() + 1}/${at.getFullYear()} ${String(rules.deadlineHour).padStart(2, '0')}:00 (เหลือ ${Math.max(0, daysLeft)} วัน)`,
+    label: `กำหนดส่งใบเสร็จ/ปิดเงื่อนไขรอบ ${periodLabel}: ภายในวันที่ ${p.day} ${THAI_MONTHS[p.month - 1]} ${toThaiYear(p.year)} เวลา ${hh}:${mm} น. (เหลือ ${Math.max(0, daysLeft)} วัน)`,
   };
 }
 
@@ -394,7 +404,7 @@ export function evaluateMember(m: NetMember, rules: Net1x5Rules, now = new Date(
   checks.push({
     key: 'receipt', label: 'ดาวน์โหลด/ยืนยันใบเสร็จ', ok: receiptOk || grace,
     detail: rules.requireReceipt
-      ? `ใบเสร็จยืนยันแล้ว ${m.receiptCount} ใบ${m.lastReceiptAt ? ` · ล่าสุด ${new Date(m.lastReceiptAt).toLocaleDateString('th-TH')}` : ' · ยังไม่มี'}`
+      ? `ใบเสร็จยืนยันแล้ว ${m.receiptCount} ใบ${m.lastReceiptAt ? ` · ล่าสุด ${thaiDateLabel(bangkokParts(new Date(m.lastReceiptAt)))}` : ' · ยังไม่มี'}`
       : 'กติกาปิดการบังคับใบเสร็จ',
   });
   if (!receiptOk && !grace) reasons.push('ไม่พบใบเสร็จที่ยืนยันภายในกำหนด');
@@ -482,7 +492,7 @@ export function rankCandidates(checks: CheckResult[], members: NetMember[], vaca
       : proximity * 1e12 + perf * 1e3 + seniority / 1e9;
     return {
       userId: c.userId, code: c.code, name: c.name, rankLevel: c.rankLevel, level: c.level,
-      score, priorityReason: `${why} · ยอดรับรอง ฿${c.verifiedAmount.toLocaleString('th-TH')} · สมัคร ${new Date(m.joinDate).toLocaleDateString('th-TH')}`,
+      score, priorityReason: `${why} · ยอดรับรอง ฿${c.verifiedAmount.toLocaleString('th-TH')} · สมัคร ${thaiDateLabel(bangkokParts(new Date(m.joinDate)))}`,
       verifiedAmount: c.verifiedAmount, ready: c.readyForPromotion, gap: c.promotionGap,
     } as Candidate;
   });

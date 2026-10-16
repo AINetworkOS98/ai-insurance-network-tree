@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyTokenEdge } from '@/lib/auth-edge';
 import { RECRUIT_STAGES, STAGE_PREFIX, stageByKey, missingRequired } from '@/lib/recruitPipeline';
+import { readTlSmart, systemRows, systemPrefill } from '@/lib/recruitSystemData';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // /api/recruit/stage — ไปป์ไลน์รับสมัครตัวแทน (ผู้มุ่งหวัง) 8 ขั้น
@@ -91,6 +92,9 @@ export async function GET(req: NextRequest) {
     const current = hist.length ? hist[hist.length - 1].toStatus : null;
     const currentKey = current && stageByKey(current) ? current : null;
 
+    // ── ข้อมูลที่มีจริงในระบบ (ใบสมัครออนไลน์ + TL SMART) ─────────────────
+    const tlSmart = readTlSmart(acts as any);
+
     return NextResponse.json({
       ok: true,
       prospect: p,
@@ -100,6 +104,12 @@ export async function GET(req: NextRequest) {
       steps,
       history: hist,
       stages: RECRUIT_STAGES,
+      system: {
+        tlSmart,
+        rows: systemRows(application, tlSmart),
+        prefill: systemPrefill(application, tlSmart),
+        realAgentCode: tlSmart.agentCodeFromSystem || null,
+      },
     });
   }
 
@@ -121,9 +131,31 @@ export async function GET(req: NextRequest) {
   const stageOf = new Map<string, { stage: string; at: Date }>();
   for (const h of hist) stageOf.set(h.prospectId, { stage: h.toStatus, at: h.createdAt });
 
+  // ── ข้อมูลระบบต่อราย (ใบสมัครออนไลน์ + TL SMART) ─────────────────────────
+  const sysActs = ids.length
+    ? await prisma.prospectActivity
+        .findMany({
+          where: {
+            prospectId: { in: ids },
+            type: { in: ['recruit_application', 'tl_smart_agent_code', 'tl_smart_application', 'tl_smart_agent_code_from_system'] },
+          },
+          orderBy: { createdAt: 'asc' },
+          select: { prospectId: true, type: true, content: true, createdAt: true },
+        })
+        .catch(() => [])
+    : [];
+  const actsOf = new Map<string, any[]>();
+  for (const a of sysActs) {
+    const arr = actsOf.get(a.prospectId) || [];
+    arr.push(a);
+    actsOf.set(a.prospectId, arr);
+  }
+
   const list = rows.map((r) => {
     const s = stageOf.get(r.id);
     const isKnown = s && stageByKey(s.stage);
+    const acts = actsOf.get(r.id) || [];
+    const tl = readTlSmart(acts as any);
     return {
       id: r.id,
       prospectId: r.prospectId,
@@ -135,6 +167,10 @@ export async function GET(req: NextRequest) {
       stageLabel: isKnown ? stageByKey(s!.stage)!.label : 'ยังไม่เริ่มไปป์ไลน์',
       stageAt: s?.at ?? null,
       createdAt: r.createdAt,
+      hasApplication: acts.some((a) => a.type === 'recruit_application'),
+      tlSmartAgentCode: tl.agentCodeFromSystem,
+      tlSmartQueueCode: tl.queueAgentCode,
+      tlSmartStatus: tl.agentCodeStatus,
     };
   });
 

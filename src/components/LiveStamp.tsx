@@ -1,37 +1,61 @@
 'use client';
-// LiveStamp — แสดงวัน/เวลาปัจจุบันของไทย (เดินจริง อัปเดตทุก 30 วินาที)
-// ฝังที่หัวหน้าแรก/หน้าที่ต้องการบอกว่า "ข้อมูล ณ เวลานี้" เป็นปัจจุบัน
+// LiveStamp — แสดงวัน/เวลาปัจจุบันของไทย (เดินจริง อัปเดตทุกวินาที)
+//
+// ⚠ บทเรียนจากของจริง: หน้าที่ถูก prerender/cache ที่ CDN (เช่นหน้าแรก) จะ "ฝัง" เวลาที่
+//   render ไว้ใน HTML — เปิดดูซ้ำอีกชั่วโมงต่อมาก็ยังเห็นเวลาเดิม (05:01 ค้างอยู่ทั้งที่จริง 06:15)
+//   ดังนั้นห้ามโชว์ค่าที่ฝังมากับ HTML: ก่อน hydrate ให้แสดงข้อความกลาง ๆ แล้วแทนด้วย
+//   เวลาจริงของเครื่องผู้ใช้ทันทีที่ mount + เดินต่อทุกวินาที และซิงค์ใหม่เมื่อกลับมาโฟกัสแท็บ
 import { useEffect, useState } from 'react';
 import { thaiDateFull, thaiDayName, thaiTime, thaiDateTimeFull } from '@/lib/now';
 
-export function LiveStamp({ className = '', showDay = true }: { className?: string; showDay?: boolean }) {
+/** เวลาปัจจุบันที่เดินจริง (คืน null ก่อน hydrate) — อัปเดตทุก intervalMs + ซิงค์เมื่อกลับมาโฟกัสแท็บ */
+export function useNow(intervalMs = 1000): Date | null {
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
-    setNow(new Date());
-    const t = setInterval(() => setNow(new Date()), 30 * 1000);
-    return () => clearInterval(t);
-  }, []);
-  // ก่อน mount ให้คำนวณจากฝั่งเซิร์ฟเวอร์ไปก่อน (ค่าเดียวกันเพราะใช้เขตเวลาไทยทั้งสองฝั่ง)
-  const d = now || new Date();
+    const tick = () => setNow(new Date());
+    tick();
+    const t = setInterval(tick, intervalMs);
+    const resync = () => { if (document.visibilityState !== 'hidden') tick(); };
+    document.addEventListener('visibilitychange', resync);
+    window.addEventListener('focus', resync);
+    window.addEventListener('pageshow', resync);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener('visibilitychange', resync);
+      window.removeEventListener('focus', resync);
+      window.removeEventListener('pageshow', resync);
+    };
+  }, [intervalMs]);
+  return now;
+}
+
+export function LiveStamp({ className = '', showDay = true }: { className?: string; showDay?: boolean }) {
+  const now = useNow(1000);
+  if (!now) {
+    // ยังไม่ hydrate — ห้ามแสดงเวลาที่ฝังมากับ HTML (จะค้างเพราะหน้าเว็บถูก cache)
+    return (
+      <span className={className} suppressHydrationWarning title="เวลาปัจจุบัน (เขตเวลาไทย UTC+7)">
+        🕒 กำลังอ่านเวลาปัจจุบัน (เขตเวลาไทย)…
+      </span>
+    );
+  }
   return (
     <span className={className} suppressHydrationWarning title="เวลาปัจจุบัน (เขตเวลาไทย UTC+7)">
-      🕒 ข้อมูล ณ {thaiDateFull(d)}{showDay ? ` (วัน${thaiDayName(d)})` : ''} เวลา {thaiTime(d)} น.
+      🕒 ข้อมูล ณ {thaiDateFull(now)}{showDay ? ` (วัน${thaiDayName(now)})` : ''} เวลา {thaiTime(now)} น.
     </span>
   );
 }
 
-/** © <ปี ค.ศ. ปัจจุบัน> */
+/** © <ปี ค.ศ. ปัจจุบัน> — คิดฝั่งผู้ใช้ ไม่ให้ปีค้างจาก HTML ที่ cache ไว้ */
 export function CeYear({ className = '' }: { className?: string }) {
-  const [y, setY] = useState<number>(new Date().getFullYear());
-  useEffect(() => { setY(new Date().getFullYear()); }, []);
-  return <span className={className} suppressHydrationWarning>{y}</span>;
+  const now = useNow(60 * 1000);
+  return <span className={className} suppressHydrationWarning>{now ? now.getFullYear() : ''}</span>;
 }
 
 /** วันที่ปัจจุบันแบบเต็ม เช่น "ปรับปรุงล่าสุด: 12 ตุลาคม 2569" */
 export function CurrentDateTh({ prefix = '', suffix = '' }: { prefix?: string; suffix?: string }) {
-  const [d, setD] = useState<Date>(new Date());
-  useEffect(() => { setD(new Date()); }, []);
-  return <span suppressHydrationWarning>{prefix}{thaiDateFull(d)}{suffix}</span>;
+  const now = useNow(60 * 1000);
+  return <span suppressHydrationWarning>{prefix}{now ? thaiDateFull(now) : '…'}{suffix}</span>;
 }
 
 export { thaiDateTimeFull };

@@ -54,6 +54,30 @@ function PipelineInner() {
   const stage = useMemo(() => stages.find((s) => s.key === stageKey), [stages, stageKey]);
   const doneKeys = useMemo(() => new Set(Object.keys(detail?.steps || {})), [detail]);
 
+  const sysRows = (detail?.system?.rows || []) as { label: string; value: string; source: string }[];
+  const sysPrefillAll = (detail?.system?.prefill || {}) as Record<string, Record<string, string>>;
+  const sysPrefillKeys = Object.keys(sysPrefillAll);
+  const sysPrefill = (sysPrefillAll[stageKey] || {}) as Record<string, string>;
+  const realAgentCode: string | null = detail?.system?.realAgentCode || null;
+
+  /** เติมข้อมูลที่มีจริงในระบบลงฟอร์ม (ไม่ทับค่าที่กรอกไว้แล้ว) — ถ้าขั้นที่เลือกไม่มีข้อมูล จะสลับไปขั้นที่มีข้อมูลให้เอง */
+  function fillFromSystem() {
+    const targetKey = sysPrefillKeys.includes(stageKey) ? stageKey : sysPrefillKeys[0];
+    const add = sysPrefillAll[targetKey];
+    if (!add || !Object.keys(add).length) return;
+    const next: Any = { ...data };
+    let n = 0;
+    for (const [k, v] of Object.entries(add)) {
+      if (!String(next[k] ?? '').trim() && String(v ?? '').trim()) { next[k] = v; n += 1; }
+    }
+    if (targetKey !== stageKey) setStageKey(targetKey);
+    setData(next);
+    const label = stages.find((s) => s.key === targetKey);
+    setMsg(n
+      ? `เติมข้อมูลจากระบบแล้ว ${n} ช่องในขั้น ${label?.no || ''} ${label?.label || targetKey} — ตรวจสอบก่อนกดบันทึก`
+      : `ฟอร์มขั้น ${label?.no || ''} มีข้อมูลอยู่แล้ว (ไม่มีช่องว่างให้เติม)`);
+  }
+
   async function save(advance: boolean) {
     if (!sel || !stage) return;
     setBusy(true); setErr(''); setMsg('');
@@ -100,6 +124,15 @@ function PipelineInner() {
                 <div className="font-semibold text-slate-700">{p.name || '(ไม่มีชื่อ)'}</div>
                 <div className="text-xs text-slate-500">{p.prospectId} · {p.phone || '—'}</div>
                 <div className="mt-1 text-xs text-emerald-700">{p.stageLabel}</div>
+                {p.tlSmartAgentCode ? (
+                  <div className="mt-1 inline-block rounded-full bg-sky-50 px-2 py-0.5 text-[11px] text-sky-700">
+                    TL SMART · รหัสตัวแทน {p.tlSmartAgentCode}
+                  </div>
+                ) : p.hasApplication ? (
+                  <div className="mt-1 inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[11px] text-amber-700">
+                    มีใบสมัครออนไลน์ · ยังไม่มีรหัสตัวแทนจาก TL SMART
+                  </div>
+                ) : null}
               </button>
             ))}
           </div>
@@ -133,6 +166,40 @@ function PipelineInner() {
                 })}
               </div>
             </div>
+
+            {/* ข้อมูลที่มีจริงในระบบ (ดึงอัตโนมัติ) */}
+            {sysRows.length > 0 && (
+              <div className="card p-5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h3 className="font-bold text-slate-800">ข้อมูลจากระบบ (ใบสมัครออนไลน์ + TL SMART)</h3>
+                    <p className="text-xs text-slate-500">
+                      ดึงอัตโนมัติจากข้อมูลที่บันทึกไว้จริง — ไม่มีข้อมูลใดถูกสร้างขึ้นใหม่ · แก้ไข/ยืนยันได้ในฟอร์มขั้นด้านล่าง
+                    </p>
+                  </div>
+                  {realAgentCode && (
+                    <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+                      รหัสตัวแทน (TL SMART ยืนยัน): {realAgentCode}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {sysRows.map((r) => (
+                    <div key={r.label} className="rounded-xl border border-[#e2e8f0] px-3 py-2 text-xs">
+                      <div className="text-slate-400">{r.label}</div>
+                      <div className="font-medium text-slate-700">{r.value}</div>
+                      <div className="mt-0.5 text-[11px] text-sky-600">ที่มา: {r.source}</div>
+                    </div>
+                  ))}
+                </div>
+                {sysPrefillKeys.length > 0 && (
+                  <button type="button" onClick={fillFromSystem}
+                    className="mt-3 rounded-xl border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 hover:bg-sky-100">
+                    เติมข้อมูลจากระบบลงฟอร์ม ({sysPrefillKeys.map((k) => `ขั้น ${stages.find((s) => s.key === k)?.no || k}`).join(', ')})
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* ฟอร์มของขั้นที่เลือก */}
             {stage && (

@@ -15,13 +15,13 @@
  *      ตัวเลือก:  node scripts/set-hostinger-env.mjs --dry       (ดูว่าจะส่งอะไร ไม่ยิงจริง)
  *                node scripts/set-hostinger-env.mjs SMTP_HOST   (ส่งเฉพาะคีย์ที่ระบุ)
  *
- * ต้องมีแท็บ Chrome ที่ล็อกอิน hPanel อยู่บนพอร์ต debug 9333
+ * ต้องมีแท็บ Chrome ที่ล็อกอิน hPanel อยู่บนพอร์ต debug (ค่าเริ่มต้น 9333 · override ด้วย CDP_PORT=9223)
  * สคริปต์พิมพ์แค่ชื่อคีย์ + ความยาว (ไม่พิมพ์ค่าจริง)
  */
 import { readFileSync, existsSync } from 'node:fs';
 
 const FILE = process.env.HOSTINGER_ENV_FILE || 'C:/Users/User/.n8n/hostinger-extra.env';
-const PORT = 9333;
+const PORT = Number(process.env.CDP_PORT || 9333);  // ตั้ง CDP_PORT=9223 ได้ถ้า hPanel ล็อกอินอยู่บนโปรไฟล์นั้น
 const B = '/api/wh-api/api/hapi/v1/accounts/u720169514/vhosts/darkslateblue-nightingale-938495.hostingersite.com/nodejs';
 const ONLY = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const DRY = process.argv.includes('--dry');

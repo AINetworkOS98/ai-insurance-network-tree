@@ -70,7 +70,9 @@ export async function notifyAdmins(opts:{ type:string; title:string; body?:strin
     const emailAdmins: any[] = await prisma.user.findMany({ where:{ email:{ in: ADMIN_EMAILS } }, select:{ id:true } }).catch(()=>[]);
     for(const u of emailAdmins) ids.add(String(u.id));
     for(const id of ids){
-      await emitNotification({ userId: id, type: opts.type, title: opts.title, body: opts.body, referenceId: opts.referenceId }).catch(()=>null);
+      // period = referenceId (เช่น id ของผู้มุ่งหวัง) — ถ้าไม่ใส่ eventId จะซ้ำกันทุกครั้ง
+      // ทำให้แจ้งเตือนในแอปถูก dedupe เหลือครั้งเดียวตลอดกาล
+      await emitNotification({ userId: id, type: opts.type, title: opts.title, body: opts.body, referenceId: opts.referenceId, period: opts.referenceId }).catch(()=>null);
     }
   }catch{}
 }
