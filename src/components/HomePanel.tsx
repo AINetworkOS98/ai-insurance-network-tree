@@ -13,11 +13,14 @@ import { useState } from 'react';
 import Link from 'next/link';
 import AIIntelligentSearch from '@/components/AIIntelligentSearch';
 import CosmicNetwork from '@/components/CosmicNetwork';
+import Net1x5MemberLayers from '@/components/Net1x5MemberLayers';
 import { LiveStamp } from '@/components/LiveStamp';
 
-export type HomePanelId = 'cosmic' | 'shortcuts';
+export type HomePanelId = 'members' | 'cosmic' | 'shortcuts';
 
+// เรียงแท็บ: สมาชิก 1 แตก 5 (สร้างก่อน) → จักรวาลของเครือข่าย → ทางลัดเข้าระบบ
 const PANEL_TABS: { id: HomePanelId; label: string; icon: string }[] = [
+  { id: 'members',   label: 'สมาชิก 1 แตก 5',      icon: '👥' },
   { id: 'cosmic',    label: 'จักรวาลของเครือข่าย', icon: '🌌' },
   { id: 'shortcuts', label: 'ทางลัดเข้าระบบ',      icon: '🧭' },
 ];
@@ -74,7 +77,12 @@ export default function HomePanel({ defaultPanel = 'cosmic' }: { defaultPanel?: 
               })}
             </div>
 
-            {panel === 'cosmic' ? (
+            {panel === 'members' ? (
+              <div className="mt-3 w-full">
+                {/* ผังสมาชิก 1 แตก 5 เป็นชั้น ๆ (ข้อมูลจริง · อ่านเท่านั้น) — ผู้ที่ยังไม่เข้าสู่ระบบจะเห็นการ์ดเชิญเข้าสู่ระบบ */}
+                <Net1x5MemberLayers embedded />
+              </div>
+            ) : panel === 'cosmic' ? (
               <div className="mt-3">
                 <p className="mx-auto max-w-[760px] text-center text-[11px] font-semibold tracking-wide text-sky-700">
                   หนึ่งคนเชื่อม 5 คน · 5 ขยายเป็น 25 · 25 ขยายเป็น 125 · 125 ขยายเป็น 625

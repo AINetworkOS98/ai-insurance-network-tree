@@ -125,9 +125,10 @@ function Tile({ label, value, sub, tone }: { label: string; value: any; sub?: st
   );
 }
 
-export default function Net1x5MemberLayers() {
+export default function Net1x5MemberLayers({ embedded = false }: { embedded?: boolean } = {}) {
   const [state, setState] = useState<State | null>(null);
   const [err, setErr] = useState('');
+  const [needLogin, setNeedLogin] = useState(false);
   const [auto, setAuto] = useState(true);
   const [zoom, setZoom] = useState(1);
   const [showSlots, setShowSlots] = useState(true);
@@ -137,8 +138,14 @@ export default function Net1x5MemberLayers() {
     try {
       const r = await fetch('/api/net/1x5/state', { credentials: 'include', cache: 'no-store' });
       const j = (await r.json()) as State;
-      if (!j?.ok) { setErr(j?.message || j?.error || 'อ่านสถานะเครือข่ายไม่สำเร็จ'); return; }
-      setState(j); setErr('');
+      if (!j?.ok) {
+        const msg = j?.message || j?.error || 'อ่านสถานะเครือข่ายไม่สำเร็จ';
+        setErr(msg);
+        // หน้าแรกเป็นหน้าสาธารณะ — ผู้ที่ยังไม่เข้าสู่ระบบจะได้ข้อความ “เฉพาะสมาชิก” ⇒ แสดงการ์ดเชิญเข้าสู่ระบบ ไม่ใช่ error ดิบ
+        setNeedLogin(/members_only|session|เข้าสู่ระบบ|expired/i.test(`${j?.error || ''} ${msg}`));
+        return;
+      }
+      setState(j); setErr(''); setNeedLogin(false);
     } catch {
       setErr('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ — กำลังลองใหม่');
     }
@@ -344,9 +351,28 @@ export default function Net1x5MemberLayers() {
   }
 
   return (
-    <section className="min-h-screen bg-[#020617] text-sky-50">
-      {/* pb-24: เว้นที่ให้แถบล่างติดจอ (VisitorCounter) — ไม่งั้นข้อความท้ายส่วนถูกบัง */}
-      <div className="max-w-[1400px] mx-auto px-3 sm:px-5 pt-5 pb-24">
+    <section className={embedded ? 'w-full rounded-2xl overflow-hidden bg-[#020617] text-sky-50' : 'min-h-screen bg-[#020617] text-sky-50'}>
+      {/* pb-24: เว้นที่ให้แถบล่างติดจอ (VisitorCounter) — ไม่งั้นข้อความท้ายส่วนถูกบัง (ไม่ต้องเมื่อฝังในแท็บของหน้าแรก) */}
+      <div className={`max-w-[1400px] mx-auto px-3 sm:px-5 pt-5 ${embedded ? 'pb-6' : 'pb-24'}`}>
+        {needLogin && (
+          <div className="rounded-2xl border border-[#c8a84e]/50 bg-[#c8a84e]/10 p-6 text-center">
+            <div className="text-3xl">🔒</div>
+            <div className="mt-2 text-sm font-semibold text-sky-50">ผังสมาชิก 1 แตก 5 เปิดให้เฉพาะสมาชิกที่เข้าสู่ระบบแล้ว</div>
+            <div className="mt-1 text-xs text-sky-200/75 max-w-xl mx-auto leading-relaxed">
+              ข้อมูลในส่วนนี้เป็นข้อมูลจริงของสมาชิกในระบบ (ชื่อถูกปกปิดบางส่วนตาม PDPA) — เข้าสู่ระบบเพื่อดูผังผู้แนะนำ 1:{branchLimit} เป็นชั้น ๆ
+              ของสมาชิกจริง · ผู้ที่ยังไม่เป็นสมาชิกเริ่มได้ที่หน้า “ชวนสมาชิก” หรือ “สมัครสมาชิก”
+            </div>
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs">
+              <a href="/login" className="rounded-full bg-[#c8a84e] px-4 py-2 font-semibold text-[#3f3a2e]">เข้าสู่ระบบ</a>
+              <a href="/referral" className="rounded-full border border-sky-400/40 px-4 py-2 font-semibold text-sky-100">ชวนสมาชิก</a>
+              <a href="/register" className="rounded-full border border-sky-400/40 px-4 py-2 font-semibold text-sky-100">สมัครสมาชิก</a>
+            </div>
+            <div className="mt-2 text-[10px] text-sky-200/55">ข้อความจากเซิร์ฟเวอร์: {err}</div>
+          </div>
+        )}
+
+        {!needLogin && (
+        <>
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
             <div className="text-[11px] font-semibold tracking-wide text-sky-300/80">MEMBER 1×5 LAYERS · ข้อมูลจริงในฐานข้อมูล</div>
@@ -627,6 +653,8 @@ export default function Net1x5MemberLayers() {
           {state?.period ? ` · รอบที่ประเมิน ${state.period}` : ''}
           {state?.testAccounts ? ` · มีสมาชิกทดสอบในฐานข้อมูล ${th(state.testAccounts)} คน` : ''}
         </div>
+        </>
+        )}
       </div>
     </section>
   );
