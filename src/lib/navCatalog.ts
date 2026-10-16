@@ -76,6 +76,8 @@ export const NAV_ENTRIES: NavEntry[] = [
   // หมายเหตุ: เมนู "ระบบ 1 แตก 5 อัตโนมัติ" (/network/1x5-autopilot) ไม่ใส่ในเมนูด้านซ้าย
   //          เพราะมีอยู่ในเมนูด้านบน (Header) แล้ว — ใส่ซ้ำจะซ้ำซ้อนกัน
   { href: '/notifications', section: 'general', label: 'ศูนย์แจ้งเตือน', key: 'nav_notif', icon: '🔔', minRank: 0 },
+  // LINE OA — สมาชิกทุกคนแอดเพื่อนแล้วคุยกับทีมงานผ่านมือถือได้ (ลิงก์สาธารณะของ OA ไม่ต้องล็อกอิน)
+  { href: 'https://line.me/R/ti/p/@923jrlgz', section: 'general', label: 'LINE OA · คุยกับทีมงาน', icon: '💬', minRank: 0, external: true },
   { href: '/settings', section: 'general', label: 'ตั้งค่าโปรไฟล์', key: 'sb_settings', icon: '⚙', minRank: 0 },
 
   // ── ตัวแทน (rank 1 ขึ้นไป) ───────────────────────────────────────────────

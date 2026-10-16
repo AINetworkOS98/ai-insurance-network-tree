@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import LineOaCard from '@/components/LineOaCard';
 import { SUBJECT_OPTIONS } from '@/lib/support';
 
 export default function ContactPage() {
@@ -69,6 +70,11 @@ export default function ContactPage() {
           <div className="max-w-2xl mx-auto">
             <h1 className="text-xl font-bold text-slate-800 mb-1">📩 ติดต่อ Admin</h1>
             <p className="text-sm text-slate-500 mb-5">Support Center — ส่งคำถาม แจ้งปัญหา หรือขอความช่วยเหลือจากทีมงาน</p>
+
+            {/* ช่องทางเร็ว: แอด LINE OA แล้วคุยผ่านมือถือ (QR สำหรับคนที่เปิดจากคอม) */}
+            <div className="mb-5">
+              <LineOaCard />
+            </div>
 
             {loadingProfile ? (
               <div className="card p-5 text-center text-sm text-slate-500">กำลังโหลดข้อมูล...</div>
