@@ -10,6 +10,7 @@ import Header from '@/components/Header';
 import { RECRUIT_STAGES } from '@/lib/recruitPipeline';
 import { TL_SMART_SPONSOR_CODE } from '@/lib/tlSmart';
 import { searchAddress, resolvePostal, resolveDistrict, autoFillFromQuery, type AddressHit } from '@/lib/thaiAddress';
+import LineOaCard from '@/components/LineOaCard';
 
 type Any = Record<string, any>;
 
@@ -245,6 +246,11 @@ function RecruitInner() {
           </button>
         </div>
       </section>
+
+      {/* ── LINE OA: แอดเพื่อนแล้วคุยกับทีมงานผ่านมือถือ ─────────────── */}
+      <div className="mt-5">
+        <LineOaCard compact />
+      </div>
 
       {/* ── แถบขั้นตอน ─────────────────────────────────────────────── */}
       <ol className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">

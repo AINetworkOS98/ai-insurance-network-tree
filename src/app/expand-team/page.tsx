@@ -11,6 +11,7 @@ import Sidebar from '@/components/Sidebar';
 import AdsManager from '@/components/AdsManager';
 import TikTokAdsResults from '@/components/TikTokAdsResults';
 import { useT } from '@/i18n';
+import LineOaCard from '@/components/LineOaCard';
 
 type Any = Record<string, any>;
 
@@ -334,6 +335,9 @@ export default function ExpandTeamPage() {
               </>
             )}
           </div>
+
+          {/* ── LINE OA: ช่องทางให้ผู้มุ่งหวัง/สมาชิกคุยกับทีมงานผ่านมือถือ ── */}
+          <LineOaCard />
 
           {/* ── 6 ช่องทางขยายทีม ────────────────────────────────────────── */}
           <div className="pt-1">
