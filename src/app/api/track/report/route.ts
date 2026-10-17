@@ -89,7 +89,8 @@ export async function GET(req: NextRequest) {
 
     // ── รวมยอด ────────────────────────────────────────────────────────────
     const types: Record<string, number> = {};
-    const pageMap = new Map<string, { views: number; visitors: Set<string>; title: string | null }>();
+    type PageAgg = { views: number; visitors: Set<string>; returns: number; title: string | null };
+    const pageMap = new Map<string, PageAgg>();
     const sessions = new Set<string>();
     const visitorIds = new Set<string>();
     const deviceOf = new Map<string, string>();
@@ -102,7 +103,7 @@ export async function GET(req: NextRequest) {
       if (e.visitorId) visitorIds.add(String(e.visitorId));
       if (e.type === 'page_view' || e.type === 'return_visit') {
         const p = String(e.pagePath || '/');
-        const cur = pageMap.get(p) || { views: 0, visitors: new Set<string>(), returns: 0, title: null };
+        const cur: PageAgg = pageMap.get(p) || { views: 0, visitors: new Set<string>(), returns: 0, title: null };
         if (e.type === 'page_view') cur.views += 1;
         else cur.returns += 1;
         if (e.visitorId) cur.visitors.add(String(e.visitorId));
