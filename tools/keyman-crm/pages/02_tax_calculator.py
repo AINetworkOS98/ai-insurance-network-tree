@@ -166,7 +166,7 @@ with tab_calc:
         st.info(res["result"] + " · " + res["engine_note"])
         st.caption(res["disclaimer"])
 
-        d1, d2 = st.columns(2)
+        d1, d2, d3 = st.columns(3)
         d1.download_button(
             "⬇ ส่งออกผลเป็น Excel",
             data=tc.to_excel(res),
@@ -178,6 +178,12 @@ with tab_calc:
             data=pd.DataFrame(tc.summary_rows(res)).to_csv(index=False).encode("utf-8-sig"),
             file_name=f"tax_{TAX_YEAR}_{last['name']}.csv",
             mime="text/csv",
+        )
+        d3.download_button(
+            "⬇ รายงาน HTML (เปิดแล้ว Ctrl+P → PDF)",
+            data=tc.to_html_report(res, f"รายงานภาษี ปีภาษี {TAX_YEAR} — {last['name']}").encode("utf-8"),
+            file_name=f"tax_{TAX_YEAR}_{last['name']}.html",
+            mime="text/html",
         )
 
 with tab_compare:

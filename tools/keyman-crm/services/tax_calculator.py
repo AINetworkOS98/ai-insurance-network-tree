@@ -184,3 +184,33 @@ def to_excel(res: Dict[str, Any], form_name: str = "ภาษี 2569") -> bytes
             writer, sheet_name="ข้อจำกัด", index=False
         )
     return buf.getvalue()
+
+
+def to_html_report(res: Dict[str, Any], title: str = "รายงานภาษีบุคคลธรรมดา") -> str:
+    """รายงาน HTML พร้อมพิมพ์ (Ctrl+P → บันทึกเป็น PDF ได้จากเบราว์เซอร์)"""
+    rows = "".join(
+        f"<tr><td>{r['รายการ']}</td><td class='n'>{r['จำนวนเงิน']:,.2f}</td></tr>"
+        for r in summary_rows(res)
+    )
+    steps = "".join(
+        f"<tr><td>{s.get('range', '')}</td><td class='n'>{float(s.get('rate', 0)) * 100:.0f}%</td>"
+        f"<td class='n'>{float(s.get('amount', 0)):,.2f}</td><td class='n'>{float(s.get('tax', 0)):,.2f}</td></tr>"
+        for s in res["bracket_steps"]
+    )
+    return f"""<!doctype html><html lang="th"><head><meta charset="utf-8">
+<title>{title}</title>
+<style>
+ body{{font-family:'Sarabun','Tahoma',sans-serif;margin:28px;color:#111}}
+ h1{{font-size:20px;margin:0 0 4px}} .muted{{color:#555;font-size:12px}}
+ table{{border-collapse:collapse;width:100%;margin:12px 0;font-size:13px}}
+ th,td{{border:1px solid #bbb;padding:6px 8px}} th{{background:#f0f2f5;text-align:left}}
+ td.n,th.n{{text-align:right;font-variant-numeric:tabular-nums}}
+ .note{{font-size:11px;color:#666}}
+</style></head><body>
+<h1>{title}</h1>
+<div class="muted">ปีภาษี {res['year']} · เอนจิน v{res['version']} · {res['filing_mode']}</div>
+<table><thead><tr><th>รายการ</th><th class="n">จำนวนเงิน (บาท)</th></tr></thead><tbody>{rows}</tbody></table>
+<table><thead><tr><th>ช่วงเงินได้สุทธิ</th><th class="n">อัตรา</th><th class="n">เงินได้ในช่วง</th><th class="n">ภาษี</th></tr></thead>
+<tbody>{steps}</tbody></table>
+<p class="note">{res['engine_note']}<br>{res['disclaimer']}</p>
+</body></html>"""
