@@ -8,6 +8,7 @@
 //    4) คำที่แปลว่า "ขอคุยกับคน" → ส่งข้อความ handoff และติดป้ายผู้ติดตามให้ทีมงานเห็น
 // ─────────────────────────────────────────────────────────────────────────────
 import { HermesProvider, getHermesProvider, providerChain } from '@/lib/ai/hermesProvider';
+import { siteKnowledgeBlock } from '@/lib/siteMap';
 import { prisma } from '@/lib/prisma';
 import { normalizeMessages } from '@/lib/lineOa';
 
@@ -144,9 +145,14 @@ export async function buildLiveFacts(scope: 'public' | 'admin' = 'public'): Prom
       if (Array.isArray(ranks) && ranks.length) lines.push(`- จำนวนสมาชิกแยกตามตำแหน่ง: ${ranks.map((r: any) => `${r.positionId || 'ไม่ระบุ'}=${r._count?._all ?? 0}`).join(', ')}`);
     }
   } catch { /* ข้อมูลสดเป็นส่วนเสริม — ถ้าดึงไม่ได้ก็ตอบจากฐานความรู้เดิม */ }
-  if (!lines.length) return '';
   const ts = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' });
-  return `── ข้อมูลสดจากระบบ (ณ ${ts}) ──\n${lines.join('\n')}\n(ข้อมูลนี้เป็นภาพรวมทั้งทีม ห้ามเปิดเผยข้อมูลรายบุคคล)`;
+  const live = lines.length
+    ? `── ข้อมูลสดจากระบบ (ณ ${ts}) ──\n${lines.join('\n')}\n(ข้อมูลนี้เป็นภาพรวมทั้งทีม ห้ามเปิดเผยข้อมูลรายบุคคล)`
+    : '';
+  // แผนที่ลิงก์/เมนูทั้งหมด — สร้างสดจาก navCatalog ทุกครั้ง → เพิ่มเมนูใหม่ในอนาคต AI รู้เองทันที
+  let map = '';
+  try { map = siteKnowledgeBlock(5000); } catch { /* ถ้าสร้างไม่ได้ก็ยังตอบได้ */ }
+  return [live, map].filter(Boolean).join('\n\n');
 }
 
 export function buildSystemPrompt(s: AiSettingsShape, facts?: string): string {

@@ -11,7 +11,7 @@ type Turn = { role: 'user' | 'ai'; text: string };
 const QUICK = ['สมัครเป็นตัวแทนต้องทำยังไง', 'มีเมนูอะไรบ้างในระบบ', 'รายได้โอนเมื่อไหร่', 'ทีมมีสมาชิกกี่คน'];
 
 export default function ContactAiChat() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const [turns, setTurns] = useState<Turn[]>([
