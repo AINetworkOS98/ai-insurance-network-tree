@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import TikTokAdsResults from '@/components/TikTokAdsResults';
@@ -89,6 +89,16 @@ function AdminContent() {
   const [auditError, setAuditError] = useState<string | null>(null);
   // แยกสาเหตุที่โหลดไม่ได้: 'auth' = ยังไม่ล็อกอิน (ให้ไปหน้าเข้าสู่ระบบ) / 'perm' = ล็อกอินแล้วแต่ไม่มีสิทธิ์ (ไม่ต้องล็อกอินใหม่)
   const [errorHint, setErrorHint] = useState<'auth'|'perm'|null>(null);
+
+  // ── ตัวตรวจความเปลี่ยนแปลงรายวินาที ────────────────────────────────────────
+  // หน้า /admin เรียก /api/admin/watch ทุก 1 วินาที · ถ้า sig เปลี่ยน = มีการแก้ข้อมูล
+  // ในระบบ (สมาชิก/ผู้สนใจ/ใบเสร็จ/ข้อความ/AuditLog) → รีเฟรชข้อมูลจริงทันที
+  const [liveAt, setLiveAt] = useState<string | null>(null);
+  const [liveChanges, setLiveChanges] = useState(0);
+  const [liveFlash, setLiveFlash] = useState<string | null>(null);
+  const [liveErr, setLiveErr] = useState<string | null>(null);
+  const [liveEvents, setLiveEvents] = useState<{ at: string; label: string }[]>([]);
+  const liveRefreshRef = useRef<() => void>(() => {});
 
   const callApi = async (endpoint: string) => {
     // credentials:'include' — ส่งคุกกี้เซสชันเสมอ (กันกรณี NEXT_PUBLIC_BASE_URL ชี้คนละโดเมน)
@@ -269,6 +279,62 @@ function AdminContent() {
     }
   };
 
+  // รีเฟรชข้อมูลจริงทั้งหน้า (เรียกจากตัวตรวจรายวินาทีเมื่อตรวจพบการเปลี่ยนแปลง)
+  liveRefreshRef.current = () => {
+    void fetchMembers();
+    void fetchIncomeSummary();
+    void fetchPositionData();
+    void fetchAuditLogs();
+    fetch('/api/admin/messages', { credentials: 'include' }).then(r => r.json()).then(j => { if (j.ok) setPendingMsgCount(j.pending || 0); }).catch(() => {});
+  };
+
+  // ── ตรวจทุก 1 วินาที: sig เปลี่ยน = มีข้อมูลใหม่ → รีเฟรช + แจ้งบนหน้าจอ ───────
+  useEffect(() => {
+    let stop = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let sig = '';
+    let since = new Date().toISOString();
+
+    const tick = async () => {
+      if (stop) return;
+      // ไม่ยิงคำขอเมื่อแท็บถูกซ่อน (ประหยัดทรัพยากร) แต่ยังวนรอบไว้ให้กลับมาทำงานทันที
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        timer = setTimeout(tick, 1000);
+        return;
+      }
+      try {
+        const qs = sig ? `?sig=${encodeURIComponent(sig)}&since=${encodeURIComponent(since)}` : '';
+        const res = await fetch(`/api/admin/watch${qs}`, { credentials: 'include', cache: 'no-store' });
+        const j: any = await res.json().catch(() => ({}));
+        if (stop) return;
+        if (!res.ok || !j.ok) {
+          setLiveErr(res.status === 401 ? 'ยังไม่ได้เข้าสู่ระบบ หรือไม่มีสิทธิ์ผู้ดูแล' : (j.error || `HTTP ${res.status}`));
+        } else {
+          setLiveErr(null);
+          if (j.at) setLiveAt(j.at);
+          if (sig && j.sig && j.sig !== sig) {
+            const evs: { at: string; label: string }[] = (j.events || []).map((e: any) => ({ at: e.at, label: e.label }));
+            setLiveEvents(evs);
+            setLiveChanges((c) => c + 1);
+            const when = new Date(j.at || Date.now()).toLocaleTimeString('th-TH');
+            setLiveFlash(`${when} · พบ ${evs.length || 1} รายการ`);
+            liveRefreshRef.current();
+            setTimeout(() => { if (!stop) setLiveFlash(null); }, 8000);
+          }
+          if (j.sig) sig = j.sig;
+          if (j.at) since = j.at;
+        }
+      } catch (e) {
+        if (!stop) setLiveErr(e instanceof Error ? e.message : 'เชื่อมต่อไม่สำเร็จ');
+      }
+      if (!stop) timer = setTimeout(tick, 1000);
+    };
+
+    void tick();
+    return () => { stop = true; if (timer) clearTimeout(timer); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
       fetchMembers();
       fetchIncomeSummary();
@@ -333,6 +399,37 @@ function AdminContent() {
         <Sidebar />
         <main className="flex-1 p-6 space-y-6 bg-white">
           <h1 className="text-xl font-bold text-slate-800">ผู้ดูแลระบบ — Admin Dashboard</h1>
+
+          {/* ── ตัวตรวจความเปลี่ยนแปลงทุก 1 วินาที (รีเฟรชข้อมูลเองเมื่อมีการแก้ในระบบ) ── */}
+          <div className="flex flex-wrap items-center gap-2 text-[11px]">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 font-semibold text-emerald-700">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              LIVE · ตรวจทุก 1 วินาที
+            </span>
+            <span className="text-slate-500">
+              อัปเดตล่าสุด: <b className="tabular-nums text-slate-700">{liveAt ? new Date(liveAt).toLocaleTimeString('th-TH') : '—'}</b>
+            </span>
+            <span className="text-slate-500">
+              ตรวจพบการเปลี่ยนแปลง: <b className="tabular-nums text-slate-700">{liveChanges}</b> ครั้ง
+            </span>
+            {liveFlash && (
+              <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-semibold text-amber-800">↻ {liveFlash} · รีเฟรชแล้ว</span>
+            )}
+            {liveErr && (
+              <span className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 font-semibold text-rose-700">{liveErr}</span>
+            )}
+          </div>
+          {liveEvents.length > 0 && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-600">
+              <b className="text-slate-700">รายการล่าสุดที่ตรวจพบ:</b>{' '}
+              {liveEvents.slice(0, 6).map((e, i) => (
+                <span key={`${e.at}-${i}`}>{i > 0 ? ' · ' : ''}{e.label}</span>
+              ))}
+            </div>
+          )}
 
           {/* ── การยิงโฆษณา TikTok + ยอดเงิน (คำสั่งเจ้าของระบบ 14 ต.ค. 2026) ──
               ใช้คอมโพเนนต์เดียวกันกับหน้า /expand-team แต่ส่ง adminOnly เพื่อไม่ให้ข้อมูลการเงิน
