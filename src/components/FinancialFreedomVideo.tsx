@@ -80,6 +80,7 @@ const COPY = {
 export default function FinancialFreedomVideo() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const detachRef = useRef<{ detach: () => void } | null>(null);
+  const { lang } = useT();
   const [ready, setReady] = useState(false);
   const [consent, setConsent] = useState<'granted' | 'denied' | null>(null);
   const [status, setStatus] = useState<ViStatus>({});
@@ -126,36 +127,43 @@ export default function FinancialFreedomVideo() {
   const granted = consent === 'granted';
   const mmss = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 
+  // ฉบับที่แสดงตามภาษาที่เลือกจากเมนูภาษา: ไทย → ฉบับไทยเดิม · ภาษาอื่น → ฉบับสากล
+  const isThai = lang === 'th';
+  const edition = isThai ? TH_ED : INTL;
+  const c = isThai ? COPY.th : COPY.en;
+
   return (
     <section className="max-w-4xl mx-auto mt-12">
       <Script src="/video-intel.js" strategy="afterInteractive" onLoad={wire} />
 
       <div className="mb-3">
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-rose-50 text-rose-700 text-sm font-semibold border border-rose-200">
-          <span>🎥</span> วิดีโอสรุปเส้นทาง · 30 SECONDS
+          <span>{c.badge}</span>
         </div>
-        <h2 className="mt-4 text-2xl font-bold text-slate-900">ดูภาพรวมก่อนตัดสินใจ</h2>
+        <h2 className="mt-4 text-2xl font-bold text-slate-900">{c.title}</h2>
         <p className="mt-1.5 text-[11px] font-semibold tracking-[0.24em] text-slate-400">
-          FOUR STEPS TO FINANCIAL FREEDOM · 1080P
+          THREE REAL STEPS + 1-TO-5 NETWORK · {c.sub}
         </p>
-        <p className="mt-2 text-slate-600 leading-relaxed">
-          คลิปสั้น 30 วินาทีสรุป 4 ขั้นตอนสู่อิสรภาพทางการเงิน — เล่าเป็นภาษาไทยพร้อมคำกำกับภาษาอังกฤษ
-          กดเล่นได้ทันที ไม่มีโหลดเพิ่มจากระบบ
-        </p>
+        <p className="mt-2 text-slate-600 leading-relaxed">{c.desc}</p>
+        <p className="mt-1.5 text-xs text-slate-500">{c.hint}</p>
       </div>
 
       <div className="relative rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-black">
         {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
         <video
+          key={edition.src}
           ref={videoRef}
-          src={SRC}
+          src={edition.src}
           controls
           playsInline
           preload="metadata"
-          poster="/financial-freedom-poster.jpg"
+          poster={edition.poster}
           className="w-full aspect-video max-h-[70vh] bg-black object-contain"
           crossOrigin="anonymous"
-        />
+        >
+          <track kind="captions" src={edition.subEn} srcLang="en" label="English" default={!isThai} />
+          <track kind="captions" src={edition.subTh} srcLang="th" label="ไทย" default={isThai} />
+        </video>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500">

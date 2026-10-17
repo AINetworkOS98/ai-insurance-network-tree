@@ -44,6 +44,36 @@ const result = { ok: false, step: 'start', promptLen: 0, videoFile: null, tiktok
 const log = (...a) => console.error('[autopilot]', ...a);
 function finish(code = 0) { console.log(JSON.stringify(result)); process.exit(code); }
 
+/* ── 0) ตัวกันข้อมูลส่วนตัว ──────────────────────────────────────────────
+ * กติกาผู้ใช้: ห้ามนำข้อมูลส่วนตัว (เช่น ข้อมูลของ "papa") ส่งออกไป AI / แอป /
+ * โปรแกรมใด ๆ — พรอมต์ที่ส่งเข้า Google Flow และแคปชันที่พิมพ์ลง TikTok คือจุดที่
+ * ข้อมูลออกจากเครื่อง จึงต้องผ่านประตูนี้ก่อนเสมอ.
+ * รายการคำต้องห้าม: n8n/flow-tiktok-autopilot/privacy-blocklist.txt (บรรทัดละคำ)
+ */
+const BLOCKLIST_FILE = arg('blocklist', path.join(HOME, 'ai-insurance-network-tree', 'n8n', 'flow-tiktok-autopilot', 'privacy-blocklist.txt'));
+function privacyTerms() {
+  try {
+    return fs.readFileSync(BLOCKLIST_FILE, 'utf8').split(/\r?\n/)
+      .map(s => s.trim()).filter(s => s && !s.startsWith('#'));
+  } catch { return []; }
+}
+function privacyCheck(text, where) {
+  const s = String(text || '');
+  const low = s.toLowerCase();
+  const hits = privacyTerms().filter(t => low.includes(t.toLowerCase()));
+  const digits = s.replace(/[^0-9]/g, '');
+  if (/(?<!\d)\d{13}(?!\d)/.test(s) || /\d-\d{4}-\d{5}-\d{2}-\d/.test(s) || /(?<!\d)\d{13}(?!\d)/.test(digits)) {
+    hits.push('เลขบัตรประชาชน/เลข 13 หลัก');
+  }
+  if (/\b0\d{8,9}\b/.test(s.replace(/[-\s]/g, ''))) hits.push('เบอร์โทรศัพท์');
+  if (hits.length) {
+    result.privacy = { blocked: true, where, hits };
+    throw new Error(`บล็อกข้อมูลส่วนตัวก่อนส่งออก (${where}) → ${hits.join(', ')} | ห้ามส่งข้อมูลส่วนตัวเข้า AI/แอป/โปรแกรมใด ๆ — แก้พรอมต์/แคปชันก่อนรันใหม่`);
+  }
+  result.privacy = { blocked: false, where };
+  return true;
+}
+
 /* ── CDP helpers (ไม่ต้องใช้ dependency) ───────────────────────────────── */
 async function listPages() {
   const r = await fetch(CDP + '/json/list');
@@ -224,6 +254,7 @@ async function generateInFlow(prompt) {
     return JSON.stringify({ ok:true });
   })()`);
   if (!focus.ok) throw new Error('หา prompt box ไม่เจอ');
+  privacyCheck(prompt, 'Google Flow (พรอมต์วิดีโอ)');
   await c.send('Input.insertText', { text: prompt });
   await sleep(2000);
 
@@ -336,6 +367,7 @@ async function postToTikTok(videoFile, caption) {
     r.selectNodeContents(el); sel.removeAllRanges(); sel.addRange(r);
     return 'focused';
   })()`);
+  privacyCheck(caption, 'TikTok (แคปชัน)');
   await c.send('Input.insertText', { text: caption });
   await sleep(3000);
   const capLen = JSON.parse(await c.evaluate(`(() => {

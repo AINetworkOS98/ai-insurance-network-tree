@@ -34,7 +34,8 @@ async function loadDict(): Promise<Dict> {
       .then((j: Dict) => (dict = j || {}))
       .catch(() => (dict = {}));
   }
-  return loading;
+  const d = await loading;
+  return d || {};
 }
 
 /** เก็บข้อความเดิมไว้คืนค่าเมื่อสลับกลับเป็นไทย */
