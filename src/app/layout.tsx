@@ -4,6 +4,7 @@ import Script from "next/script";
 import VisitorCounter from "@/components/VisitorCounter";
 import UtmCapture from "@/components/UtmCapture";
 import AutoTranslate from "@/components/AutoTranslate";
+import SiteAiAssistant from "@/components/SiteAiAssistant";
 
 export const metadata: Metadata = {
   title: "AI Insurance Network Tree — ระบบบริหารเครือข่ายตัวแทน",
@@ -18,6 +19,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-full flex flex-col bg-soft-white text-slate-medium font-sans antialiased" style={{fontFamily:"'Sarabun','Noto Sans Thai',sans-serif"}}>
         {children}
+        {/* ผู้ช่วย AI ลอยได้ทุกหน้า (Hermes · DeepSeek) — ซ่อนเองในหน้าผู้ดูแลและหน้า /contact */}
+        <SiteAiAssistant />
         <VisitorCounter />
         {/* ทำให้ทุกหน้าเป็นสากล: สลับข้อความไทย→อังกฤษตามเมนูภาษา (ไม่แตะหน้าตาเดิม) */}
         <AutoTranslate />
