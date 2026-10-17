@@ -49,6 +49,9 @@ const SCENES = [
 ];
 const FPS = 30;
 const XFADE = 0.6; // คาบเหลื่อมของครอสเฟด
+// ขนาดภาพออก: ค่าเริ่มต้น 1920×1080 (แนวนอน) · ตั้ง OUT_W/OUT_H เพื่อทำแนวตั้ง 1080×1920
+const W = Number(process.env.OUT_W || 1920);
+const H = Number(process.env.OUT_H || 1080);
 const TOTAL = SCENES.reduce((a, s) => a + s.dur, 0) - XFADE * (SCENES.length - 1);
 
 function ensureFonts() {
@@ -87,7 +90,7 @@ function shoot(scenes) {
     const dest = join(OUT, `scene-${s.id}.png`);
     const r = spawnSync(CHROME, [
       '--headless=new', '--disable-gpu', '--no-sandbox', '--hide-scrollbars',
-      '--force-device-scale-factor=1', '--window-size=1920,1080',
+      '--force-device-scale-factor=1', `--window-size=${W},${H}`,
       '--default-background-color=00000000', '--virtual-time-budget=4000',
       `--screenshot=${dest.replace(/\\/g, '/')}`, `${page}?scene=${s.id}`,
     ], { stdio: 'inherit' });
@@ -118,9 +121,9 @@ function compose(files) {
   const useGradients = hasFilter('gradients');
   if (useGradients) {
     args.push('-f', 'lavfi', '-i',
-      `gradients=s=1920x1080:r=${FPS}:d=${TOTAL.toFixed(2)}:nb_colors=4:c0=0x04122b:c1=0x0b2450:c2=0x1a1140:c3=0x02101f:x0=180:y0=120:x1=1760:y1=960:speed=0.012`);
+      `gradients=s=${W}x${H}:r=${FPS}:d=${TOTAL.toFixed(2)}:nb_colors=4:c0=0x04122b:c1=0x0b2450:c2=0x1a1140:c3=0x02101f:x0=${Math.round(W * 0.09)}:y0=${Math.round(H * 0.11)}:x1=${Math.round(W * 0.92)}:y1=${Math.round(H * 0.89)}:speed=0.012`);
   } else {
-    args.push('-f', 'lavfi', '-i', `color=c=0x061530:s=1920x1080:r=${FPS}:d=${TOTAL.toFixed(2)}`);
+    args.push('-f', 'lavfi', '-i', `color=c=0x061530:s=${W}x${H}:r=${FPS}:d=${TOTAL.toFixed(2)}`);
   }
   // 1..N) ภาพแต่ละฉาก (วนซ้ำเป็นวิดีโอ)
   for (const f of files) args.push('-loop', '1', '-framerate', String(FPS), '-i', f);
@@ -137,7 +140,7 @@ function compose(files) {
     const span = spans[i];
     const fadeOutAt = span.end - 0.75;
     fc.push(
-      `[${i + 1}:v]scale=2112:1188,zoompan=z='min(1+0.00055*on,1.09)':d=1:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080:fps=${FPS},format=rgba,` +
+      `[${i + 1}:v]scale=${Math.round(W * 1.1)}:${Math.round(H * 1.1)},zoompan=z='min(1+0.00055*on,1.09)':d=1:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=${W}x${H}:fps=${FPS},format=rgba,` +
       `fade=t=in:st=${span.start.toFixed(2)}:d=0.65:alpha=1,fade=t=out:st=${fadeOutAt.toFixed(2)}:d=0.75:alpha=1,` +
       `setpts=PTS-STARTPTS[s${i}]`,
     );
@@ -146,7 +149,7 @@ function compose(files) {
     last = tag;
   });
   // แถบความคืบหน้า + ขอบมืดแบบภาพยนตร์
-  fc.push(`[${last}]vignette=PI/5,drawbox=x=0:y=1072:w='iw*t/${TOTAL.toFixed(2)}':h=8:color=0x7dd3fc@0.85:t=fill[vout]`);
+  fc.push(`[${last}]vignette=PI/5,drawbox=x=0:y=${H - 8}:w='iw*t/${TOTAL.toFixed(2)}':h=8:color=0x7dd3fc@0.85:t=fill[vout]`);
   // เสียงบรรยากาศ: ผสม 3 เสียง + กรองความถี่สูงออก + เฟดเข้า/ออก
   fc.push(
     `[${A0}:a][${A0 + 1}:a][${A0 + 2}:a]amix=inputs=3:duration=longest,lowpass=f=1200,volume=0.14,` +
