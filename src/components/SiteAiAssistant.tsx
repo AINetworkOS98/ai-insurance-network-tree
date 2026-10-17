@@ -47,13 +47,13 @@ export default function SiteAiAssistant() {
   if (hide) return null;
 
   return (
-    <div className="fixed left-3 bottom-16 sm:bottom-14 z-[70] print:hidden">
+    <div className="fixed left-3 bottom-14 sm:bottom-12 z-[70] print:hidden">
       {open ? (
         <div className="w-[92vw] max-w-[360px] rounded-2xl bg-white border border-[#dbeafe] shadow-2xl overflow-hidden">
           <div className="flex items-center justify-between gap-2 px-3 py-2 bg-[#0b2b5b] text-white">
             <div className="min-w-0">
               <div className="text-[13px] font-semibold truncate">🤖 ผู้ช่วย AI ของทีม</div>
-              <div className="text-[10px] opacity-80">Hermes AI · DeepSeek · ตอบจากข้อมูลจริงในระบบ</div>
+              <div className="text-[10px] opacity-80">ตอบจากข้อมูลจริงในระบบ · อัตโนมัติ 24 ชม.</div>
             </div>
             <button onClick={() => setOpen(false)} aria-label="ปิด" className="px-2 py-1 rounded-lg bg-white/15 text-xs">✕</button>
           </div>
@@ -90,7 +90,7 @@ export default function SiteAiAssistant() {
           <span className="text-lg">🤖</span>
           <span className="text-left leading-tight">
             <span className="block text-[12px] font-semibold">ถาม AI</span>
-            <span className="block text-[9.5px] opacity-80">Hermes · DeepSeek</span>
+            <span className="block text-[9.5px] opacity-80">ตอบอัตโนมัติ</span>
           </span>
         </button>
       )}

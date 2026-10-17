@@ -112,7 +112,7 @@ export default function LineOaAiPanel({ onSaved }: { onSaved?: () => void }) {
       <div className="card p-4 space-y-4">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <div className="font-semibold text-sm text-slate-800">AI ตอบกลับอัตโนมัติ (Hermes + DeepSeek)</div>
+            <div className="font-semibold text-sm text-slate-800">AI ตอบกลับอัตโนมัติ</div>
             <div className="text-xs text-slate-500 mt-0.5">ตอบผ่านข้อความตอบกลับ (ไม่กินโควตารายเดือน) · ใช้ฐานความรู้ของทีมเป็นหลัก</div>
           </div>
           <label className="flex items-center gap-2 text-sm">

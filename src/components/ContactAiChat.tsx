@@ -44,7 +44,7 @@ export default function ContactAiChat() {
     <div className="card p-4 mb-4">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
-          <div className="font-semibold text-sm text-slate-800">🤖 ถามผู้ช่วย AI ของทีม (Hermes · DeepSeek)</div>
+          <div className="font-semibold text-sm text-slate-800">🤖 ถามผู้ช่วย AI ของทีม</div>
           <div className="text-xs text-slate-500 mt-0.5">ตอบจากฐานความรู้ + ข้อมูลจริงในระบบ · ไม่เปิดเผยข้อมูลส่วนบุคคล</div>
         </div>
         <button onClick={() => setOpen((v) => !v)} className="px-3 py-2 rounded-xl bg-sky-600 text-white text-sm">
