@@ -229,13 +229,15 @@ export async function generateAiReply(o: {
       try {
         const p = new HermesProvider({ provider: c.provider, model: c.model });
         if (!p.isConfigured()) continue;
-        let out = await p.chat(base, { temperature: s.temperature, maxTokens: 1600, timeoutMs: 25000 });
+        let out = await p.chat(base, { temperature: s.temperature, maxTokens: 2600, timeoutMs: 25000 });
         out = String(out || '')
           .replace(/\*\*(.+?)\*\*/g, '$1')     // ตัด markdown หนา
           .replace(/^[#>\s]*[-*]\s+/gm, '• ')  // bullet ธรรมดา
           .trim();
         if (!out) { errors.push(`${c.provider}: ไม่ตอบกลับ`); continue; }
-        const text = out.slice(0, s.maxChars);
+        const text = out.length > s.maxChars
+          ? out.slice(0, s.maxChars).replace(/\s+\S*$/, '') + ' …'  // ตัดที่ขอบคำ ไม่ให้ URL ขาดกลาง
+          : out;
         return { ok: true, text, messages: [{ type: 'text', text }], provider: c.provider, model: c.model, ms: Date.now() - t0, source: 'ai' };
       } catch (e: any) {
         errors.push(`${c.provider}: ${String(e?.message || e).slice(0, 120)}`);
