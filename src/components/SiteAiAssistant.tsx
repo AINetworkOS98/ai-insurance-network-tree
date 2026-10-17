@@ -47,7 +47,7 @@ export default function SiteAiAssistant() {
   if (hide) return null;
 
   return (
-    <div className="fixed left-3 bottom-3 z-[70] print:hidden">
+    <div className="fixed left-3 bottom-16 sm:bottom-14 z-[70] print:hidden">
       {open ? (
         <div className="w-[92vw] max-w-[360px] rounded-2xl bg-white border border-[#dbeafe] shadow-2xl overflow-hidden">
           <div className="flex items-center justify-between gap-2 px-3 py-2 bg-[#0b2b5b] text-white">
