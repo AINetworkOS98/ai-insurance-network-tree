@@ -237,7 +237,9 @@ export default function BusinessSimulator() {
                   <Row label="หัก ลดหย่อนอื่น ๆ (คู่สมรส/บุตร/ประกัน/ฯลฯ)" cells={cells((x) => x.other_deductions)} indent />
                   <Row label="เงินได้สุทธิ" cells={cells((x) => x.net_income)} strong />
                   {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-                    <Row key={i} indent label={`ขั้น ${cols[0].brackets[i]?.range ?? ''}`} cells={cols.map((c) => ({ v: c.brackets[i]?.tax ?? 0 }))} />
+                    <Row key={i} indent
+                      label={(cols[0].brackets[i]?.rate ?? 0) === 0 ? 'ช่วงยกเว้นภาษี (150,000 แรก)' : `อัตรา ${Math.round((cols[0].brackets[i]?.rate ?? 0) * 100)}%`}
+                      cells={cols.map((c) => ({ v: c.brackets[i]?.tax ?? 0 }))} />
                   ))}
                   <Row label="ภาษีเงินได้บุคคลธรรมดารวม" cells={cells((x) => x.pit)} strong tone="warn" />
 
