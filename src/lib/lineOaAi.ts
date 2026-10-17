@@ -114,12 +114,48 @@ export async function aiRepliesThisHour(lineUserId: string): Promise<number> {
   } catch { return 0; }
 }
 
-export function buildSystemPrompt(s: AiSettingsShape): string {
+/** ── ข้อมูลสดจากฐานข้อมูลของระบบ (เฉพาะภาพรวมทีม ไม่มีข้อมูลส่วนบุคคล) ──
+ *  ใช้เดิมทุกครั้งที่ AI ตอบ → คำตอบอ้างตัวเลขจริงได้ ไม่ใช่ข้อมูลนิ่งในฐานความรู้
+ */
+export async function buildLiveFacts(scope: 'public' | 'admin' = 'public'): Promise<string> {
+  const lines: string[] = [];
+  try {
+    const [members, activeMembers, followers, ticketsOpen, periods] = await Promise.all([
+      (prisma as any).user.count().catch(() => 0),
+      (prisma as any).user.count({ where: { status: 'ACTIVE' } }).catch(() => 0),
+      (prisma as any).lineFollower.count({ where: { followed: true } }).catch(() => 0),
+      (prisma as any).supportTicket.count({ where: { status: { in: ['NEW', 'IN_PROGRESS'] } } }).catch(() => 0),
+      (prisma as any).calendarPeriod?.findMany?.({ orderBy: { createdAt: 'desc' }, take: 1 }).catch?.(() => []) ?? [],
+    ]);
+    lines.push(`- สมาชิกในระบบทั้งหมด ${members} คน (ใช้งานอยู่ ${activeMembers} คน)`);
+    lines.push(`- ผู้ติดตาม LINE OA ปัจจุบัน ${followers} คน`);
+    const p: any = Array.isArray(periods) ? periods[0] : null;
+    if (p) lines.push(`- รอบค่าคอมล่าสุดในระบบ: ${p.name || p.code || '—'} (สถานะ ${p.status || '—'})`);
+    lines.push(`- เวลาทำการทีมงาน: จันทร์–เสาร์ 09:00–18:00 น. (ตอบแชทนอกเวลาในวันทำการถัดไป)`);
+
+    if (scope === 'admin') {
+      const [pending, incomeSum, ranks] = await Promise.all([
+        (prisma as any).prospect?.count?.({ where: { status: 'PENDING' } }).catch?.(() => 0) ?? 0,
+        (prisma as any).incomeTransaction?.aggregate?.({ _sum: { amount: true }, where: { createdAt: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) } } }).catch?.(() => null) ?? null,
+        (prisma as any).membership?.groupBy?.({ by: ['positionId'], _count: { _all: true } }).catch?.(() => []) ?? [],
+      ]);
+      lines.push(`- ผู้มุ่งหวังรออนุมัติ ${pending} ราย · ใบร้องเรียน/สอบถามที่ยังไม่ปิด ${ticketsOpen} เรื่อง`);
+      if (incomeSum?._sum?.amount != null) lines.push(`- ค่าคอมรวมที่บันทึกไว้เดือนนี้ ${Number(incomeSum._sum.amount).toLocaleString('th-TH')} บาท (ภาพรวมทั้งทีม)`);
+      if (Array.isArray(ranks) && ranks.length) lines.push(`- จำนวนสมาชิกแยกตามตำแหน่ง: ${ranks.map((r: any) => `${r.positionId || 'ไม่ระบุ'}=${r._count?._all ?? 0}`).join(', ')}`);
+    }
+  } catch { /* ข้อมูลสดเป็นส่วนเสริม — ถ้าดึงไม่ได้ก็ตอบจากฐานความรู้เดิม */ }
+  if (!lines.length) return '';
+  const ts = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' });
+  return `── ข้อมูลสดจากระบบ (ณ ${ts}) ──\n${lines.join('\n')}\n(ข้อมูลนี้เป็นภาพรวมทั้งทีม ห้ามเปิดเผยข้อมูลรายบุคคล)`;
+}
+
+export function buildSystemPrompt(s: AiSettingsShape, facts?: string): string {
   return [
     s.systemPrompt,
     '',
     '── ฐานความรู้ของทีม (ใช้ตอบเท่านั้น ห้ามคิดขึ้นเอง) ──',
     s.knowledge || '(ไม่มี)',
+    ...(facts ? ['', facts] : []),
     '',
     '── รูปแบบคำตอบ ──',
     `ความยาวไม่เกิน ${s.maxChars} ตัวอักษร · ภาษาไทย · ไม่ใช้ markdown · ไม่ต้องมีหัวข้อ "คำตอบ:"`,
@@ -141,6 +177,7 @@ export interface AiReplyResult {
 /** สร้างคำตอบด้วย AI (เรียกโมเดลจริง) — ใช้ทั้ง webhook จริงและหน้าทดสอบ */
 export async function generateAiReply(o: {
   lineUserId?: string; text: string; cfg: any; draft?: Partial<AiSettingsShape>; skipLimit?: boolean;
+  scope?: 'public' | 'admin'; facts?: string;
 }): Promise<AiReplyResult> {
   const base = aiSettings(o.cfg);
   const s: AiSettingsShape = { ...base, ...(o.draft || {}) };
@@ -176,8 +213,9 @@ export async function generateAiReply(o: {
   const errors: string[] = [];
   try {
     const history = o.lineUserId ? await loadHistory(o.lineUserId, 8) : [];
+    const facts = o.facts ?? await buildLiveFacts(o.scope === 'admin' ? 'admin' : 'public');
     const base: any[] = [
-      { role: 'system', content: buildSystemPrompt(s) },
+      { role: 'system', content: buildSystemPrompt(s, facts) },
       ...history,
       { role: 'user', content: o.text.slice(0, 2000) },
     ];

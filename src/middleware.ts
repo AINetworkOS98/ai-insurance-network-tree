@@ -63,6 +63,7 @@ const PUBLIC_API = [
   '/api/line',
   '/api/line/webhook', // ประตูรับ event จาก LINE (Messaging API) — ตรวจลายเซ็น X-Line-Signature เองใน route ไม่มี cookie/Bearer ของเรา
   '/api/admin/line-oa', // LINE OA Studio — route ตรวจสิทธิ์เอง (ผู้ดูแลที่ล็อกอิน หรือ Bearer CRON_SECRET) เพื่อให้ระบบอัตโนมัติตั้ง webhook/ริชเมนูได้
+  '/api/contact/ai', // ผู้ช่วย AI บนหน้า /contact (สาธารณะ) — จำกัดจำนวนคำขอต่อ IP ใน route เอง
 
   '/api/net/1x5', // ระบบบริหารเครือข่าย 1 แตก 5 (ข้อมูลจริง) — route ตรวจสิทธิ์เอง (สมาชิก/ผู้ดูแล/Bearer CRON_SECRET สำหรับ n8n)
   '/api/automation', // สถานะระบบอัตโนมัติ n8n ที่แสดงบนหน้าเว็บ — อ่านอย่างเดียว ไม่มีข้อมูลส่วนบุคคล (route ไม่แตะข้อมูลสำคัญ)

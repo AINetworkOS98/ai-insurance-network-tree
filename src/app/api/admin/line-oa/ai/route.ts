@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, route: 'handoff', provider: aiProviderInfo({ provider: eff.provider, model: eff.model }), messages: eff.handoffMessages, text: previewText(eff.handoffMessages) });
     }
 
-    const r = await generateAiReply({ text, cfg, draft, skipLimit: true });
+    const r = await generateAiReply({ text, cfg, draft, skipLimit: true, scope: 'admin' });
     return NextResponse.json({
       ok: r.ok,
       route: 'ai',

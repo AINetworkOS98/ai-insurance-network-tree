@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import LineOaCard from '@/components/LineOaCard';
+import ContactAiChat from '@/components/ContactAiChat';
 import { SUBJECT_OPTIONS } from '@/lib/support';
 
 export default function ContactPage() {
@@ -75,6 +76,9 @@ export default function ContactPage() {
             <div className="mb-5">
               <LineOaCard />
             </div>
+
+            {/* ผู้ช่วย AI (Hermes + DeepSeek) — เอนจินเดียวกับ LINE OA ตอบจากข้อมูลจริงของระบบ */}
+            <ContactAiChat />
 
             {loadingProfile ? (
               <div className="card p-5 text-center text-sm text-slate-500">กำลังโหลดข้อมูล...</div>

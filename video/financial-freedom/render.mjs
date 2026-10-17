@@ -95,6 +95,12 @@ function shoot(scenes) {
       `--screenshot=${dest.replace(/\\/g, '/')}`, `${page}?scene=${s.id}`,
     ], { stdio: 'inherit' });
     if (r.status !== 0 || !existsSync(dest)) throw new Error(`ถ่ายฉาก ${s.id} ไม่สำเร็จ`);
+    // ตรวจขนาดภาพจริงจากหัวไฟล์ PNG — ถ้า Chrome เขียนไม่สำเร็จจะเหลือไฟล์เก่าขนาดอื่น (เคยเกิดจากไฟล์ถูกล็อก)
+    const buf = readFileSync(dest);
+    const pw = buf.readUInt32BE(16), ph = buf.readUInt32BE(20);
+    if (pw !== W || ph !== H) {
+      throw new Error(`ฉาก ${s.id} ได้ภาพ ${pw}x${ph} แต่ต้องเป็น ${W}x${H} — ไฟล์อาจถูกล็อก/เขียนไม่สำเร็จ (ลบไฟล์ใน out/ แล้วลองใหม่)`);
+    }
     files.push(dest);
     console.log(`  ✓ scene ${s.id} → ${dest}`);
   });
@@ -160,7 +166,7 @@ function compose(files) {
     '-filter_complex', fc.join(';'),
     '-map', '[vout]', '-map', '[aout]',
     '-r', String(FPS), '-t', TOTAL.toFixed(2),
-    '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p',
+    '-c:v', 'libx264', '-preset', process.env.PRESET || 'medium', '-crf', '20', '-pix_fmt', 'yuv420p',
     '-c:a', 'aac', '-b:a', '96k',
     '-movflags', '+faststart',
     '-y', TARGET,
