@@ -47,7 +47,7 @@ export default function SiteAiAssistant() {
   if (hide) return null;
 
   return (
-    <div className="fixed left-3 bottom-14 sm:bottom-12 z-[70] print:hidden">
+    <div className="fixed left-3 bottom-12 z-[70] print:hidden">
       {open ? (
         <div className="w-[92vw] max-w-[360px] rounded-2xl bg-white border border-[#dbeafe] shadow-2xl overflow-hidden">
           <div className="flex items-center justify-between gap-2 px-3 py-2 bg-[#0b2b5b] text-white">
@@ -85,13 +85,9 @@ export default function SiteAiAssistant() {
           <div className="px-2 pb-2 text-[10px] text-slate-400">AI อาจคลาดเคลื่อนในรายละเอียดเฉพาะราย · เรื่องเงิน/กรมธรรม์ยึดเอกสารบริษัท</div>
         </div>
       ) : (
-        <button onClick={() => setOpen(true)}
-          className="flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full bg-[#0b2b5b] text-white shadow-lg hover:bg-[#123a75]">
-          <span className="text-lg">🤖</span>
-          <span className="text-left leading-tight">
-            <span className="block text-[12px] font-semibold">ถาม AI</span>
-            <span className="block text-[9.5px] opacity-80">ตอบอัตโนมัติ</span>
-          </span>
+        <button onClick={() => setOpen(true)} aria-label="เปิดผู้ช่วย AI" title="ผู้ช่วย AI ของทีม"
+          className="w-14 h-14 rounded-full bg-[#0b2b5b] text-white shadow-lg hover:bg-[#123a75] flex items-center justify-center text-[26px] leading-none">
+          🤖
         </button>
       )}
     </div>
