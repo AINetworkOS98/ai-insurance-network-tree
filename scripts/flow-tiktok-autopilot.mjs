@@ -417,11 +417,41 @@ async function downloadAsset(assetId, project = PROJECT) {
 }
 
 /* ── 3) TikTok: อัปโหลด + คำอธิบาย + โพสต์ ───────────────────────────── */
+// อ่านโพสต์บนสุด + จำนวนโพสต์จาก content manager (ใช้ยืนยันว่ามีโพสต์ใหม่จริง)
+async function topPostLink() {
+  try {
+    await gotoAndWait('tiktokstudio/content', 'https://www.tiktok.com/tiktokstudio/content', 10000);
+    const c2 = await attach('tiktokstudio/content');
+    const d = JSON.parse(await c2.evaluate(`(() => {
+      const a = document.querySelector('a[href*="/video/"]');
+      const t = document.body.innerText.replace(/\\s+/g,' ');
+      const m = t.match(/Posts\\s+(\\d+)/) || t.match(/โพสต์\\s+(\\d+)/);
+      return JSON.stringify({ link: a ? a.href : null, count: m ? Number(m[1]) : null });
+    })()`));
+    c2.close();
+    return d;
+  } catch (e) { log('อ่าน content manager ไม่ได้: ' + e.message); return { link: null, count: null }; }
+}
+
 async function postToTikTok(videoFile, caption) {
   result.step = 'tiktok';
+
+  // ปิดแท็บ upload เก่าทั้งหมดก่อน — แท็บที่ค้างจากรอบก่อนถือ state คนละชุด (คลิปเก่า/แคปชันค้าง)
+  // ทำให้กด Post แล้วเงียบ หรือแคปชันต่อกันยาวเกินจริง
+  for (const t of await listPages()) {
+    if ((t.url || '').includes('tiktokstudio/upload')) {
+      await fetch(cdpBase(CDP_PORT) + '/json/close/' + t.id).catch(() => {});
+    }
+  }
+  await sleep(1500);
   await newPage('https://www.tiktok.com/tiktokstudio/upload');
   await sleep(14000);
   const c = await attach('tiktokstudio/upload');
+
+  // สถานะก่อนโพสต์ (ไว้ยืนยันว่ามีโพสต์ใหม่จริง ไม่ใช่เห็นแคปชันเดิม)
+  const before = await topPostLink();
+  result.postsBefore = before.count;
+  log('ก่อนโพสต์: Posts', before.count, '| บนสุด', before.link);
 
   // attach file through DOM.setFileInputFiles
   // ⚠️ DOM nodeId ใช้ได้ชั่วคราว: ถ้า SPA re-render ระหว่าง getDocument → querySelector → setFileInputFiles
@@ -460,6 +490,14 @@ async function postToTikTok(videoFile, caption) {
     return 'focused';
   })()`);
   privacyCheck(caption, 'TikTok (แคปชัน)');
+  // ล้างข้อความค้างในช่องด้วยคีย์จริงก่อน (select-all + Delete) — ถ้าไม่ล้าง แคปชันจะต่อท้ายของเดิม
+  for (const k of [
+    { type: 'keyDown', key: 'a', code: 'KeyA', modifiers: 2, windowsVirtualKeyCode: 65 },
+    { type: 'keyUp', key: 'a', code: 'KeyA', modifiers: 2, windowsVirtualKeyCode: 65 },
+    { type: 'keyDown', key: 'Delete', code: 'Delete', windowsVirtualKeyCode: 46 },
+    { type: 'keyUp', key: 'Delete', code: 'Delete', windowsVirtualKeyCode: 46 },
+  ]) await c.send('Input.dispatchKeyEvent', k).catch(() => {});
+  await sleep(800);
   await c.send('Input.insertText', { text: caption });
   await sleep(3000);
   const capLen = JSON.parse(await c.evaluate(`(() => {
@@ -481,51 +519,72 @@ async function postToTikTok(videoFile, caption) {
     try { return JSON.parse(raw); } catch { return { editor: true }; }
   };
   let leftEditor = false;
-  for (let attempt = 1; attempt <= 2 && !leftEditor; attempt++) {
-    const post = await rectOf(c, `(() => {
-      const vis = e => { const r = e.getBoundingClientRect(); return r.width > 20 && r.height > 20; };
-      const e = [...document.querySelectorAll('button')].filter(vis).find(b => /^(Post|โพสต์)$/.test((b.innerText||'').trim()));
-      if (!e) return JSON.stringify({ ok:false, why:'no Post button' });
-      const r = e.getBoundingClientRect();
-      return JSON.stringify({ ok:true, x: Math.round(r.x + r.width/2), y: Math.round(r.y + r.height/2) });
-    })()`);
+  for (let attempt = 1; attempt <= 3 && !leftEditor; attempt++) {
+    // รอให้ปุ่ม Post พร้อมจริง + ต้อง scroll มาอยู่ใน viewport ก่อน
+    // (ปุ่มอยู่ล่างสุดของหน้า: พิกัด y เกินความสูงจอ ⇒ dispatchMouseEvent ไม่โดนอะไรเลย คลิกเงียบ)
+    let post = null;
+    for (let i = 0; i < 12 && !post; i++) {
+      await c.evaluate(`(() => {
+        const el = [...document.querySelectorAll('button')].find(b => /^(Post|โพสต์)$/.test((b.innerText||'').trim()));
+        if (el) el.scrollIntoView({ block: 'center' });
+        return true;
+      })()`).catch(() => {});
+      await sleep(700);
+      const btn = JSON.parse(await c.evaluate(`(() => {
+        const vis = e => { const r = e.getBoundingClientRect(); return r.width > 20 && r.height > 20 && r.top >= 0 && r.bottom <= window.innerHeight; };
+        const el = [...document.querySelectorAll('button')].filter(vis).find(b => /^(Post|โพสต์)$/.test((b.innerText||'').trim()));
+        if (!el) return JSON.stringify({ ok:false, why:'ไม่อยู่ใน viewport' });
+        const r = el.getBoundingClientRect();
+        const x = Math.round(r.x + r.width/2), y = Math.round(r.y + r.height/2);
+        const hit = document.elementFromPoint(x, y);
+        return JSON.stringify({ ok:true, disabled: !!el.disabled || el.getAttribute('aria-disabled') === 'true', x, y, hitIsTarget: !!(hit && (hit === el || el.contains(hit))) });
+      })()`).catch(() => ({ ok: false, why: 'eval fail' })));
+      if (btn.ok && !btn.disabled && btn.hitIsTarget) post = btn;
+      else { log('รอปุ่ม Post พร้อม... (' + (btn.ok ? ('disabled=' + btn.disabled + ', hit=' + btn.hitIsTarget) : btn.why) + ')'); await sleep(4000); }
+    }
+    if (!post) throw new Error('ปุ่ม Post ไม่พร้อมภายในเวลาที่รอ (คลิปอาจประมวลผลไม่เสร็จ)');
     await clickAt(c, post.x, post.y);
     log('กด Post (ครั้งที่ ' + attempt + ')');
-    await sleep(5000);
+    await sleep(6000);
     const now = await rectOf(c, `(() => {
       const vis = e => { const r = e.getBoundingClientRect(); return r.width > 10 && r.height > 10; };
-      const e = [...document.querySelectorAll('button')].filter(vis).find(b => /Post now|โพสต์เลย/.test(b.innerText||''));
+      const e = [...document.querySelectorAll('button')].filter(vis).find(b => /Post now|โพสต์เลย|Continue to post/i.test(b.innerText||''));
       if (!e) return JSON.stringify({ ok:false });
       const r = e.getBoundingClientRect();
       return JSON.stringify({ ok:true, x: Math.round(r.x + r.width/2), y: Math.round(r.y + r.height/2) });
     })()`).catch(() => ({ ok: false }));
-    if (now.ok) { await clickAt(c, now.x, now.y); log('กด Post now'); }
-    await sleep(8000);
+    if (now.ok) { await clickAt(c, now.x, now.y); log('กดปุ่มยืนยันในกล่อง'); }
+    await sleep(9000);
     const st = await editorStillOpen();
     log('สถานะหลังกดโพสต์:', st.url, st.editor ? '(ยังอยู่ใน editor)' : '(ออกจาก editor แล้ว)');
-    leftEditor = !st.editor || (st.url || '').includes('tiktokstudio/content');
+    leftEditor = !st.editor;
   }
-  const uploadTab = c; // เก็บไว้เผื่อลองซ้ำ
-  uploadTab.close();
+  c.close();
 
-  // ── ตรวจใน content manager (poll สูงสุด ~60 วิ) ─────────────────────────
+  // ── ตรวจว่ามีโพสต์ใหม่จริง: ลิงก์บนสุดต้องเปลี่ยน หรือจำนวนโพสต์ต้องเพิ่ม ─────────
+  // (ห้ามตัดสินจาก "เห็นแคปชัน" เพราะโพสต์เก่าที่แคปชันเดียวกันจะทำให้เข้าใจผิดว่าโพสต์สำเร็จ)
   const checkToken = CAPTION_CHECK || 'กลายเป็น 5';
-  await gotoAndWait('tiktokstudio/content', 'https://www.tiktok.com/tiktokstudio/content', 12000);
-  const c2 = await attach('tiktokstudio/content');
-  let chk = { count: null, hasCaption: false, links: [] };
+  let after = { link: before.link, count: before.count };
+  let fresh = false;
   for (let i = 0; i < 6; i++) {
-    chk = JSON.parse(await c2.evaluate(`(() => {
-      const t = document.body.innerText.replace(/\\s+/g,' ');
-      const m = t.match(/Posts\\s+(\\d+)/) || t.match(/โพสต์\\s+(\\d+)/);
-      const links = [...document.querySelectorAll('a[href*="/video/"]')].map(a => a.href).filter(Boolean);
-      return JSON.stringify({ count: m ? Number(m[1]) : null, hasCaption: t.includes(${JSON.stringify(checkToken)}), links: [...new Set(links)].slice(0, 5) });
-    })()`));
-    if (chk.hasCaption) break;
+    after = await topPostLink();
+    fresh = !!after.link && after.link !== before.link;
+    const grew = after.count != null && before.count != null && after.count > before.count;
+    if (fresh || grew) break;
     await sleep(10000);
   }
-  c2.close();
-  result.posted = !!chk.hasCaption;
-  result.tiktok = { posts: chk.count, captionVisible: chk.hasCaption, links: chk.links, postUrl: chk.links[0] || null, leftEditor, profile: 'https://www.tiktok.com/@aka989._' };
+  let captionVisible = false;
+  try {
+    const c3 = await attach('tiktokstudio/content');
+    captionVisible = JSON.parse(await c3.evaluate(`(() => JSON.stringify({ v: document.body.innerText.replace(/\\s+/g,' ').includes(${JSON.stringify(checkToken)}) }))()`)).v;
+    c3.close();
+  } catch { }
+  result.posted = fresh || (after.count != null && before.count != null && after.count > before.count);
+  result.tiktok = {
+    posts: after.count, postsBefore: before.count, captionVisible,
+    links: after.link ? [after.link] : [], postUrl: fresh ? after.link : null,
+    leftEditor, profile: 'https://www.tiktok.com/@aka989._',
+  };
   return;
 }
 
