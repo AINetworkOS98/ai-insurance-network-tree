@@ -18,7 +18,7 @@
  */
 
 export const CIT_CALC_VERSION = '1.0.0';
-export const CIT_YEAR = 2568;
+export const CIT_YEAR = 2569;
 
 export const CIT_STANDARD_RATE = 0.20;
 

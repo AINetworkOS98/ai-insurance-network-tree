@@ -26,7 +26,7 @@ import { computeCit } from './thaiCit';
 import { computePit } from './thaiPit';
 
 export const KEYMAN_VERSION = '1.0.0';
-export const KEYMAN_YEAR = 2568;
+export const KEYMAN_YEAR = 2569;
 
 export type KeymanInput = {
   // ── ข้อมูลธุรกิจ/บุคคลสำคัญ (ใช้ประเมินวงเงินคุ้มครอง) ──

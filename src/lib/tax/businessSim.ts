@@ -21,7 +21,7 @@ import { computePit, type PitPerson } from './thaiPit';
 import { computeCit } from './thaiCit';
 
 export const BUSINESS_SIM_VERSION = '1.0.0';
-export const BUSINESS_SIM_YEAR = 2568;
+export const BUSINESS_SIM_YEAR = 2569;
 /** เพดานวนซ้ำของ gross-up (ปกติบรรจบใน 15 ทอด — กันลูปไม่จบ) */
 const MAX_ROUNDS = 40;
 const EPS = 0.01;

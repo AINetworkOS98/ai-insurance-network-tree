@@ -232,7 +232,7 @@ export default function CorporateTaxCalculator() {
           </div>
 
           <div className="card p-4">
-            <h3 className="text-sm font-bold text-[#475569] mb-2">อัตราภาษีนิติบุคคล (2568)</h3>
+            <h3 className="text-sm font-bold text-[#475569] mb-2">อัตราภาษีนิติบุคคล ({CIT_YEAR})</h3>
             <table className="w-full text-[11px] tabular-nums">
               <tbody className="[&_td]:py-1">
                 <tr className="border-b"><td className="text-slate-500">นิติบุคคลทั่วไป (ทุกกำไร)</td><td className="text-right font-semibold">{Math.round(CIT_STANDARD_RATE * 100)}%</td></tr>
