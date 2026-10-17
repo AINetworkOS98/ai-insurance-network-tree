@@ -11,6 +11,7 @@ import TaxExamplesByOccupation from '@/components/tax/TaxExamplesByOccupation';
 import CorporateTaxCalculator from '@/components/tax/CorporateTaxCalculator';
 import KeymanInsurance from '@/components/tax/KeymanInsurance';
 import BusinessSimulator from '@/components/tax/BusinessSimulator';
+import TaxTable2569 from '@/components/tax/TaxTable2569';
 
 // หน้า "สมาชิกทั่วไป" (เดิมชื่อ "ผู้สนใจ") — ฐานเดียวกับระบบสมาชิก (/api/members)
 // นิยาม: สมาชิกทั่วไป = ผู้ที่ยังอยู่ระดับตำแหน่ง 0 (ยังไม่เลื่อนเป็นตัวแทน)
@@ -238,6 +239,8 @@ export default function GeneralMembersPage(){
             <div className="space-y-4">
               {/* โปรแกรมเปรียบเทียบผลประกอบการ (ต่อจากแท็บคีย์แมน) — ให้สมาชิกกรอกข้อมูลลูกค้าเอง */}
               <BusinessSimulator/>
+              {/* ตารางคำนวณภาษี 2569 + เครื่องคำนวณออกภาษีให้ทุกทอด (ดึงสูตรจากโปรแกรมภาษี2569.xls) */}
+              <TaxTable2569/>
             </div>
           ) : (<>
           {/* หัวหน้า */}
