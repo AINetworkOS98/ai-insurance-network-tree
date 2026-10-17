@@ -9,6 +9,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { HermesProvider, getHermesProvider, providerChain } from '@/lib/ai/hermesProvider';
 import { siteKnowledgeBlock } from '@/lib/siteMap';
+import { parseIndex, relevantPages, renderPagesForPrompt } from '@/lib/siteIndex';
 import { prisma } from '@/lib/prisma';
 import { normalizeMessages } from '@/lib/lineOa';
 
@@ -220,8 +221,15 @@ export async function generateAiReply(o: {
   try {
     const history = o.lineUserId ? await loadHistory(o.lineUserId, 8) : [];
     const facts = o.facts ?? await buildLiveFacts(o.scope === 'admin' ? 'admin' : 'public');
+    // ค้นคืนเนื้อหาจริงของหน้าที่เกี่ยวกับคำถาม (ดัชนีที่ crawl จากเว็บจริง)
+    let pageCtx = '';
+    try {
+      const rel = relevantPages(o.text, parseIndex(o.cfg?.aiSiteIndex), 4);
+      pageCtx = renderPagesForPrompt(rel, 900);
+    } catch { /* ถ้ายังไม่มีดัชนีก็ตอบจากฐานความรู้/แผนที่ลิงก์ */ }
+    const systemContent = buildSystemPrompt(s, [facts, pageCtx].filter(Boolean).join('\n\n'));
     const base: any[] = [
-      { role: 'system', content: buildSystemPrompt(s, facts) },
+      { role: 'system', content: systemContent },
       ...history,
       { role: 'user', content: o.text.slice(0, 2000) },
     ];

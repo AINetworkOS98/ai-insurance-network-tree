@@ -1994,6 +1994,9 @@ model LineOaConfig {
   aiHandoffKeywords String[] @default(["คุยกับเจ้าหน้าที่", "เจ้าหน้าที่", "คนจริง", "ขอคุยกับคน"]) @map("ai_handoff_keywords")
   aiHandoffMessage  Json     @default("[]") @map("ai_handoff_message")
   aiFailMessage     Json     @default("[]") @map("ai_fail_message")
+  // ── ดัชนีเนื้อหาทุกหน้าของเว็บ (crawl จากหน้าเว็บจริง → AI ตอบเจาะเนื้อหาแต่ละหน้า) ──
+  aiSiteIndex       String?  @db.Text @map("ai_site_index")
+  aiSiteIndexAt     DateTime? @map("ai_site_index_at") @db.Timestamptz
   updatedBy         String?  @db.Uuid @map("updated_by")
   updatedAt         DateTime @updatedAt @db.Timestamptz @map("updated_at")
   createdAt         DateTime @default(now()) @db.Timestamptz @map("created_at")

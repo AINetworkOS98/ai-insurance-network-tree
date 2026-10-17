@@ -21,6 +21,29 @@ export default function LineOaAiPanel({ onSaved }: { onSaved?: () => void }) {
   const [testInput, setTestInput] = useState('');
   const [testBusy, setTestBusy] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
+  // ดัชนีเนื้อหาทุกหน้า (ให้ AI ตอบเจาะเนื้อหาแต่ละหน้า)
+  const [idxInfo, setIdxInfo] = useState<any>(null);
+  const [idxBusy, setIdxBusy] = useState(false);
+
+  const loadIndex = useCallback(async () => {
+    try {
+      const r = await fetch('/api/admin/line-oa/site-index', { credentials: 'include' });
+      const j = await r.json();
+      if (j.ok) setIdxInfo(j);
+    } catch { /* ไม่สำคัญต่อการตั้งค่า */ }
+  }, []);
+  useEffect(() => { loadIndex(); }, [loadIndex]);
+
+  async function rebuildIndex() {
+    setIdxBusy(true);
+    try {
+      const r = await fetch('/api/admin/line-oa/site-index', { method: 'POST', credentials: 'include' });
+      const j = await r.json();
+      if (j.ok) { flash(`✅ อ่านเนื้อหาเสร็จ ${j.pages} หน้า (ข้าม ${j.skipped})`); loadIndex(); }
+      else flash('❌ ' + (j.error || 'อัปเดตดัชนีไม่สำเร็จ'));
+    } catch { flash('❌ อัปเดตดัชนีไม่สำเร็จ'); }
+    finally { setIdxBusy(false); }
+  }
 
   const flash = (t: string) => { setToast(t); setTimeout(() => setToast(null), 5000); };
 
@@ -196,6 +219,37 @@ export default function LineOaAiPanel({ onSaved }: { onSaved?: () => void }) {
               </div>
             </div>
           )}
+        </div>
+
+        <div className="card p-4">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div>
+              <div className="font-semibold text-sm text-slate-800">ดัชนีเนื้อหาทุกหน้า (ให้ AI ตอบเจาะหน้า)</div>
+              <div className="text-xs text-slate-500 mt-0.5">
+                {idxInfo ? `อ่านแล้ว ${idxInfo.pageCount} หน้า · อัปเดต ${idxInfo.savedAt ? new Date(idxInfo.savedAt).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) : '—'}` : 'ยังไม่ได้สร้างดัชนี'}
+              </div>
+            </div>
+            <button disabled={idxBusy} onClick={rebuildIndex} className="px-3 py-2 rounded-xl bg-emerald-600 text-white text-xs disabled:opacity-50">
+              {idxBusy ? 'กำลังอ่านทุกหน้า…' : '🔄 อัปเดตดัชนีทุกหน้า'}
+            </button>
+          </div>
+          {idxInfo?.pages?.length > 0 && (
+            <div className="mt-2 max-h-[26vh] overflow-y-auto text-[11px] text-slate-600 space-y-0.5">
+              {idxInfo.pages.map((p: any) => (
+                <div key={p.path} className="flex items-center gap-2">
+                  <span className="font-mono text-slate-400 shrink-0 w-[130px] truncate">{p.path}</span>
+                  <span className="flex-1 truncate">{p.title}</span>
+                  <span className="text-slate-400 shrink-0">{p.chars}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {(idxInfo?.skipped || []).length > 0 && (
+            <div className="mt-2 text-[11px] text-amber-600">
+              ข้าม {idxInfo.skipped.length} หน้า: {idxInfo.skipped.slice(0, 4).map((s: any) => `${s.path} (${s.reason})`).join(' · ')}
+            </div>
+          )}
+          <div className="text-[11px] text-slate-400 mt-2">กดอัปเดตทุกครั้งที่เพิ่ม/แก้หน้าเว็บ — AI จะตอบโดยอ้างเนื้อหาในหน้านั้นจริง</div>
         </div>
 
         <div className="card p-4">
