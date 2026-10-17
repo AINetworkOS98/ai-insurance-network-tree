@@ -247,42 +247,42 @@ with tab_detail:
                     st.success("บันทึกแล้ว")
                     rerun()
 
-            st.markdown("**ประวัติการติดต่อ**")
-            acts = ps.activities(pid)
-            if acts:
-                st.dataframe(
-                    pd.DataFrame(
-                        [
-                            {"วันที่": thai_date(a["activity_at"]), "ช่องทาง": a["kind"],
-                             "สรุป": a["summary"], "ข้อกังวล": a["concern"], "เหตุไม่สนใจ": a["lost_reason"]}
-                            for a in acts
-                        ]
-                    ),
-                    use_container_width=True, hide_index=True,
-                )
-            else:
-                st.caption("ยังไม่มีประวัติ — บันทึกได้ที่หน้า Follow-up CRM")
+        st.markdown("**ประวัติการติดต่อ**")
+        acts = ps.activities(pid)
+        if acts:
+            st.dataframe(
+                pd.DataFrame(
+                    [
+                        {"วันที่": thai_date(a["activity_at"]), "ช่องทาง": a["kind"],
+                         "สรุป": a["summary"], "ข้อกังวล": a["concern"], "เหตุไม่สนใจ": a["lost_reason"]}
+                        for a in acts
+                    ]
+                ),
+                use_container_width=True, hide_index=True,
+            )
+        else:
+            st.caption("ยังไม่มีประวัติ — บันทึกได้ที่หน้า Follow-up CRM")
 
-            an = ps.analyses(pid)
-            if an:
-                st.markdown("**ผลวิเคราะห์คีย์แมนที่บันทึกไว้**")
-                st.dataframe(
-                    pd.DataFrame(
-                        [
-                            {"วันที่": thai_date(a["created_at"]),
-                             "วงเงินแนะนำ": money(a["recommended_cover"]),
-                             "ต้นทุนสุทธิ/ปี": money(a["net_cost"])}
-                            for a in an
-                        ]
-                    ),
-                    use_container_width=True, hide_index=True,
-                )
+        an = ps.analyses(pid)
+        if an:
+            st.markdown("**ผลวิเคราะห์คีย์แมนที่บันทึกไว้**")
+            st.dataframe(
+                pd.DataFrame(
+                    [
+                        {"วันที่": thai_date(a["created_at"]),
+                         "วงเงินแนะนำ": money(a["recommended_cover"]),
+                         "ต้นทุนสุทธิ/ปี": money(a["net_cost"])}
+                        for a in an
+                    ]
+                ),
+                use_container_width=True, hide_index=True,
+            )
 
-            st.divider()
-            st.markdown("**ลบรายการ (ถาวร)**")
-            confirm = st.checkbox(f"ยืนยันลบ {pid}")
-            if st.button("ลบรายการนี้", disabled=not confirm):
-                ps.delete(pid)
-                st.warning(f"ลบ {pid} แล้ว")
-                st.session_state.pop("selected_prospect", None)
-                rerun()
+        st.divider()
+        st.markdown("**ลบรายการ (ถาวร)**")
+        confirm = st.checkbox(f"ยืนยันลบ {pid}")
+        if st.button("ลบรายการนี้", disabled=not confirm):
+            ps.delete(pid)
+            st.warning(f"ลบ {pid} แล้ว")
+            st.session_state.pop("selected_prospect", None)
+            rerun()
