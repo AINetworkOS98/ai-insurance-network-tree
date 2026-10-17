@@ -10,6 +10,7 @@ import InsuranceTaxTools from '@/components/tax/InsuranceTaxTools';
 import TaxExamplesByOccupation from '@/components/tax/TaxExamplesByOccupation';
 import CorporateTaxCalculator from '@/components/tax/CorporateTaxCalculator';
 import KeymanInsurance from '@/components/tax/KeymanInsurance';
+import BusinessSimulator from '@/components/tax/BusinessSimulator';
 
 // หน้า "สมาชิกทั่วไป" (เดิมชื่อ "ผู้สนใจ") — ฐานเดียวกับระบบสมาชิก (/api/members)
 // นิยาม: สมาชิกทั่วไป = ผู้ที่ยังอยู่ระดับตำแหน่ง 0 (ยังไม่เลื่อนเป็นตัวแทน)
@@ -28,14 +29,14 @@ const STATUS_TH: Record<string, string> = {
 
 export default function GeneralMembersPage(){
   // สลับมุมมองในหน้าเดียว: ภาษีบุคคลธรรมดา (ค่าเริ่มต้น) / ภาษีนิติบุคคล / ประกันคีย์แมน / ทะเบียนสมาชิกทั่วไป
-  type View = 'tax'|'cit'|'keyman'|'members';
+  type View = 'tax'|'cit'|'keyman'|'sim'|'members';
   const [view, setView]=useState<View>('tax');
   // ── URL ของแต่ละแท็บ: ?tab=pit | cit | keyman | members (เปิด/แชร์ลิงก์แล้วเข้าถูกแท็บ) ──
-  const TAB_URL: Record<View,string> = { tax:'pit', cit:'cit', keyman:'keyman', members:'members' };
+  const TAB_URL: Record<View,string> = { tax:'pit', cit:'cit', keyman:'keyman', sim:'sim', members:'members' };
   const viewFromUrl = (): View => {
     if (typeof window === 'undefined') return 'tax';
     const t = new URLSearchParams(window.location.search).get('tab') || '';
-    return t === 'cit' ? 'cit' : t === 'keyman' ? 'keyman' : t === 'members' ? 'members' : 'tax';
+    return t === 'cit' ? 'cit' : t === 'keyman' ? 'keyman' : t === 'sim' ? 'sim' : t === 'members' ? 'members' : 'tax';
   };
   const [tabUrl, setTabUrl] = useState<string>('');
   const goTab = (v: View) => {
@@ -186,7 +187,7 @@ export default function GeneralMembersPage(){
         <main className="flex-1 p-6 space-y-6">
           {/* ── เมนูในหน้าเดียว: เครื่องคำนวณภาษี (สมาชิกทั่วไปใช้ก่อน) / ทะเบียนสมาชิกทั่วไป ── */}
           <div className="flex flex-wrap gap-2 items-center">
-            {([['tax','pit','🧾 ภาษีบุคคลธรรมดา'],['cit','cit','🏢 ภาษีนิติบุคคล'],['keyman','keyman','🛡 ประกันคีย์แมน (Keyman)'],['members','members','👥 ทะเบียนสมาชิกทั่วไป']] as Array<[View,string,string]>).map(([key,slug,label]) => (
+            {([['tax','pit','🧾 ภาษีบุคคลธรรมดา'],['cit','cit','🏢 ภาษีนิติบุคคล'],['keyman','keyman','🛡 ประกันคีย์แมน (Keyman)'],['sim','sim','📊 ผลประกอบการ (Keyman)'],['members','members','👥 ทะเบียนสมาชิกทั่วไป']] as Array<[View,string,string]>).map(([key,slug,label]) => (
               <a
                 key={key}
                 href={`?tab=${slug}`}
@@ -208,7 +209,7 @@ export default function GeneralMembersPage(){
               className="px-2.5 py-1 rounded-full border bg-white text-slate-600 font-semibold hover:bg-slate-50"
             >⧉ คัดลอกลิงก์แท็บ</button>
             <span className="text-slate-400">
-              {view==='tax' ? 'ภาษีบุคคลธรรมดา' : view==='cit' ? 'ภาษีนิติบุคคล' : view==='keyman' ? 'ประกันคีย์แมน (Keyman)' : 'ทะเบียนสมาชิกทั่วไป'}
+              {view==='tax' ? 'ภาษีบุคคลธรรมดา' : view==='cit' ? 'ภาษีนิติบุคคล' : view==='keyman' ? 'ประกันคีย์แมน (Keyman)' : view==='sim' ? 'ผลประกอบการ (Keyman)' : 'ทะเบียนสมาชิกทั่วไป'}
             </span>
           </div>
 
@@ -232,6 +233,11 @@ export default function GeneralMembersPage(){
             <div className="space-y-4">
               {/* ประกันคีย์แมน — ต่อจากแท็บภาษีนิติบุคคล */}
               <KeymanInsurance/>
+            </div>
+          ) : view === 'sim' ? (
+            <div className="space-y-4">
+              {/* โปรแกรมเปรียบเทียบผลประกอบการ (ต่อจากแท็บคีย์แมน) — ให้สมาชิกกรอกข้อมูลลูกค้าเอง */}
+              <BusinessSimulator/>
             </div>
           ) : (<>
           {/* หัวหน้า */}

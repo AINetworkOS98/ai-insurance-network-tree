@@ -74,6 +74,7 @@ export default function KeymanInsurance() {
           <span className="text-[10px] px-2 py-0.5 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 font-semibold">หนังสือตอบข้อหารือ 6 ฉบับ</span>
           <span className="text-[10px] px-2 py-0.5 rounded-full border bg-white text-slate-500">รอบปี {KEYMAN_YEAR}</span>
           <span className="ml-auto flex flex-wrap gap-2">
+            <a href="?tab=sim" className="px-3 py-2 rounded-full border border-emerald-600 bg-emerald-600 text-xs font-semibold text-white">📊 เปิดโปรแกรมเปรียบเทียบผลประกอบการ</a>
             <button onClick={selftest} disabled={busy}
               className="px-3 py-2 rounded-full border border-emerald-200 bg-emerald-50 text-xs font-semibold text-emerald-700 disabled:opacity-50">
               {busy ? 'กำลังตรวจ…' : '✓ ตรวจความถูกต้อง'}
