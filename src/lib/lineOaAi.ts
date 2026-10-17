@@ -229,7 +229,7 @@ export async function generateAiReply(o: {
       try {
         const p = new HermesProvider({ provider: c.provider, model: c.model });
         if (!p.isConfigured()) continue;
-        let out = await p.chat(base, { temperature: s.temperature, maxTokens: 800, timeoutMs: 25000 });
+        let out = await p.chat(base, { temperature: s.temperature, maxTokens: 1600, timeoutMs: 25000 });
         out = String(out || '')
           .replace(/\*\*(.+?)\*\*/g, '$1')     // ตัด markdown หนา
           .replace(/^[#>\s]*[-*]\s+/gm, '• ')  // bullet ธรรมดา
