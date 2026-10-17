@@ -42,6 +42,7 @@ const PROMPT_FILE = arg('prompt-file', null);   // ใช้พรอมต์�
 const CAPTION_CHECK = arg('caption-check', null); // ข้อความไว้ยืนยันว่าแคปชันขึ้นจริงใน TikTok content manager
 const VIDEO_FILE = arg('video-file', null);     // โพสต์คลิปที่ดาวน์โหลดไว้แล้ว (ข้าม ChatGPT/Flow) — ใช้เมื่อสร้างคลิปจาก Chrome คนละโปรไฟล์
 const MODEL = arg('model', null);               // ชื่อรุ่นใน Flow เช่น "Veo 3.1 - Fast" (ไม่ระบุ = ใช้รุ่นที่หน้ามีอยู่)
+const GEN_ONLY = !!arg('generate-only', false); // สร้าง+ดาวน์โหลดอย่างเดียว ไม่แตะ TikTok (ใช้ต่อคลิปหลายฉาก)
 const TIMEOUT_GEN_MS = Number(arg('gen-timeout-ms', 300000));
 
 // ── พอร์ต/โปรไฟล์ Chrome: งาน TikTok+ChatGPT ที่ CDP_PORT, งาน Google Flow ที่ FLOW_PORT ──
@@ -342,6 +343,14 @@ async function generateInFlow(prompt) {
   })()`).then(JSON.parse).catch(() => ({ warn: false }));
   if (credit.warn) throw new Error('Flow เครดิตไม่เพียงพอ — ปุ่มสร้างถูกปิด รอเครดิตรีเซ็ต (รายวัน) หรืออัปเกรดแพ็กเกจแล้วรันใหม่');
 
+  // เก็บ asset ที่มีอยู่ก่อนกดสร้าง → หลังจากสร้างเสร็จต้องเลือกเฉพาะ uuid ใหม่
+  // (โปรเจกต์เดียวกันมีคลิปเก่าสะสมอยู่ ถ้าหยิบ "อันสุดท้าย" จะได้คลิปเก่ามาใช้ซ้ำ)
+  const preAssets = JSON.parse(await c.evaluate(`(() => {
+    const uu = [...document.body.innerHTML.matchAll(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g)].map(m => m[0]);
+    return JSON.stringify([...new Set(uu)]);
+  })()`));
+  log('asset ที่มีอยู่ก่อนสร้าง:', preAssets.length, 'รายการ');
+
   // verify send enabled then click it
   const send = await rectOf(c, `(() => {
     const b = [...document.querySelectorAll('button')].find(x => (x.getAttribute('aria-label')||'') === 'เริ่มสร้าง');
@@ -365,8 +374,8 @@ async function generateInFlow(prompt) {
       return JSON.stringify({ pcts: pcts.slice(0,4), uuids: [...new Set(uu)] });
     })()`));
     log('progress', st.pcts.join(','), '| assets seen:', st.uuids.length);
-    const others = st.uuids.filter(u => u !== PROJECT);
-    if (!st.pcts.length && others.length) { assetId = others[others.length - 1]; break; }
+    const fresh = st.uuids.filter(u => u !== PROJECT && !preAssets.includes(u));
+    if (!st.pcts.length && fresh.length) { assetId = fresh[fresh.length - 1]; log('asset ใหม่ที่ได้:', assetId); break; }
   }
   c.close();
   if (!assetId) throw new Error('วิดีโอไม่เสร็จภายในเวลาที่รอ');
@@ -620,6 +629,10 @@ try {
 
   const video = SKIP_GENERATE ? null : await generateInFlow(prompt);
   if (!SKIP_GENERATE && !video) throw new Error('ดาวน์โหลดวิดีโอไม่สำเร็จ');
+  if (GEN_ONLY) {
+    log('generate-only: ได้ไฟล์ ' + video + ' (ไม่แตะ TikTok)');
+    result.ok = true; result.step = 'generated'; finish(0);
+  }
   if (video) { log('ได้ไฟล์', video); await postToTikTok(video, caption); }
   result.ok = true;
   result.step = 'done';
