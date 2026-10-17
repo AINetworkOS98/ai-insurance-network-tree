@@ -13,7 +13,7 @@ const EXTRA: { label: string; path: string; note?: string }[] = [
   { label: 'ติดต่อ/ช่วยเหลือ (มีผู้ช่วย AI ตอบอัตโนมัติ)', path: '/contact' },
   { label: 'เข้าสู่ระบบ', path: '/login' },
   { label: 'สมัครสมาชิก', path: '/register' },
-  { label: 'คำถามที่พบบ่อย', path: '/faq' },
+  { label: 'คำถามที่พบบ่อย', path: '/privacy-details' },
   { label: 'ความเป็นส่วนตัว (PDPA)', path: '/privacy' },
   { label: 'ข้อกำหนดการใช้บริการ', path: '/terms' },
   { label: 'LINE OA ทีมงาน (แอดเพื่อน/แชท)', path: 'https://line.me/R/ti/p/@923jrlgz' },

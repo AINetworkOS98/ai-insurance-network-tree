@@ -1,0 +1,480 @@
+{
+  "name": "02 Visitor LINE Report · ทุกหน้า/ทุกลิงก์ → LINE OA",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "vr-sched-15m",
+      "name": "ทุก 15 นาที",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -420,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 20,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "vr-sched-20",
+      "name": "สรุปประจำวัน 20:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -420,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "visitor-line-report",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "vr-hook",
+      "name": "Webhook สั่งรายงานเอง (POST /visitor-line-report)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -420,
+        520
+      ],
+      "webhookId": "83c1a5cf-4436-4b02-9242-f9a5ae993435"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// รอบ 15 นาที — ดึง \"รายการใช้งานที่น่าสนใจ\" ที่เกิดหลัง cursor ครั้งก่อน\n// cursor เก็บใน staticData ของ workflow (ไม่ต้องมี DB เพิ่ม)\nconst sd = $getWorkflowStaticData('global');\nconst now = new Date();\nconst lastMs = sd.cursor ? new Date(sd.cursor).getTime() : (now.getTime() - 24 * 3600e3);\nconst safeLast = new Date(Math.min(lastMs, now.getTime() - 60e3));\nconst lastPushMs = sd.lastInstantPushAt ? new Date(sd.lastInstantPushAt).getTime() : 0;\nconst quiet = lastPushMs > 0 && (now.getTime() - lastPushMs) < 10 * 60e3;\nconst base = ($env.APP_BASE_URL || 'https://ai-insurance-network-tree.vercel.app').replace(/\\/$/, '');\nreturn [{ json: {\n  mode: 'instant',\n  quiet: quiet,\n  cursor: safeLast.toISOString(),\n  url: base + '/api/track/report?range=24h&since=' + encodeURIComponent(safeLast.toISOString()),\n} }];"
+      },
+      "id": "vr-prep-instant",
+      "name": "เตรียมคิวรี (15 นาที)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// รอบสรุปประจำวัน 20:00 — ภาพรวมของ \"วันนี้\" ทั้งหมด\nconst base = ($env.APP_BASE_URL || 'https://ai-insurance-network-tree.vercel.app').replace(/\\/$/, '');\nreturn [{ json: {\n  mode: 'daily',\n  quiet: false,\n  cursor: null,\n  url: base + '/api/track/report?range=today',\n} }];"
+      },
+      "id": "vr-prep-daily",
+      "name": "เตรียมคิวรี (สรุปวัน)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// สั่งเองผ่าน webhook: POST /webhook/visitor-line-report { \"range\": \"today\" | \"24h\" | \"7d\" | \"30d\" }\nconst body = $json.body || $json;\nconst range = String(body.range || 'today');\nconst allowed = ['today', '24h', '7d', '30d'];\nconst key = allowed.indexOf(range) >= 0 ? range : 'today';\nconst base = ($env.APP_BASE_URL || 'https://ai-insurance-network-tree.vercel.app').replace(/\\/$/, '');\nreturn [{ json: {\n  mode: 'manual',\n  quiet: false,\n  cursor: null,\n  rangeKey: key,\n  url: base + '/api/track/report?range=' + key,\n} }];"
+      },
+      "id": "vr-prep-manual",
+      "name": "เตรียมคิวรี (สั่งเอง)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "vr-fetch",
+      "name": "ดึงรายงานการเข้าชม (/api/track/report)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        100,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// สร้างข้อความ LINE จากข้อมูลจริงของ /api/track/report\n// กติกา: ข้อความล้วน (LINE ไม่แสดง markdown) · ไม่มีข้อมูลส่วนบุคคล (ผู้เข้าชมเป็นรหัสสั้น)\nfunction prepOf() {\n  const names = ['เตรียมคิวรี (15 นาที)', 'เตรียมคิวรี (สรุปวัน)', 'เตรียมคิวรี (สั่งเอง)'];\n  for (let i = 0; i < names.length; i++) {\n    try { return $(names[i]).first().json; } catch (e) { /* โหนดนี้ไม่ได้รันในรอบนี้ */ }\n  }\n  return {};\n}\nconst prep = prepOf();\nconst mode = prep.mode;\nconst j = $input.first().json || {};\nconst body = (j.body && typeof j.body === 'object') ? j.body : j;\nconst quiet = prep.quiet === true;\n\nif (body.ok !== true) {\n  return [{ json: {\n    push: false, mode: mode, error: true,\n    detail: 'ดึงรายงานไม่สำเร็จ: ' + String(body.error || body.message || 'unknown').slice(0, 160),\n    cursor: prep.cursor, nextCursor: null,\n  } }];\n}\n\nconst t = body.totals || {};\nconst pages = Array.isArray(body.pages) ? body.pages : [];\nconst recent = Array.isArray(body.recent) ? body.recent : [];\nconst dev = Array.isArray(body.devices) ? body.devices : [];\nconst src = Array.isArray(body.sources) ? body.sources : [];\nconst bkk = new Date(new Date(body.generatedAt || Date.now()).getTime() + 7 * 3600e3);\nconst dstr = bkk.toISOString().slice(0, 10).split('-');\nconst months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];\nconst dateTh = Number(dstr[2]) + ' ' + months[Number(dstr[1]) - 1] + ' ' + (Number(dstr[0]) + 543);\nconst hhmm = bkk.toISOString().slice(11, 16);\nconst num = function (v) { return Number(v || 0); };\n\nlet text = '';\nif (mode === 'instant') {\n  if (quiet || !recent.length) {\n    return [{ json: { push: false, mode: mode, skipped: true,\n      detail: recent.length ? 'มีรายการแต่ยังไม่ถึงรอบแจ้ง (กันถี่เกิน 10 นาที)' : 'ไม่มีรายการใช้งานใหม่ที่น่าสนใจ',\n      cursor: prep.cursor, nextCursor: body.range ? body.range.to : new Date().toISOString() } }];\n  }\n  const lines = recent.slice(-8).map(function (r) {\n    return '• ' + r.label + ' — ' + r.pagePath + ' เวลา ' + r.atBkk + ' (ผู้เข้าชม ' + r.visitor + ')';\n  });\n  text = '🔔 มีผู้สนใจใช้งานเว็บ\\n' + lines.join('\\n');\n  if (recent.length > 8) text += '\\n…และอีก ' + (recent.length - 8) + ' รายการ';\n  text += '\\n\\nดูรายละเอียด: https://ai-insurance-network-tree.vercel.app/admin';\n} else {\n  const label = mode === 'daily' ? 'สรุปวันนี้' : ('สรุป' + String((body.range && body.range.label) || ''));\n  const top = pages.filter(function (p) { return p.views > 0; }).slice(0, 15);\n  text = '📊 ผู้เข้าชมเว็บ — ' + label + '\\n' + dateTh + ' · ข้อมูลถึง ' + hhmm + '\\n';\n  text += '\\n👥 ผู้เข้าชม ' + num(t.visitors) + ' คน · เปิดหน้า ' + num(t.pageViews) + ' ครั้ง · ' + num(t.sessions) + ' ช่วงใช้งาน';\n  if (num(t.returnVisits)) text += '\\n🔁 กลับมาเยี่ยมซ้ำ ' + num(t.returnVisits) + ' ครั้ง';\n  if (num(t.ctaClicks)) text += ' · กดปุ่ม CTA ' + num(t.ctaClicks) + ' ครั้ง';\n  text += '\\n\\n📄 หน้าถูกเปิดมากที่สุด' + (body.pagesSeen ? ' (ทั้งหมด ' + num(body.pagesSeen) + ' หน้า)' : '');\n  if (!top.length) text += '\\n— ยังไม่มีการเปิดหน้าในช่วงนี้ —';\n  top.forEach(function (p, i) {\n    text += '\\n' + (i + 1) + '. ' + p.path + ' — ' + num(p.views) + ' ครั้ง' + (num(p.visitors) ? ' (' + num(p.visitors) + ' คน)' : '');\n  });\n  if (pages.length > top.length) text += '\\n…และอีก ' + (pages.length - top.length) + ' หน้า';\n\n  text += '\\n\\n🎯 การใช้งาน';\n  text += '\\n• กรอก/ส่งฟอร์ม ' + num(t.formSubmits) + ' · ขอติดต่อกลับ ' + num(t.callbackRequests) + ' · เลือกหัวข้อ ' + num(t.topicSelects);\n  if (num(t.videoViews) || num(t.videoCompletes)) text += '\\n• เปิดคลิป ' + num(t.videoViews) + ' · ดูจนจบ ' + num(t.videoCompletes);\n\n  if (dev.length) text += '\\n\\n📱 อุปกรณ์: ' + dev.map(function (d) { return d.device + ' ' + num(d.visitors); }).join(' · ');\n  if (src.length) text += '\\n🔗 ที่มา: ' + src.slice(0, 4).map(function (s) { return s.source + ' (' + num(s.count) + ')'; }).join(' · ');\n  if (body.lastEventAt) {\n    const lb = new Date(new Date(body.lastEventAt).getTime() + 7 * 3600e3).toISOString().slice(11, 16);\n    text += '\\n⏱ เข้าชมล่าสุด ' + lb;\n  }\n  text += '\\n\\nดูรายละเอียด: https://ai-insurance-network-tree.vercel.app/admin';\n}\n\nif (text.length > 4800) text = text.slice(0, 4790) + '\\n…';\n\nreturn [{ json: {\n  push: true,\n  mode: mode,\n  text: text,\n  kind: mode === 'instant' ? 'line.visitor.alert' : 'line.visitor.report',\n  detail: 'mode=' + mode + ' pages=' + pages.length + ' interesting=' + recent.length,\n  cursor: prep.cursor,\n  nextCursor: body.range ? body.range.to : new Date().toISOString(),\n} }];"
+      },
+      "id": "vr-build",
+      "name": "สร้างข้อความ LINE",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "vr-cond-1",
+              "leftValue": "={{ $json.push }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "vr-if",
+      "name": "ต้องส่ง LINE?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        620,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/line/notify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: $json.text, kind: $json.kind }) }}",
+        "options": {
+          "timeout": 20000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "vr-line",
+      "name": "ส่งเข้า LINE OA (/api/line/notify)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// ส่ง LINE สำเร็จแล้ว → เลื่อน cursor (กันแจ้งซ้ำ) เฉพาะโหมด instant\nconst pushed = $('สร้างข้อความ LINE').first().json;\nconst res = $input.first().json || {};\nconst body = (res.body && typeof res.body === 'object') ? res.body : res;\nconst sd = $getWorkflowStaticData('global');\nconst ok = body.ok === true;\nif (pushed.mode === 'instant' && ok) {\n  if (pushed.nextCursor) sd.cursor = pushed.nextCursor;\n  sd.lastInstantPushAt = new Date().toISOString();\n}\nreturn [{ json: {\n  ok: ok,\n  stage: pushed.mode === 'instant' ? 'send_alert' : 'send_report',\n  detail: (ok ? 'ส่ง LINE สำเร็จ: ' : 'ส่ง LINE ไม่สำเร็จ: ') + String(body.error || pushed.detail || ''),\n  sent: ok ? 1 : 0,\n  chars: Number(body.chars || 0),\n  at: new Date().toISOString(),\n} }];"
+      },
+      "id": "vr-fin-sent",
+      "name": "ปิดรอบ (ส่งแล้ว)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// ไม่ต้องส่ง LINE รอบนี้ → เลื่อน cursor ได้อย่างปลอดภัย (ไม่มีอะไรค้าง)\nconst built = $('สร้างข้อความ LINE').first().json;\nconst sd = $getWorkflowStaticData('global');\nif (built.mode === 'instant' && built.nextCursor && !built.error) sd.cursor = built.nextCursor;\nreturn [{ json: {\n  ok: true,\n  stage: 'skip',\n  detail: String(built.detail || 'ไม่มีอะไรต้องแจ้ง'),\n  sent: 0,\n  chars: 0,\n  at: new Date().toISOString(),\n} }];"
+      },
+      "id": "vr-fin-skip",
+      "name": "จบรอบ (ไม่มีอะไรต้องแจ้ง)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/agent-log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: '02-visitor-line-report', ok: $json.ok, stage: $json.stage, detail: $json.detail, sent: $json.sent, chars: $json.chars, at: $json.at }) }}",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "vr-log-1",
+      "name": "บันทึก Log (ส่งแล้ว)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1360,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ai-insurance-network-tree.vercel.app/api/agent-log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.CRON_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', workflow: '02-visitor-line-report', ok: $json.ok, stage: $json.stage, detail: $json.detail, sent: $json.sent, chars: $json.chars, at: $json.at }) }}",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "vr-log-2",
+      "name": "บันทึก Log (ข้ามรอบ)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "ทุก 15 นาที": {
+      "main": [
+        [
+          {
+            "node": "เตรียมคิวรี (15 นาที)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สรุปประจำวัน 20:00": {
+      "main": [
+        [
+          {
+            "node": "เตรียมคิวรี (สรุปวัน)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook สั่งรายงานเอง (POST /visitor-line-report)": {
+      "main": [
+        [
+          {
+            "node": "เตรียมคิวรี (สั่งเอง)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "เตรียมคิวรี (15 นาที)": {
+      "main": [
+        [
+          {
+            "node": "ดึงรายงานการเข้าชม (/api/track/report)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "เตรียมคิวรี (สรุปวัน)": {
+      "main": [
+        [
+          {
+            "node": "ดึงรายงานการเข้าชม (/api/track/report)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "เตรียมคิวรี (สั่งเอง)": {
+      "main": [
+        [
+          {
+            "node": "ดึงรายงานการเข้าชม (/api/track/report)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ดึงรายงานการเข้าชม (/api/track/report)": {
+      "main": [
+        [
+          {
+            "node": "สร้างข้อความ LINE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สร้างข้อความ LINE": {
+      "main": [
+        [
+          {
+            "node": "ต้องส่ง LINE?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ต้องส่ง LINE?": {
+      "main": [
+        [
+          {
+            "node": "ส่งเข้า LINE OA (/api/line/notify)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "จบรอบ (ไม่มีอะไรต้องแจ้ง)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ส่งเข้า LINE OA (/api/line/notify)": {
+      "main": [
+        [
+          {
+            "node": "ปิดรอบ (ส่งแล้ว)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ปิดรอบ (ส่งแล้ว)": {
+      "main": [
+        [
+          {
+            "node": "บันทึก Log (ส่งแล้ว)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "จบรอบ (ไม่มีอะไรต้องแจ้ง)": {
+      "main": [
+        [
+          {
+            "node": "บันทึก Log (ข้ามรอบ)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "a3c53150-d772-4e18-8017-5c95a98882f4",
+    "saveManualExecutions": true,
+    "timezone": "Asia/Bangkok"
+  },
+  "active": true
+}
