@@ -23,6 +23,10 @@
     {
       "path": "/api/cron/tl-smart-sync",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/admin/line-oa/site-index",
+      "schedule": "30 20 * * *"
     }
   ]
 }

@@ -17,6 +17,21 @@ export async function GET(req: NextRequest) {
   const a = await requireLineAdmin(req);
   if (!a.ok) return a.res;
   try {
+    // เรียกจาก Vercel Cron (Bearer CRON_SECRET) = ให้ crawl ใหม่ทันที หรือ ?refresh=1 จากหน้าจัดการ
+    const wantRefresh = a.via === 'cron' || new URL(req.url).searchParams.get('refresh') === '1';
+    if (wantRefresh) {
+      const idx = await crawlSite(60, 1400);
+      await loadConfig();
+      await (prisma as any).lineOaConfig.update({
+        where: { id: 'default' },
+        data: { aiSiteIndex: JSON.stringify(idx), aiSiteIndexAt: new Date() },
+      });
+      return NextResponse.json({
+        ok: true, crawled: true, builtAt: idx.builtAt,
+        pageCount: idx.pages.length, skipped: idx.skipped.length,
+        pages: idx.pages.map((p) => ({ path: p.path, title: p.title, chars: p.text.length })),
+      });
+    }
     const cfg: any = await loadConfig();
     const idx = parseIndex(cfg.aiSiteIndex);
     return NextResponse.json({

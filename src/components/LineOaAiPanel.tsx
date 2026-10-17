@@ -249,7 +249,7 @@ export default function LineOaAiPanel({ onSaved }: { onSaved?: () => void }) {
               ข้าม {idxInfo.skipped.length} หน้า: {idxInfo.skipped.slice(0, 4).map((s: any) => `${s.path} (${s.reason})`).join(' · ')}
             </div>
           )}
-          <div className="text-[11px] text-slate-400 mt-2">กดอัปเดตทุกครั้งที่เพิ่ม/แก้หน้าเว็บ — AI จะตอบโดยอ้างเนื้อหาในหน้านั้นจริง</div>
+          <div className="text-[11px] text-slate-400 mt-2">อัปเดตอัตโนมัติทุกวัน ~03:30 น. (Vercel Cron) · กดปุ่มนี้เมื่อเพิ่งเพิ่ม/แก้หน้าเว็บเอง — AI จะตอบโดยอ้างเนื้อหาในหน้านั้นจริง</div>
         </div>
 
         <div className="card p-4">
