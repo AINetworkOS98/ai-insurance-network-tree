@@ -18,7 +18,7 @@ export default function SiteAiAssistant() {
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const [turns, setTurns] = useState<Turn[]>([
-    { role: 'ai', text: 'สวัสดีครับ 🙏 ผมคือผู้ช่วย AI ของทีม (Hermes · DeepSeek)\nถามเรื่องระบบ เมนู สมัครตัวแทน หรือรายได้ได้เลยครับ' },
+    { role: 'ai', text: 'สวัสดีครับ 🙏 ผมคือผู้ช่วย AI ของทีม ตอบจากข้อมูลจริงในระบบ\nถามเรื่องเมนู สมัครตัวแทน หรือรายได้ได้เลยครับ' },
   ]);
   const boxRef = useRef<HTMLDivElement | null>(null);
   const hide = path.startsWith('/admin') || path.startsWith('/contact') || path.startsWith('/login') || path.startsWith('/no-access');

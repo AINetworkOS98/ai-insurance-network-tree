@@ -122,8 +122,8 @@ export default function LineOaAiPanel({ onSaved }: { onSaved?: () => void }) {
 
         <div className={'text-xs rounded-xl p-2 border ' + (keyOk ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-rose-50 border-rose-100 text-rose-700')}>
           {keyOk
-            ? `ค่ายที่ใช้จริง: ${provider.provider} · รุ่น: ${provider.model} · พร้อมตอบ`
-            : `ยังใช้ไม่ได้: ${provider.provider || '?'} — ยังไม่มี API key (ตรวจ AI_PROVIDER / DEEPSEEK_API_KEY ใน Vercel แล้ว deploy ใหม่)`}
+            ? `เชื่อมต่อผู้ให้บริการ AI แล้ว · พร้อมตอบ`
+            : `ยังใช้ไม่ได้: ยังไม่มี API key (ตรวจ AI_PROVIDER / DEEPSEEK_API_KEY ใน Vercel แล้ว deploy ใหม่)`}
           {info?.usage && <span className="ml-2">· ตอบไปแล้ว 24 ชม.: {info.usage.last24h} ครั้ง ({info.usage.users24h} คน)</span>}
         </div>
 
@@ -142,12 +142,12 @@ export default function LineOaAiPanel({ onSaved }: { onSaved?: () => void }) {
         <div className="grid grid-cols-2 gap-3">
           <label className="text-xs text-slate-500">ค่ายโมเดล
             <select value={draft.aiProvider || ''} onChange={(e) => setDraft({ ...draft, aiProvider: e.target.value })} className="mt-1 w-full px-3 py-2 rounded-xl border border-[#dbeafe] text-sm">
-              <option value="">อัตโนมัติ (DeepSeek ก่อน)</option>
-              {(info?.providers || ['deepseek']).map((p: string) => <option key={p} value={p}>{p}</option>)}
+              <option value="">อัตโนมัติ (ค่ายหลักของระบบ)</option>
+              {(info?.providers || ['deepseek']).map((p: string, i: number) => <option key={p} value={p}>{i === 0 ? 'ค่ายหลัก' : `ค่ายสำรอง ${i}`}</option>)}
             </select>
           </label>
           <label className="text-xs text-slate-500">รุ่น (เว้นว่าง = รุ่นเริ่มต้น)
-            <input value={draft.aiModel || ''} onChange={(e) => setDraft({ ...draft, aiModel: e.target.value })} placeholder={provider.model || 'deepseek-flash'} className="mt-1 w-full px-3 py-2 rounded-xl border border-[#dbeafe] text-sm" />
+            <input value={draft.aiModel || ''} onChange={(e) => setDraft({ ...draft, aiModel: e.target.value })} placeholder="รุ่นเริ่มต้น" className="mt-1 w-full px-3 py-2 rounded-xl border border-[#dbeafe] text-sm" />
           </label>
           <label className="text-xs text-slate-500">ความยาวคำตอบสูงสุด (ตัวอักษร)
             <input type="number" value={draft.aiMaxChars} onChange={(e) => setDraft({ ...draft, aiMaxChars: e.target.value })} className="mt-1 w-full px-3 py-2 rounded-xl border border-[#dbeafe] text-sm" />
@@ -209,7 +209,7 @@ export default function LineOaAiPanel({ onSaved }: { onSaved?: () => void }) {
                 <span className={'px-2 py-0.5 rounded-full ' + (testResult.route === 'handoff' ? 'bg-violet-100 text-violet-700' : testResult.ok ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700')}>
                   {testResult.route === 'handoff' ? 'ส่งต่อทีมงาน' : testResult.ok ? 'AI ตอบ' : 'AI ตอบไม่ได้'}
                 </span>
-                {testResult.provider && <span className="text-slate-500">{testResult.provider}{testResult.model ? ` · ${testResult.model}` : ''}{testResult.ms ? ` · ${testResult.ms} ms` : ''}</span>}
+                {testResult.ms ? <span className="text-slate-500">ตอบใน {testResult.ms} ms</span> : null}
                 {testResult.error && <span className="text-rose-600">{String(testResult.error).slice(0, 160)}</span>}
               </div>
               <div className="bg-[#8cabd9] rounded-2xl p-3">
