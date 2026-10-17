@@ -17,7 +17,9 @@ export const LINE_DATA_API = 'https://api-data.line.me';
 export type OaMessage =
   | { type: 'text'; text: string }
   | { type: 'image'; originalContentUrl: string; previewImageUrl: string }
-  | { type: 'sticker'; packageId: string; stickerId: string };
+  | { type: 'sticker'; packageId: string; stickerId: string }
+  // การ์ด Flex (LINE Messaging API) — ใช้ส่งรายงาน/สรุปผลเป็น card แทนข้อความยาว ๆ
+  | { type: 'flex'; altText: string; contents: Record<string, any> };
 
 export type MatchKind = 'welcome' | 'greet' | 'menu' | 'offline' | 'rule' | 'fallback' | 'broadcast' | 'test';
 
@@ -127,6 +129,9 @@ export function normalizeMessages(input: any): OaMessage[] {
     if (raw.type === 'text' && String(raw.text || '').trim()) out.push({ type: 'text', text: String(raw.text).slice(0, 4900) });
     else if (raw.type === 'image' && raw.originalContentUrl && raw.previewImageUrl) out.push({ type: 'image', originalContentUrl: String(raw.originalContentUrl), previewImageUrl: String(raw.previewImageUrl) });
     else if (raw.type === 'sticker' && raw.packageId && raw.stickerId) out.push({ type: 'sticker', packageId: String(raw.packageId), stickerId: String(raw.stickerId) });
+    else if (raw.type === 'flex' && raw.contents && typeof raw.contents === 'object' && /^(bubble|carousel)$/.test(String(raw.contents.type || ''))) {
+      out.push({ type: 'flex', altText: String(raw.altText || 'รายงาน').slice(0, 400), contents: raw.contents });
+    }
   }
   return out.slice(0, 5); // LINE จำกัด 5 ข้อความต่อการส่งหนึ่งครั้ง
 }
@@ -135,7 +140,7 @@ export function toLineMessages(list: OaMessage[]): any[] {
 }
 export function previewText(list: any): string {
   const n = normalizeMessages(list);
-  return n.map((m) => (m.type === 'text' ? m.text : m.type === 'image' ? '[รูปภาพ]' : '[สติกเกอร์]')).join(' | ').slice(0, 400);
+  return n.map((m) => (m.type === 'text' ? m.text : m.type === 'image' ? '[รูปภาพ]' : m.type === 'flex' ? '[การ์ด]' : '[สติกเกอร์]')).join(' | ').slice(0, 400);
 }
 
 /* ── ตั้งค่า (singleton) ───────────────────────────────────────────────── */
