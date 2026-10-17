@@ -18,10 +18,10 @@ import { LiveStamp } from '@/components/LiveStamp';
 
 export type HomePanelId = 'members' | 'cosmic' | 'shortcuts';
 
-// เรียงแท็บ: สมาชิก 1 แตก 5 (สร้างก่อน) → จักรวาลของเครือข่าย → ทางลัดเข้าระบบ
+// เรียงแท็บ (ลำดับที่เจ้าของกำหนด): จักรวาลของเครือข่าย → สมาชิก 1 แตก 5 → ทางลัดเข้าระบบ
 const PANEL_TABS: { id: HomePanelId; label: string; icon: string; hint: string }[] = [
-  { id: 'members',   label: 'สมาชิก 1 แตก 5',      icon: '👥', hint: 'ผังสมาชิก 1 แตก 5 เป็นชั้น ๆ (ข้อมูลจริง)' },
   { id: 'cosmic',    label: 'จักรวาลของเครือข่าย', icon: '🌌', hint: 'ฉาก 3 มิติของเครือข่าย 1 แตก 5 (ลากหมุน · คลิกดูข้อมูล)' },
+  { id: 'members',   label: 'สมาชิก 1 แตก 5',      icon: '👥', hint: 'ผังสมาชิก 1 แตก 5 เป็นชั้น ๆ (ข้อมูลจริง)' },
   { id: 'shortcuts', label: 'ทางลัดเข้าระบบ',      icon: '🧭', hint: 'ปุ่มลัดไปหน้าที่ใช้บ่อย' },
 ];
 
