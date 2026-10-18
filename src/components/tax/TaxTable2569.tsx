@@ -137,9 +137,9 @@ export default function TaxTable2569() {
     <div className="space-y-4">
       <section className="card p-4 sm:p-5">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-sm font-bold text-[#475569]">🔎 ตารางคำนวณภาษี ปีภาษี 2569</h3>
+          <h3 className="text-sm font-bold text-[#475569]">🔎 ตารางคำนวณภาษี 2560</h3>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100">
-            อัตราตาม พ.ร.บ. แก้ไขเพิ่มเติมประมวลรัษฎากร (ฉบับที่ 44) พ.ศ. 2560
+            อัตราตาม พ.ร.บ. แก้ไขเพิ่มเติมประมวลรัษฎากร (ฉบับที่ 44) พ.ศ. 2560 · ใช้ต่อเนื่องถึงปัจจุบัน
           </span>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
             ชีต PITrate + คำนวณภาษี · เอนจิน src/lib/tax/thaiPit.ts
@@ -151,7 +151,7 @@ export default function TaxTable2569() {
 
         <div className="grid lg:grid-cols-2 gap-4 mt-4">
           <div className="overflow-x-auto">
-            <div className="text-xs font-semibold text-slate-600 mb-1.5">อัตราภาษีขั้นบันได — ตาม พ.ร.บ. ฉบับที่ 44 พ.ศ. 2560 (ใช้กับปีภาษี 2569)</div>
+            <div className="text-xs font-semibold text-slate-600 mb-1.5">อัตราภาษีขั้นบันได 2560</div>
             <table className="w-full text-[11px] tabular-nums">
               <thead>
                 <tr className="bg-[#475569] text-white">
@@ -177,7 +177,7 @@ export default function TaxTable2569() {
               </tbody>
             </table>
             <p className="text-[10px] text-slate-400 mt-1.5 leading-4">
-              ที่มา: บัญชีอัตราภาษีเงินได้ ท้ายประมวลรัษฎากร มาตรา 48 — <b>แก้ไขล่าสุด พ.ร.บ. แก้ไขเพิ่มเติมประมวลรัษฎากร (ฉบับที่ 44) พ.ศ. 2560</b> ใช้บังคับสำหรับเงินได้ประจำปีภาษี 2560 เป็นต้นไป จึงใช้ตารางเดิมต่อเนื่องถึงปีภาษี 2569 · rd.go.th/5938
+              ที่มา: บัญชีอัตราภาษีเงินได้ ท้ายประมวลรัษฎากร มาตรา 48 — <b>แก้ไขล่าสุด พ.ร.บ. แก้ไขเพิ่มเติมประมวลรัษฎากร (ฉบับที่ 44) พ.ศ. 2560</b> ใช้บังคับสำหรับเงินได้ประจำปีภาษี 2560 เป็นต้นไป และยังเป็นอัตราที่ใช้อยู่ในปัจจุบัน · rd.go.th/5938
             </p>
           </div>
 
