@@ -17,7 +17,7 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        -460,
+        -480,
         40
       ]
     },
@@ -33,22 +33,22 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        -460,
+        -480,
         280
       ],
-      "webhookId": "4d3ae8a3-2d9b-45f3-b33f-50dcbca17baa"
+      "webhookId": "ba4810b4-8681-42aa-bf5b-3c9b78016de8"
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// อ่าน cursor/คิวที่ค้างจาก staticData — ใช้ร่วมกันทั้ง schedule และ webhook\nconst input = $input.first().json || {};\nconst isManual = !!(input && input.headers);   // webhook มี headers · schedule มี {}\nconst s = $getWorkflowStaticData('global');\nconst nowIso = new Date().toISOString();\nreturn [{ json: {\n  sig: String(s.sig || ''),\n  since: String(s.since || nowIso),\n  wait: isManual ? 0 : 9,\n  manual: isManual,\n  pending: Array.isArray(s.pending) ? s.pending : [],\n  lastPushAt: Number(s.lastPushAt || 0),\n} }];"
+        "jsCode": "// ตั้งค่าของรอบนี้ — schedule = long-poll 9 วิ + ห่างอย่างน้อย 5 นาที · webhook สั่งเอง = ตรวจทันที ไม่จำกัดเวลา\nconst input = $input.first().json || {};\nconst isManual = !!(input && input.headers);\nreturn [{ json: {\n  claim: '1',\n  wait: isManual ? 0 : 9,\n  minGap: isManual ? 0 : 300,\n  manual: isManual,\n} }];"
       },
-      "id": "acw-cursor",
-      "name": "อ่าน cursor (staticData)",
+      "id": "acw-setup",
+      "name": "ตั้งค่าของรอบ",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -200,
+        -220,
         160
       ]
     },
@@ -60,16 +60,16 @@
         "queryParameters": {
           "parameters": [
             {
-              "name": "sig",
-              "value": "={{ $json.sig }}"
-            },
-            {
-              "name": "since",
-              "value": "={{ $json.since }}"
+              "name": "claim",
+              "value": "={{ $json.claim }}"
             },
             {
               "name": "wait",
               "value": "={{ $json.wait }}"
+            },
+            {
+              "name": "minGap",
+              "value": "={{ $json.minGap }}"
             }
           ]
         },
@@ -92,12 +92,12 @@
           }
         }
       },
-      "id": "acw-watch",
-      "name": "อ่านสถานะระบบ (/api/admin/watch · long-poll)",
+      "id": "acw-claim",
+      "name": "ตรวจ + จองรอบแจ้งเตือน (/api/admin/watch?claim=1)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        60,
+        40,
         160
       ]
     },
@@ -112,8 +112,8 @@
           },
           "conditions": [
             {
-              "id": "acw-cond-1",
-              "leftValue": "={{ $json.changed }}",
+              "id": "acw-c1",
+              "leftValue": "={{ $json.allowed }}",
               "operator": {
                 "type": "boolean",
                 "operation": "true"
@@ -126,25 +126,25 @@
         "options": {}
       },
       "id": "acw-if",
-      "name": "มีการเปลี่ยนแปลง?",
+      "name": "ถึงรอบแจ้งเตือน?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        320,
+        300,
         160
       ]
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// รวมเหตุการณ์ใหม่ + คิวที่ยังไม่ได้รายงาน → สร้างคำถามให้ Hermes AI สรุป\nfunction j(v) { return (v === null || v === undefined) ? '' : String(v); }\nconst prep = $('อ่าน cursor').first().json || {};\nconst raw = $input.first().json || {};\nconst body = (raw.body && typeof raw.body === 'object' && !Array.isArray(raw.body)) ? raw.body : raw;\n\nif (body.ok !== true) {\n  return [{ json: {\n    push: false, error: true,\n    detail: 'อ่านสถานะไม่สำเร็จ: ' + j(body.error || body.message || 'unknown').slice(0, 160),\n    sig: prep.sig, at: null, events: [], pending: prep.pending, lastPushAt: prep.lastPushAt,\n    highSignal: false, counts: {}, prompt: '', totalNew: 0,\n  } }];\n}\n\nconst events = Array.isArray(body.events) ? body.events : [];\nconst pending = Array.isArray(prep.pending) ? prep.pending : [];\nconst seen = {};\nconst all = [];\npending.concat(events).forEach(function (e) {\n  const key = j(e.at) + '|' + j(e.label);\n  if (seen[key]) return;\n  seen[key] = 1;\n  all.push({ at: j(e.at), label: j(e.label), action: j(e.action) });\n});\nall.sort(function (a, b) { return a.at < b.at ? -1 : (a.at > b.at ? 1 : 0); });\n\n// การเปลี่ยนแปลงที่ตัวเลขเปลี่ยนแต่ไม่มี AuditLog (เช่น เขียนผ่านสคริปต์) — ต้องไม่เงียบ\nif (!all.length && body.changed === true) {\n  all.push({ at: j(body.at), label: 'ข้อมูลในระบบเปลี่ยน (ไม่พบบันทึก AuditLog)', action: 'system.change' });\n}\n\nconst HIGH = ['register', 'approve', 'reject', 'delete', 'restore', 'receipt', 'support', 'message', 'prospect.create', 'promot', 'verify'];\nconst highSignal = all.some(function (e) {\n  const a = j(e.action).toLowerCase();\n  return HIGH.some(function (h) { return a.indexOf(h) >= 0; });\n});\n\nfunction bkk(iso) {\n  const t = new Date(iso);\n  if (isNaN(t.getTime())) return '';\n  const d = new Date(t.getTime() + 7 * 3600e3).toISOString();\n  return d.slice(11, 19);\n}\nconst lines = all.slice(-12).map(function (e) { return '- ' + bkk(e.at) + ' ' + e.label; });\nconst c = body.counts || {};\nconst countsLine = 'สมาชิก ' + Number(c.users || 0) +\n  ' · รออนุมัติ ' + Number(c.membersPending || 0) +\n  ' · ผู้สนใจ ' + Number(c.prospects || 0) +\n  ' · ใบเสร็จ ' + Number(c.receipts || 0) +\n  ' · ข้อความค้างตอบ ' + Number(c.messagesPending || 0);\n\nconst prompt = [\n  'คุณคือผู้ช่วยผู้ดูแลระบบ AI Insurance Network',\n  'รายการเปลี่ยนแปลงล่าสุดในระบบ (จาก AuditLog จริง เรียงตามเวลา):',\n  lines.join('\\n') || '- ไม่มีรายละเอียด',\n  'จำนวนรวม ' + all.length + ' รายการ · ' + countsLine,\n  '',\n  'ให้สรุปเป็นภาษาไทยสั้น ๆ ไม่เกิน 4 บรรทัดว่าเกิดอะไรขึ้น น่าจับตาอะไร และควรทำอะไรต่อ',\n  'ห้ามแต่งข้อมูลที่ไม่มีในรายการ ห้ามใส่ชื่อบุคคล อีเมล หรือรหัสส่วนตัว',\n].join('\\n');\n\nreturn [{ json: {\n  push: false, error: false, detail: '',\n  sig: j(body.sig), at: j(body.at),\n  events: all.slice(-25), totalNew: all.length, highSignal: highSignal,\n  counts: c, countsLine: countsLine, prompt: prompt,\n  pending: prep.pending, lastPushAt: prep.lastPushAt,\n} }];"
+        "jsCode": "// สร้างข้อความพื้นฐาน + คำถามให้ Hermes AI จากเหตุการณ์จริงที่เซิร์ฟเวอร์ส่งมา\nfunction j(v) { return (v === null || v === undefined) ? '' : String(v); }\nconst raw = $input.first().json || {};\nconst body = (raw.body && typeof raw.body === 'object' && !Array.isArray(raw.body)) ? raw.body : raw;\n\nif (body.ok !== true || body.allowed !== true) {\n  return [{ json: {\n    skip: true,\n    why: body.ok !== true ? ('read failed: ' + j(body.error || body.message).slice(0, 120)) : j(body.reason || 'ไม่ถึงรอบส่ง'),\n    count: 0, text: '', prompt: '', at: body.at || null,\n  } }];\n}\n\nconst events = Array.isArray(body.events) ? body.events.slice(-25) : [];\nconst c = body.counts || {};\nconst countsLine = 'สมาชิก ' + Number(c.users || 0) +\n  ' · รออนุมัติ ' + Number(c.membersPending || 0) +\n  ' · ผู้สนใจ ' + Number(c.prospects || 0) +\n  ' · ใบเสร็จ ' + Number(c.receipts || 0) +\n  ' · ข้อความค้างตอบ ' + Number(c.messagesPending || 0);\n\nfunction bkk(iso) {\n  const t = new Date(iso);\n  if (isNaN(t.getTime())) return '';\n  return new Date(t.getTime() + 7 * 3600e3).toISOString().slice(11, 19);\n}\nconst items = events.map(function (e) { return '• ' + bkk(e.at) + ' ' + j(e.label); });\nconst stamp = bkk(body.at || new Date().toISOString());\n\nlet base = '🔔 ตรวจพบการเปลี่ยนแปลงในระบบ\\n' + stamp + ' น.\\n\\n';\nbase += '📋 รายการ (' + events.length + ')\\n' + (items.join('\\n') || '• ข้อมูลในระบบเปลี่ยน');\nbase += '\\n\\n📊 ' + countsLine;\nbase += '\\n👉 https://ai-insurance-network-tree.vercel.app/admin';\n\nconst prompt = [\n  'คุณคือผู้ช่วยผู้ดูแลระบบ AI Insurance Network',\n  'รายการเปลี่ยนแปลงล่าสุดของระบบ (จาก AuditLog จริง เรียงตามเวลา):',\n  items.join('\\n') || '- ไม่มีรายละเอียด',\n  'จำนวน ' + events.length + ' รายการ · ' + countsLine,\n  '',\n  'ให้สรุปเป็นภาษาไทยสั้น ๆ ไม่เกิน 4 บรรทัดว่าเกิดอะไรขึ้น น่าจับตาอะไร และควรทำอะไรต่อ',\n  'ห้ามแต่งข้อมูลที่ไม่มีในรายการ ห้ามใส่ชื่อบุคคล อีเมล หรือรหัสส่วนตัว',\n].join('\\n');\n\nreturn [{ json: {\n  skip: false, count: events.length, text: base.slice(0, 4600), prompt: prompt,\n  countsLine: countsLine, at: body.at || null,\n} }];"
       },
       "id": "acw-summary",
-      "name": "สรุปการเปลี่ยนแปลง",
+      "name": "สรุปเหตุการณ์",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        580,
+        560,
         60
       ]
     },
@@ -170,7 +170,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ query: $json.prompt, mode: 'SMART' }) }}",
         "options": {
-          "timeout": 60000,
+          "timeout": 30000,
           "response": {
             "response": {
               "neverError": true,
@@ -184,7 +184,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        840,
+        820,
         60
       ],
       "onError": "continueRegularOutput"
@@ -192,47 +192,14 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// ประกอบข้อความ LINE + ตัดสินว่าจะส่งรอบนี้หรือสะสมไว้ (โควตาข้อความ LINE มีจำกัด)\nconst b = $('สรุปการเปลี่ยนแปลง').first().json || {};\nconst aiRaw = $input.first().json || {};\nconst aiText = String(aiRaw.answer || aiRaw.text || (aiRaw.body && aiRaw.body.answer) || '').trim();\n\nconst MIN_GAP = 300000;   // ปกติ: ไม่ถี่กว่า 1 ครั้ง / 5 นาที\nconst HIGH_GAP = 60000;   // เหตุการณ์สำคัญ: ไม่ถี่กว่า 1 ครั้ง / 60 วินาที\nconst MAX_PENDING = 15;\n\nconst now = Date.now();\nconst gap = now - Number(b.lastPushAt || 0);\nconst shouldPush = (b.events || []).length > 0 && !b.error && (gap >= MIN_GAP || (b.highSignal && gap >= HIGH_GAP));\n\nfunction bkk(iso) {\n  const t = new Date(iso || Date.now());\n  const d = new Date(t.getTime() + 7 * 3600e3);\n  const p = d.toISOString();\n  return p.slice(8, 10) + '/' + p.slice(5, 7) + '/' + (Number(p.slice(0, 4)) + 543) + ' ' + p.slice(11, 19);\n}\n\nconst evs = Array.isArray(b.events) ? b.events : [];\nconst items = evs.slice(-10).map(function (e) {\n  return '• ' + (bkk(e.at).slice(-8)) + ' ' + e.label;\n});\nlet text = '🔔 ตรวจพบการเปลี่ยนแปลงในระบบ\\n' + bkk(b.at) + ' น.\\n';\nif (aiText.length >= 10) {\n  text += '\\n🤖 สรุปโดย Hermes AI\\n' + aiText.slice(0, 1200) + '\\n';\n} else {\n  text += '\\n• รายการที่เปลี่ยน (' + evs.length + ')\\n' + (items.join('\\n') || '• ข้อมูลในระบบเปลี่ยน');\n}\ntext += '\\n📊 ' + (b.countsLine || '');\nif (evs.length > 10) text += '\\n…และอีก ' + (evs.length - 10) + ' รายการ';\ntext += '\\n👉 https://ai-insurance-network-tree.vercel.app/admin';\n\nconst sd = $getWorkflowStaticData('global');\nsd.sig = b.sig || sd.sig || '';\nif (b.at) sd.since = b.at;\nif (!shouldPush) {\n  sd.pending = evs.slice(-MAX_PENDING);\n}\n\nconst pendingAfter = shouldPush ? (sd.pending || []) : evs.slice(-MAX_PENDING);\nreturn [{ json: {\n  shouldPush: shouldPush,\n  text: text.slice(0, 4800),\n  kind: 'admin.change',\n  count: evs.length,\n  highSignal: !!b.highSignal,\n  aiUsed: aiText.length >= 10,\n  at: b.at,\n  pendingAfter: pendingAfter,\n} }];"
+        "jsCode": "// ต่อบทสรุปของ Hermes AI เข้ากับรายการจริง\nconst s = $('สรุปเหตุการณ์').first().json || {};\nconst aiRaw = $input.first().json || {};\nconst aiText = String(aiRaw.answer || aiRaw.text || (aiRaw.body && aiRaw.body.answer) || '').trim();\n\nlet text = String(s.text || '');\nif (aiText.length >= 10) {\n  const idx = text.indexOf('\\n\\n');\n  const head = idx >= 0 ? text.slice(0, idx) : text;\n  const rest = idx >= 0 ? text.slice(idx) : '';\n  text = head + '\\n\\n🤖 สรุปโดย Hermes AI\\n' + aiText.slice(0, 1200) + rest;\n}\n\nreturn [{ json: {\n  text: text.slice(0, 4800),\n  kind: 'admin.change',\n  count: Number(s.count || 0),\n  aiUsed: aiText.length >= 10,\n  at: s.at,\n} }];"
       },
       "id": "acw-compose",
-      "name": "ประกอบข้อความ LINE",
+      "name": "ประกอบข้อความ",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1100,
-        60
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "acw-cond-2",
-              "leftValue": "={{ $json.shouldPush }}",
-              "operator": {
-                "type": "boolean",
-                "operation": "true"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "looseTypeValidation": true,
-        "options": {}
-      },
-      "id": "acw-if-push",
-      "name": "ถึงเวลาส่ง LINE?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        1360,
+        1080,
         60
       ]
     },
@@ -272,36 +239,22 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1620,
-        -40
+        1340,
+        60
       ]
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// ปิดรอบหลังส่ง LINE — เลื่อน cursor และเคลียร์คิวเฉพาะเมื่อส่งสำเร็จ\nconst sent = $input.first().json || {};\nconst c = $('ประกอบข้อความ LINE').first().json || {};\nconst body = (sent.body && typeof sent.body === 'object') ? sent.body : sent;\nconst ok = body.ok === true;\nconst sd = $getWorkflowStaticData('global');\nif (ok) {\n  sd.lastPushAt = Date.now();\n  sd.pending = [];\n} else {\n  sd.pending = Array.isArray(c.pendingAfter) ? c.pendingAfter : [];\n}\nif (c.at) sd.since = c.at;\nreturn [{ json: {\n  ok: ok,\n  sent: ok ? 1 : 0,\n  count: Number(c.count || 0),\n  aiUsed: c.aiUsed === true,\n  detail: ok ? 'ส่ง LINE สำเร็จ' : ('ส่ง LINE ไม่สำเร็จ: ' + String(body.error || body.message || '').slice(0, 120)),\n  chars: String(c.text || '').length,\n  at: new Date().toISOString(),\n} }];"
+        "jsCode": "// ปิดรอบ — รายงานผลจากคำตอบของ /api/line/notify\nconst resp = $input.first().json || {};\nconst c = $('ประกอบข้อความ').first().json || {};\nconst body = (resp.body && typeof resp.body === 'object') ? resp.body : resp;\nconst ok = body.ok === true;\nreturn [{ json: {\n  ok: ok, sent: ok ? 1 : 0,\n  count: Number(c.count || 0),\n  aiUsed: c.aiUsed === true,\n  detail: ok ? 'ส่ง LINE สำเร็จ' : ('ส่ง LINE ไม่สำเร็จ: ' + String(body.error || body.message || '').slice(0, 120)),\n  chars: String(c.text || '').length,\n  at: new Date().toISOString(),\n} }];"
       },
       "id": "acw-done",
       "name": "ปิดรอบ (ส่งแล้ว)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1880,
-        -40
-      ]
-    },
-    {
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "// ยังไม่ถึงรอบส่ง หรือไม่มีอะไรใหม่ — เก็บคิวไว้ ไม่ยิง LINE (ประหยัดโควตา)\nconst c = $('ประกอบข้อความ LINE').first().json || {};\nconst sd = $getWorkflowStaticData('global');\nsd.pending = Array.isArray(c.pendingAfter) ? c.pendingAfter : [];\nif (c.at) sd.since = c.at;\nreturn [{ json: {\n  ok: true, sent: 0, count: Number(c.count || 0),\n  detail: 'สะสมไว้ในคิว (' + Number((c.pendingAfter || []).length) + ' รายการ) — รอรอบส่งถัดไป',\n  at: new Date().toISOString(),\n} }];"
-      },
-      "id": "acw-skip",
-      "name": "สะสมคิว (ยังไม่ส่ง)",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1620,
-        200
+        1600,
+        60
       ]
     },
     {
@@ -340,8 +293,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2140,
-        -40
+        1860,
+        60
       ]
     }
   ],
@@ -350,7 +303,7 @@
       "main": [
         [
           {
-            "node": "อ่าน cursor (staticData)",
+            "node": "ตั้งค่าของรอบ",
             "type": "main",
             "index": 0
           }
@@ -361,40 +314,40 @@
       "main": [
         [
           {
-            "node": "อ่าน cursor (staticData)",
+            "node": "ตั้งค่าของรอบ",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "อ่าน cursor (staticData)": {
+    "ตั้งค่าของรอบ": {
       "main": [
         [
           {
-            "node": "อ่านสถานะระบบ (/api/admin/watch · long-poll)",
+            "node": "ตรวจ + จองรอบแจ้งเตือน (/api/admin/watch?claim=1)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "อ่านสถานะระบบ (/api/admin/watch · long-poll)": {
+    "ตรวจ + จองรอบแจ้งเตือน (/api/admin/watch?claim=1)": {
       "main": [
         [
           {
-            "node": "มีการเปลี่ยนแปลง?",
+            "node": "ถึงรอบแจ้งเตือน?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "มีการเปลี่ยนแปลง?": {
+    "ถึงรอบแจ้งเตือน?": {
       "main": [
         [
           {
-            "node": "สรุปการเปลี่ยนแปลง",
+            "node": "สรุปเหตุการณ์",
             "type": "main",
             "index": 0
           }
@@ -402,7 +355,7 @@
         []
       ]
     },
-    "สรุปการเปลี่ยนแปลง": {
+    "สรุปเหตุการณ์": {
       "main": [
         [
           {
@@ -417,36 +370,18 @@
       "main": [
         [
           {
-            "node": "ประกอบข้อความ LINE",
+            "node": "ประกอบข้อความ",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "ประกอบข้อความ LINE": {
-      "main": [
-        [
-          {
-            "node": "ถึงเวลาส่ง LINE?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "ถึงเวลาส่ง LINE?": {
+    "ประกอบข้อความ": {
       "main": [
         [
           {
             "node": "ส่งเข้า LINE OA (/api/line/notify)",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "สะสมคิว (ยังไม่ส่ง)",
             "type": "main",
             "index": 0
           }
@@ -481,7 +416,7 @@
     "errorWorkflow": "a3c53150-d772-4e18-8017-5c95a98882f4",
     "saveManualExecutions": true,
     "timezone": "Asia/Bangkok",
-    "saveDataSuccessExecution": "none"
+    "saveDataSuccessExecution": "all"
   },
   "active": true
 }
