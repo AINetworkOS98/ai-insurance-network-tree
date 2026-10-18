@@ -24,6 +24,8 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
+const NOTIFY_TYPE = 'admin.watch.notify';
+
 const TH_ENTITY: Record<string, string> = {
   User: 'สมาชิก',
   Prospect: 'ผู้สนใจ',
@@ -149,6 +151,10 @@ export async function GET(req: NextRequest) {
   const sinceSig = (url.searchParams.get('sig') || '').trim();
   const sinceAt = (url.searchParams.get('since') || '').trim();
   const wait = Math.max(0, Math.min(25, Number(url.searchParams.get('wait') || 0) || 0));
+  // claim=1 → ให้ "เซิร์ฟเวอร์" ตัดสินว่าจะแจ้งเตือนรอบนี้หรือไม่ (เก็บสถานะใน NotificationLog)
+  //   ทำแบบนี้เพราะเครื่องมือภายนอก (n8n) ไม่ควรถือ state เอง — รีสตาร์ท/แก้ workflow แล้วสถานะไม่หาย
+  const claim = url.searchParams.get('claim') === '1';
+  const minGap = Math.max(0, Math.min(86400, Number(url.searchParams.get('minGap') || 300) || 300));
   const t0 = Date.now();
 
   let snap = await readSnapshot();
@@ -159,6 +165,54 @@ export async function GET(req: NextRequest) {
     await new Promise((r) => setTimeout(r, 1000));
     snap = await readSnapshot();
     polls += 1;
+  }
+
+  if (claim) {
+    const last = await prisma.notificationLog.findFirst({
+      where: { type: NOTIFY_TYPE },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true, payload: true },
+    });
+    const lastPayload: any = last?.payload || {};
+    const lastNotifyAt = lastPayload.at || last?.createdAt?.toISOString() || null;
+    const lastSig = typeof lastPayload.sig === 'string' ? lastPayload.sig : null;
+    const gapMs = last ? Date.now() - last.createdAt.getTime() : Number.MAX_SAFE_INTEGER;
+    const changed = lastSig ? lastSig !== snap.sig : true;
+    const allowed = changed && gapMs >= minGap * 1000;
+
+    let events: ChangeEvent[] = [];
+    if (allowed) {
+      events = await readEvents(lastNotifyAt || '');
+      // จองรอบนี้ทันที (กันการแจ้งซ้ำเมื่อมีผู้เรียกพร้อมกัน)
+      await prisma.notificationLog.create({
+        data: {
+          type: NOTIFY_TYPE,
+          channel: 'line',
+          target: 'owner',
+          status: 'PENDING',
+          payload: { sig: snap.sig, at: new Date().toISOString(), events: events.length } as any,
+        },
+      });
+    }
+
+    return NextResponse.json(
+      {
+        ok: true,
+        at: new Date().toISOString(),
+        sig: snap.sig,
+        changed,
+        allowed,
+        reason: !changed ? 'ไม่มีการเปลี่ยนแปลงตั้งแต่รอบล่าสุด' : (gapMs < minGap * 1000 ? `ยังไม่ถึงรอบส่ง (ห่าง ${Math.round(gapMs / 1000)}/${minGap} วิ)` : 'ถึงรอบส่ง'),
+        lastNotifyAt,
+        minGap,
+        counts: snap.counts,
+        last: snap.last,
+        events,
+        waitedMs: Date.now() - t0,
+        polls,
+      },
+      { headers: { 'Cache-Control': 'no-store, max-age=0' } },
+    );
   }
 
   const changed = sinceSig ? snap.sig !== sinceSig : true;
