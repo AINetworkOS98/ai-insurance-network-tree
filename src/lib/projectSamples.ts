@@ -298,6 +298,8 @@ export type ProjectSample = {
   goal: string;
   structure: string[];
   benefits: string[];
+  payYears: number;
+  payAssumed: boolean;
 };
 
 // เลือกเงื่อนไขที่ตรงกับอายุ/ทุนในตารางจริง (ถ้าอายุที่ต้องการไม่อยู่ในเกณฑ์ → ขยับไปอายุที่เข้าเกณฑ์ใกล้สุด)
@@ -327,6 +329,23 @@ function score(v: Variant, cover: number) {
   return s;
 }
 
+// จำนวนปีชำระเบี้ยสำหรับ "ภาพการจ่ายเบี้ย" — ใช้ช่วงปีชำระจากตารางก่อน (แม่นสุด)
+// แล้วค่อยเดาจากชื่อแบบ (เช่น 20/20, 15/5) ถ้าตารางไม่ระบุ; ถ้าไม่รู้จริงใช้ 10 ปี และติดป้ายว่าสมมติ
+export function payYearsOf(p: { n: string; v?: Variant[] }, v: Variant | null): { years: number; assumed: boolean } {
+  if (v?.pay) {
+    const hi = v.pay[1];
+    const lo = v.pay[0];
+    if (hi != null && hi >= 1 && hi <= 40) return { years: Math.max(1, hi), assumed: false };
+    if (hi != null && hi > 40 && lo != null && lo >= 1 && lo <= 40) return { years: lo, assumed: false };
+  }
+  const m = p.n.match(/\/\s*(\d{1,2})(?!\d)/);
+  if (m) {
+    const y = Number(m[1]);
+    if (y >= 1 && y <= 40) return { years: y, assumed: false };
+  }
+  return { years: 10, assumed: true };
+}
+
 export function buildProjectSamples(
   products: Product[],
   opts: { startGender?: 'ชาย' | 'หญิง'; age?: number; cover?: number } = {}
@@ -338,6 +357,7 @@ export function buildProjectSamples(
     const tpl = templateFor(p.cat);
     const { variant, age } = pickVariant(p.v || [], wantAge, cover);
     const rider = tpl.rider === true;
+    const pay = payYearsOf(p, variant);
     return {
       no: i + 1,
       code: p.c,
@@ -353,6 +373,8 @@ export function buildProjectSamples(
       goal: tpl.goal,
       structure: tpl.structure,
       benefits: tpl.benefits,
+      payYears: pay.years,
+      payAssumed: pay.assumed,
     };
   });
 }

@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import PremiumPaymentPicture from '@/components/PremiumPaymentPicture';
 import { buildProjectSamples } from '@/lib/projectSamples';
 
 // เมนูตารางค่าคอมมิชชั่น — กล่องค้นหาแบบ dropdown + ตัวอย่างการคำนวณเป็นบาท
@@ -436,6 +437,13 @@ export default function CommissionsPage(){
                       {s.benefits.map((b:string,i:number)=><li key={i}>{b}</li>)}
                     </ul>
                   </div>
+                  <PremiumPaymentPicture
+                    payYears={s.payYears}
+                    premium={premium}
+                    cover={s.cover}
+                    assumed={s.payAssumed}
+                    rider={s.rider}
+                  />
                   {showExample && s.variant && (
                     <div className="mt-2 rounded-lg bg-emerald-50 border border-emerald-100 p-2 text-[11px]">
                       <span className="font-semibold text-emerald-800">ค่าคอมมิชชั่นตัวแทนตามตาราง: </span>
