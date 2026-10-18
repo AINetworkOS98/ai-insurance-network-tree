@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import BusinessModelBoard from '@/components/BusinessModelBoard';
+import IncomeBenefits3DSection from '@/components/IncomeBenefits3DSection';
 import { RANK_CATALOG } from '@/lib/rankCatalog';
 import { DEFAULT_POSITIONS, PositionId } from '@/lib/compensationRules';
 
@@ -96,6 +97,9 @@ export default function ProgressView() {
       <div className="flex w-full">
         <Sidebar />
         <main className="min-w-0 flex-1 p-6 space-y-4">
+          {/* ── ส่วนแรกสุดของหน้า: 3D Income Benefits Dashboard ── */}
+          <IncomeBenefits3DSection />
+
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold text-[#475569]">ความก้าวหน้า ⬆</h1>
             <span className="badge-demo">เส้นทางตำแหน่ง</span>

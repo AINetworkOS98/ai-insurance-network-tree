@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { DEMO_MEMBERS } from '@/lib/demo-data';
 
 /* ─────────────────────────────────────────────────────────────
@@ -94,12 +94,28 @@ export default function RadialNetworkTree({ filter, demoOnly = false }: {
   const [members, setMembers] = useState<MemberLike[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [usedDemo, setUsedDemo] = useState(false);
+  const membersRef = useRef<MemberLike[] | null>(null);
+  const applyMembers = (ms: MemberLike[]) => { membersRef.current = ms; setMembers(ms); };
+  const [tick, setTick] = useState(0);
+
+  // อัปเดตข้อมูลจริงอัตโนมัติ: ทุก 30 วิ · เมื่อหน้าอื่นแก้ข้อมูลสมาชิก · เมื่อกลับเข้าหน้านี้
+  useEffect(() => {
+    const t = setInterval(() => setTick(v => v + 1), 30000);
+    const bump = () => setTick(v => v + 1);
+    window.addEventListener('members-updated', bump as any);
+    window.addEventListener('focus', bump);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener('members-updated', bump as any);
+      window.removeEventListener('focus', bump);
+    };
+  }, []);
 
   // ── โหลดสมาชิกจริง (fallback: demo data เหมือน TreeView เดิม) ──
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      setLoading(true);
+      if (!membersRef.current) setLoading(true);
       const f = filter || {};
       const apply = (ms: MemberLike[]) => {
         let list = ms;
@@ -119,7 +135,7 @@ export default function RadialNetworkTree({ filter, demoOnly = false }: {
       // โหมดสาธิต (หน้าสาธารณะ): ใช้ข้อมูลตัวอย่างเท่านั้น — ห้ามดึงข้อมูลสมาชิกจริงมาแสดง
       if (demoOnly) {
         setUsedDemo(true);
-        setMembers(apply(DEMO_MEMBERS as any));
+        applyMembers(apply(DEMO_MEMBERS as any));
         setLoading(false);
         return;
       }
@@ -127,18 +143,20 @@ export default function RadialNetworkTree({ filter, demoOnly = false }: {
         const r = await fetch('/api/members', { cache: 'no-store' });
         const j = await r.json();
         if (cancelled) return;
-        const raw: MemberLike[] = j?.members && Array.isArray(j.members) && j.members.length > 0 ? j.members : (DEMO_MEMBERS as any);
-        setUsedDemo(!(j?.members && Array.isArray(j.members) && j.members.length > 0));
-        setMembers(apply(raw));
+        const all: MemberLike[] = Array.isArray(j?.members) ? j.members : [];
+        // ข้อมูลจริงเท่านั้น: ตัดสมาชิกที่ถูกลบ/ลาออก (RESIGNED) ออกให้ตรงกับหน้า /members
+        const live = all.filter((m: any) => String(m?.status || '').toUpperCase() !== 'RESIGNED');
+        setUsedDemo(live.length === 0);
+        applyMembers(apply(live.length > 0 ? live : (DEMO_MEMBERS as any)));
       } catch {
         if (cancelled) return;
         setUsedDemo(true);
-        setMembers(apply(DEMO_MEMBERS as any));
+        applyMembers(apply(DEMO_MEMBERS as any));
       }
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [demoOnly, filter?.q, filter?.status, filter?.province, filter?.district, filter?.tambon, filter?.zipCode]);
+  }, [demoOnly, tick, filter?.q, filter?.status, filter?.province, filter?.district, filter?.tambon, filter?.zipCode]);
 
   // ── ประกอบผัง: โครงสร้าง + ข้อมูลจริง + พิกัด ──
   const layout = useMemo(() => {

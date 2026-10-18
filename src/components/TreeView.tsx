@@ -97,7 +97,7 @@ export default function TreeView({ filter }: { filter?: { q?:string; status?:str
         if(cancelled) return;
         let members:any[];
         if(j && j.members && Array.isArray(j.members) && j.members.length>0){
-          members = applyFilter(j.members);
+          members = applyFilter((j.members as any[]).filter(m=>String(m?.status||'').toUpperCase()!=='RESIGNED'));
         } else {
           console.warn('no members from API, using demo data');
           members = applyFilter(DEMO_MEMBERS);

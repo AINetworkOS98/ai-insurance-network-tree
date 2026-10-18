@@ -18,6 +18,7 @@ type Member = {
   positionName?: string | null;
   rankName?: string;
   rankLevel?: number;
+  commission?: number;
   createdAt?: string | null;
   joinDate?: string | null;
   deleted?: boolean;
@@ -48,6 +49,10 @@ export default function MembersPage(){
   const [msg, setMsg]=useState<string|null>(null);
   const [errMsg, setErrMsg]=useState<string|null>(null);
   const [lastAt, setLastAt]=useState<Date|null>(null);
+  // ตัวแทนที่มีผล = มีค่าคอมมิชชันสะสม > 0 (ดึงจาก IncomeTransaction)
+  const [onlyPerf, setOnlyPerf]=useState(false);
+  const [commMap, setCommMap]=useState<Record<string, number>>({});
+  const [commErr, setCommErr]=useState<string|null>(null);
 
   const load = useCallback(async ()=>{
     setLoading(true);
@@ -77,6 +82,20 @@ export default function MembersPage(){
   },[]);
 
   useEffect(()=>{ load(); },[load]);
+
+  // ค่าคอมมิชชันสะสมรายคน — ใช้กรอง "เฉพาะตัวแทนที่มีผล"
+  const loadCommissions = useCallback(async ()=>{
+    try{
+      const r = await fetch('/api/member-commissions',{credentials:'include',cache:'no-store'});
+      const j = await r.json().catch(()=>({}));
+      setCommMap((j?.map||{}) as Record<string, number>);
+      setCommErr(j?.ok ? null : (j?.error || 'อ่านค่าคอมมิชชันไม่สำเร็จ'));
+    }catch{
+      setCommErr('เชื่อมต่อข้อมูลค่าคอมมิชชันไม่สำเร็จ');
+    }
+  },[]);
+
+  useEffect(()=>{ loadCommissions(); },[loadCommissions]);
 
   // อัปเดตรายชื่อเองทุก 30 วินาที — สถานะไม่ค้าง
   useEffect(()=>{
@@ -143,10 +162,14 @@ export default function MembersPage(){
       if(isDeleted(m)) return false;            // แถวที่ลบแล้วซ่อนจากมุมมองปกติ
       if(filter!=='all' && m.status!==filter) return false;
     }
+    if(onlyPerf && !((commMap[m.id]||0) > 0)) return false;   // เฉพาะตัวแทนที่มีผล (มีค่าคอมสะสม)
     const hay = `${codeOf(m)} ${m.name||''} ${m.email||''} ${m.province||''}`.toLowerCase();
     if(q && !hay.includes(q.toLowerCase())) return false;
     return true;
   });
+
+  const perfCount = members.filter(m=>!isDeleted(m) && (commMap[m.id]||0) > 0).length;
+  const fmtBaht = (v:number)=> v.toLocaleString('en-US',{maximumFractionDigits:0});
 
   return (
     <div>
@@ -159,7 +182,7 @@ export default function MembersPage(){
             <span className="badge-demo">ทีมของฉัน</span>
             <span className="text-xs text-slate-500 hidden md:inline">ดูสมาชิกในสายงานตามสิทธิ์ • Own / Team / All</span>
             <Link href="/tree" className="ml-auto px-4 py-2 rounded-full bg-[#475569] text-white text-sm">ดูผังเครือข่าย</Link>
-            <button onClick={load} className="px-4 py-2 rounded-full border bg-white text-sm">รีเฟรช</button>
+            <button onClick={()=>{ load(); loadCommissions(); }} className="px-4 py-2 rounded-full border bg-white text-sm">รีเฟรช</button>
           </div>
 
           <div className="grid md:grid-cols-4 gap-3 text-sm">
@@ -175,6 +198,14 @@ export default function MembersPage(){
               <select value={filter} onChange={e=>setFilter(e.target.value)} className="border rounded-xl px-3 py-2">
                 <option value="all">ทุกสถานะ</option><option value="ACTIVE">Active</option><option value="PENDING">Pending</option><option value="SUSPENDED">Suspended</option><option value="INACTIVE">Inactive</option><option value="RESIGNED">ลบแล้ว (คืนค่าได้)</option>
               </select>
+              <button
+                type="button"
+                onClick={()=>setOnlyPerf(v=>!v)}
+                title="แสดงเฉพาะสมาชิกที่มีค่าคอมมิชชันสะสมมากกว่า 0"
+                className={`px-3 py-2 rounded-xl border text-xs font-semibold ${onlyPerf ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+              >
+                {onlyPerf ? '✓ ' : '💼 '}เฉพาะตัวแทนที่มีผล ({perfCount})
+              </button>
               <span className="text-xs text-slate-500 self-center">{loading?'กำลังโหลด...':`${filtered.length} รายการ`}</span>
             </div>
 
@@ -193,6 +224,7 @@ export default function MembersPage(){
                       <th className="text-left p-2.5">จังหวัด</th>
                       <th className="text-left p-2.5 hidden md:table-cell">ตำแหน่ง</th>
                       <th className="p-2.5">สถานะ</th>
+                      <th className="text-right p-2.5">ค่าคอมสะสม</th>
                       <th className="text-left p-2.5 hidden md:table-cell">อีเมล</th>
                       {canManage && <th className="p-2.5">จัดการ</th>}
                     </tr>
@@ -208,6 +240,9 @@ export default function MembersPage(){
                           <td className="p-2.5">{m.province || '-'}</td>
                           <td className="p-2.5 hidden md:table-cell">{m.positionName || m.rankName || m.branch || '-'}</td>
                           <td className="p-2.5"><span className={`px-2 py-1 rounded-full border text-[11px] font-medium ${STATUS_COLOR[String(m.status)]||'bg-slate-100'}`}>{m.status || 'PENDING'}</span></td>
+                          <td className={`p-2.5 text-right font-mono tabular-nums ${(commMap[m.id]||0)>0?'text-emerald-700 font-semibold':'text-slate-300'}`}>
+                            {(commMap[m.id]||0) > 0 ? fmtBaht(commMap[m.id]) : '—'}
+                          </td>
                           <td className="p-2.5 hidden md:table-cell font-mono text-[11px]">{m.email || '-'}</td>
                           {canManage && (
                             <td className="p-2.5 text-center">
@@ -245,6 +280,9 @@ export default function MembersPage(){
               <span suppressHydrationWarning>อัปเดตรายชื่ออัตโนมัติทุก 30 วินาที • ข้อมูลจากทะเบียนสมาชิกกลาง</span>
               {lastAt && <span suppressHydrationWarning>• ดึงล่าสุด {lastAt.toLocaleTimeString('th-TH')} น.</span>}
               <span>• สมาชิกที่ไม่ได้อยู่ในขอบเขตสิทธิ์จะไม่แสดง (Deny by Default)</span>
+              {commErr
+                ? <span className="text-rose-600">• {commErr}</span>
+                : <span>• ค่าคอมสะสมคิดจากรายการรับรู้รายได้ที่ยังมีผล (ตัด REJECTED/REVERSED)</span>}
               {canManage && <span>• การลบ/คืนค่าถูกบันทึก Audit Log ทุกครั้ง</span>}
             </div>
           </div>

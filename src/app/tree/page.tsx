@@ -198,6 +198,11 @@ export default function TreePage(){
                   </select>
                   <input placeholder="รหัสไปรษณีย์" value={zipQ} onChange={e=>setZipQ(e.target.value)} inputMode="numeric" className="border rounded-xl px-3 py-2 w-[130px]" />
                   <button onClick={applySearch} className="px-4 py-2 rounded-xl bg-[#eff6ff] border border-[#dbeafe] text-sky-700 text-xs font-semibold hover:bg-[#e0f0ff]">ค้นหา</button>
+                  <button
+                    onClick={()=>{ window.dispatchEvent(new Event('members-updated')); }}
+                    title="ดึงข้อมูลสมาชิกจริงจากฐานข้อมูลใหม่ทันที (ไม่ใช้แคช)"
+                    className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:opacity-90"
+                  >🔄 อัปเดตข้อมูลจริง</button>
                   <button className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 text-xs hover:bg-slate-50">ซูม +</button>
                   <button className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 text-xs hover:bg-slate-50">ย้อนขึ้นชั้นบน</button>
                 </div>

@@ -241,6 +241,19 @@ export default function GeneralMembersPage(){
               <BusinessSimulator/>
               {/* ตารางคำนวณภาษี 2569 + เครื่องคำนวณออกภาษีให้ทุกทอด (ดึงสูตรจากโปรแกรมภาษี2569.xls) */}
               <TaxTable2569/>
+              {/* ปุ่มต่อไปยังหน้าเปรียบเทียบรูปแบบประกันคีย์แมน (ต่อจากผลประกอบการ) */}
+              <div className="card p-4 flex flex-wrap items-center gap-3">
+                <div className="flex-1 min-w-[240px]">
+                  <div className="text-sm font-semibold text-[#475569]">🛡 Keyman Analysis — เปรียบเทียบรูปแบบการทำประกันคีย์แมน</div>
+                  <div className="text-xs text-slate-500">เทียบ 4 รูปแบบ (Term / Whole Life / สะสมทรัพย์ / ประกันกลุ่มผู้บริหาร) จากกำไรและภาระผูกพันของธุรกิจ · PDPA-safe</div>
+                </div>
+                <Link
+                  href="/keyman-analysis"
+                  className="px-5 py-2.5 rounded-full bg-[#475569] text-white text-sm font-semibold hover:opacity-90"
+                >
+                  เปิดหน้าเปรียบเทียบคีย์แมน →
+                </Link>
+              </div>
             </div>
           ) : (<>
           {/* หัวหน้า */}
