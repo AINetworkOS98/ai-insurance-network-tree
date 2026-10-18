@@ -77,7 +77,7 @@ export async function GET(req: NextRequest){
         ((p.aka || []) as string[]).some((a:string)=> String(a).toLowerCase().includes(q))
       ).slice(0, 50);
     } else {
-      products = products.slice(0, 100);
+      products = products.slice(0, 500);
     }
     const categories = [...new Set(((data.products || []) as any[]).map(p=> p.cat))];
     return NextResponse.json({
