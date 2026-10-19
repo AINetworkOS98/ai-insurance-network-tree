@@ -46,6 +46,7 @@ const PUBLIC_API = [
   '/api/cron/renewal',
   '/api/cron/registration-sync',
   '/api/cron/email-sync',
+  '/api/cron/insurance-case-cleanup', // ลบเคสทำประกันที่หมดอายุ (PDPA 180 วัน) — route บังคับ Bearer CRON_SECRET เอง
   '/api/cron/net-1x5', // ตัวเฝ้าให้ข้อมูลระบบ 1 แตก 5 เป็นปัจจุบันเสมอ (Bearer CRON_SECRET / ผู้ดูแลที่ล็อกอิน)
   '/api/cron/tl-smart-sync', // ส่งใบสมัครตัวแทนจาก /recruit → app TL SMART (route บังคับ Bearer CRON_SECRET เอง)
   '/api/tl-smart/status', // ดูสถานะสะพาน TL SMART (route บังคับ Bearer CRON_SECRET เอง)
