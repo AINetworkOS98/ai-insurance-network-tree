@@ -55,6 +55,19 @@ export default function Header(){
           <Link href={user ? "/" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_home')}</Link>
           <Link href="/financial-freedom" className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors font-semibold">{t('nav_vision')}</Link>
           <Link href={user ? "/prospects" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_prospects')}</Link>
+          {/* คำนวณภาษี — แยกเมนูออกจาก "ลงทะเบียนสมาชิกทั่วไป" */}
+          <div className="relative group">
+            <button type="button" className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">
+              {t('menu_taxcalc')} ▾
+            </button>
+            <div className="absolute left-0 top-full pt-1 hidden group-hover:block z-50">
+              <div className="bg-white rounded-2xl shadow-xl border border-gray-100 py-1.5 min-w-[248px]">
+                <Link href="/prospects?tab=pit" className="block px-4 py-2 text-sm text-slate-700 hover:bg-[#eff6ff] hover:text-sky-700">🧾 {t('sb_tax_pit')}</Link>
+                <Link href="/prospects?tab=cit" className="block px-4 py-2 text-sm text-slate-700 hover:bg-[#eff6ff] hover:text-sky-700">🏢 {t('sb_tax_cit')}</Link>
+                <Link href="/prospects?tab=keyman" className="block px-4 py-2 text-sm text-slate-700 hover:bg-[#eff6ff] hover:text-sky-700">🛡 {t('sb_tax_keyman')}</Link>
+              </div>
+            </div>
+          </div>
           {/* เมนูใหม่ "ช่องขยายทีมงาน" — ต่อจาก "สมาชิกทั่วไป" (ศูนย์รวมช่องทาง/เครื่องมือขยายทีม) */}
           <Link href={user ? "/expand-team" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors font-semibold">📣 {t('nav_expand_team')}</Link>
           {/* N8N Submenu — เฉพาะ Admin หรือสมาชิกอีเมล akarapol.pro798@gmail.com */}

@@ -41,7 +41,9 @@ export interface NavEntry {
 export const NAV_SECTIONS: NavSection[] = [
   { id: 'home',    label: 'หน้าแรก',                key: 'nav_home',     minRank: 0 },
   { id: 'admin',   label: 'ผู้ดูแลระบบ',             key: 'menu_admin',   minRank: 0, adminOnly: true },
-  { id: 'general', label: 'สมาชิกทั่วไป',            key: 'menu_general', minRank: 0 },
+  { id: 'general', label: 'ลงทะเบียนสมาชิกทั่วไป',       key: 'menu_general', minRank: 0 },
+  // หัวข้อ "คำนวณภาษี" — แยกออกจาก "ลงทะเบียนสมาชิกทั่วไป" (เครื่องคำนวณภาษีบุคคลธรรมดา/นิติบุคคล/ประกันคีย์แมน)
+  { id: 'taxcalc', label: 'คำนวณภาษี',              key: 'menu_taxcalc', minRank: 0 },
   { id: 'agent',   label: 'ตัวแทน',                 key: 'menu_agent',   minRank: 1 },
   { id: 'unit',    label: 'หัวหน้าหน่วยขึ้นไป',       key: 'menu_unit',    minRank: 2 },
   { id: 'center',  label: 'ผู้จัดการศูนย์ขึ้นไป',      key: 'menu_center',  minRank: 3 },
@@ -82,9 +84,14 @@ export const NAV_ENTRIES: NavEntry[] = [
   { href: 'https://line.me/R/ti/p/@923jrlgz', section: 'general', label: 'LINE OA · คุยกับทีมงาน', icon: '💬', minRank: 0, external: true },
   { href: '/settings', section: 'general', label: 'ตั้งค่าโปรไฟล์', key: 'sb_settings', icon: '⚙', minRank: 0 },
 
+  // ── คำนวณภาษี (ทุกสมาชิกที่ล็อกอิน) ─────────────────────────────────────────
+  { href: '/prospects?tab=pit',    section: 'taxcalc', label: 'คำนวณภาษีบุคคลธรรมดา', key: 'sb_tax_pit',    icon: '🧾', minRank: 0 },
+  { href: '/prospects?tab=cit',    section: 'taxcalc', label: 'คำนวณภาษีนิติบุคคล',   key: 'sb_tax_cit',    icon: '🏢', minRank: 0 },
+  { href: '/prospects?tab=keyman', section: 'taxcalc', label: 'ประกันคีย์แมน (ลดหย่อนภาษี)', key: 'sb_tax_keyman', icon: '🛡', minRank: 0 },
+
   // ── ตัวแทน (rank 1 ขึ้นไป) ───────────────────────────────────────────────
   { href: '/dashboard', section: 'agent', label: 'ภาพรวม', key: 'sb_dashboard', icon: '▦', minRank: 1 },
-  { href: '/prospects', section: 'agent', label: 'สมาชิกทั่วไป', key: 'nav_prospects', icon: '◎', minRank: 1 },
+  { href: '/prospects', section: 'agent', label: 'ลงทะเบียนสมาชิกทั่วไป', key: 'nav_prospects', icon: '◎', minRank: 1 },
   // ย้ายจากเมนูด้านบน (Header) มาฝั่งซ้ายตามคำสั่ง — ค้นหา/ตรวจสอบสมาชิก (ใช้ /api/members)
   { href: '/verify', section: 'agent', label: 'ตรวจสอบสมาชิก', key: 'nav_verify', icon: '🔍', minRank: 1 },
   { href: '/members', section: 'agent', label: 'สมาชิกของฉัน', key: 'sb_my_members', icon: '◉', minRank: 1 },
