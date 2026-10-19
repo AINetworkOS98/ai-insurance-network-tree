@@ -7,7 +7,7 @@
  * (ไม่มีเลขที่พิมพ์ค้างไว้) — ถ้าแก้กติกาที่ thaiPit.ts ตัวเลขทั้งหมดจะเปลี่ยนตามทันที
  * เอกสารอ้างอิง: ภ.ง.ด.90 + ใบแนบลดหย่อน ข้อ 7.1–7.3 + คำชี้แจงการกรอก ภ.ง.ด.90 (ข้อ 7)
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import occFile from '../../../python/occupations_examples.json';
 import {
   computePit, DEFAULT_TAX_YEAR, LIM, TAX_BRACKETS,
@@ -87,7 +87,24 @@ const QUICK_SEARCH = [
   'ขนส่ง', 'บันเทิง', 'ร้าน', 'ฟรีแลนซ์', 'ช่าง', '40(1)',
 ];
 
+const STEPS = [
+  { n: 1, t: '1) ตารางอาชีพ' },
+  { n: 2, t: '1ข) ทุกอาชีพที่ต้องยื่นแบบ' },
+  { n: 3, t: '1ข-2) 10 อันดับภาษีสูงสุด' },
+  { n: 4, t: '2) ลดหย่อนด้วยเบี้ยประกันชีวิต' },
+] as const;
+
 export default function TaxExamplesByOccupation() {
+  // ── แบ่งเนื้อหาเป็น "หน้าถัดไป" ทีละส่วน (1 → 1ข → 1ข-2 → 2) ──
+  const [sec, setSec] = useState<number>(1);
+  const goSec = (n: number) => {
+    setSec(n);
+    if (typeof window !== 'undefined') window.history.replaceState(null, '', `#sec=${n}`);
+  };
+  useEffect(() => {
+    const m = typeof window !== 'undefined' ? window.location.hash.match(/sec=(\d)/) : null;
+    if (m) setSec(Number(m[1]));
+  }, []);
   /** แบ่งหน้า: แสดงหน้าละ 20 อาชีพ (ผู้ใช้ขอปุ่ม "หน้าถัดไป") + ช่องค้นหาอาชีพ */
   const PAGE_SIZE = 20;
   const [page, setPage] = useState(1);
@@ -276,7 +293,21 @@ export default function TaxExamplesByOccupation() {
         </p>
       </div>
 
-      {/* ── ตารางอาชีพ ── */}
+      {/* ── แบ่งเป็นหน้าถัดไป: ทีละส่วน ── */}
+      <div className="card p-3">
+        <div className="flex flex-wrap items-center gap-2 text-[11px]">
+          {STEPS.map((s) => (
+            <button key={s.n} type="button" onClick={() => goSec(s.n)}
+              className={`px-3 py-1.5 rounded-full border font-semibold ${sec === s.n ? 'bg-navy text-white border-navy' : 'bg-white text-slate-600'}`}>
+              {s.n}. {s.t}
+            </button>
+          ))}
+          <span className="ml-auto text-slate-400">ส่วนที่ {sec}/{STEPS.length}</span>
+        </div>
+      </div>
+
+      {/* ── ส่วนที่ 1: ตารางอาชีพ ── */}
+      {sec === 1 && (
       <div className="card p-4 sm:p-5">
         <h3 className="text-sm font-bold text-[#475569] mb-3">1) ประมาณการภาษีตามอาชีพ ({OCCUPATIONS.length} อาชีพ)</h3>
 
@@ -368,8 +399,10 @@ export default function TaxExamplesByOccupation() {
         </p>
         <Pager at="table" />
       </div>
+      )}
 
-      {/* ── 1ข) เปรียบเทียบรายได้–ภาษี ทุกอาชีพที่ต้องยื่นแบบ ── */}
+      {/* ── ส่วนที่ 2: 1ข) เปรียบเทียบรายได้–ภาษี ทุกอาชีพที่ต้องยื่นแบบ ── */}
+      {sec === 2 && (
       <div className="card p-4 sm:p-5" id="tax-income-compare">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-sm font-bold text-[#475569]">1ข) เปรียบเทียบรายได้–ภาษี ของทุกอาชีพที่ต้องยื่นแบบภาษี</h3>
@@ -426,6 +459,12 @@ export default function TaxExamplesByOccupation() {
           <Pager at="chart" />
         </div>
 
+      </div>
+      )}
+
+      {/* ── ส่วนที่ 3: 1ข-2) 10 อันดับภาษีสูงสุด (คิดจากทุกหน้า) ── */}
+      {sec === 3 && (
+      <div className="card p-4 sm:p-5" id="tax-top10">
         {/* 10 อันดับภาษีสูงสุดจากทั้งหมด */}
         <h4 className="text-xs font-bold text-[#475569] mt-5 mb-2">
           1ข-2) 10 อันดับภาษีสูงสุดจากทั้งหมด {compare.filing.length} อาชีพ (คิดจากทุกหน้า)
@@ -512,8 +551,10 @@ export default function TaxExamplesByOccupation() {
           • อาชีพที่มีรายได้เท่ากันและภาษีเท่ากัน (เช่นพนักงานเงินเดือนด้วยกัน) จะไม่แสดงในตารางนี้
         </p>
       </div>
+      )}
 
-      {/* ── เปรียบเทียบประกันชีวิต ── */}
+      {/* ── ส่วนที่ 4: เปรียบเทียบการลดหย่อนด้วยเบี้ยประกันชีวิต ── */}
+      {sec === 4 && (
       <div className="card p-4 sm:p-5">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-sm font-bold text-[#475569]">2) เปรียบเทียบการลดหย่อนด้วย “เบี้ยประกันชีวิต” ตามหลักกฎหมาย</h3>
@@ -649,6 +690,17 @@ export default function TaxExamplesByOccupation() {
           และตามคำชี้แจงการกรอก ภ.ง.ด.90 ข้อ 7.6 กรณีมีเบี้ยประกันชีวิตแบบบำนาญ ให้ใช้สิทธิ 7.1 ให้เต็ม {baht0(LIFE)} บาทก่อน แล้วส่วนที่เหลือจึงกรอกเป็นแบบบำนาญ (ข้อ 7.3)
         </div>
       </div>
+      )}
+
+      {/* ── ปุ่มเลื่อนหน้าถัดไป/ย้อนกลับ ── */}
+      <div className="card p-3 flex flex-wrap items-center justify-between gap-2">
+        <button type="button" onClick={() => goSec(Math.max(1, sec - 1))} disabled={sec === 1}
+          className="px-4 py-2 rounded-full border text-xs disabled:opacity-40">‹ ก่อนหน้า</button>
+        <span className="text-[11px] text-slate-500">ส่วนที่ {sec}/{STEPS.length}: {STEPS[sec - 1].t}</span>
+        <button type="button" onClick={() => goSec(Math.min(STEPS.length, sec + 1))} disabled={sec === STEPS.length}
+          className="px-4 py-2 rounded-full bg-navy text-white text-xs disabled:opacity-40">หน้าถัดไป ›</button>
+      </div>
+
 
       <div className="card p-4 text-[11px] text-slate-400 leading-5">
         <div className="font-bold text-slate-500 mb-1">แหล่งอ้างอิงของเกณฑ์ทั้งหมดในหน้านี้</div>
