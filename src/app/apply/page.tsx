@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import PremiumPaymentPicture from '@/components/PremiumPaymentPicture';
-import { buildProjectSamples, condText } from '@/lib/projectSamples';
+import { buildProjectSamples, condText, isRiderCat } from '@/lib/projectSamples';
 
 const fmt = (n: number) => Number(n || 0).toLocaleString('th-TH');
 const PAGE_SIZE = 10;
@@ -27,6 +27,7 @@ type CaseData = {
   title: string; first: string; last: string; birth: string;
   occupation: string; phone: string; citizenId: string;
   beneficiary: string; relation: string; note: string;
+  riders?: { code: string; name: string; cat: string }[];
 };
 
 const b64encode = (s: string) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -43,6 +44,9 @@ export default function ApplyPage() {
   const [step, setStep] = useState(1);
 
   const [picked, setPicked] = useState<any>(null);
+  const [riders, setRiders] = useState<{ code: string; name: string; cat: string }[]>([]);
+  const [rq, setRq] = useState('');
+  const [rPage, setRPage] = useState(1);
   const [gender, setGender] = useState<'ชาย' | 'หญิง'>('ชาย');
   const [age, setAge] = useState('30');
   const [cover, setCover] = useState('1000000');
@@ -76,20 +80,37 @@ export default function ApplyPage() {
       setGender(c.gender); setAge(String(c.age)); setCover(String(c.cover)); setPayYears(String(c.payYears));
       setForm(f => ({ ...f, title: c.title || f.title, first: c.first || '', last: c.last || '', birth: c.birth || '', occupation: c.occupation || '', phone: c.phone || '', citizenId: c.citizenId || '', beneficiary: c.beneficiary || '', relation: c.relation || f.relation, note: c.note || '' }));
       setCaseLink(window.location.href);
+      setRiders(c.riders || []);
       setStep(4);
     } catch { /* ลิงก์เสีย — เริ่มใหม่ */ }
   }, []);
 
   const products = (data?.products || []) as any[];
-  const filtered = useMemo(() => products.filter(p => {
-    if (cat && p.cat !== cat) return false;
+
+  // แยก "สัญญาหลัก" กับ "สัญญาเพิ่มเติม" — สัญญาเพิ่มเติมเลือกได้หลายตัวและต้องมีสัญญาหลักก่อน
+  const mains = useMemo(() => products.filter(p => !isRiderCat(p.cat)), [products]);
+  const riderPlans = useMemo(() => products.filter(p => isRiderCat(p.cat)), [products]);
+
+  const match = (p: any, s: string) => !s || String(p.c).toLowerCase().includes(s) || String(p.n).toLowerCase().includes(s) || String(p.cat).toLowerCase().includes(s);
+
+  const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
-    if (!s) return true;
-    return String(p.c).toLowerCase().includes(s) || String(p.n).toLowerCase().includes(s) || String(p.cat).toLowerCase().includes(s);
-  }), [products, q, cat]);
+    return mains.filter(p => match(p, s) && (!cat || p.cat === cat));
+  }, [mains, q, cat]);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const rFiltered = useMemo(() => {
+    const s = rq.trim().toLowerCase();
+    return riderPlans.filter(p => match(p, s));
+  }, [riderPlans, rq]);
+  const rTotalPages = Math.max(1, Math.ceil(rFiltered.length / PAGE_SIZE));
+  const rSafePage = Math.min(rPage, rTotalPages);
+  const rPaged = rFiltered.slice((rSafePage - 1) * PAGE_SIZE, rSafePage * PAGE_SIZE);
+  const riderCats = Array.from(new Set(riderPlans.map(p => p.cat)));
+
+  const toggleRider = (p: any) => setRiders(rs => rs.some(r => r.code === p.c) ? rs.filter(r => r.code !== p.c) : [...rs, { code: p.c, name: p.n, cat: p.cat }]);
 
   const sample = useMemo(() => {
     if (!picked) return null;
@@ -119,6 +140,7 @@ export default function ApplyPage() {
       title: form.title, first: form.first.trim(), last: form.last.trim(), birth: form.birth,
       occupation: form.occupation, phone: form.phone.replace(/\D/g, ''), citizenId: form.citizenId.replace(/\D/g, ''),
       beneficiary: form.beneficiary.trim(), relation: form.relation, note: form.note,
+      riders,
     };
     const link = `${window.location.origin}/apply#case=${b64encode(JSON.stringify(c))}`;
     setCaseLink(link);
@@ -133,7 +155,8 @@ export default function ApplyPage() {
   const plainText = () => {
     if (!picked) return '';
     return [
-      `แบบประกัน: ${picked.c} ${picked.n}`,
+      `สัญญาหลัก: ${picked.c} ${picked.n} (${picked.cat})`,
+      riders.length ? `สัญญาเพิ่มเติม (${riders.length}): ${riders.map(r => `${r.code} ${r.name}`).join(' + ')}` : 'สัญญาเพิ่มเติม: ไม่ได้เลือก',
       `ทุนประกัน: ${fmt(coverNum)} บาท · ระยะชำระเบี้ย: ${payYears} ปี`,
       `ผู้เอาประกันภัย: ${form.title}${form.first} ${form.last} · ${gender} · อายุ ${ageNum} ปี`,
       `วันเกิด: ${form.birth || '-'} · อาชีพ: ${form.occupation || '-'}`,
@@ -173,38 +196,101 @@ export default function ApplyPage() {
 
           {err && <div className="p-2 rounded-xl bg-amber-50 border text-xs">{err}</div>}
 
-          {/* ── ขั้น 1: เลือกแบบประกัน ── */}
+          {/* ── ขั้น 1: เลือกสัญญาหลัก + สัญญาเพิ่มเติม ── */}
           {step === 1 && (
-            <div className="card p-4">
-              <div className="grid md:grid-cols-3 gap-2">
-                <input value={q} onChange={e => { setQ(e.target.value); setPage(1); }} placeholder="ค้นหารหัส/ชื่อแบบ เช่น FA05, เกษมเกษียณ"
-                  className="md:col-span-2 px-3 py-2 rounded-xl border text-sm" />
-                <select value={cat} onChange={e => { setCat(e.target.value); setPage(1); }} className="px-3 py-2 rounded-xl border text-sm">
-                  <option value="">ทุกหมวด</option>
-                  {(data?.categories || []).map((c: string) => <option key={c} value={c}>{c}</option>)}
-                </select>
+            <div className="space-y-3">
+              {/* สัญญาหลัก */}
+              <div className="card p-4">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <div className="text-sm font-semibold text-navy">1) สัญญาหลัก <span className="text-[11px] font-normal text-slate-500">(เลือก 1 แบบ — จำเป็น)</span></div>
+                  {picked && <div className="text-[11px] text-emerald-700">เลือกแล้ว: <b className="font-mono">{picked.c}</b> {picked.n}</div>}
+                </div>
+                <div className="mt-2 grid md:grid-cols-3 gap-2">
+                  <input value={q} onChange={e => { setQ(e.target.value); setPage(1); }} placeholder="ค้นหารหัส/ชื่อสัญญาหลัก เช่น FA05, เกษมเกษียณ"
+                    className="md:col-span-2 px-3 py-2 rounded-xl border text-sm" />
+                  <select value={cat} onChange={e => { setCat(e.target.value); setPage(1); }} className="px-3 py-2 rounded-xl border text-sm">
+                    <option value="">ทุกหมวดสัญญาหลัก</option>
+                    {Array.from(new Set(mains.map((m: any) => m.cat))).map((c: any) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-600">
+                  <span>สัญญาหลัก {filtered.length} แบบ · หน้า {safePage}/{totalPages}</span>
+                  <span className="flex items-center gap-1">
+                    <button type="button" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safePage === 1} className="px-2 py-1 rounded-lg border disabled:opacity-40">‹</button>
+                    {Array.from({ length: totalPages }).slice(Math.max(0, safePage - 3), Math.max(0, safePage - 3) + 7).map((_, i) => {
+                      const n = Math.max(0, safePage - 3) + i + 1;
+                      return <button key={n} type="button" onClick={() => setPage(n)} className={`px-2 py-1 rounded-lg border font-mono ${n === safePage ? 'bg-navy text-white border-navy' : ''}`}>{n}</button>;
+                    })}
+                    <button type="button" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={safePage === totalPages} className="px-2 py-1 rounded-lg border disabled:opacity-40">›</button>
+                  </span>
+                </div>
+                <div className="mt-2 space-y-1">
+                  {paged.map((p: any) => (
+                    <button key={p.c} type="button" onClick={() => { setPicked(p); }}
+                      className={`w-full text-left px-3 py-2 rounded-xl border hover:bg-slate-50 ${picked?.c === p.c ? 'border-navy bg-navy/5' : ''}`}>
+                      <span className="font-mono font-bold text-sm">{p.c}</span>
+                      <span className="ml-2 text-sm font-semibold">{p.n}</span>
+                      <span className="ml-2 text-[11px] px-2 py-0.5 rounded-full bg-slate-100">{p.cat}</span>
+                      <div className="text-[11px] text-slate-500 mt-0.5">{(p.v || [])[0] ? condText((p.v || [])[0]) : 'เงื่อนไขตามตาราง'}</div>
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-600">
-                <span>พบ {filtered.length} แบบ · หน้า {safePage}/{totalPages}</span>
-                <span className="flex items-center gap-1">
-                  <button type="button" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safePage === 1} className="px-2 py-1 rounded-lg border disabled:opacity-40">‹</button>
-                  {Array.from({ length: totalPages }).slice(Math.max(0, safePage - 3), Math.max(0, safePage - 3) + 7).map((_, i) => {
-                    const n = Math.max(0, safePage - 3) + i + 1;
-                    return <button key={n} type="button" onClick={() => setPage(n)} className={`px-2 py-1 rounded-lg border font-mono ${n === safePage ? 'bg-navy text-white border-navy' : ''}`}>{n}</button>;
+
+              {/* สัญญาเพิ่มเติม */}
+              <div className="card p-4 border-l-4 border-sky-500">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <div className="text-sm font-semibold text-navy">
+                    2) สัญญาเพิ่มเติม / อนุสัญญา <span className="text-[11px] font-normal text-slate-500">(ไม่บังคับ — เลือกได้หลายตัว ต้องต่อพ่วงสัญญาหลัก)</span>
+                  </div>
+                  <span className="text-[11px] text-slate-500">เลือกแล้ว {riders.length} ตัว</span>
+                </div>
+                {riders.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {riders.map(r => (
+                      <button key={r.code} type="button" onClick={() => setRiders(rs => rs.filter(x => x.code !== r.code))}
+                        className="px-2 py-0.5 rounded-full bg-sky-100 text-sky-900 text-[11px] border border-sky-200">
+                        {r.code} {r.name} ✕
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <input value={rq} onChange={e => { setRq(e.target.value); setRPage(1); }} placeholder="ค้นหาสัญญาเพิ่มเติม เช่น เฮลท์, PA, อ.1"
+                  className="mt-2 w-full px-3 py-2 rounded-xl border text-sm" />
+                <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-600">
+                  <span>{rFiltered.length} แบบ · หมวด: {riderCats.join(' / ')} · หน้า {rSafePage}/{rTotalPages}</span>
+                  <span className="flex items-center gap-1">
+                    <button type="button" onClick={() => setRPage(p => Math.max(1, p - 1))} disabled={rSafePage === 1} className="px-2 py-1 rounded-lg border disabled:opacity-40">‹</button>
+                    {Array.from({ length: rTotalPages }).slice(Math.max(0, rSafePage - 3), Math.max(0, rSafePage - 3) + 7).map((_, i) => {
+                      const n = Math.max(0, rSafePage - 3) + i + 1;
+                      return <button key={n} type="button" onClick={() => setRPage(n)} className={`px-2 py-1 rounded-lg border font-mono ${n === rSafePage ? 'bg-sky-600 text-white border-sky-600' : ''}`}>{n}</button>;
+                    })}
+                    <button type="button" onClick={() => setRPage(p => Math.min(rTotalPages, p + 1))} disabled={rSafePage === rTotalPages} className="px-2 py-1 rounded-lg border disabled:opacity-40">›</button>
+                  </span>
+                </div>
+                <div className="mt-2 space-y-1">
+                  {rPaged.map((p: any) => {
+                    const on = riders.some(r => r.code === p.c);
+                    return (
+                      <button key={p.c} type="button" onClick={() => toggleRider(p)}
+                        className={`w-full text-left px-3 py-2 rounded-xl border hover:bg-slate-50 ${on ? 'border-sky-500 bg-sky-50' : ''}`}>
+                        <span className={`inline-block w-4 text-center font-bold ${on ? 'text-sky-600' : 'text-slate-300'}`}>{on ? '✓' : '+'}</span>
+                        <span className="font-mono font-bold text-sm">{p.c}</span>
+                        <span className="ml-2 text-sm font-semibold">{p.n}</span>
+                        <span className="ml-2 text-[11px] px-2 py-0.5 rounded-full bg-slate-100">{p.cat}</span>
+                      </button>
+                    );
                   })}
-                  <button type="button" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={safePage === totalPages} className="px-2 py-1 rounded-lg border disabled:opacity-40">›</button>
-                </span>
+                </div>
+                {!picked && <div className="mt-2 text-[11px] text-amber-700">เลือกสัญญาหลักก่อน จึงจะทำสัญญาเพิ่มเติมได้</div>}
               </div>
-              <div className="mt-2 space-y-1">
-                {paged.map((p: any) => (
-                  <button key={p.c} type="button" onClick={() => { setPicked(p); setStep(2); }}
-                    className="w-full text-left px-3 py-2 rounded-xl border hover:bg-slate-50">
-                    <span className="font-mono font-bold text-sm">{p.c}</span>
-                    <span className="ml-2 text-sm font-semibold">{p.n}</span>
-                    <span className="ml-2 text-[11px] px-2 py-0.5 rounded-full bg-slate-100">{p.cat}</span>
-                    <div className="text-[11px] text-slate-500 mt-0.5">{(p.v || [])[0] ? condText((p.v || [])[0]) : 'เงื่อนไขตามตาราง'}</div>
-                  </button>
-                ))}
+
+              <div className="card p-2 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-[11px] text-slate-600">
+                  {picked ? <>สัญญาหลัก: <b className="font-mono">{picked.c}</b> {picked.n} · สัญญาเพิ่มเติม {riders.length} ตัว</> : 'ยังไม่ได้เลือกสัญญาหลัก'}
+                </span>
+                <button type="button" onClick={() => setStep(2)} disabled={!picked}
+                  className="px-4 py-2 rounded-full bg-navy text-white text-xs disabled:opacity-40">ถัดไป: ทุน / อายุ / เพศ ›</button>
               </div>
             </div>
           )}
@@ -311,7 +397,8 @@ export default function ApplyPage() {
                 <table className="mt-2 w-full text-[11px]">
                   <tbody>
                     {[
-                      ['แบบประกัน', `${picked?.c} ${picked?.n} (${picked?.cat})`],
+                      ['สัญญาหลัก', `${picked?.c} ${picked?.n} (${picked?.cat})`],
+                      ['สัญญาเพิ่มเติม / อนุสัญญา', riders.length ? riders.map(r => `${r.code} ${r.name}`).join(' + ') : '— ไม่ได้เลือก'],
                       ['ทุนประกัน', `฿${fmt(coverNum)}`],
                       ['เพศ / อายุ', `${gender} / ${ageNum} ปี`],
                       ['ระยะชำระเบี้ย', `${payYears} ปี`],

@@ -449,6 +449,13 @@ export function cashbackFor(cat: string): CashbackInfo {
   };
 }
 
+// หมวดที่เป็น "สัญญาเพิ่มเติม" (ต้องต่อพ่วงกับสัญญาหลัก ไม่สามารถทำเดี่ยว ๆ ได้)
+export const RIDER_CATS = ['สัญญาเพิ่มเติม', 'เฮลท์', 'PA', 'โรคร้าย'];
+
+export function isRiderCat(cat: string): boolean {
+  return RIDER_CATS.includes(cat);
+}
+
 export function templateFor(cat: string): CategoryTemplate {
   return CATEGORY_TEMPLATES[cat] || FALLBACK_TEMPLATE;
 }
