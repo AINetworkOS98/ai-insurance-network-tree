@@ -12,6 +12,7 @@ export default function Header(){
   const [n8nOpen, setN8nOpen] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
+  const [taxOpen, setTaxOpen] = useState(false); // เมนู "คำนวณภาษี" — กดเปิดได้ (รองรับจอสัมผัส/iPad)
   // เมนู N8N สงวนสิทธิ์: Admin หรือสมาชิกอีเมล akarapol.pro798@gmail.com เท่านั้น (กติกาเดียวกับ middleware)
   const canUseN8n = isAdminEmail(user?.email);
   useEffect(()=>{ (async()=>{
@@ -57,14 +58,15 @@ export default function Header(){
           <Link href={user ? "/prospects?tab=members" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_prospects')}</Link>
           {/* คำนวณภาษี — แยกเมนูออกจาก "ลงทะเบียนสมาชิกทั่วไป" */}
           <div className="relative group">
-            <button type="button" className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">
+            <button type="button" onClick={()=> setTaxOpen(v=>!v)} aria-expanded={taxOpen}
+              className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">
               {t('menu_taxcalc')} ▾
             </button>
-            <div className="absolute left-0 top-full pt-1 hidden group-hover:block z-50">
+            <div className={`absolute left-0 top-full pt-1 z-50 ${taxOpen ? 'block' : 'hidden group-hover:block'}`} onMouseLeave={()=> setTaxOpen(false)}>
               <div className="bg-white rounded-2xl shadow-xl border border-gray-100 py-1.5 min-w-[248px]">
-                <a href="/prospects?tab=pit" className="block px-4 py-2 text-sm text-slate-700 hover:bg-[#eff6ff] hover:text-sky-700">🧾 {t('sb_tax_pit')}</a>
-                <a href="/prospects?tab=cit" className="block px-4 py-2 text-sm text-slate-700 hover:bg-[#eff6ff] hover:text-sky-700">🏢 {t('sb_tax_cit')}</a>
-                <a href="/prospects?tab=keyman" className="block px-4 py-2 text-sm text-slate-700 hover:bg-[#eff6ff] hover:text-sky-700">🛡 {t('sb_tax_keyman')}</a>
+                <a href="/prospects?tab=pit" className="block px-4 py-2 text-sm text-slate-700 hover:bg-[#eff6ff] hover:text-sky-700" onClick={()=> setTaxOpen(false)}>🧾 {t('sb_tax_pit')}</a>
+                <a href="/prospects?tab=cit" className="block px-4 py-2 text-sm text-slate-700 hover:bg-[#eff6ff] hover:text-sky-700" onClick={()=> setTaxOpen(false)}>🏢 {t('sb_tax_cit')}</a>
+                <a href="/prospects?tab=keyman" className="block px-4 py-2 text-sm text-slate-700 hover:bg-[#eff6ff] hover:text-sky-700" onClick={()=> setTaxOpen(false)}>🛡 {t('sb_tax_keyman')}</a>
               </div>
             </div>
           </div>

@@ -88,6 +88,11 @@ export const NAV_ENTRIES: NavEntry[] = [
   { href: '/prospects?tab=pit',    section: 'taxcalc', label: 'คำนวณภาษีบุคคลธรรมดา', key: 'sb_tax_pit',    icon: '🧾', minRank: 0 },
   { href: '/prospects?tab=cit',    section: 'taxcalc', label: 'คำนวณภาษีนิติบุคคล',   key: 'sb_tax_cit',    icon: '🏢', minRank: 0 },
   { href: '/prospects?tab=keyman', section: 'taxcalc', label: 'ประกันคีย์แมน (ลดหย่อนภาษี)', key: 'sb_tax_keyman', icon: '🛡', minRank: 0 },
+  // ลิงก์ตรงไปแต่ละหน้าของเครื่องคำนวณภาษีบุคคลธรรมดา (หน้าถัดไป 4 ส่วน)
+  { href: '/prospects?tab=pit#sec=1', section: 'taxcalc', label: 'ตารางอาชีพ (2,037 อาชีพ)', icon: '▤', minRank: 0 },
+  { href: '/prospects?tab=pit#sec=2', section: 'taxcalc', label: '1ข) ทุกอาชีพที่ต้องยื่นแบบ', icon: '📊', minRank: 0 },
+  { href: '/prospects?tab=pit#sec=3', section: 'taxcalc', label: '1ข-2) 10 อันดับภาษีสูงสุด', icon: '🏆', minRank: 0 },
+  { href: '/prospects?tab=pit#sec=4', section: 'taxcalc', label: '2) ลดหย่อนด้วยเบี้ยประกันชีวิต', icon: '🛡', minRank: 0 },
 
   // ── ตัวแทน (rank 1 ขึ้นไป) ───────────────────────────────────────────────
   { href: '/dashboard', section: 'agent', label: 'ภาพรวม', key: 'sb_dashboard', icon: '▦', minRank: 1 },
