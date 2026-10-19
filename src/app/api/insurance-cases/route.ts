@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
     count: rows.length,
     cases: rows.map(r => ({
       caseNo: r.caseNo, agentCode: r.agentCode, productCode: r.productCode, productName: r.productName,
-      productCat: r.productCat, gender: r.gender, age: r.age, cover: r.cover, payYears: r.payYears,
+      productCat: r.productCat, gender: r.gender, age: r.age, cover: r.cover, payYears: r.payYears, nameMasked: r.nameMasked,
       riders: Array.isArray(r.riders) ? (r.riders as any[]).length : 0, status: r.status,
       createdAt: r.createdAt, expiresAt: r.expiresAt,
     })),
