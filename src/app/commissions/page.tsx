@@ -525,6 +525,7 @@ export default function CommissionsPage(){
                     cover={s.cover}
                     assumed={s.payAssumed}
                     rider={s.rider}
+                    cashback={{ has: !!s.cashback?.has, title: s.cashback?.title }}
                   />
                   {showExample && s.variant && (
                     <div className="mt-2 rounded-lg bg-emerald-50 border border-emerald-100 p-2 text-[11px]">
