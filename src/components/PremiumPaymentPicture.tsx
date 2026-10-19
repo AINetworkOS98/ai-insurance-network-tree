@@ -13,7 +13,7 @@ export default function PremiumPaymentPicture({
   const years = Math.min(Math.max(1, Math.round(payYears || 10)), 30);
   const total = Math.round(premium * years);
   const hasCash = cashback?.has === true;
-  const W = 340, H = 130;
+  const W = 340, H = 150;
   const x0 = 8, x1 = W - 8;
   const payW = (x1 - x0) * 0.62;          // สัดส่วนแถบชำระเบี้ยในภาพ
   const cellW = payW / years;
@@ -37,45 +37,45 @@ export default function PremiumPaymentPicture({
 
         {/* แถบปีที่ชำระเบี้ย */}
         {Array.from({ length: years }).map((_, i) => (
-          <rect key={i} x={x0 + i * cellW} y={26} width={Math.max(1, cellW - 1.5)} height={20} rx={2}
+          <rect key={i} x={x0 + i * cellW} y={28} width={Math.max(1, cellW - 1.5)} height={20} rx={2}
             fill="#1d4ed8" opacity={0.92} />
         ))}
         {/* ปีที่เหลือ (ไม่ต้องชำระ) */}
-        <rect x={x0 + payW} y={26} width={x1 - (x0 + payW)} height={20} rx={2} fill="#e2e8f0" />
-        <text x={x0 + payW + 6} y={39} fontSize="7.5" fill="#475569">ไม่ต้องชำระ</text>
+        <rect x={x0 + payW} y={28} width={x1 - (x0 + payW)} height={20} rx={2} fill="#e2e8f0" />
+        <text x={x0 + payW + 6} y={42} fontSize="7.5" fill="#475569">ไม่ต้องชำระ</text>
 
         {/* แถวรับผลประโยชน์: เงินคืนระหว่างสัญญา (จุดเขียวตามรอบ) + จุดครบสัญญา */}
         {hasCash && (
           <>
-            <line x1={x0} y1={56} x2={x0 + payW} y2={56} stroke="#a7f3d0" strokeWidth="1" strokeDasharray="2 2" />
+            <line x1={x0} y1={60} x2={x0 + payW} y2={60} stroke="#a7f3d0" strokeWidth="1" strokeDasharray="2 2" />
             {Array.from({ length: years }).map((_, i) => (
-              <circle key={`c${i}`} cx={x0 + i * cellW + Math.max(1, cellW - 1.5) / 2} cy={56} r={2.6} fill="#059669" />
+              <circle key={`c${i}`} cx={x0 + i * cellW + Math.max(1, cellW - 1.5) / 2} cy={60} r={2.6} fill="#059669" />
             ))}
           </>
         )}
-        <line x1={x0 + payW} y1={56} x2={x1 - 10} y2={56} stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3 2" />
-        <circle cx={x1 - 4} cy={56} r={3.6} fill="#0ea5e9" />
-        <text x={x0 + payW + 4} y={52} fontSize="7.5" fill="#0f172a">
+        <line x1={x0 + payW} y1={60} x2={x1 - 10} y2={60} stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3 2" />
+        <circle cx={x1 - 4} cy={60} r={3.6} fill="#0ea5e9" />
+        <text x={x0 + payW + 4} y={76} fontSize="7.5" fill="#0f172a">
           {hasCash ? 'เงินคืนตามรอบ' : 'ยังไม่จ่าย'}
         </text>
-        <text x={x1 - 40} y={52} fontSize="7.5" fill="#0369a1" textAnchor="end">ครบสัญญา</text>
+        <text x={x1 - 4} y={76} fontSize="7.5" fill="#0369a1" textAnchor="end">ครบสัญญา</text>
 
         {/* ป้ายปีที่ 1 และปีสุดท้าย */}
-        <text x={x0 + 1} y={70} fontSize="7.5" fill="#334155">ปีที่ 1</text>
-        <text x={x0 + payW - 34} y={70} fontSize="7.5" fill="#334155">ปีที่ {years}</text>
-        <text x={x1 - 44} y={70} fontSize="7.5" fill="#334155" textAnchor="end">สิ้นสุดสัญญา</text>
+        <text x={x0 + 1} y={90} fontSize="7.5" fill="#334155">ปีที่ 1</text>
+        <text x={x0 + payW - 34} y={90} fontSize="7.5" fill="#334155">ปีที่ {years}</text>
+        <text x={x1 - 4} y={90} fontSize="7.5" fill="#334155" textAnchor="end">สิ้นสุดสัญญา</text>
 
         {/* เส้นฐาน */}
-        <line x1={x0} y1={76} x2={x1} y2={76} stroke="#cbd5e1" strokeWidth="1" />
-        <text x={x0} y={91} fontSize="8.5" fill="#0f172a">
+        <line x1={x0} y1={96} x2={x1} y2={96} stroke="#cbd5e1" strokeWidth="1" />
+        <text x={x0} y={110} fontSize="8.5" fill="#0f172a">
           จ่ายเบี้ย {years} ปี ปีละ {fmt(premium)} บาท = รวม {fmt(total)} บาท
         </text>
-        <text x={x0} y={104} fontSize="8.5" fill="#047857">
+        <text x={x0} y={123} fontSize="8.5" fill="#047857">
           {hasCash
             ? 'รับเงินคืนระหว่างสัญญาตามรอบ + เงินครบสัญญาเมื่อครบกำหนด'
             : 'ไม่มีเงินคืนระหว่างสัญญา — รับผลประโยชน์ก้อนเดียวเมื่อครบกำหนดสัญญา'}
         </text>
-        <text x={x0} y={117} fontSize="7.5" fill="#64748b">
+        <text x={x0} y={136} fontSize="7.5" fill="#64748b">
           % เงินคืน / เงินครบสัญญา: ยืนยันจากตารางผลประโยชน์ของแบบก่อนยื่นลูกค้า
         </text>
       </svg>
