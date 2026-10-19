@@ -75,6 +75,7 @@ export default function ApplyPage() {
       setPicked({ c: c.code, n: c.name, cat: c.cat, v: [] });
       setGender(c.gender); setAge(String(c.age)); setCover(String(c.cover)); setPayYears(String(c.payYears));
       setForm(f => ({ ...f, title: c.title || f.title, first: c.first || '', last: c.last || '', birth: c.birth || '', occupation: c.occupation || '', phone: c.phone || '', citizenId: c.citizenId || '', beneficiary: c.beneficiary || '', relation: c.relation || f.relation, note: c.note || '' }));
+      setCaseLink(window.location.href);
       setStep(4);
     } catch { /* ลิงก์เสีย — เริ่มใหม่ */ }
   }, []);
