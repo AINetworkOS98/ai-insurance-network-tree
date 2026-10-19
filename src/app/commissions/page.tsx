@@ -106,6 +106,14 @@ export default function CommissionsPage(){
 
   const adjustedCount = projectSamples.filter((s:any)=> s.ageAdjusted).length;
 
+  // ── แบ่งหน้าตัวอย่างโครงการ: ทีละ 10 ใบ ──
+  const [projPage, setProjPage] = useState(1);
+  const [projShowAll, setProjShowAll] = useState(false);
+  const projTotalPages = Math.max(1, Math.ceil(shownSamples.length / PAGE_SIZE));
+  const safeProjPage = Math.min(Math.max(1, projPage), projTotalPages);
+  const pagedSamples = projShowAll ? shownSamples : shownSamples.slice((safeProjPage - 1) * PAGE_SIZE, safeProjPage * PAGE_SIZE);
+  useEffect(()=>{ setProjPage(1); }, [projQ, projCat, projGender, projAge, projCover]);
+
   const premium = Math.max(0, Number(String(premiumInput).replace(/[^\d.]/g,'')) || 0);
   // แปลงอัตรา % ของตาราง → ตัวอย่างจำนวนเงิน (บาท) จากสมมติฐานเบี้ยต่อปี
   const bahtOf = (pct:any)=> Math.round(premium * Number(pct || 0) / 100);
@@ -471,12 +479,36 @@ export default function CommissionsPage(){
               </div>
             </div>
             <div className="text-[11px] text-slate-500 mt-1">
-              แสดง {shownSamples.length} / {projectSamples.length} โครงการ
+              แสดง {projShowAll ? shownSamples.length : Math.min(shownSamples.length, (safeProjPage - 1) * PAGE_SIZE + 1)}–{projShowAll ? shownSamples.length : Math.min(safeProjPage * PAGE_SIZE, shownSamples.length)} จาก {shownSamples.length} โครงการ
+              {!projShowAll && ` · หน้า ${safeProjPage}/${projTotalPages} (ทีละ ${PAGE_SIZE} ใบ)`}
               {adjustedCount > 0 && ` • ${adjustedCount} แบบอายุ ${projAge} ไม่อยู่ในเกณฑ์รับประกัน → ใช้อายุที่เข้าเกณฑ์ใกล้สุด (ระบุไว้ในใบนั้น)`}
             </div>
 
+            <div className="mt-2 card p-2 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+              <span className="text-slate-600">ตัวอย่างโครงการ · ทีละ {PAGE_SIZE} ใบ</span>
+              <div className="flex items-center gap-1">
+                <button type="button" onClick={()=> setProjPage(1)} disabled={projShowAll || safeProjPage===1}
+                  className="px-2 py-1 rounded-lg border disabled:opacity-40">«</button>
+                <button type="button" onClick={()=> setProjPage(p=> Math.max(1, p-1))} disabled={projShowAll || safeProjPage===1}
+                  className="px-2 py-1 rounded-lg border disabled:opacity-40">‹ ก่อนหน้า</button>
+                {Array.from({ length: projTotalPages }).slice(Math.max(0, safeProjPage-3), Math.max(0, safeProjPage-3)+7).map((_, i) => {
+                  const n = Math.max(0, safeProjPage-3) + i + 1;
+                  return (
+                    <button key={n} type="button" onClick={()=>{ setProjShowAll(false); setProjPage(n); }}
+                      className={`px-2 py-1 rounded-lg border font-mono ${!projShowAll && n===safeProjPage ? 'bg-emerald-600 text-white border-emerald-600' : ''}`}>{n}</button>
+                  );
+                })}
+                <button type="button" onClick={()=> setProjPage(p=> Math.min(projTotalPages, p+1))} disabled={projShowAll || safeProjPage===projTotalPages}
+                  className="px-2 py-1 rounded-lg border disabled:opacity-40">ถัดไป ›</button>
+                <button type="button" onClick={()=> setProjPage(projTotalPages)} disabled={projShowAll || safeProjPage===projTotalPages}
+                  className="px-2 py-1 rounded-lg border disabled:opacity-40">»</button>
+                <button type="button" onClick={()=> setProjShowAll(v=> !v)}
+                  className="ml-1 px-2 py-1 rounded-full bg-slate-100 border">{projShowAll ? 'ย่อกลับทีละ 10' : 'แสดงทั้งหมด'}</button>
+              </div>
+            </div>
+
             <div className="mt-3 grid md:grid-cols-2 gap-3">
-              {shownSamples.map((s:any)=>(
+              {pagedSamples.map((s:any)=>(
                 <div key={s.code + s.no} className="rounded-xl border p-3 bg-white">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-600 text-white">โครงการที่ {s.no}</span>
@@ -540,6 +572,13 @@ export default function CommissionsPage(){
                   )}
                 </div>
               ))}
+            </div>
+            <div className="mt-3 card p-2 flex flex-wrap items-center justify-center gap-2 text-[11px]">
+              <button type="button" onClick={()=> setProjPage(p=> Math.max(1, p-1))} disabled={projShowAll || safeProjPage===1}
+                className="px-3 py-1 rounded-full border disabled:opacity-40">‹ ก่อนหน้า</button>
+              <span className="text-slate-600">หน้า {projShowAll ? 'ทั้งหมด' : `${safeProjPage}/${projTotalPages}`} · ทีละ {PAGE_SIZE} โครงการ</span>
+              <button type="button" onClick={()=> setProjPage(p=> Math.min(projTotalPages, p+1))} disabled={projShowAll || safeProjPage===projTotalPages}
+                className="px-3 py-1 rounded-full bg-emerald-600 text-white disabled:opacity-40">ถัดไป ›</button>
             </div>
             <p className="mt-3 text-[11px] text-amber-700">
               หมายเหตุ: ทุกใบเป็น <b>ตัวอย่าง/สมมติ</b> (เพศ–อายุ–ทุนประกัน ตั้งขึ้นเพื่อสาธิตโครงสร้าง) — เบี้ยจริงขึ้นกับทุนประกัน อายุ แผน และการพิจารณารับประกันของบริษัท
