@@ -159,7 +159,12 @@ export default function CommissionsPage(){
         <Sidebar/>
         <main className="flex-1 p-6 space-y-4 w-full min-w-0">
           <div>
-            <h1 className="text-xl font-bold text-navy">ตารางค่าคอมมิชชั่น</h1>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h1 className="text-xl font-bold text-navy">ตารางค่าคอมมิชชั่น</h1>
+              <a href="/apply" className="px-4 py-2 rounded-full bg-emerald-600 text-white text-xs font-semibold">
+                ✎ กรอกข้อมูลเพื่อทำประกันชีวิต (ตามแบบ TL PRO PLUS)
+              </a>
+            </div>
             <p className="text-xs text-slate-500 mt-1">
               {data ? `เวอร์ชัน ${data.version} (${data.effectiveFrom ? new Date(data.effectiveFrom).toLocaleDateString('th-TH') : ''} – ${data.effectiveTo ? new Date(data.effectiveTo).toLocaleDateString('th-TH') : ''}) • ` : ''}{tierMsg}
             </p>
