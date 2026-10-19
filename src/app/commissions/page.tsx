@@ -385,15 +385,45 @@ export default function CommissionsPage(){
                 <option value="">ทุกหมวด</option>
                 {(data?.categories || []).map((c:string)=><option key={c} value={c}>{c}</option>)}
               </select>
-              <div className="flex items-center gap-2">
-                <select value={projGender} onChange={e=> setProjGender(e.target.value as any)} className="px-2 py-2 rounded-xl border text-xs">
-                  <option value="ชาย">เริ่มด้วย ชาย</option>
-                  <option value="หญิง">เริ่มด้วย หญิง</option>
-                </select>
-                <input value={projAge} onChange={e=> setProjAge(e.target.value)} inputMode="numeric" aria-label="อายุตัวอย่าง"
-                  className="w-16 px-2 py-2 rounded-xl border text-xs text-right font-mono" />
-                <input value={projCover} onChange={e=> setProjCover(e.target.value)} inputMode="numeric" aria-label="ทุนประกัน"
-                  className="w-28 px-2 py-2 rounded-xl border text-xs text-right font-mono" />
+              <select value={projGender} onChange={e=> setProjGender(e.target.value as any)} className="px-2 py-2 rounded-xl border text-xs">
+                <option value="ชาย">เริ่มด้วย ชาย</option>
+                <option value="หญิง">เริ่มด้วย หญิง</option>
+              </select>
+            </div>
+
+            {/* ปรับ อายุ / ทุนประกัน ที่ใช้ทดลองได้ — มีผลทั้ง 111 ใบ + ภาพการจ่ายเบี้ย */}
+            <div className="mt-2 rounded-xl border border-emerald-200 bg-emerald-50/50 p-2">
+              <div className="text-[11px] font-semibold text-emerald-900">ทดลองเปลี่ยน อายุ และ ทุนประกัน</div>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <label className="text-[11px] text-slate-700 flex items-center gap-1">
+                  อายุ
+                  <input value={projAge} onChange={e=> setProjAge(e.target.value)} inputMode="numeric"
+                    className="w-16 px-2 py-1 rounded-lg border text-xs text-right font-mono" />
+                  ปี
+                </label>
+                <span className="flex gap-1">
+                  {[25, 30, 35, 40, 45, 50].map(a=>(
+                    <button key={a} type="button" onClick={()=> setProjAge(String(a))}
+                      className={`px-2 py-0.5 rounded-full border text-[11px] ${String(projAge)===String(a) ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600'}`}>
+                      {a}
+                    </button>
+                  ))}
+                </span>
+                <span className="mx-1 h-4 w-px bg-emerald-200" />
+                <label className="text-[11px] text-slate-700 flex items-center gap-1">
+                  ทุนประกัน
+                  <input value={projCover} onChange={e=> setProjCover(e.target.value)} inputMode="numeric"
+                    className="w-28 px-2 py-1 rounded-lg border text-xs text-right font-mono" />
+                  บาท
+                </label>
+                <span className="flex gap-1">
+                  {[500000, 1000000, 2000000, 3000000, 5000000].map(c=>(
+                    <button key={c} type="button" onClick={()=> setProjCover(String(c))}
+                      className={`px-2 py-0.5 rounded-full border text-[11px] ${Number(String(projCover).replace(/[^\d]/g,''))===c ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600'}`}>
+                      {c >= 1000000 ? `${c/1000000} ล้าน` : `${c/1000}พัน`}
+                    </button>
+                  ))}
+                </span>
               </div>
             </div>
             <div className="text-[11px] text-slate-500 mt-1">
@@ -435,6 +465,14 @@ export default function CommissionsPage(){
                     <div className="text-[11px] font-semibold text-slate-700">ผลประโยชน์ที่ได้รับ (โครงสร้างตัวอย่าง)</div>
                     <ul className="mt-1 space-y-0.5 list-disc pl-4 text-[11px] text-slate-600">
                       {s.benefits.map((b:string,i:number)=><li key={i}>{b}</li>)}
+                    </ul>
+                  </div>
+                  <div className={`mt-2 rounded-lg border p-2 ${s.cashback?.has ? 'border-emerald-200 bg-emerald-50/60' : 'border-slate-200 bg-slate-50'}`}>
+                    <div className={`text-[11px] font-semibold ${s.cashback?.has ? 'text-emerald-800' : 'text-slate-700'}`}>
+                      เงินคืนระหว่างสัญญา / การจ่ายผลประโยชน์ — {s.cashback?.title}
+                    </div>
+                    <ul className="mt-1 space-y-0.5 list-disc pl-4 text-[11px] text-slate-600">
+                      {(s.cashback?.lines || []).map((b:string,i:number)=><li key={i}>{b}</li>)}
                     </ul>
                   </div>
                   <PremiumPaymentPicture
