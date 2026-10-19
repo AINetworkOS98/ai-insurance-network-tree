@@ -79,6 +79,11 @@ export default function CommissionsPage(){
   const [check, setCheck] = useState({ code:'', age:'', policyYear:'1', inputRate:'' });
   const [checkRes, setCheckRes] = useState<any>(null);
 
+  // ── แบ่งหน้าตารางค่าคอมมิชชั่น: ทีละ 10 รายการ ──
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
+  const [showAll, setShowAll] = useState(false);
+
   // ── ตัวอย่างโครงการครบทุกแบบประกัน (สร้างจากการ์ดแบบประกันจริงในตาราง) ──
   const [projGender, setProjGender] = useState<'ชาย' | 'หญิง'>('ชาย');
   const [projAge, setProjAge] = useState('30');
@@ -109,7 +114,7 @@ export default function CommissionsPage(){
     try{
       const r = await fetch(`/api/commissions?q=${encodeURIComponent(query)}&category=${encodeURIComponent(category)}`,{credentials:'include'});
       const j = await r.json();
-      if(j.ok) setData(j);
+      if(j.ok) { setData(j); setPage(1); }
       else setMsg(j.error || 'ค้นหาไม่สำเร็จ');
     }catch{ setMsg('ค้นหาไม่สำเร็จ'); }
   }
@@ -122,6 +127,9 @@ export default function CommissionsPage(){
 
   // ประกันตัวแรก = ผลิตภัณฑ์ตัวแรกของรายการที่แสดงอยู่ (ใช้ทำตัวอย่างการคำนวณเป็นบาท)
   const products = (data?.products || []) as any[];
+  const totalPages = Math.max(1, Math.ceil(products.length / PAGE_SIZE));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const pagedProducts = showAll ? products : products.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const firstProduct = products.find((p:any)=> Array.isArray(p.v) && p.v.length) || null;
   const showExample = data?.tier !== 'names_only';
 
@@ -226,8 +234,36 @@ export default function CommissionsPage(){
             </div>
           )}
 
+          <div className="card p-2 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+            <div className="text-slate-600">
+              {showAll
+                ? <>แสดงทั้งหมด {products.length} รายการ</>
+                : <>แสดงรายการที่ <b>{(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, products.length)}</b> จาก {products.length} รายการ · หน้า {safePage}/{totalPages}</>}
+            </div>
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={()=> setPage(1)} disabled={showAll || safePage===1}
+                className="px-2 py-1 rounded-lg border disabled:opacity-40">«</button>
+              <button type="button" onClick={()=> setPage(p=> Math.max(1, p-1))} disabled={showAll || safePage===1}
+                className="px-2 py-1 rounded-lg border disabled:opacity-40">‹ ก่อนหน้า</button>
+              {Array.from({ length: totalPages }).slice(Math.max(0, safePage-3), Math.max(0, safePage-3)+7).map((_, i, arr) => {
+                const start = Math.max(0, safePage-3);
+                const n = start + i + 1;
+                return (
+                  <button key={n} type="button" onClick={()=>{ setShowAll(false); setPage(n); }}
+                    className={`px-2 py-1 rounded-lg border font-mono ${!showAll && n===safePage ? 'bg-navy text-white border-navy' : ''}`}>{n}</button>
+                );
+              })}
+              <button type="button" onClick={()=> setPage(p=> Math.min(totalPages, p+1))} disabled={showAll || safePage===totalPages}
+                className="px-2 py-1 rounded-lg border disabled:opacity-40">ถัดไป ›</button>
+              <button type="button" onClick={()=> setPage(totalPages)} disabled={showAll || safePage===totalPages}
+                className="px-2 py-1 rounded-lg border disabled:opacity-40">»</button>
+              <button type="button" onClick={()=> setShowAll(v=> !v)}
+                className="ml-1 px-2 py-1 rounded-full bg-slate-100 border">{showAll ? 'ย่อกลับทีละ 10' : 'แสดงทั้งหมด'}</button>
+            </div>
+          </div>
+
           <div className="space-y-2">
-            {products.map((p:any,idx:number)=>(
+            {pagedProducts.map((p:any,i:number)=>{ const idx = showAll ? i : (safePage - 1) * PAGE_SIZE + i; return (
               <div key={p.c} className="card p-4">
                 <div className="flex flex-wrap gap-2 items-center text-sm">
                   <span className="font-mono font-bold">{p.c}</span>
@@ -281,7 +317,15 @@ export default function CommissionsPage(){
                   </div>
                 )}
               </div>
-            ))}
+            );})}
+          </div>
+
+          <div className="card p-2 flex flex-wrap items-center justify-center gap-2 text-[11px]">
+            <button type="button" onClick={()=> setPage(p=> Math.max(1, p-1))} disabled={showAll || safePage===1}
+              className="px-3 py-1 rounded-full border disabled:opacity-40">‹ ก่อนหน้า</button>
+            <span className="text-slate-600">หน้า {showAll ? `ทั้งหมด` : `${safePage}/${totalPages}`} · ทีละ {PAGE_SIZE} รายการ</span>
+            <button type="button" onClick={()=> setPage(p=> Math.min(totalPages, p+1))} disabled={showAll || safePage===totalPages}
+              className="px-3 py-1 rounded-full bg-navy text-white disabled:opacity-40">ถัดไป ›</button>
           </div>
 
           {data?.tier==='full' && (
