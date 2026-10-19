@@ -188,7 +188,11 @@ export default function GeneralMembersPage(){
         <main className="flex-1 p-6 space-y-6">
           {/* ── เมนูในหน้าเดียว: เครื่องคำนวณภาษี (สมาชิกทั่วไปใช้ก่อน) / ทะเบียนสมาชิกทั่วไป ── */}
           <div className="flex flex-wrap gap-2 items-center">
-            {([['tax','pit','🧾 ภาษีบุคคลธรรมดา'],['cit','cit','🏢 ภาษีนิติบุคคล'],['keyman','keyman','🛡 ประกันคีย์แมน (Keyman)'],['sim','sim','📊 ผลประกอบการ (Keyman)'],['members','members','👥 ทะเบียนสมาชิกทั่วไป']] as Array<[View,string,string]>).map(([key,slug,label]) => (
+            {((view === 'members'
+              // หน้าทะเบียนสมาชิกทั่วไป: ไม่แสดงลิงก์ภาษี (เมนูภาษีอยู่ในเมนูด้านซ้าย/บนแล้ว)
+              ? [['members','members','👥 ทะเบียนสมาชิกทั่วไป']]
+              : [['tax','pit','🧾 ภาษีบุคคลธรรมดา'],['cit','cit','🏢 ภาษีนิติบุคคล'],['keyman','keyman','🛡 ประกันคีย์แมน (Keyman)'],['sim','sim','📊 ผลประกอบการ (Keyman)'],['members','members','👥 ทะเบียนสมาชิกทั่วไป']]
+            ) as Array<[View,string,string]>).map(([key,slug,label]) => (
               <a
                 key={key}
                 href={`?tab=${slug}`}
@@ -197,9 +201,11 @@ export default function GeneralMembersPage(){
                 className={`px-4 py-2 rounded-full text-sm font-semibold border ${view===key ? 'bg-[#475569] text-white border-[#475569]' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
               >{label}</a>
             ))}
-            <span className="text-[11px] text-slate-400 ml-1">
-              เครื่องคำนวณภาษี (บุคคลธรรมดา + นิติบุคคล) อ้างอิงกรมสรรพากร ปีภาษี/รอบบัญชี 2569 — ใช้ฟรีสำหรับสมาชิกทั่วไป
-            </span>
+            {view !== 'members' && (
+              <span className="text-[11px] text-slate-400 ml-1">
+                เครื่องคำนวณภาษี (บุคคลธรรมดา + นิติบุคคล) อ้างอิงกรมสรรพากร ปีภาษี/รอบบัญชี 2569 — ใช้ฟรีสำหรับสมาชิกทั่วไป
+              </span>
+            )}
           </div>
           {/* ── URL ของแท็บปัจจุบัน (เปิด/แชร์ลิงก์แล้วเข้าถูกแท็บทันที) ── */}
           <div className="flex flex-wrap items-center gap-2 text-[11px]" id="tab-url">
