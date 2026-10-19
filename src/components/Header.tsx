@@ -55,7 +55,6 @@ export default function Header(){
               ("ตรวจสอบสมาชิก" /verify และ "รายได้" /income ย้ายไปเมนูด้านซ้ายแล้ว — ดู lib/navCatalog.ts) */}
           <Link href={user ? "/" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_home')}</Link>
           <Link href="/financial-freedom" className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors font-semibold">{t('nav_vision')}</Link>
-          <Link href={user ? "/prospects?tab=members" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_prospects')}</Link>
           {/* คำนวณภาษี — แยกเมนูออกจาก "ลงทะเบียนสมาชิกทั่วไป" */}
           <div className="relative group">
             <button type="button" onClick={()=> setTaxOpen(v=>!v)} aria-expanded={taxOpen}
@@ -126,6 +125,7 @@ export default function Header(){
           <ReceiptScanMenu />
           {/* "สอบถามรายละเอียด" ย้ายมาต่อท้ายเมนู "สแกนใบเสร็จ" (สั่งโดยเจ้าของระบบ) */}
           <Link href={user ? "/contact" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_inquire')}</Link>
+          <Link href={user ? "/prospects?tab=members" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_prospects')}</Link>
           <Link href={user ? "/notifications" : "/admin"} className="relative text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">🔔 {t('nav_notif')} {unread!=null && unread>0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-red-600 text-white text-[11px]">{unread}</span>}</Link>
         </nav>
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
@@ -172,7 +172,6 @@ export default function Header(){
             <Link href={user ? '/' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_home')}</Link>
             <Link href="/financial-freedom" onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_vision')}</Link>
             {/* "ตรวจสอบสมาชิก" (/verify) และ "รายได้" (/income) อยู่ในเมนูด้านข้างแล้ว (กดปุ่ม "เมนูทั้งหมด" ได้) */}
-            <Link href={user ? '/prospects?tab=members' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_prospects')}</Link>
             {/* เมนูใหม่ "ช่องขยายทีมงาน" (มือถือ) — ต่อจาก "สมาชิกทั่วไป" */}
             <Link href={user ? '/expand-team' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#57534e] hover:bg-[#FCFBF6]">📣 {t('nav_expand_team')}</Link>
             <Link href={user ? '/network/1x5-autopilot' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#57534e] hover:bg-[#FCFBF6]">🧬 {t('nav_1x5')}</Link>
@@ -180,6 +179,7 @@ export default function Header(){
             <ReceiptScanMobileItems onNavigate={()=> setMobileNav(false)} />
             {/* "สอบถามรายละเอียด" ย้ายมาต่อท้ายเมนู "สแกนใบเสร็จ" (สั่งโดยเจ้าของระบบ) */}
             <Link href={user ? '/contact' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_inquire')}</Link>
+            <Link href={user ? '/prospects?tab=members' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_prospects')}</Link>
             <Link href={user ? '/notifications' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6] flex items-center gap-2">
               <span>🔔 {t('nav_notif')}</span>
               {unread!=null && unread>0 && <span className="px-1.5 py-0.5 rounded-full bg-red-600 text-white text-[11px]">{unread}</span>}
