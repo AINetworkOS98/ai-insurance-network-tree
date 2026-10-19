@@ -54,7 +54,7 @@ export default function Header(){
               ("ตรวจสอบสมาชิก" /verify และ "รายได้" /income ย้ายไปเมนูด้านซ้ายแล้ว — ดู lib/navCatalog.ts) */}
           <Link href={user ? "/" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_home')}</Link>
           <Link href="/financial-freedom" className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors font-semibold">{t('nav_vision')}</Link>
-          <Link href={user ? "/prospects" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_prospects')}</Link>
+          <Link href={user ? "/prospects?tab=members" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_prospects')}</Link>
           {/* คำนวณภาษี — แยกเมนูออกจาก "ลงทะเบียนสมาชิกทั่วไป" */}
           <div className="relative group">
             <button type="button" className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">
@@ -62,9 +62,9 @@ export default function Header(){
             </button>
             <div className="absolute left-0 top-full pt-1 hidden group-hover:block z-50">
               <div className="bg-white rounded-2xl shadow-xl border border-gray-100 py-1.5 min-w-[248px]">
-                <Link href="/prospects?tab=pit" className="block px-4 py-2 text-sm text-slate-700 hover:bg-[#eff6ff] hover:text-sky-700">🧾 {t('sb_tax_pit')}</Link>
-                <Link href="/prospects?tab=cit" className="block px-4 py-2 text-sm text-slate-700 hover:bg-[#eff6ff] hover:text-sky-700">🏢 {t('sb_tax_cit')}</Link>
-                <Link href="/prospects?tab=keyman" className="block px-4 py-2 text-sm text-slate-700 hover:bg-[#eff6ff] hover:text-sky-700">🛡 {t('sb_tax_keyman')}</Link>
+                <a href="/prospects?tab=pit" className="block px-4 py-2 text-sm text-slate-700 hover:bg-[#eff6ff] hover:text-sky-700">🧾 {t('sb_tax_pit')}</a>
+                <a href="/prospects?tab=cit" className="block px-4 py-2 text-sm text-slate-700 hover:bg-[#eff6ff] hover:text-sky-700">🏢 {t('sb_tax_cit')}</a>
+                <a href="/prospects?tab=keyman" className="block px-4 py-2 text-sm text-slate-700 hover:bg-[#eff6ff] hover:text-sky-700">🛡 {t('sb_tax_keyman')}</a>
               </div>
             </div>
           </div>
@@ -170,7 +170,7 @@ export default function Header(){
             <Link href={user ? '/' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_home')}</Link>
             <Link href="/financial-freedom" onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_vision')}</Link>
             {/* "ตรวจสอบสมาชิก" (/verify) และ "รายได้" (/income) อยู่ในเมนูด้านข้างแล้ว (กดปุ่ม "เมนูทั้งหมด" ได้) */}
-            <Link href={user ? '/prospects' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_prospects')}</Link>
+            <Link href={user ? '/prospects?tab=members' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm text-[#57534e] hover:bg-[#FCFBF6]">{t('nav_prospects')}</Link>
             {/* เมนูใหม่ "ช่องขยายทีมงาน" (มือถือ) — ต่อจาก "สมาชิกทั่วไป" */}
             <Link href={user ? '/expand-team' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#57534e] hover:bg-[#FCFBF6]">📣 {t('nav_expand_team')}</Link>
             <Link href={user ? '/network/1x5-autopilot' : '/admin'} onClick={()=> setMobileNav(false)} className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#57534e] hover:bg-[#FCFBF6]">🧬 {t('nav_1x5')}</Link>

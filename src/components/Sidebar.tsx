@@ -100,6 +100,10 @@ export default function Sidebar(){
     if(e.external){
       return <a href={e.href} target="_blank" rel="noopener noreferrer" title={collapsed?label(e):undefined} className={cls}>{inner}</a>;
     }
+    // เมนูที่มี query (?tab=...) ต้องโหลดหน้าใหม่ทั้งหน้า เพื่อให้แท็บในหน้าเปลี่ยนตามลิงก์จริง
+    if (String(e.href).includes('?')) {
+      return <a href={e.href} onClick={()=>setMobileOpen(false)} title={collapsed?label(e):undefined} className={cls}>{inner}</a>;
+    }
     return <Link href={e.href} onClick={()=>setMobileOpen(false)} title={collapsed?label(e):undefined} className={cls}>{inner}</Link>;
   };
 
