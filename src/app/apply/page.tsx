@@ -59,6 +59,8 @@ export default function ApplyPage() {
   const [err, setErr] = useState('');
   const [caseLink, setCaseLink] = useState('');
   const [copied, setCopied] = useState(false);
+  const [saved, setSaved] = useState<{ caseNo: string; url: string } | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -167,6 +169,26 @@ export default function ApplyPage() {
     ].filter(Boolean).join('\n');
   };
 
+  async function saveCase() {
+    if (!picked) { setErr('เลือกแบบประกันก่อน'); return; }
+    setSaving(true); setErr('');
+    try {
+      const r = await fetch('/api/insurance-cases', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({
+          product: { code: picked.c, name: picked.n, cat: picked.cat },
+          riders,
+          gender, age: ageNum, cover: coverNum, payYears: Number(payYears) || 10,
+          applicant: { ...form }, agent: AGENT, note: form.note,
+        }),
+      });
+      const j = await r.json();
+      if (j.ok) { setSaved({ caseNo: j.caseNo, url: j.url }); }
+      else setErr(j.error || 'บันทึกเคสไม่สำเร็จ');
+    } catch { setErr('บันทึกเคสไม่สำเร็จ'); }
+    setSaving(false);
+  }
+
   return (
     <div>
       <Header />
@@ -178,6 +200,7 @@ export default function ApplyPage() {
             <p className="text-xs text-slate-500 mt-1">
               โครงเดียวกับหน้า “คำนวณเบี้ย / ใบเสนอขาย” ของ TL PRO PLUS — เลือกแบบประกัน → เลือกทุน/อายุ → กรอกข้อมูล → ได้ลิงก์เคสพร้อมข้อมูลครบ
             </p>
+            <a href="/cases" className="inline-block mt-1 text-[11px] font-semibold text-navy underline">→ ดูเคสที่บันทึกไว้ทั้งหมด</a>
           </div>
 
           <div className="card p-2 flex flex-wrap items-center gap-2 text-[11px]">
@@ -389,6 +412,27 @@ export default function ApplyPage() {
                   </>
                 ) : (
                   <div className="text-[11px] text-amber-700 mt-1">ยังไม่มีลิงก์ — กลับไปกรอกข้อมูลให้ครบที่ขั้น 3</div>
+                )}
+              </div>
+
+              <div className="card p-4 border-l-4 border-navy">
+                <div className="text-sm font-semibold">บันทึกเคสเข้าฐานข้อมูล (มีเลขเคสค้นย้อนหลัง)</div>
+                {saved ? (
+                  <div className="mt-1 text-[12px]">
+                    บันทึกแล้ว: <b className="font-mono">{saved.caseNo}</b> ·{' '}
+                    <a className="underline text-navy" href={saved.url}>เปิดหน้าเคส</a> ·{' '}
+                    <a className="underline text-navy" href="/cases">ดูรายการเคสทั้งหมด</a>
+                  </div>
+                ) : (
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <button type="button" onClick={saveCase} disabled={saving}
+                      className="px-4 py-2 rounded-full bg-navy text-white text-xs disabled:opacity-50">
+                      {saving ? 'กำลังบันทึก…' : 'บันทึกเคส (เข้ารหัส + ออกเลขเคส)'}
+                    </button>
+                    <span className="text-[11px] text-slate-500">
+                      เก็บข้อมูลผู้เอาประกันแบบเข้ารหัส AES-256-GCM · เข้าถึงเฉพาะเจ้าของ/หัวหน้าหน่วย · ลบอัตโนมัติ 180 วัน · มี audit log
+                    </span>
+                  </div>
                 )}
               </div>
 

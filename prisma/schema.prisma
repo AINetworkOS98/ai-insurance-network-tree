@@ -2061,3 +2061,30 @@ model LineMessageLog {
   @@index([lineUserId, createdAt])
   @@map("line_message_log")
 }
+
+// ── เคสทำประกันชีวิต (จากหน้า /apply) — เก็บข้อมูลผู้เอาประกันแบบเข้ารหัส (PDPA) ──
+model InsuranceCase {
+  id          String    @id @default(uuid()) @db.Uuid
+  caseNo      String    @unique
+  agentCode   String
+  agentUserId String?   @db.Uuid
+  productCode String
+  productName String
+  productCat  String
+  riders      Json?
+  gender      String
+  age         Int
+  cover       Int
+  payYears    Int
+  nameMasked  String
+  sealed      String
+  status      String    @default("DRAFT")
+  note        String?
+  createdAt   DateTime  @default(now()) @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @db.Timestamptz
+  expiresAt   DateTime? @db.Timestamptz
+
+  @@index([agentCode])
+  @@index([createdAt])
+  @@map("insurance_cases")
+}
