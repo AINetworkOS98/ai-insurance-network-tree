@@ -125,6 +125,9 @@ export default function DocumentsPage() {
   const [isPhone, setIsPhone] = useState(false);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [origin, setOrigin] = useState('');
+  // in-app browser (LINE/Facebook/Instagram) บล็อกกล้องเสมอ → ต้องเปิดด้วย Chrome/Safari
+  const [inApp, setInApp] = useState(false);
+  const [camFallback, setCamFallback] = useState(false);
   // สิทธิ์ผู้ดูแลระบบ — ใช้ซ่อน/แสดงปุ่มลบ (ฝั่งเซิร์ฟเวอร์บังคับซ้ำเสมอ)
   const me = useAdminMe();
   const isAdmin = me?.isAdmin === true;
@@ -151,6 +154,7 @@ export default function DocumentsPage() {
     const ua = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
     const narrow = window.matchMedia('(max-width: 768px)').matches;
     setIsPhone(force || ua || narrow);
+    setInApp(/Line\/|FBAN|FBAV|FB_IAB|Instagram|Messenger|MicroMessenger|; wv\)/i.test(navigator.userAgent));
   }, []);
 
   useEffect(() => {
@@ -230,9 +234,21 @@ export default function DocumentsPage() {
   // --- กล้องมือถือ ---
   const openCamera = async () => {
     setCamError(null);
+    setCamFallback(false);
     try {
+      if (!window.isSecureContext) {
+        setCamError('เปิดกล้องไม่ได้: หน้านี้ไม่ได้อยู่ใน HTTPS');
+        setCamFallback(true);
+        return;
+      }
       if (!navigator.mediaDevices?.getUserMedia) {
-        setCamError('เบราว์เซอร์นี้ไม่รองรับกล้องเว็บ');
+        // in-app browser (LINE/Facebook) และ WebView หลายตัวไม่มี getUserMedia
+        setCamError(
+          inApp
+            ? 'ในแอป LINE/Facebook กล้องถูกบล็อก — กดปุ่มด้านล่างเพื่อเปิดใน Chrome/Safari หรือใช้ "ถ่ายรูป/แกลเลอรี" ของเครื่อง'
+            : 'เบราว์เซอร์นี้ไม่รองรับกล้องในเว็บ — ใช้ปุ่ม "ถ่ายรูป (กล้องเครื่อง)" แทนได้เลย'
+        );
+        setCamFallback(true);
         return;
       }
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -246,14 +262,24 @@ export default function DocumentsPage() {
       }
       setCamOpen(true);
     } catch (err: any) {
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setCamError('อนุญาตสิทธิ์กล้องไม่ถูกต้อง — ให้เปิดใช้งานกล้องใน 설정เบราว์เซอร์');
-      } else if (err.name === 'NotFoundError') {
-        setCamError('ไม่พบอุปกรณ์กล้อง');
+      const name = String(err?.name || '');
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+        setCamError('ยังไม่ได้อนุญาตสิทธิ์กล้อง — แตะไอคอน 🔒/⚙️ ข้างที่อยู่เว็บ แล้วตั้ง กล้อง = อนุญาต (หรือใช้ปุ่ม "ถ่ายรูป (กล้องเครื่อง)" ด้านล่าง)');
+      } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+        setCamError('ไม่พบกล้องที่ใช้ได้ — ใช้ปุ่ม "ถ่ายรูป (กล้องเครื่อง)" ด้านล่างแทน');
+      } else if (name === 'NotReadableError') {
+        setCamError('กล้องถูกแอปอื่นใช้งานอยู่ — ปิดแอปกล้องแล้วลองใหม่ หรือใช้ "ถ่ายรูป (กล้องเครื่อง)"');
       } else {
-        setCamError('เปิดกล้องไม่ได้: ' + (err.message || 'ไม่ทราบสาเหตุ'));
+        setCamError(`เปิดกล้องในเว็บไม่ได้ (${name || 'unknown'}) — ใช้ปุ่ม "ถ่ายรูป (กล้องเครื่อง)" ด้านล่างแทน`);
       }
+      setCamFallback(true);
     }
+  };
+
+  // ปุ่มสแกนหลักบนมือถือ: ลอง getUserMedia ก่อน แล้วถ้าไม่พร้อมใช้กล้อง native ของเครื่องทันที
+  const phoneScan = async () => {
+    if (inApp) { phoneCamRef.current?.click(); return; }
+    await openCamera();
   };
 
   const closeCamera = () => {
@@ -455,6 +481,24 @@ export default function DocumentsPage() {
               ระบบจะสแกนยอดเงินจริงด้วย AI (Gemini Vision) แล้วตรวจคุณสมบัติเลื่อนตำแหน่งให้อัตโนมัติ
             </p>
 
+            {/* in-app browser (LINE/Facebook) บล็อกกล้อง — เตือนก่อนผู้ใช้กดแล้วเงียบ */}
+            {inApp && (
+              <div className="mb-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+                ⚠️ คุณเปิดจากเบราว์เซอร์ในแอป (LINE/Facebook) — กล้องมักถูกบล็อก ·
+                กด <b>⋯</b> แล้วเลือก <b>เปิดในเบราว์เซอร์</b> (Chrome/Safari) หรือ
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(`${origin}/documents?m=1`);
+                    setNotice('คัดลอกลิงก์แล้ว — เปิดใน Chrome/Safari บนมือถือ');
+                  }}
+                  className="underline font-semibold ml-1"
+                >
+                  คัดลอกลิงก์ไปเปิดเอง
+                </button>
+              </div>
+            )}
+
             <div className="mb-3">
               <label className="text-xs text-slate-500 block mb-1">รหัสสมาชิก (Member ID)</label>
               <input
@@ -506,10 +550,17 @@ export default function DocumentsPage() {
                       <div className="flex flex-col gap-2">
                         <button
                           type="button"
-                          onClick={() => phoneCamRef.current?.click()}
+                          onClick={phoneScan}
                           className="w-full py-3.5 rounded-xl bg-[#475569] text-white text-sm font-bold"
                         >
                           📷 ถ่ายรูปใบเสร็จ (เปิดกล้อง)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => phoneCamRef.current?.click()}
+                          className="w-full py-3 rounded-xl bg-[#c8a84e] text-[#3f3a2f] text-sm font-bold"
+                        >
+                          📷 ถ่ายด้วยกล้องเครื่อง (ใช้เมื่อกล้องในเว็บไม่เปิด)
                         </button>
                         <button
                           type="button"
@@ -536,6 +587,32 @@ export default function DocumentsPage() {
                     </div>
                   )}
                 </div>
+
+                {/* แจ้ง error ของกล้อง + ทางออกสำรอง (เดิมข้อความนี้ซ่อนอยู่ใต้ overlay กล้องเท่านั้น) */}
+                {!camOpen && camError && (
+                  <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+                    <div className="font-semibold mb-1">กล้องไม่เปิด</div>
+                    <div>{camError}</div>
+                    {camFallback && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => phoneCamRef.current?.click()}
+                          className="px-3 py-2 rounded-lg bg-[#475569] text-white font-semibold"
+                        >
+                          📷 ถ่ายรูป (กล้องเครื่อง)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => inputRef.current?.click()}
+                          className="px-3 py-2 rounded-lg border border-amber-300 bg-white font-semibold"
+                        >
+                          🖼 เลือกจากแกลเลอรี
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* 📱 ส่งงานไปสแกนที่มือถือ (QR) — เฉพาะเมื่อเปิดบนคอมพิวเตอร์ */}
                 {!isPhone && !previewUrl && (
