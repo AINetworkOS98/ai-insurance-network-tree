@@ -219,7 +219,7 @@ export default function DocumentsPage() {
     (async () => {
       try {
         const QRCode = (await import('qrcode')).default;
-        const url = await QRCode.toDataURL(`${origin}/documents?m=1`, {
+        const url = await QRCode.toDataURL(`${origin}/documents?m=1&cam=1`, {
           width: 280,
           margin: 1,
           color: { dark: '#475569', light: '#ffffff' },
@@ -361,6 +361,18 @@ export default function DocumentsPage() {
     };
   }, [camOpen]);
 
+  // ?cam=1 → เปิดกล้องให้พร้อมถ่ายทันที (ใช้ได้ใน Chrome/Safari ทุกเครื่อง)
+  const autoCamDone = useRef(false);
+  useEffect(() => {
+    if (autoCamDone.current) return;
+    if (camSupport !== 'ready' || inApp) return;
+    const want = new URLSearchParams(window.location.search).get('cam') === '1';
+    if (!want) return;
+    autoCamDone.current = true;
+    const t = setTimeout(() => { openCamera(); }, 500);
+    return () => clearTimeout(t);
+  }, [camSupport, inApp]);
+
   const closeCamera = () => {
     setCamReady(false);
     if (camStreamRef.current) {
@@ -394,6 +406,8 @@ export default function DocumentsPage() {
       const file = new File([blob], `scan-${Date.now()}.jpg`, { type: 'image/jpeg' });
       closeCamera();
       acceptFile(file);
+      // ถ่ายแล้วสแกนต่อทันที (ไม่ต้องกดเพิ่ม) — ยกเลิกได้ด้วยปุ่มยกเลิกในกล่อง error
+      setTimeout(() => { scan(file); }, 50);
     } catch (err: any) {
       setCamError('ถ่ายภาพไม่สำเร็จ: ' + (err.message || ''));
     }
@@ -455,14 +469,15 @@ export default function DocumentsPage() {
     }
   }, []);
 
-  const scan = async () => {
-    if (!file) return;
+  const scan = async (fileArg?: File) => {
+    const src: File | null = fileArg || file;
+    if (!src) return;
     setError(null);
     setNotice(null);
     setStage('uploading');
-    diag('scan-start', { ok: true, sizeKb: file.size / 1024, type: file.type || file.name.split('.').pop() });
+    diag('scan-start', { ok: true, sizeKb: src.size / 1024, type: src.type || src.name.split('.').pop() });
     try {
-      const upload = await shrinkImage(file);
+      const upload = await shrinkImage(src);
       diag('scan-shrunk', { ok: true, sizeKb: upload.size / 1024, type: upload.type });
       if (upload.size > 4.2 * 1024 * 1024) {
         setError(`รูปใหญ่เกินไป (${(upload.size / 1024 / 1024).toFixed(1)} MB) — ถ่ายใหม่ให้ชัดแต่เล็กลง หรือใช้ปุ่ม "ถ่ายจากแอปกล้อง"`);
@@ -551,10 +566,10 @@ export default function DocumentsPage() {
       diag('scan-ok', { ok: true, http: 200 });
     } catch (e: any) {
       const msg = String(e?.message || '');
-      diag('scan-error', { ok: false, message: msg, sizeKb: file.size / 1024, type: file.type || '' });
+      diag('scan-error', { ok: false, message: msg, sizeKb: src.size / 1024, type: src.type || '' });
       if (/failed to fetch|networkerror|load failed|network request failed/i.test(msg)) {
         setError(
-          `เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ (Failed to fetch) — ไฟล์ ${(file.size / 1024 / 1024).toFixed(1)} MB ` +
+          `เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ (Failed to fetch) — ไฟล์ ${(src.size / 1024 / 1024).toFixed(1)} MB ` +
           'มักเกิดจากไฟล์ใหญ่เกิน 4 MB หรือสัญญาณเน็ตหลุด · ลองกดสแกนอีกครั้ง ถ้ายังไม่ผ่านให้ถ่ายใหม่ให้เล็กลง'
         );
       } else {
@@ -902,7 +917,7 @@ export default function DocumentsPage() {
                   <span className="font-mono text-xs">✓ {file.name}</span>
                   <span className="text-xs text-slate-400 ml-2">({(file.size / 1024).toFixed(1)} KB)</span>
                 </div>
-                <button onClick={scan} disabled={busy} className="px-4 py-2 rounded-full bg-[#475569] text-white text-sm font-semibold disabled:opacity-50">
+                <button onClick={() => scan()} disabled={busy} className="px-4 py-2 rounded-full bg-[#475569] text-white text-sm font-semibold disabled:opacity-50">
                   🔍 สแกนยอดเงิน
                 </button>
               </div>
@@ -1030,7 +1045,7 @@ export default function DocumentsPage() {
                       ) : (
                         <>
                           <button onClick={() => setEditing(true)} className="px-3 py-1.5 rounded-full text-xs border bg-white">✏️ แก้ไขข้อมูล</button>
-                          <button onClick={scan} className="px-3 py-1.5 rounded-full text-xs border bg-white">🔄 สแกนใหม่</button>
+                          <button onClick={() => scan()} className="px-3 py-1.5 rounded-full text-xs border bg-white">🔄 สแกนใหม่</button>
                         </>
                       )}
                       <button onClick={confirm} disabled={stage === 'saving'} className="px-4 py-1.5 rounded-full text-xs bg-[#475569] text-white font-semibold disabled:opacity-50">
