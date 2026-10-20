@@ -218,9 +218,10 @@ export default function DocumentsPage() {
 
   const acceptFile = useCallback((f: File) => {
     if (!f) return;
-    const okType = /^(image\/(jpeg|png|webp))$/i.test(f.type) || /\\.(jpe?g|png|webp)$/i.test(f.name);
+    const heic = /^image\/(hei[cf])$/i.test(f.type) || /\.(heic|heif)$/i.test(f.name);
+    const okType = /^(image\/(jpeg|png|webp))$/i.test(f.type) || /\.(jpe?g|png|webp)$/i.test(f.name) || heic;
     if (!okType) {
-      setError('รองรับเฉพาะ JPG / PNG / WEBP');
+      setError(`ไฟล์นี้เป็น "${f.type || f.name.split('.').pop()}" — รองรับ JPG / PNG / WEBP (HEIC จาก iPhone ใช้ได้ผ่านปุ่มถ่ายรูป)`);
       return;
     }
     setError(null);
@@ -274,12 +275,6 @@ export default function DocumentsPage() {
       }
       setCamFallback(true);
     }
-  };
-
-  // ปุ่มสแกนหลักบนมือถือ: ลอง getUserMedia ก่อน แล้วถ้าไม่พร้อมใช้กล้อง native ของเครื่องทันที
-  const phoneScan = async () => {
-    if (inApp) { phoneCamRef.current?.click(); return; }
-    await openCamera();
   };
 
   const closeCamera = () => {
@@ -546,31 +541,30 @@ export default function DocumentsPage() {
                   ) : isPhone ? (
                     <div>
                       <div className="text-3xl mb-1">📱</div>
-                      <div className="text-sm font-semibold text-slate-600 mb-3">สแกนใบเสร็จด้วยกล้องมือถือ</div>
+                      <div className="text-sm font-semibold text-slate-600 mb-1">สแกนใบเสร็จด้วยกล้องมือถือ</div>
+                      <div className="text-[11px] text-slate-400 mb-3">
+                        ปุ่มแรก = เปิดกล้องสดในหน้านี้ (ไม่เปิดคลังรูป) · ปุ่มที่สอง = ถ่ายจากแอปกล้องแล้วเลือกภาพ
+                      </div>
                       <div className="flex flex-col gap-2">
                         <button
                           type="button"
-                          onClick={phoneScan}
+                          onClick={openCamera}
                           className="w-full py-3.5 rounded-xl bg-[#475569] text-white text-sm font-bold"
                         >
-                          📷 ถ่ายรูปใบเสร็จ (เปิดกล้อง)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => phoneCamRef.current?.click()}
-                          className="w-full py-3 rounded-xl bg-[#c8a84e] text-[#3f3a2f] text-sm font-bold"
-                        >
-                          📷 ถ่ายด้วยกล้องเครื่อง (ใช้เมื่อกล้องในเว็บไม่เปิด)
+                          📷 เปิดกล้องสดในหน้านี้
                         </button>
                         <button
                           type="button"
                           onClick={() => inputRef.current?.click()}
-                          className="w-full py-3.5 rounded-xl border border-slate-300 bg-white text-[#475569] text-sm font-semibold"
+                          className="w-full py-3 rounded-xl bg-[#c8a84e] text-[#3f3a2f] text-sm font-bold"
                         >
-                          🖼 เลือกรูปจากแกลเลอรี
+                          🖼 ถ่ายจากแอปกล้อง / เลือกจากคลังภาพ
                         </button>
                       </div>
                       <div className="text-[11px] text-slate-400 mt-2">
+                        ถ้ากดปุ่มแรกแล้วยังเปิดคลังรูป = เบราว์เซอร์ในแอปบล็อกกล้อง → คัดลอกลิงก์ไปเปิดใน Chrome/Safari (ปุ่มคัดลอกด้านล่าง)
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-1">
                         รองรับ JPG / PNG / WEBP · รูปจะถูกอ่านยอดเงินอัตโนมัติ
                       </div>
                     </div>
