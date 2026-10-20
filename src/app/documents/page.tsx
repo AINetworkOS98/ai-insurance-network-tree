@@ -745,6 +745,14 @@ export default function DocumentsPage() {
                     🖼 เลือกจากคลังภาพ
                   </label>
                 </div>
+                {/Android/i.test(typeof navigator !== 'undefined' ? navigator.userAgent : '') && (
+                  <a
+                    href={`intent://${(origin || 'https://ai-insurance-network-tree.vercel.app').replace(/^https?:\/\//, '')}/documents?m=1&cam=1#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(`${origin || 'https://ai-insurance-network-tree.vercel.app'}/documents?m=1&cam=1`)};end`}
+                    className="mt-2 inline-block rounded-full bg-emerald-700 px-4 py-2 font-bold text-white no-underline"
+                  >
+                    🌐 เปิดใน Chrome (กล้องจะขึ้น)
+                  </a>
+                )}
                 <div className="mt-2 text-[11px] leading-relaxed">
                   ถ้าหน้าต่างที่เด้งขึ้นเป็น “ค้นรูป/แกลเลอรี” ให้แตะไอคอน <b>📷 กล้อง</b> ที่แถบด้านบนของหน้าต่างนั้น (ไม่ใช่ช่องค้นหา) แล้วถ่ายรูปใหม่ ·
                   {' '}
