@@ -670,20 +670,20 @@ export default function DocumentsPage() {
                 ✅ <b>ใช้ได้เลยไม่ต้องเปิด Chrome</b> — ในแอป LINE กล้องสดในเว็บถูกบล็อก แต่ใช้ <b>กล้องของเครื่อง</b>ได้:
                 กด <b>“📷 ถ่ายด้วยแอปกล้อง”</b> → ถ่ายรูป → กลับมาเลือกภาพ → กดสแกน
                 <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => phoneCamRef.current?.click()}
-                    className="rounded-full bg-[#475569] px-3 py-1.5 font-bold text-white"
+                  <label
+                    htmlFor="scan-camera-input"
+                    onClick={() => diag('picker-open', { ok: true, target: 'camera' })}
+                    className="cursor-pointer rounded-full bg-[#475569] px-3 py-1.5 font-bold text-white"
                   >
                     📷 ถ่ายด้วยแอปกล้อง
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => inputRef.current?.click()}
-                    className="rounded-full border border-emerald-400 bg-white px-3 py-1.5 font-semibold"
+                  </label>
+                  <label
+                    htmlFor="scan-file-input"
+                    onClick={() => diag('picker-open', { ok: true, target: 'gallery' })}
+                    className="cursor-pointer rounded-full border border-emerald-400 bg-white px-3 py-1.5 font-semibold"
                   >
                     🖼 เลือกจากคลังภาพ
-                  </button>
+                  </label>
                 </div>
               </div>
             )}
@@ -703,21 +703,24 @@ export default function DocumentsPage() {
               <>
                 <input
                   ref={inputRef}
+                  id="scan-file-input"
                   type="file"
                   accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
-                  className="hidden"
-                  onChange={(e) => e.target.files?.[0] && acceptFile(e.target.files[0])}
+                  className="sr-only"
+                  onChange={(e) => { diag('file-input-change', { ok: true, sizeKb: (e.target.files?.[0]?.size || 0) / 1024 }); e.target.files?.[0] && acceptFile(e.target.files[0]); }}
                 />
                 {/* กล้องมือถือแบบ native — เสถียรที่สุดบน iOS/Android (capture=environment) */}
                 <input
                   ref={phoneCamRef}
-                  id="mobile-gallery-input"
+                  id="scan-camera-input"
                   type="file"
                   accept="image/*"
                   capture="environment"
-                  className="hidden"
+                  className="sr-only"
+                  onClick={() => diag('camera-input-click', { ok: true })}
                   onChange={(e) => {
                     const f = e.target.files?.[0];
+                    diag('camera-input-change', { ok: !!f, sizeKb: (f?.size || 0) / 1024 });
                     if (f) acceptFile(f);
                   }}
                 />
@@ -749,20 +752,20 @@ export default function DocumentsPage() {
                             📷 เปิดกล้องสดในหน้านี้
                           </button>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => phoneCamRef.current?.click()}
-                          className="w-full py-3 rounded-xl bg-[#c8a84e] text-[#3f3a2f] text-sm font-bold"
+                        <label
+                          htmlFor="scan-camera-input"
+                          onClick={() => diag('picker-open', { ok: true, target: 'camera' })}
+                          className="w-full cursor-pointer py-3 rounded-xl bg-[#c8a84e] text-center text-[#3f3a2f] text-sm font-bold"
                         >
                           📷 ถ่ายด้วยกล้องเครื่อง (เปิดแอปกล้อง)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => inputRef.current?.click()}
-                          className="w-full py-2.5 rounded-xl border border-slate-300 bg-white text-[#475569] text-xs font-semibold"
+                        </label>
+                        <label
+                          htmlFor="scan-file-input"
+                          onClick={() => diag('picker-open', { ok: true, target: 'gallery' })}
+                          className="w-full cursor-pointer py-2.5 rounded-xl border border-slate-300 bg-white text-center text-[#475569] text-xs font-semibold"
                         >
                           🖼 เลือกรูปจากคลังภาพ
-                        </button>
+                        </label>
                       </div>
                       {(camSupport === 'unsupported' || camSupport === 'denied') && (
                         <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-left text-[11px] text-amber-900">
