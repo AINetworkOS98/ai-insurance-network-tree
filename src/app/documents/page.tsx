@@ -434,6 +434,11 @@ export default function DocumentsPage() {
       }
 
       if (!res.ok || !data.success) {
+        if (res.status === 401) {
+          setError('เซสชันหมดอายุ — กรุณาล็อกอินใหม่แล้วสแกนอีกครั้ง');
+          setStage('idle');
+          return;
+        }
         const isKeyError = data.code === 'INVALID_KEY' || data.code === 'MISSING_KEY' || data.code === 'QUOTA_EXCEEDED';
         if (isKeyError && file) {
           setError(null);
@@ -572,8 +577,11 @@ export default function DocumentsPage() {
           {/* สแกน + อัปโหลดใบเสร็จ */}
           <div className="card p-5">
             <h2 className="font-semibold text-[#475569] mb-1">↑ อัปโหลดสลิป/ใบเสร็จ — สแกนยอดเงินจริง</h2>
-            <p className="text-xs text-slate-500 mb-4">
+            <p className="text-xs text-slate-500 mb-1">
               ระบบจะสแกนยอดเงินจริงด้วย AI (Gemini Vision) แล้วตรวจคุณสมบัติเลื่อนตำแหน่งให้อัตโนมัติ
+            </p>
+            <p className="text-[10px] text-slate-400 mb-3">
+              build: {(process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA || 'dev').slice(0, 7)} · ถ้าเลขนี้ไม่ตรงกับที่แจ้ง ให้กดรีเฟรชหน้า (ล้างแคช)
             </p>
 
             {/* in-app browser (LINE/Facebook) บล็อกกล้อง — เตือนก่อนผู้ใช้กดแล้วเงียบ */}
