@@ -7,6 +7,7 @@ import { isAdminOnlyPage, canAccessAdminOnlyPage } from '@/lib/access-rules';
 // เมื่อสถานะถูกพัก/คัดออก (SUSPENDED/RESIGNED/INACTIVE) ต้องยกเลิกสิทธิทันที
 
 const PUBLIC_API = [
+  '/api/scan-diag', // วินิจฉัยการสแกนใบเสร็จจากฝั่งเครื่องผู้ใช้ — เขียน runtime log เท่านั้น ไม่แตะ DB/ข้อมูลส่วนบุคคล
   '/api/support', // ฟอร์มติดต่อสาธารณะ — เข้าถึงได้โดยไม่ต้องล็อกอิน (route ตรวจ rate-limit + เบอร์โทรเอง)
   '/api/track', // เก็บพฤติกรรมผู้เข้าชม — ต้องยินยอมก่อนเก็บ (route ตรวจ consent เอง)
   // ระบบ AI Video Intelligence: /api/video-intel/event = สาธารณะ (consent-gated) · เส้นทางอื่นตรวจ Bearer/session เอง

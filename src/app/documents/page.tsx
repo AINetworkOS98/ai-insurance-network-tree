@@ -135,6 +135,35 @@ export default function DocumentsPage() {
   const me = useAdminMe();
   const isAdmin = me?.isAdmin === true;
 
+  // วินิจฉัยจากเครื่องผู้ใช้จริง → /api/scan-diag เขียนลง Vercel runtime log (ไม่แตะ DB)
+  const diag = useCallback((stage: string, extra: Record<string, any> = {}) => {
+    try {
+      const body = JSON.stringify({
+        stage,
+        build: (process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA || 'dev').slice(0, 7),
+        ua: navigator.userAgent,
+        inApp,
+        isPhone,
+        camSupport,
+        ...extra,
+      });
+      fetch('/api/scan-diag', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        keepalive: true,
+      }).catch(() => {});
+    } catch {
+      /* ignore */
+    }
+  }, [inApp, isPhone, camSupport]);
+
+  // แจ้งครั้งเดียวว่าเครื่องไหนเปิดหน้า (build/UA/โหมด) — ใช้ตรวจว่าได้บิลด์ใหม่หรือยัง
+  useEffect(() => {
+    const t = setTimeout(() => diag('page-loaded', { ok: true }), 900);
+    return () => clearTimeout(t);
+  }, [diag]);
+
   const loadReceipts = useCallback(async () => {
     try {
       const res = await fetch(`/api/documents?memberId=${encodeURIComponent(memberId)}`);
@@ -244,10 +273,12 @@ export default function DocumentsPage() {
 
   const acceptFile = useCallback((f: File) => {
     if (!f) return;
+    diag('file-picked', { ok: true, sizeKb: f.size / 1024, type: f.type || f.name.split('.').pop() });
     const heic = /^image\/(hei[cf])$/i.test(f.type) || /\.(heic|heif)$/i.test(f.name);
     const okType = /^(image\/(jpeg|png|webp))$/i.test(f.type) || /\.(jpe?g|png|webp)$/i.test(f.name) || heic;
     if (!okType) {
       setError(`ไฟล์นี้เป็น "${f.type || f.name.split('.').pop()}" — รองรับ JPG / PNG / WEBP (HEIC จาก iPhone ใช้ได้ผ่านปุ่มถ่ายรูป)`);
+      diag('file-rejected', { ok: false, sizeKb: f.size / 1024, type: f.type || f.name.split('.').pop() });
       return;
     }
     setError(null);
@@ -308,6 +339,7 @@ export default function DocumentsPage() {
         setCamError(`เปิดกล้องในเว็บไม่ได้ (${name || 'unknown'}) — ใช้ปุ่ม "ถ่ายรูป (กล้องเครื่อง)" ด้านล่างแทน`);
       }
       setCamFallback(true);
+      diag('camera-error', { ok: false, message: name || 'unsupported' });
     }
   };
 
@@ -404,8 +436,10 @@ export default function DocumentsPage() {
     setError(null);
     setNotice(null);
     setStage('uploading');
+    diag('scan-start', { ok: true, sizeKb: file.size / 1024, type: file.type || file.name.split('.').pop() });
     try {
       const upload = await shrinkImage(file);
+      diag('scan-shrunk', { ok: true, sizeKb: upload.size / 1024, type: upload.type });
       if (upload.size > 4.2 * 1024 * 1024) {
         setError(`รูปใหญ่เกินไป (${(upload.size / 1024 / 1024).toFixed(1)} MB) — ถ่ายใหม่ให้ชัดแต่เล็กลง หรือใช้ปุ่ม "ถ่ายจากแอปกล้อง"`);
         setStage('idle');
@@ -423,6 +457,7 @@ export default function DocumentsPage() {
       const res = await fetch('/api/ocr', { method: 'POST', body: formData });
       setStage('verifying');
       const data = await res.json().catch(() => ({} as any));
+      diag('scan-http', { ok: res.ok, http: res.status, message: String((data as any)?.error || '').slice(0, 120) });
       if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
         setError(
           res.status === 413
@@ -470,8 +505,10 @@ export default function DocumentsPage() {
         referenceNumber: data.referenceNumber || '',
       });
       setStage('preview');
+      diag('scan-ok', { ok: true, http: 200 });
     } catch (e: any) {
       const msg = String(e?.message || '');
+      diag('scan-error', { ok: false, message: msg, sizeKb: file.size / 1024, type: file.type || '' });
       if (/failed to fetch|networkerror|load failed|network request failed/i.test(msg)) {
         setError(
           `เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ (Failed to fetch) — ไฟล์ ${(file.size / 1024 / 1024).toFixed(1)} MB ` +
