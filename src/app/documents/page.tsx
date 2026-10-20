@@ -666,29 +666,24 @@ export default function DocumentsPage() {
 
             {/* in-app browser (LINE/Facebook) บล็อกกล้อง — เตือนก่อนผู้ใช้กดแล้วเงียบ */}
             {inApp && (
-              <div className="mb-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
-                ⚠️ คุณเปิดจากเบราว์เซอร์ในแอป (LINE/Facebook) — กล้องมักถูกบล็อก ·
-                กด <b>⋯</b> แล้วเลือก <b>เปิดในเบราว์เซอร์</b> (Chrome/Safari) หรือ
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard?.writeText(`${origin}/documents?m=1`);
-                    setNotice('คัดลอกลิงก์แล้ว — เปิดใน Chrome/Safari บนมือถือ');
-                  }}
-                  className="underline font-semibold ml-1"
-                >
-                  คัดลอกลิงก์ไปเปิดเอง
-                </button>
-                {/Android/i.test(typeof navigator !== 'undefined' ? navigator.userAgent : '') && (
-                  <a
-                    href={`intent://${(origin || 'https://ai-insurance-network-tree.vercel.app').replace(/^https?:\/\//, '')}/documents?m=1#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(`${origin}/documents?m=1`)};end`}
-                    className="ml-2 inline-block rounded-full bg-[#475569] px-3 py-1.5 text-white font-bold no-underline"
+              <div className="mb-3 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-xs text-emerald-900">
+                ✅ <b>ใช้ได้เลยไม่ต้องเปิด Chrome</b> — ในแอป LINE กล้องสดในเว็บถูกบล็อก แต่ใช้ <b>กล้องของเครื่อง</b>ได้:
+                กด <b>“📷 ถ่ายด้วยแอปกล้อง”</b> → ถ่ายรูป → กลับมาเลือกภาพ → กดสแกน
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => phoneCamRef.current?.click()}
+                    className="rounded-full bg-[#475569] px-3 py-1.5 font-bold text-white"
                   >
-                    เปิดใน Chrome ทันที
-                  </a>
-                )}
-                <div className="mt-1 text-[11px] text-amber-800">
-                  กล้องในแอป LINE ถูกบล็อกโดยระบบ (NotAllowedError) — ต้องเปิดด้วย Chrome/Safari กล้องจึงจะขึ้น
+                    📷 ถ่ายด้วยแอปกล้อง
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => inputRef.current?.click()}
+                    className="rounded-full border border-emerald-400 bg-white px-3 py-1.5 font-semibold"
+                  >
+                    🖼 เลือกจากคลังภาพ
+                  </button>
                 </div>
               </div>
             )}
@@ -745,7 +740,7 @@ export default function DocumentsPage() {
                         เลือกวิธีที่สะดวก — กล้องสดในหน้าเว็บ หรือใช้แอปกล้องของเครื่อง (ได้ทุกiPhone/Android)
                       </div>
                       <div className="flex flex-col gap-2">
-                        {camSupport === 'ready' && (
+                        {camSupport === 'ready' && !inApp && (
                           <button
                             type="button"
                             onClick={openCamera}
