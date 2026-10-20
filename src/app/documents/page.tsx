@@ -655,6 +655,17 @@ export default function DocumentsPage() {
                 >
                   คัดลอกลิงก์ไปเปิดเอง
                 </button>
+                {/Android/i.test(typeof navigator !== 'undefined' ? navigator.userAgent : '') && (
+                  <a
+                    href={`intent://${(origin || 'https://ai-insurance-network-tree.vercel.app').replace(/^https?:\/\//, '')}/documents?m=1#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(`${origin}/documents?m=1`)};end`}
+                    className="ml-2 inline-block rounded-full bg-[#475569] px-3 py-1.5 text-white font-bold no-underline"
+                  >
+                    เปิดใน Chrome ทันที
+                  </a>
+                )}
+                <div className="mt-1 text-[11px] text-amber-800">
+                  กล้องในแอป LINE ถูกบล็อกโดยระบบ (NotAllowedError) — ต้องเปิดด้วย Chrome/Safari กล้องจึงจะขึ้น
+                </div>
               </div>
             )}
 
