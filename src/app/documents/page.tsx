@@ -120,6 +120,7 @@ export default function DocumentsPage() {
   const camStreamRef = useRef<MediaStream | null>(null);
   const [camOpen, setCamOpen] = useState(false);
   const [camError, setCamError] = useState<string | null>(null);
+  const [camReady, setCamReady] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   // 📱 โหมดมือถือ (ตรวจจาก UA/ความกว้างจอ หรือบังคับด้วย ?m=1) + QR สำหรับส่งงานจากคอมไปมือถือ
   const [isPhone, setIsPhone] = useState(false);
@@ -343,7 +344,25 @@ export default function DocumentsPage() {
     }
   };
 
+  // overlay กล้องถูก mount หลัง setCamOpen(true) → ต้องผูก stream ตอน DOM พร้อมจริง
+  // (เดิมผูกตอน overlay ยังไม่มีใน DOM ⇒ video ว่าง ⇒ กดถ่ายแล้วขึ้น "กล้องยังไม่พร้อม")
+  useEffect(() => {
+    const v = camVideoRef.current;
+    const s = camStreamRef.current;
+    if (!camOpen || !v || !s) return;
+    v.srcObject = s;
+    const onReady = () => { if (v.videoWidth > 0) setCamReady(true); };
+    v.onloadedmetadata = onReady;
+    v.oncanplay = onReady;
+    v.play().then(onReady).catch(() => {});
+    return () => {
+      v.onloadedmetadata = null;
+      v.oncanplay = null;
+    };
+  }, [camOpen]);
+
   const closeCamera = () => {
+    setCamReady(false);
     if (camStreamRef.current) {
       camStreamRef.current.getTracks().forEach(t => t.stop());
       camStreamRef.current = null;
@@ -353,9 +372,14 @@ export default function DocumentsPage() {
   };
 
   const capturePhoto = async () => {
-    const video = camVideoRef.current;
+    // รอให้เฟรมแรกมาถึงก่อน (มือถือใช้ 0.3-2 วิ) แทนการฟันธงว่า "กล้องยังไม่พร้อม" ทันที
+    let video = camVideoRef.current;
+    for (let i = 0; i < 24 && (!video || !video.videoWidth); i++) {
+      await new Promise(r => setTimeout(r, 150));
+      video = camVideoRef.current;
+    }
     if (!video || !video.videoWidth) {
-      setCamError('กล้องยังไม่พร้อม');
+      setCamError('กล้องยังไม่พร้อม — รอสักครู่แล้วกด "ถ่าย" อีกครั้ง');
       return;
     }
     try {
@@ -881,6 +905,9 @@ export default function DocumentsPage() {
                   muted
                   className="w-full max-w-[520px] rounded-xl bg-black aspect-video object-cover"
                 />
+                {!camReady && !camError && (
+                  <div className="mt-2 text-xs text-amber-200 text-center">กำลังเตรียมกล้อง… รอสักครู่</div>
+                )}
                 {camError && <div className="mt-2 text-xs text-red-300 text-center">{camError}</div>}
                 <div className="mt-3 flex gap-2">
                   <button onClick={capturePhoto} className="px-8 py-2.5 rounded-full bg-white text-sm font-bold shadow-lg">
