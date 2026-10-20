@@ -454,10 +454,29 @@ export default function DocumentsPage() {
       formData.append('file', upload);
 
       setStage('reading');
-      const res = await fetch('/api/ocr', { method: 'POST', body: formData });
+      const t0 = Date.now();
+      let res: Response;
+      try {
+        res = await fetch('/api/ocr', { method: 'POST', body: formData });
+      } catch (e1: any) {
+        // WebView ในแอปมือถือ (LINE/FB) บางรุ่นตัด multipart POST ทิ้ง → ส่ง JSON base64 แทน
+        diag('scan-retry-json', { ok: false, message: String(e1?.message || '') });
+        const dataUrl = await new Promise<string>((ok, no) => {
+          const rd = new FileReader();
+          rd.onload = () => ok(String(rd.result || ''));
+          rd.onerror = () => no(new Error('read-failed'));
+          rd.readAsDataURL(upload);
+        });
+        res = await fetch('/api/ocr', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageBase64: dataUrl, mime: upload.type || 'image/jpeg', filename: upload.name }),
+        });
+      }
+      diag('scan-http', { ok: res.ok, http: res.status, ms: Date.now() - t0 });
       setStage('verifying');
       const data = await res.json().catch(() => ({} as any));
-      diag('scan-http', { ok: res.ok, http: res.status, message: String((data as any)?.error || '').slice(0, 120) });
+      diag('scan-body', { ok: res.ok, http: res.status, message: String((data as any)?.error || '').slice(0, 120) });
       if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
         setError(
           res.status === 413

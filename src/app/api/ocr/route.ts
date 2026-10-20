@@ -21,8 +21,24 @@ function pick<T>(primary: T | null | undefined, fallback: T | null | undefined):
 
 export async function POST(request: Request) {
   try {
-    const form = await request.formData();
-    const file = form.get('file') as File | null;
+    // รับได้ 2 แบบ: multipart/form-data (เบราว์เซอร์ปกติ) และ JSON base64
+    //   เหตุผล: WebView ของแอปในมือถือ (LINE/Facebook) บางรุ่นตัด multipart POST ทิ้ง
+    //   แล้วเบราว์เซอร์รายงานแค่ "Failed to fetch" — JSON base64 เลี่ยงปัญหาได้
+    const ct = (request.headers.get('content-type') || '').toLowerCase();
+    let file: File | null = null;
+    if (ct.includes('application/json')) {
+      const body: any = await request.json().catch(() => ({}));
+      const raw = String(body?.imageBase64 || body?.dataUrl || '');
+      const b64 = raw.replace(/^data:[^;]+;base64,/, '').replace(/\s+/g, '');
+      const mime = String(body?.mime || 'image/jpeg');
+      if (b64) {
+        const buf = Buffer.from(b64, 'base64');
+        file = new File([buf], String(body?.filename || 'upload.jpg'), { type: mime });
+      }
+    } else {
+      const form = await request.formData();
+      file = form.get('file') as File | null;
+    }
 
     if (!file) return NextResponse.json({ success: false, error: 'ไม่พบไฟล์ที่อัปโหลด' }, { status: 400 });
     if (!ALLOWED.test(file.type)) {
