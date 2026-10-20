@@ -165,6 +165,18 @@ export default function DocumentsPage() {
     return () => clearTimeout(t);
   }, [diag]);
 
+  // PWA install prompt (Android/Chrome) — ให้มีไอคอนแอป เปิดแล้วกล้องพร้อมถ่าย
+  const [installEvt, setInstallEvt] = useState<any>(null);
+  useEffect(() => {
+    const onPrompt = (e: any) => {
+      e.preventDefault();
+      setInstallEvt(e);
+      diag('install-available', { ok: true });
+    };
+    window.addEventListener('beforeinstallprompt', onPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', onPrompt);
+  }, [diag]);
+
   const loadReceipts = useCallback(async () => {
     try {
       const res = await fetch(`/api/documents?memberId=${encodeURIComponent(memberId)}`);
@@ -678,6 +690,39 @@ export default function DocumentsPage() {
             <p className="text-[10px] text-slate-400 mb-3">
               build: {(process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA || 'dev').slice(0, 7)} · ถ้าเลขนี้ไม่ตรงกับที่แจ้ง ให้กดรีเฟรชหน้า (ล้างแคช)
             </p>
+
+            {/* ติดตั้งเป็นแอป (PWA) — ครั้งต่อไปแตะไอคอนแล้วกล้องพร้อมถ่ายเลย ไม่ต้องผ่าน LINE */}
+            {(installEvt || isPhone) && (
+              <div className="mb-3 rounded-xl border border-[#c8a84e] bg-amber-50 p-3 text-xs text-[#3f3a2f]">
+                <div className="font-semibold mb-1">📲 ใช้เป็นแอปบนมือถือ (กล้องเปิดได้ทันที)</div>
+                {installEvt ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await installEvt.prompt();
+                        const r = await installEvt.userChoice;
+                        diag('install-choice', { ok: r?.outcome === 'accepted', message: r?.outcome });
+                        setInstallEvt(null);
+                        setNotice(r?.outcome === 'accepted' ? 'ติดตั้งแล้ว — เปิดจากไอคอนบนหน้าจอโฮมได้เลย' : 'ยกเลิกการติดตั้ง');
+                      } catch {
+                        setNotice('ติดตั้งอัตโนมัติไม่ได้ — ใช้เมนู Chrome → เพิ่มลงในหน้าจอหลัก');
+                      }
+                    }}
+                    className="rounded-full bg-[#475569] px-4 py-2 font-bold text-white"
+                  >
+                    ติดตั้งแอปสแกนใบเสร็จ
+                  </button>
+                ) : (
+                  <div className="leading-relaxed">
+                    {isIOS
+                      ? 'iPhone: กดปุ่มแชร์ ⬆️ → “เพิ่มไปที่หน้าจอโฮม”'
+                      : 'Android: เปิดหน้านี้ด้วย Chrome → ⋮ → “เพิ่มลงในหน้าจอหลัก”'}
+                    {' '}แล้วเปิดจากไอคอน — กล้องจะขึ้นพร้อมถ่ายทุกครั้ง
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* in-app browser (LINE/Facebook) บล็อกกล้อง — เตือนก่อนผู้ใช้กดแล้วเงียบ */}
             {inApp && (
