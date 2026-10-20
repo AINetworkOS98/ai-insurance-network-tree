@@ -823,14 +823,19 @@ export default function DocumentsPage() {
                         เลือกวิธีที่สะดวก — กล้องสดในหน้าเว็บ หรือใช้แอปกล้องของเครื่อง (ได้ทุกiPhone/Android)
                       </div>
                       <div className="flex flex-col gap-2">
-                        {camSupport === 'ready' && !inApp && (
-                          <button
-                            type="button"
-                            onClick={openCamera}
-                            className="w-full py-3.5 rounded-xl bg-[#475569] text-white text-sm font-bold"
-                          >
-                            📷 เปิดกล้องสดในหน้านี้
-                          </button>
+                        <button
+                          type="button"
+                          onClick={openCamera}
+                          className={`w-full py-3.5 rounded-xl text-sm font-bold ${
+                            inApp ? 'bg-slate-200 text-slate-500' : 'bg-[#475569] text-white'
+                          }`}
+                        >
+                          📷 เปิดกล้องสดในหน้านี้
+                        </button>
+                        {inApp && (
+                          <div className="text-[11px] text-amber-700">
+                            ปุ่มนี้ไม่ทำงานในเบราว์เซอร์ของ LINE (ระบบบล็อกกล้อง) — เปิดด้วย Chrome/Safari หรือติดตั้งเป็นแอปด้านบน
+                          </div>
                         )}
                         <label
                           htmlFor="scan-camera-input"
