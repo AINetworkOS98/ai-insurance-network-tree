@@ -115,11 +115,16 @@ export default function DocumentsPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const phoneCamRef = useRef<HTMLInputElement>(null);
   const camVideoRef = useRef<HTMLVideoElement>(null);
   const camStreamRef = useRef<MediaStream | null>(null);
   const [camOpen, setCamOpen] = useState(false);
   const [camError, setCamError] = useState<string | null>(null);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+  // 📱 โหมดมือถือ (ตรวจจาก UA/ความกว้างจอ หรือบังคับด้วย ?m=1) + QR สำหรับส่งงานจากคอมไปมือถือ
+  const [isPhone, setIsPhone] = useState(false);
+  const [qrUrl, setQrUrl] = useState<string | null>(null);
+  const [origin, setOrigin] = useState('');
   // สิทธิ์ผู้ดูแลระบบ — ใช้ซ่อน/แสดงปุ่มลบ (ฝั่งเซิร์ฟเวอร์บังคับซ้ำเสมอ)
   const me = useAdminMe();
   const isAdmin = me?.isAdmin === true;
@@ -138,6 +143,34 @@ export default function DocumentsPage() {
     const saved = localStorage.getItem('memberId');
     if (saved) setMemberId(saved);
   }, []);
+
+  // 📱 ตรวจโหมดมือถือ + เตรียมลิงก์/QR สำหรับส่งงานสแกนจากคอมพิวเตอร์ไปมือถือ
+  useEffect(() => {
+    setOrigin(window.location.origin);
+    const force = new URLSearchParams(window.location.search).get('m') === '1';
+    const ua = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    const narrow = window.matchMedia('(max-width: 768px)').matches;
+    setIsPhone(force || ua || narrow);
+  }, []);
+
+  useEffect(() => {
+    if (!origin || isPhone) { setQrUrl(null); return; }
+    let alive = true;
+    (async () => {
+      try {
+        const QRCode = (await import('qrcode')).default;
+        const url = await QRCode.toDataURL(`${origin}/documents?m=1`, {
+          width: 280,
+          margin: 1,
+          color: { dark: '#475569', light: '#ffffff' },
+        });
+        if (alive) setQrUrl(url);
+      } catch {
+        /* QR ไม่ขึ้น = ยังใช้ลิงก์ตรงได้ */
+      }
+    })();
+    return () => { alive = false; };
+  }, [origin, isPhone]);
 
   useEffect(() => {
     loadReceipts();
@@ -434,15 +467,7 @@ export default function DocumentsPage() {
             </div>
 
             {!ocr && (
-              <div
-                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={onDrop}
-                onClick={() => inputRef.current?.click()}
-                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition ${
-                  dragOver ? 'border-[#c8a84e] bg-amber-50' : 'border-slate-300 hover:border-[#475569] bg-slate-50'
-                }`}
-              >
+              <>
                 <input
                   ref={inputRef}
                   type="file"
@@ -450,40 +475,109 @@ export default function DocumentsPage() {
                   className="hidden"
                   onChange={(e) => e.target.files?.[0] && acceptFile(e.target.files[0])}
                 />
-                {/* Hidden file input for gallery picker */}
+                {/* กล้องมือถือแบบ native — เสถียรที่สุดบน iOS/Android (capture=environment) */}
                 <input
+                  ref={phoneCamRef}
+                  id="mobile-gallery-input"
                   type="file"
                   accept="image/*"
                   capture="environment"
                   className="hidden"
                   onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      acceptFile(file);
-                    }
+                    const f = e.target.files?.[0];
+                    if (f) acceptFile(f);
                   }}
-                  id="mobile-gallery-input"
                 />
-                {previewUrl ? (
-                  <img src={previewUrl} alt="preview" className="max-h-48 mx-auto rounded-lg shadow" />
-                ) : (
-                  <div className="text-slate-500">
-                    <div className="text-3xl mb-2">📄</div>
-                    <div className="font-medium">
-                      ลากไฟล์มาวางที่นี่ หรือ
-                      <span className="text-[#475569] underline cursor-pointer" onClick={() => inputRef.current?.click()}>เลือกไฟล์</span>
-                      {' '}/{' '}
-                      <span className="text-[#475569] underline cursor-pointer" onClick={openCamera}>ถ่ายรูป</span>
-                      {' '}/{' '}
-                      <span className="text-[#475569] underline cursor-pointer" onClick={() => document.getElementById('mobile-gallery-input')?.click()}>เลือกจากแกลเลอรี</span>
+
+                <div
+                  onDragOver={(e) => { if (isPhone) return; e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={(e) => { if (isPhone) return; onDrop(e); }}
+                  className={`border-2 border-dashed rounded-xl p-5 sm:p-8 text-center transition ${
+                    dragOver ? 'border-[#c8a84e] bg-amber-50' : 'border-slate-300 bg-slate-50'
+                  }`}
+                >
+                  {previewUrl ? (
+                    <img src={previewUrl} alt="preview" className="max-h-48 mx-auto rounded-lg shadow" />
+                  ) : isPhone ? (
+                    <div>
+                      <div className="text-3xl mb-1">📱</div>
+                      <div className="text-sm font-semibold text-slate-600 mb-3">สแกนใบเสร็จด้วยกล้องมือถือ</div>
+                      <div className="flex flex-col gap-2">
+                        <button
+                          type="button"
+                          onClick={() => phoneCamRef.current?.click()}
+                          className="w-full py-3.5 rounded-xl bg-[#475569] text-white text-sm font-bold"
+                        >
+                          📷 ถ่ายรูปใบเสร็จ (เปิดกล้อง)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => inputRef.current?.click()}
+                          className="w-full py-3.5 rounded-xl border border-slate-300 bg-white text-[#475569] text-sm font-semibold"
+                        >
+                          🖼 เลือกรูปจากแกลเลอรี
+                        </button>
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-2">
+                        รองรับ JPG / PNG / WEBP · รูปจะถูกอ่านยอดเงินอัตโนมัติ
+                      </div>
                     </div>
-                    <div className="text-xs mt-1">รองรับ JPG / PNG / WEBP</div>
-                    <div className="text-xs mt-2 text-slate-400">
-                      📱 ใช้ได้ทั้ง Android และ iOS — เลือก "ถ่ายรูป" เพื่อเปิดกล้อง หรือ "เลือกจากแกลเลอรี" เพื่อเลือกจากรูปที่มี
+                  ) : (
+                    <div className="text-slate-500">
+                      <div className="text-3xl mb-2">📄</div>
+                      <div className="font-medium">
+                        ลากไฟล์มาวางที่นี่ หรือ{' '}
+                        <button type="button" onClick={() => inputRef.current?.click()} className="text-[#475569] underline font-semibold">เลือกไฟล์</button>
+                        {' · '}
+                        <button type="button" onClick={openCamera} className="text-[#475569] underline font-semibold">ถ่ายด้วยเว็บแคม</button>
+                      </div>
+                      <div className="text-xs mt-1">รองรับ JPG / PNG / WEBP</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 📱 ส่งงานไปสแกนที่มือถือ (QR) — เฉพาะเมื่อเปิดบนคอมพิวเตอร์ */}
+                {!isPhone && !previewUrl && (
+                  <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+                    <div className="text-sm font-semibold text-[#475569] mb-1">📱 สแกนด้วยมือถือ</div>
+                    <p className="text-xs text-slate-500 mb-3">
+                      เปิดกล้องมือถือสแกน QR นี้ แล้วถ่ายใบเสร็จจากมือถือได้เลย — บันทึกเข้าโปรไฟล์เดิม (ต้องล็อกอินบัญชีเดียวกันบนมือถือ)
+                    </p>
+                    <div className="flex items-start gap-4">
+                      {qrUrl ? (
+                        <img
+                          src={qrUrl}
+                          alt="QR เปิดหน้าสแกนใบเสร็จบนมือถือ"
+                          className="w-[132px] h-[132px] rounded-lg border border-slate-200"
+                          data-mobile-qr="documents"
+                        />
+                      ) : (
+                        <div className="w-[132px] h-[132px] rounded-lg bg-slate-100 animate-pulse" data-mobile-qr="pending" />
+                      )}
+                      <div className="text-xs text-slate-500 space-y-1.5 min-w-0">
+                        <div className="break-all">
+                          ลิงก์ตรง:{' '}
+                          <a href={`${origin}/documents?m=1`} className="underline text-[#475569]">
+                            {origin ? `${origin}/documents?m=1` : '…'}
+                          </a>
+                        </div>
+                        <div>มือถือต้องล็อกอินบัญชีเดียวกันก่อนถ่าย</div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard?.writeText(`${origin}/documents?m=1`);
+                            setNotice('คัดลอกลิงก์สำหรับมือถือแล้ว — เปิดในเบราว์เซอร์มือถือแล้วล็อกอิน');
+                          }}
+                          className="underline text-[#475569] font-semibold"
+                        >
+                          คัดลอกลิงก์
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
-              </div>
+              </>
             )}
 
             {file && !ocr && (
