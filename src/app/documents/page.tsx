@@ -685,6 +685,13 @@ export default function DocumentsPage() {
                     🖼 เลือกจากคลังภาพ
                   </label>
                 </div>
+                <div className="mt-2 text-[11px] leading-relaxed">
+                  ถ้าหน้าต่างที่เด้งขึ้นเป็น “ค้นรูป/แกลเลอรี” ให้แตะไอคอน <b>📷 กล้อง</b> ที่แถบด้านบนของหน้าต่างนั้น (ไม่ใช่ช่องค้นหา) แล้วถ่ายรูปใหม่ ·
+                  {' '}
+                  <label htmlFor="scan-camera-legacy" className="cursor-pointer font-semibold underline">
+                    ลองปุ่มกล้องแบบเก่า
+                  </label>
+                </div>
               </div>
             )}
 
@@ -721,6 +728,19 @@ export default function DocumentsPage() {
                   onChange={(e) => {
                     const f = e.target.files?.[0];
                     diag('camera-input-change', { ok: !!f, sizeKb: (f?.size || 0) / 1024 });
+                    if (f) acceptFile(f);
+                  }}
+                />
+                {/* แบบเก่า: WebView บางตัว (รวม LINE บางเวอร์ชัน) อ่าน capture จาก accept string เท่านั้น */}
+                <input
+                  id="scan-camera-legacy"
+                  type="file"
+                  accept="image/*;capture=camera"
+                  className="sr-only"
+                  onClick={() => diag('camera-legacy-click', { ok: true })}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    diag('camera-legacy-change', { ok: !!f, sizeKb: (f?.size || 0) / 1024 });
                     if (f) acceptFile(f);
                   }}
                 />
