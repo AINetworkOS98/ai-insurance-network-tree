@@ -128,6 +128,9 @@ export default function DocumentsPage() {
   // in-app browser (LINE/Facebook/Instagram) บล็อกกล้องเสมอ → ต้องเปิดด้วย Chrome/Safari
   const [inApp, setInApp] = useState(false);
   const [camFallback, setCamFallback] = useState(false);
+  // ความพร้อมของกล้องในเว็บ: ตรวจก่อนวาดปุ่ม เพื่อไม่ให้ผู้ใช้กดแล้วเงียบ
+  const [camSupport, setCamSupport] = useState<'unknown' | 'ready' | 'unsupported' | 'denied'>('unknown');
+  const [isIOS, setIsIOS] = useState(false);
   // สิทธิ์ผู้ดูแลระบบ — ใช้ซ่อน/แสดงปุ่มลบ (ฝั่งเซิร์ฟเวอร์บังคับซ้ำเสมอ)
   const me = useAdminMe();
   const isAdmin = me?.isAdmin === true;
@@ -155,6 +158,29 @@ export default function DocumentsPage() {
     const narrow = window.matchMedia('(max-width: 768px)').matches;
     setIsPhone(force || ua || narrow);
     setInApp(/Line\/|FBAN|FBAV|FB_IAB|Instagram|Messenger|MicroMessenger|; wv\)/i.test(navigator.userAgent));
+    setIsIOS(/iPhone|iPad|iPod/i.test(navigator.userAgent));
+
+    // ตรวจความพร้อมของกล้องล่วงหน้า (ทั้ง iPhone และ Android)
+    (async () => {
+      try {
+        if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+          setCamSupport('unsupported');
+          return;
+        }
+        const Perm: any = (navigator as any).permissions;
+        if (Perm?.query) {
+          try {
+            const st = await Perm.query({ name: 'camera' as any });
+            if (st?.state === 'denied') { setCamSupport('denied'); return; }
+          } catch {
+            /* Safari ไม่รองรับ permissions.query('camera') — ถือว่าพร้อม */
+          }
+        }
+        setCamSupport('ready');
+      } catch {
+        setCamSupport('ready');
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -252,10 +278,18 @@ export default function DocumentsPage() {
         setCamFallback(true);
         return;
       }
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false,
-      });
+      // ลองจากเข้มไปอ่อน — บางรุ่น (Android WebView / iPhone บางเวอร์ชัน) ตกด้วย OverconstrainedError
+      const tries: MediaStreamConstraints[] = [
+        { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1600 }, height: { ideal: 1200 } }, audio: false },
+        { video: { facingMode: 'environment' }, audio: false },
+        { video: true, audio: false },
+      ];
+      let stream: MediaStream | null = null;
+      let lastErr: any = null;
+      for (const c of tries) {
+        try { stream = await navigator.mediaDevices.getUserMedia(c); break; } catch (e) { lastErr = e; }
+      }
+      if (!stream) throw lastErr || new Error('cannot open camera');
       camStreamRef.current = stream;
       if (camVideoRef.current) {
         camVideoRef.current.srcObject = stream;
@@ -327,19 +361,77 @@ export default function DocumentsPage() {
     [acceptFile]
   );
 
+  // ย่อ/บีบอัดรูปก่อนอัปโหลด — กล้องมือถือได้ไฟล์ 3-12 MB ซึ่งเกินขีดจำกัดของ Vercel (4.5 MB)
+  // อาการที่เจอจริง: fetch ล้มด้วย "Failed to fetch" เพราะ body ใหญ่เกิน/ฟังก์ชัน timeout
+  const shrinkImage = useCallback(async (f: File): Promise<File> => {
+    const LIMIT = 3.2 * 1024 * 1024;
+    const isHeic = /^image\/(hei[cf])$/i.test(f.type) || /\.(heic|heif)$/i.test(f.name);
+    if (f.size <= LIMIT && !isHeic) return f;
+    try {
+      let src: any;
+      try {
+        src = await createImageBitmap(f);
+      } catch {
+        const url = URL.createObjectURL(f);
+        src = await new Promise<HTMLImageElement>((ok, no) => {
+          const img = new Image();
+          img.onload = () => ok(img);
+          img.onerror = () => no(new Error('decode'));
+          img.src = url;
+        });
+        URL.revokeObjectURL(url);
+      }
+      const w = src.width as number;
+      const h = src.height as number;
+      const scale = Math.min(1, 1600 / Math.max(w, h));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(w * scale));
+      canvas.height = Math.max(1, Math.round(h * scale));
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return f;
+      ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise<Blob | null>(r => canvas.toBlob(b => r(b), 'image/jpeg', 0.85));
+      if (!blob) return f;
+      const name = (f.name.replace(/\.[^.]+$/, '') || 'scan') + '.jpg';
+      return new File([blob], name, { type: 'image/jpeg' });
+    } catch {
+      return f; // ย่อไม่ได้ (เช่น HEIC ที่เบราว์เซอร์ถอดไม่ได้) — ส่งไฟล์เดิม
+    }
+  }, []);
+
   const scan = async () => {
     if (!file) return;
     setError(null);
     setNotice(null);
     setStage('uploading');
     try {
+      const upload = await shrinkImage(file);
+      if (upload.size > 4.2 * 1024 * 1024) {
+        setError(`รูปใหญ่เกินไป (${(upload.size / 1024 / 1024).toFixed(1)} MB) — ถ่ายใหม่ให้ชัดแต่เล็กลง หรือใช้ปุ่ม "ถ่ายจากแอปกล้อง"`);
+        setStage('idle');
+        return;
+      }
+      if (/hei[cf]/i.test(upload.type) || /\.hei[cf]$/i.test(upload.name)) {
+        setError('รูปเป็น HEIC ของ iPhone ที่เบราว์เซอร์ย่อไม่ได้ — ตั้งค่า → กล้อง → รูปแบบ → "ความเข้ากันได้สูงสุด" แล้วถ่ายใหม่ (หรือใช้ปุ่มถ่ายในหน้าเว็บ)');
+        setStage('idle');
+        return;
+      }
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', upload);
 
       setStage('reading');
       const res = await fetch('/api/ocr', { method: 'POST', body: formData });
       setStage('verifying');
-      const data = await res.json();
+      const data = await res.json().catch(() => ({} as any));
+      if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
+        setError(
+          res.status === 413
+            ? 'ไฟล์ใหญ่เกินขีดจำกัดของเซิร์ฟเวอร์ (413) — ลองถ่ายใหม่หรือย่อรูป'
+            : `เซิร์ฟเวอร์ตอบผิดรูป (HTTP ${res.status}) — ลองกดสแกนอีกครั้ง`
+        );
+        setStage('idle');
+        return;
+      }
 
       if (!res.ok || !data.success) {
         const isKeyError = data.code === 'INVALID_KEY' || data.code === 'MISSING_KEY' || data.code === 'QUOTA_EXCEEDED';
@@ -374,7 +466,15 @@ export default function DocumentsPage() {
       });
       setStage('preview');
     } catch (e: any) {
-      setError(e.message || 'เกิดข้อผิดพลาดในการอ่านเอกสาร');
+      const msg = String(e?.message || '');
+      if (/failed to fetch|networkerror|load failed|network request failed/i.test(msg)) {
+        setError(
+          `เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ (Failed to fetch) — ไฟล์ ${(file.size / 1024 / 1024).toFixed(1)} MB ` +
+          'มักเกิดจากไฟล์ใหญ่เกิน 4 MB หรือสัญญาณเน็ตหลุด · ลองกดสแกนอีกครั้ง ถ้ายังไม่ผ่านให้ถ่ายใหม่ให้เล็กลง'
+        );
+      } else {
+        setError(msg || 'เกิดข้อผิดพลาดในการอ่านเอกสาร');
+      }
       setStage('idle');
     }
   };
@@ -543,26 +643,54 @@ export default function DocumentsPage() {
                       <div className="text-3xl mb-1">📱</div>
                       <div className="text-sm font-semibold text-slate-600 mb-1">สแกนใบเสร็จด้วยกล้องมือถือ</div>
                       <div className="text-[11px] text-slate-400 mb-3">
-                        ปุ่มแรก = เปิดกล้องสดในหน้านี้ (ไม่เปิดคลังรูป) · ปุ่มที่สอง = ถ่ายจากแอปกล้องแล้วเลือกภาพ
+                        เลือกวิธีที่สะดวก — กล้องสดในหน้าเว็บ หรือใช้แอปกล้องของเครื่อง (ได้ทุกiPhone/Android)
                       </div>
                       <div className="flex flex-col gap-2">
+                        {camSupport === 'ready' && (
+                          <button
+                            type="button"
+                            onClick={openCamera}
+                            className="w-full py-3.5 rounded-xl bg-[#475569] text-white text-sm font-bold"
+                          >
+                            📷 เปิดกล้องสดในหน้านี้
+                          </button>
+                        )}
                         <button
                           type="button"
-                          onClick={openCamera}
-                          className="w-full py-3.5 rounded-xl bg-[#475569] text-white text-sm font-bold"
+                          onClick={() => phoneCamRef.current?.click()}
+                          className="w-full py-3 rounded-xl bg-[#c8a84e] text-[#3f3a2f] text-sm font-bold"
                         >
-                          📷 เปิดกล้องสดในหน้านี้
+                          📷 ถ่ายด้วยกล้องเครื่อง (เปิดแอปกล้อง)
                         </button>
                         <button
                           type="button"
                           onClick={() => inputRef.current?.click()}
-                          className="w-full py-3 rounded-xl bg-[#c8a84e] text-[#3f3a2f] text-sm font-bold"
+                          className="w-full py-2.5 rounded-xl border border-slate-300 bg-white text-[#475569] text-xs font-semibold"
                         >
-                          🖼 ถ่ายจากแอปกล้อง / เลือกจากคลังภาพ
+                          🖼 เลือกรูปจากคลังภาพ
                         </button>
                       </div>
+                      {(camSupport === 'unsupported' || camSupport === 'denied') && (
+                        <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-left text-[11px] text-amber-900">
+                          <div className="font-semibold mb-1">
+                            {camSupport === 'denied' ? 'สิทธิ์กล้องถูกปิดอยู่' : 'เบราว์เซอร์นี้ไม่รองรับกล้องในเว็บ'}
+                          </div>
+                          {camSupport === 'denied' ? (
+                            <div>
+                              {isIOS
+                                ? 'เปิด: ตั้งค่า → Safari → กล้อง → อนุญาต (หรือ ตั้งค่า → ' + 'Chrome → กล้อง)'
+                                : 'เปิด: แตะ 🔒/⚙️ ข้างที่อยู่เว็บ → สิทธิ์ → กล้อง → อนุญาต แล้วโหลดหน้าใหม่'}
+                            </div>
+                          ) : (
+                            <div>
+                              มักเกิดในเบราว์เซอร์ของ LINE/Facebook — ใช้ปุ่มสีทองด้านบนถ่ายจากแอปกล้องได้เลย
+                              หรือเปิดลิงก์นี้ใน {isIOS ? 'Safari' : 'Chrome'}
+                            </div>
+                          )}
+                        </div>
+                      )}
                       <div className="text-[11px] text-slate-400 mt-2">
-                        ถ้ากดปุ่มแรกแล้วยังเปิดคลังรูป = เบราว์เซอร์ในแอปบล็อกกล้อง → คัดลอกลิงก์ไปเปิดใน Chrome/Safari (ปุ่มคัดลอกด้านล่าง)
+                        ปุ่มสีทองใช้ได้ทุกเครื่อง (iPhone/Android) ทุกเบราว์เซอร์ · ปุ่มเทา = กล้องสดในหน้าเว็บ
                       </div>
                       <div className="text-[11px] text-slate-400 mt-1">
                         รองรับ JPG / PNG / WEBP · รูปจะถูกอ่านยอดเงินอัตโนมัติ
@@ -674,6 +802,7 @@ export default function DocumentsPage() {
                 <video
                   ref={camVideoRef}
                   playsInline
+                  autoPlay
                   muted
                   className="w-full max-w-[520px] rounded-xl bg-black aspect-video object-cover"
                 />
