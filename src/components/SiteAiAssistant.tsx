@@ -47,7 +47,7 @@ export default function SiteAiAssistant() {
   if (hide) return null;
 
   return (
-    <div className="fixed left-3 bottom-12 z-[70] print:hidden">
+    <div className="fixed right-3 z-[70] print:hidden" style={{ bottom: 'calc(var(--visitor-h, 56px) + 12px)' }}>
       {open ? (
         <div className="w-[92vw] max-w-[360px] rounded-2xl bg-white border border-[#dbeafe] shadow-2xl overflow-hidden">
           <div className="flex items-center justify-between gap-2 px-3 py-2 bg-[#0b2b5b] text-white">

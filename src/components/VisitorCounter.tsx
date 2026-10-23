@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 /**
  * VisitorCounter — แถบล่างติดจอ แสดง "สมาชิกทั้งหมด" + "ผู้เยี่ยมชมทั้งหมด" ตลอดเวลา
@@ -29,12 +29,28 @@ export default function VisitorCounter() {
       .catch(() => {});
   }, []);
 
+  // วัดความสูงจริงของแถบ แล้วบอกให้ globals.css เว้นที่ให้เนื้อหา (กันข้อความถูกบัง)
+  const barRef = useRef<HTMLDivElement | null>(null);
+  useLayoutEffect(() => {
+    if (!mounted) return;
+    const el = barRef.current;
+    if (!el) return;
+    const apply = () => document.documentElement.style.setProperty('--visitor-h', `${Math.ceil(el.getBoundingClientRect().height)}px`);
+    apply();
+    let ro: ResizeObserver | null = null;
+    try { ro = new ResizeObserver(apply); ro.observe(el); } catch { /* older browsers */ }
+    window.addEventListener('resize', apply);
+    return () => { try { ro?.disconnect(); } catch {} window.removeEventListener('resize', apply); };
+  }, [mounted]);
+
   if (!mounted) return null;
 
   return (
     <div
       className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-slate-200 py-2 px-3 text-center text-[11px] sm:text-xs text-slate-700 z-50 overflow-hidden leading-snug"
       style={{ fontFamily: "'Sarabun','Noto Sans Thai',sans-serif" }}
+      data-visitor-bar="1"
+      ref={barRef}
     >
       {/* ชื่อโดเมน + ข้อความสงวนสิทธิ (เพิ่มตามคำสั่ง) */}
       <div className="text-[10px] sm:text-[11px] text-slate-600 tracking-tight">ai-insurance-network-tree.vercel.app</div>

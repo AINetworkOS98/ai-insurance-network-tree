@@ -29,3 +29,10 @@ html::-webkit-scrollbar{ display:none; }
 @keyframes showcaseGrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 .animate-showcase-fade { animation: showcaseFade .4s ease both; }
 .animate-showcase-grow { animation: showcaseGrow 7s linear infinite; transform-origin: left; }
+/* ── กัน "ข้อความถูกบังด้วยจอ" ─────────────────────────────────────────────────
+   VisitorCounter เป็นแถบ fixed bottom-0 z-50 สูง ~56-92px: ถ้าเนื้อหาไม่มีที่ว่างด้านล่าง
+   ข้อความ/ตารางบรรทัดสุดท้ายจะจมอยู่ใต้แถบนั้น (เห็นในหน้า /commissions)
+   ⇒ เว้น padding-bottom ให้ body เท่าความสูงจริงของแถบ (component วัดแล้วตั้ง --visitor-h) */
+:root{ --visitor-h: 56px; }
+body{ padding-bottom: calc(var(--visitor-h) + 14px); }
+@media (max-width: 640px){ body{ padding-bottom: calc(var(--visitor-h) + 18px); } }
