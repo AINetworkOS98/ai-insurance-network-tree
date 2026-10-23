@@ -34,12 +34,19 @@ const CAT_FACTOR: { match: RegExp; factor: number }[] = [
 /** หญิงเบี้ยถูกกว่าชายในทุนเดียวกัน (อัตรามาตรฐานอุตสาหกรรม) */
 const GENDER_FACTOR = { male: 1, female: 0.88 } as const;
 
+/** ตัวคูณเบี้ย "อนุสัญญา/สัญญาเพิ่มเติม" ต่อทุน 1,000 บาท (ต่ำกว่าสัญญาหลัก เพราะไม่มีความคุ้มครองชีวิตเต็มจำนวน) */
+export const RIDER_FACTOR = 0.35;
+
 /** เพดานลดหย่อนเบี้ยประกันชีวิต (กรมสรรพากร): ที่จ่ายจริงไม่เกิน 100,000 บาท/ปี */
 export const LIFE_PREMIUM_TAX_CAP = 100_000;
+
+export type RiderInput = { name?: string | null; cat?: string | null; cover?: number | string | null };
 
 export type PremiumInput = {
   planName?: string | null;
   planCat?: string | null;
+  /** อนุสัญญา/สัญญาเพิ่มเติมที่เลือกไว้ (ไม่บังคับ) */
+  riders?: RiderInput[] | null;
   gender?: 'male' | 'female' | string | null;
   age?: number | string | null;
   cover?: number | string | null;
@@ -48,6 +55,9 @@ export type PremiumInput = {
 
 export type PremiumEstimate = {
   ok: boolean;
+  mainPremium: number;
+  riderPremium: number;
+  ridersUsed: { name: string; premium: number }[];
   perThousand: number;
   catFactor: number;
   genderFactor: number;
@@ -85,16 +95,32 @@ export function estimatePremium(input: PremiumInput): PremiumEstimate {
   if (age > 70) warnings.push('อายุเกินช่วงที่ระบบประมาณการได้ — ต้องยืนยันกับบริษัท');
   if (cover && cover < 100_000) warnings.push('ทุนประกันต่ำกว่า 100,000 บาท — บริษัทอาจไม่รับหรือมีเงื่อนไขพิเศษ');
 
-  const perYear = ok ? Math.round((cover / 1000) * perThousand * catFactor * genderFactor) : 0;
+  const mainPremium = ok ? Math.round((cover / 1000) * perThousand * catFactor * genderFactor) : 0;
+
+  // ── อนุสัญญา/สัญญาเพิ่มเติม: คิดจากทุนของอนุสัญญา (ถ้าไม่ระบุ ใช้ทุนเดียวกับสัญญาหลัก) ──
+  const ridersUsed: { name: string; premium: number }[] = [];
+  if (ok && Array.isArray(input.riders)) {
+    for (const rd of input.riders) {
+      const rCover = Math.round(num(rd?.cover, cover)) || cover;
+      const rPrem = Math.round((rCover / 1000) * perThousand * RIDER_FACTOR * genderFactor);
+      if (rPrem > 0) ridersUsed.push({ name: String(rd?.name || rd?.cat || 'อนุสัญญา'), premium: rPrem });
+    }
+  }
+  const riderPremium = ridersUsed.reduce((s, r) => s + r.premium, 0);
+  const perYear = mainPremium + riderPremium;
   const perMonth = Math.round(perYear / 12);
   const taxDeductible = Math.min(perYear, LIFE_PREMIUM_TAX_CAP);
   const totalPremium = perYear * (payYears || 0);
 
-  const basis = `อัตราอ้างอิง ${perThousand.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท/ทุน 1,000 บาท/ปี` +
-    ` × ตัวคูณหมวด ${catFactor.toFixed(2)} × ตัวคูณเพศ ${genderFactor.toFixed(2)}`;
+  const basis = `สัญญาหลัก: อัตราอ้างอิง ${perThousand.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท/ทุน 1,000 บาท/ปี` +
+    ` × ตัวคูณหมวด ${catFactor.toFixed(2)} × ตัวคูณเพศ ${genderFactor.toFixed(2)}` +
+    (ridersUsed.length ? ` · อนุสัญญา ${ridersUsed.length} รายการ × ตัวคูณ ${RIDER_FACTOR}` : ' · ไม่มีอนุสัญญา');
 
   return {
     ok,
+    mainPremium,
+    riderPremium,
+    ridersUsed,
     perThousand,
     catFactor,
     genderFactor,

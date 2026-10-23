@@ -4,6 +4,7 @@ import Header from '@/components/Header';
 import LineOaCard from '@/components/LineOaCard';
 import Sidebar from '@/components/Sidebar';
 import { estimatePremium, LIFE_PREMIUM_TAX_CAP, PREMIUM_RATE_VERSION } from '@/lib/premiumEstimate';
+import { isRiderCat } from '@/lib/projectSamples';
 import Link from 'next/link';
 import AdminRightsPanel, { useAdminMe } from '@/components/AdminRightsPanel';
 
@@ -126,6 +127,7 @@ export default function DocumentsPage() {
   // ── เครื่องคำนวณเบี้ยประกันชีวิต (วางก่อนขั้นสร้าง/อัปโหลดใบเสร็จ) ─────────────
   const [premPlans, setPremPlans] = useState<any[]>([]);
   const [premPicked, setPremPicked] = useState<any>(null);
+  const [premRider, setPremRider] = useState<any>(null);
   const [premGender, setPremGender] = useState<'ชาย' | 'หญิง'>('ชาย');
   const [premAge, setPremAge] = useState('30');
   const [premCover, setPremCover] = useState('1000000');
@@ -727,7 +729,8 @@ export default function DocumentsPage() {
       try {
         const r = await fetch('/api/commissions?q=&category=', { credentials: 'include' });
         const j = await r.json();
-        const list = (j?.products || []).filter((x: any) => !/เพิ่มเติม| rider/i.test(String(x?.cat || '')));
+        // เก็บทั้งชุด — แยกเป็น "สัญญาหลัก" กับ "อนุสัญญา/สัญญาเพิ่มเติม" ตอน render
+        const list = Array.isArray(j?.products) ? j.products : [];
         if (alive) setPremPlans(list);
       } catch { /* คำนวณด้วยค่าที่กรอกได้แม้ไม่มีรายการ */ }
     })();
@@ -899,14 +902,24 @@ export default function DocumentsPage() {
             </div>
             <div className="p-4 sm:p-5">
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-                <label className="text-[11px] font-medium text-slate-600 lg:col-span-2">แบบประกัน (สัญญาหลัก)
+                <label className="text-[11px] font-medium text-slate-600 lg:col-span-2">สัญญาหลัก (บังคับเลือก 1 แบบ)
                   <select
                     value={premPicked?.c || ''}
                     onChange={(e) => { const hit = premPlans.find((x) => x.c === e.target.value); setPremPicked(hit || null); setPremResult(null); }}
                     className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
                   >
-                    <option value="">— เลือกแบบประกัน —</option>
-                    {premPlans.slice(0, 150).map((x) => <option key={x.c} value={x.c}>{x.c} · {x.n} ({x.cat})</option>)}
+                    <option value="">— เลือกสัญญาหลัก —</option>
+                    {premPlans.filter((x) => !isRiderCat(x.cat)).slice(0, 200).map((x) => <option key={x.c} value={x.c}>{x.c} · {x.n} ({x.cat})</option>)}
+                  </select>
+                </label>
+                <label className="text-[11px] font-medium text-slate-600 lg:col-span-2">อนุสัญญา / สัญญาเพิ่มเติม (ไม่บังคับ)
+                  <select
+                    value={premRider?.c || ''}
+                    onChange={(e) => { const hit = premPlans.find((x) => x.c === e.target.value); setPremRider(hit || null); setPremResult(null); }}
+                    className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                  >
+                    <option value="">— ไม่มีอนุสัญญา —</option>
+                    {premPlans.filter((x) => isRiderCat(x.cat)).slice(0, 300).map((x) => <option key={x.c} value={x.c}>{x.c} · {x.n} ({x.cat})</option>)}
                   </select>
                 </label>
                 <label className="text-[11px] font-medium text-slate-600">เพศ
@@ -933,6 +946,7 @@ export default function DocumentsPage() {
                 <button type="button"
                   onClick={() => setPremResult(estimatePremium({
                     planName: premPicked?.n, planCat: premPicked?.cat,
+                    riders: premRider ? [{ name: `${premRider.c} ${premRider.n}`, cat: premRider.cat, cover: premCover }] : [],
                     gender: premGender === 'หญิง' ? 'female' : 'male',
                     age: premAge, cover: premCover, payYears: premPayYears,
                   }))}
@@ -945,7 +959,9 @@ export default function DocumentsPage() {
                       setMkOpen(true);
                       setMk((prev) => ({
                         ...prev,
-                        planName: premPicked ? `${premPicked.c} ${premPicked.n}` : prev.planName,
+                        planName: premPicked
+                          ? `${premPicked.c} ${premPicked.n}${premRider ? ` + ${premRider.c} ${premRider.n}` : ''}`
+                          : prev.planName,
                         amount: String(premResult.perYear || ''),
                       }));
                     }}
@@ -961,7 +977,9 @@ export default function DocumentsPage() {
                 <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                     {[
-                      { l: 'เบี้ยต่อปี (ประมาณการ)', v: `${Number(premResult.perYear || 0).toLocaleString()} ฿`, s: `${premPicked?.c || '-'} · ${premGender} ${premAge} ปี` },
+                      { l: 'เบี้ยต่อปี (ประมาณการ)', v: `${Number(premResult.perYear || 0).toLocaleString()} ฿`, s: `${premPicked?.c || '-'}${premRider ? ` + ${premRider.c}` : ''} · ${premGender} ${premAge} ปี` },
+                      { l: 'แยก: สัญญาหลัก', v: `${Number(premResult.mainPremium || 0).toLocaleString()} ฿`, s: 'สัญญาหลักเท่านั้น' },
+                      { l: 'แยก: อนุสัญญา', v: `${Number(premResult.riderPremium || 0).toLocaleString()} ฿`, s: premResult.ridersUsed?.length ? `${premResult.ridersUsed.length} รายการ` : 'ยังไม่เลือกอนุสัญญา' },
                       { l: 'เฉลี่ยต่อเดือน', v: `${Number(premResult.perMonth || 0).toLocaleString()} ฿`, s: 'เบี้ยรายปี ÷ 12' },
                       { l: 'ลดหย่อนภาษีได้สูงสุด', v: `${Number(premResult.taxDeductible || 0).toLocaleString()} ฿`, s: `เพดาน ${LIFE_PREMIUM_TAX_CAP.toLocaleString()} ฿/ปี` },
                       { l: `รวมตลอด ${Number(premResult.payYears || 0)} ปี`, v: `${Number(premResult.totalPremium || 0).toLocaleString()} ฿`, s: 'เบี้ยต่อปี × ระยะชำระ' },
