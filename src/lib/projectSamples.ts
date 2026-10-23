@@ -469,9 +469,16 @@ const RIDER_CODE_RE = /^LV-(รพ|OP\d*|HHA|NHG|SPH|VP|C\d+)$/i;
 
 export function isRiderProduct(p: { c?: string | null; n?: string | null; cat?: string | null } | null | undefined): boolean {
   if (!p) return false;
-  if (isRiderCat(String(p.cat || ''))) return true;
-  if (RIDER_CODE_RE.test(String(p.c || ''))) return true;
-  if (RIDER_NAME_RE.test(String(p.n || ''))) return true;
+  const code = String(p.c || '');
+  const name = String(p.n || '');
+  const cat = String(p.cat || '');
+  if (isRiderCat(cat)) return true;
+  // หมวด LifeVerse (LV-*) ทั้งหมด = อนุสัญญา/สัญญาเพิ่มเติม (ตามที่เจ้าของระบบยืนยัน)
+  if (cat === 'LifeVerse') return true;
+  if (/^LV-/i.test(code)) return true;
+  if (/^LV\b/i.test(name)) return true;
+  if (RIDER_CODE_RE.test(code)) return true;
+  if (RIDER_NAME_RE.test(name)) return true;
   return false;
 }
 
