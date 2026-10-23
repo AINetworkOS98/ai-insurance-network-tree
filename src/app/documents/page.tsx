@@ -773,7 +773,9 @@ export default function DocumentsPage() {
   /** เปิดตัวช่วยกรอก: ดึงข้อมูลที่ระบบรู้อยู่แล้ว (รหัสตัวแทน/สมาชิก) มาเติมให้ก่อน */
   const openWizard = async () => {
     setWzOpen(true); setWzStep(1); setWzErr(null); setWzDone(null);
-    if (wz.agentCode) return;
+    // เติมจากค่าที่หน้านี้ดึงไว้แล้วก่อน (เร็วและไม่ต้องรอเน็ต) แล้วค่อยยืนยันจากเซสชัน
+    if (!wz.agentCode && mk.agentCode) setWz((prev: any) => ({ ...prev, agentCode: prev.agentCode || mk.agentCode }));
+    if (wz.agentCode || mk.agentCode) return;
     try {
       const r = await fetch('/api/auth/me', { credentials: 'include' });
       const u = (await r.json().catch(() => ({})))?.user || null;
