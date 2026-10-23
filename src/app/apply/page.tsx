@@ -124,6 +124,7 @@ export default function ApplyPage() {
 
   // ── เครื่องคำนวณเบี้ยประกันชีวิต (ประมาณการ) ──────────────────────────────────
   const [premCalcOpen, setPremCalcOpen] = useState(true);
+  const [premRider, setPremRider] = useState<any>(null);
   const [premResult, setPremResult] = useState<any>(null);
   const ageNum = Number(age) || 30;
   const coverNum = Number(String(cover).replace(/[^\d]/g, '')) || 1000000;
@@ -237,14 +238,24 @@ export default function ApplyPage() {
 
             <div className="p-4 sm:p-5">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                <label className="text-[11px] font-medium text-slate-600 lg:col-span-2">แบบประกัน (สัญญาหลัก)
+                <label className="text-[11px] font-medium text-slate-600 lg:col-span-2">สัญญาหลัก (บังคับเลือก 1 แบบ)
                   <select
                     value={picked?.c || ''}
                     onChange={(e) => { const hit = mains.find((m: any) => m.c === e.target.value); setPicked(hit || null); setPremResult(null); }}
                     className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm"
                   >
-                    <option value="">— เลือกแบบประกัน —</option>
-                    {mains.slice(0, 120).map((m: any) => <option key={m.c} value={m.c}>{m.c} · {m.n} ({m.cat})</option>)}
+                    <option value="">— เลือกสัญญาหลัก —</option>
+                    {mains.slice(0, 200).map((m: any) => <option key={m.c} value={m.c}>{m.c} · {m.n} ({m.cat})</option>)}
+                  </select>
+                </label>
+                <label className="text-[11px] font-medium text-slate-600 lg:col-span-2">อนุสัญญา / สัญญาเพิ่มเติม (ไม่บังคับ)
+                  <select
+                    value={premRider?.c || ''}
+                    onChange={(e) => { const hit = riderPlans.find((m: any) => m.c === e.target.value); setPremRider(hit || null); setPremResult(null); }}
+                    className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm"
+                  >
+                    <option value="">— ไม่มีอนุสัญญา —</option>
+                    {riderPlans.slice(0, 300).map((m: any) => <option key={m.c} value={m.c}>{m.c} · {m.n} ({m.cat})</option>)}
                   </select>
                 </label>
                 <label className="text-[11px] font-medium text-slate-600">เพศ
@@ -283,7 +294,12 @@ export default function ApplyPage() {
                   {premCalcOpen ? 'ซ่อนเครื่องคำนวณ' : 'เปิดเครื่องคำนวณเบี้ย'}
                 </button>
                 <button type="button"
-                  onClick={() => setPremResult(estimatePremium({ planName: picked?.n, planCat: picked?.cat, gender: gender === 'หญิง' ? 'female' : 'male', age: ageNum, cover: coverNum, payYears: Number(payYears) || 10 }))}
+                  onClick={() => setPremResult(estimatePremium({
+                    planName: picked?.n, planCat: picked?.cat,
+                    riders: premRider ? [{ name: `${premRider.c} ${premRider.n}`, cat: premRider.cat, cover: coverNum }] : [],
+                    gender: gender === 'หญิง' ? 'female' : 'male',
+                    age: ageNum, cover: coverNum, payYears: Number(payYears) || 10,
+                  }))}
                   className="rounded-full bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:opacity-95">
                   คำนวณเบี้ยประกันชีวิต
                 </button>
@@ -298,7 +314,9 @@ export default function ApplyPage() {
                 <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                     {[
-                      { l: 'เบี้ยต่อปี (ประมาณการ)', v: `${fmt(premResult.perYear)} ฿`, s: `${(picked?.c || '-')} · ${gender} ${ageNum} ปี` },
+                      { l: 'เบี้ยต่อปี (ประมาณการ)', v: `${fmt(premResult.perYear)} ฿`, s: `${(picked?.c || '-')}${premRider ? ` + ${premRider.c}` : ''} · ${gender} ${ageNum} ปี` },
+                      { l: 'แยก: สัญญาหลัก', v: `${fmt(premResult.mainPremium)} ฿`, s: 'สัญญาหลักเท่านั้น' },
+                      { l: 'แยก: อนุสัญญา', v: `${fmt(premResult.riderPremium)} ฿`, s: premResult.ridersUsed?.length ? `${premResult.ridersUsed.length} รายการ` : 'ยังไม่เลือกอนุสัญญา' },
                       { l: 'เฉลี่ยต่อเดือน', v: `${fmt(premResult.perMonth)} ฿`, s: 'เบี้ยรายปี ÷ 12' },
                       { l: 'ลดหย่อนภาษีได้สูงสุด', v: `${fmt(premResult.taxDeductible)} ฿`, s: `เพดาน ${fmt(LIFE_PREMIUM_TAX_CAP)} ฿/ปี` },
                       { l: `รวมตลอด ${premResult.payYears || 0} ปี`, v: `${fmt(premResult.totalPremium)} ฿`, s: 'เบี้ยต่อปี × ระยะชำระ' },
@@ -320,7 +338,14 @@ export default function ApplyPage() {
                     </ul>
                   )}
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <button type="button" onClick={() => setStep(2)}
+                    <button type="button"
+                      onClick={() => {
+                        // พาอนุสัญญาที่เลือกไว้เข้าเคสด้วย (กันซ้ำ)
+                        if (premRider && !riders.some((r) => r.code === premRider.c)) {
+                          setRiders([...riders, { code: premRider.c, name: premRider.n, cat: premRider.cat }]);
+                        }
+                        setStep(2);
+                      }}
                       className="rounded-full bg-navy px-4 py-2 text-[11px] font-bold text-white">
                       ใช้แบบนี้กรอกข้อมูลต่อ →
                     </button>
