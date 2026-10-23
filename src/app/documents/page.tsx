@@ -115,6 +115,17 @@ export default function DocumentsPage() {
   const [mk, setMk] = useState<{ agentCode: string; receiptNumber: string; referenceNumber: string; amount: string; paidAt: string; policyNo: string; planName: string }>({
     agentCode: '', receiptNumber: '', referenceNumber: '', amount: '', paidAt: '', policyNo: '', planName: '',
   });
+  // ── ตัวช่วยกรอกทีละขั้น "ตามที่โปรแกรม/ใบเสร็จกำหนด" แล้วจบด้วยการสแกน ──────────
+  const [wzOpen, setWzOpen] = useState(false);
+  const [wzStep, setWzStep] = useState(1);
+  const [wzBusy, setWzBusy] = useState(false);
+  const [wzErr, setWzErr] = useState<string | null>(null);
+  const [wzDone, setWzDone] = useState<any>(null);
+  const [wz, setWz] = useState<any>({
+    docType: 'receipt', agentCode: '', planName: '', policyNo: '', policyTermYears: '',
+    paymentMethod: 'รายปี', installmentLabel: '01/01', bank: '',
+    amount: '', amountLife: '', paidAt: '', receiptNumber: '', referenceNumber: '',
+  });
   const [ocr, setOcr] = useState<OCRData | null>(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<{ amount: string; date: string; payerName: string; receiverName: string; referenceNumber: string }>({ amount: '', date: '', payerName: '', receiverName: '', referenceNumber: '' });
@@ -742,6 +753,52 @@ export default function DocumentsPage() {
     }
   };
 
+  // ── ตัวเลือกที่ยึดตามรูปแบบใบเสร็จ/โปรแกรมจริง (ไม่แต่งผลิตภัณฑ์ขึ้นเอง) ──────
+  const WZ_DOC_TYPES: [string, string][] = [
+    ['receipt', 'ใบเสร็จรับเงิน'],
+    ['premium_certificate', 'หนังสือรับรองการชำระเบี้ยประกันภัย'],
+    ['bank_slip', 'สลิปจ่ายบิล / ใบโอนเงิน'],
+  ];
+  const WZ_PAY_METHODS = ['รายปี', 'ราย 6 เดือน', 'ราย 3 เดือน', 'รายเดือน', 'ชำระครั้งเดียว'];
+  const WZ_BANKS = ['ธ.ก.ส. (BAAC)', 'ธนาคารกรุงเทพ', 'กสิกรไทย', 'ไทยพาณิชย์', 'กรุงไทย', 'กรุงศรีอยุธยา', 'ออมสิน', 'เงินสด/ตัวแทนรับเงิน', 'อื่น ๆ'];
+  const wzSet = (k: string, v: any) => setWz((prev: any) => ({ ...prev, [k]: v }));
+  const wzValid = (st: number) => {
+    if (st === 1) return Boolean(String(wz.agentCode).trim() && String(wz.docType).trim());
+    if (st === 2) return Boolean(String(wz.planName).trim());
+    if (st === 3) return Boolean(String(wz.paymentMethod).trim());
+    if (st === 4) return Boolean(Number(String(wz.amount).replace(/[^\d.]/g, '')) > 0 && String(wz.paidAt).trim() && (String(wz.receiptNumber).trim() || String(wz.referenceNumber).trim()));
+    return true;
+  };
+
+  /** เปิดตัวช่วยกรอก: ดึงข้อมูลที่ระบบรู้อยู่แล้ว (รหัสตัวแทน/สมาชิก) มาเติมให้ก่อน */
+  const openWizard = async () => {
+    setWzOpen(true); setWzStep(1); setWzErr(null); setWzDone(null);
+    if (wz.agentCode) return;
+    try {
+      const r = await fetch('/api/auth/me', { credentials: 'include' });
+      const u = (await r.json().catch(() => ({})))?.user || null;
+      const code = String(u?.memberCode || u?.referralCode || '');
+      if (code) setWz((prev: any) => ({ ...prev, agentCode: prev.agentCode || code }));
+    } catch { /* กรอกเองได้ */ }
+  };
+
+  /** จบกระบวนการ: บันทึกใบเสร็จ (ผูก agentCode) แล้วต่อด้วยการสแกนใบเสร็จรับเงิน */
+  const submitWizard = async () => {
+    setWzErr(null); setWzBusy(true);
+    try {
+      const res = await fetch('/api/documents/create-manual', {
+        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...wz, memberId }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j.ok) { setWzErr(j.error || 'บันทึกไม่สำเร็จ'); return; }
+      setWzDone(j.receipt || j);
+      await loadReceipts();
+    } catch (e: any) {
+      setWzErr(e?.message || 'เชื่อมต่อไม่สำเร็จ');
+    } finally { setWzBusy(false); }
+  };
+
   const confPct = ocr ? Math.round(ocr.confidence * 100) : 0;
   const busy = stage !== 'idle' && stage !== 'preview';
 
@@ -954,6 +1011,155 @@ export default function DocumentsPage() {
                 </div>
               </div>
             )}
+
+            {/* ── ตัวช่วยกรอกทีละขั้น ตามที่โปรแกรมกำหนด → จบด้วยการสแกนใบเสร็จ ── */}
+            <div className="mb-3 rounded-xl border border-sky-200 bg-sky-50/60 p-3">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-[#475569]">🧭 กรอกใบเสร็จทีละขั้น (ตามที่โปรแกรมกำหนด)</div>
+                  <div className="text-[11px] leading-relaxed text-slate-500">
+                    กดปุ่มเดียว ระบบดึงข้อมูลที่รู้อยู่แล้วมาเติม แล้วพาเลือกตัวเลือกตามลำดับ 5 ขั้น
+                    (ประเภทเอกสาร → แบบประกัน/กรมธรรม์ → งวดและช่องทางชำระ → ยอด/วันที่/เลขที่ → ตรวจสอบ)
+                    จบแล้วต่อด้วย <b>สแกนใบเสร็จรับเงิน</b>ได้ทันที
+                  </div>
+                </div>
+                <button type="button" onClick={() => (wzOpen ? (setWzOpen(false), setWzStep(1)) : openWizard())}
+                  className="shrink-0 rounded-full bg-sky-600 px-4 py-2 text-xs font-bold text-white">
+                  {wzOpen ? 'ปิด' : 'ดึงข้อมูล + กรอกตามขั้นตอน'}
+                </button>
+              </div>
+
+              {wzOpen && (
+                <div className="mt-3">
+                  <div className="flex flex-wrap items-center gap-1 text-[11px]">
+                    {['ข้อมูลตัวแทน', 'แบบประกัน/กรมธรรม์', 'งวด/ช่องทาง', 'ยอด/วันที่/เลขที่', 'ตรวจสอบ+สแกน'].map((t, i) => (
+                      <span key={t} className={`rounded-full px-2 py-0.5 ${wzStep === i + 1 ? 'bg-sky-600 text-white' : wzStep > i + 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-slate-500 border'}`}>
+                        {i + 1}. {t}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {wzStep === 1 && (<>
+                      <label className="text-xs text-slate-500">ประเภทเอกสาร (ตามที่โปรแกรมออกให้)
+                        <select value={wz.docType} onChange={(e) => wzSet('docType', e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                          {WZ_DOC_TYPES.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
+                        </select>
+                      </label>
+                      <label className="text-xs text-slate-500">รหัสตัวแทนของฉัน *
+                        <input value={wz.agentCode} onChange={(e) => wzSet('agentCode', e.target.value.trim())} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="เช่น 01759064" />
+                      </label>
+                      <div className="sm:col-span-2 text-[11px] text-slate-400">รหัสตัวแทนถูกดึงจากบัญชีที่ล็อกอินให้แล้ว — แก้ได้ถ้าใบเสร็จออกในนามรหัสอื่น</div>
+                    </>)}
+
+                    {wzStep === 2 && (<>
+                      <label className="text-xs text-slate-500">ชื่อแบบประกัน (ตามที่ระบุในกรมธรรม์) *
+                        <input value={wz.planName} onChange={(e) => wzSet('planName', e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="เช่น ไทยประกัน 99/1" list="wz-plans" />
+                        <datalist id="wz-plans">
+                          {Array.from(new Set((receipts || []).map((r: any) => r.planName).filter(Boolean))).slice(0, 20).map((v: any) => <option key={String(v)} value={String(v)} />)}
+                        </datalist>
+                      </label>
+                      <label className="text-xs text-slate-500">เลขกรมธรรม์
+                        <input value={wz.policyNo} onChange={(e) => wzSet('policyNo', e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="เช่น C8009159" />
+                      </label>
+                      <label className="text-xs text-slate-500">ระยะชำระ (ปี)
+                        <input value={wz.policyTermYears} inputMode="numeric" onChange={(e) => wzSet('policyTermYears', e.target.value.replace(/\D/g, '').slice(0, 2))} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="เช่น 10" />
+                      </label>
+                    </>)}
+
+                    {wzStep === 3 && (<>
+                      <label className="text-xs text-slate-500">งวดชำระ *
+                        <select value={wz.paymentMethod} onChange={(e) => wzSet('paymentMethod', e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                          {WZ_PAY_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
+                        </select>
+                      </label>
+                      <label className="text-xs text-slate-500">งวดที่ / จำนวนงวด (รูปแบบ NN/NN)
+                        <input value={wz.installmentLabel} onChange={(e) => wzSet('installmentLabel', e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="01/01" />
+                      </label>
+                      <label className="text-xs text-slate-500">ช่องทางรับชำระ
+                        <select value={wz.bank} onChange={(e) => wzSet('bank', e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                          <option value="">— เลือก —</option>
+                          {WZ_BANKS.map((b) => <option key={b} value={b}>{b}</option>)}
+                        </select>
+                      </label>
+                    </>)}
+
+                    {wzStep === 4 && (<>
+                      <label className="text-xs text-slate-500">ยอดเงินที่ชำระ (บาท) *
+                        <input value={wz.amount} inputMode="decimal" onChange={(e) => wzSet('amount', e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="เช่น 66604.00" />
+                      </label>
+                      <label className="text-xs text-slate-500">วันที่ชำระ *
+                        <input type="date" value={wz.paidAt} onChange={(e) => wzSet('paidAt', e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
+                      </label>
+                      <label className="text-xs text-slate-500">เลขใบเสร็จ
+                        <input value={wz.receiptNumber} onChange={(e) => wzSet('receiptNumber', e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="จาก TL ProPlus" />
+                      </label>
+                      <label className="text-xs text-slate-500">เลขอ้างอิงรายการ
+                        <input value={wz.referenceNumber} onChange={(e) => wzSet('referenceNumber', e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="Ref./Transaction No." />
+                      </label>
+                    </>)}
+
+                    {wzStep === 5 && (
+                      <div className="sm:col-span-2 rounded-lg border bg-white p-3 text-xs text-slate-600">
+                        <div className="font-semibold text-[#475569] mb-2">ตรวจสอบก่อนบันทึก</div>
+                        <div className="grid gap-1 sm:grid-cols-2">
+                          <div>ประเภทเอกสาร: <b>{WZ_DOC_TYPES.find(([v]) => v === wz.docType)?.[1]}</b></div>
+                          <div>รหัสตัวแทน: <b className="font-mono">{wz.agentCode}</b></div>
+                          <div>แบบประกัน: <b>{wz.planName || '-'}</b></div>
+                          <div>กรมธรรม์: <b className="font-mono">{wz.policyNo || '-'}</b></div>
+                          <div>งวด: <b>{wz.paymentMethod} {wz.installmentLabel || ''}</b></div>
+                          <div>ช่องทาง: <b>{wz.bank || '-'}</b></div>
+                          <div>ยอดเงิน: <b>{Number(String(wz.amount).replace(/[^\d.]/g, '') || 0).toLocaleString()} บาท</b></div>
+                          <div>วันที่ชำระ: <b>{wz.paidAt || '-'}</b></div>
+                          <div>เลขใบเสร็จ: <b className="font-mono">{wz.receiptNumber || '-'}</b></div>
+                          <div>เลขอ้างอิง: <b className="font-mono">{wz.referenceNumber || '-'}</b></div>
+                        </div>
+                        <div className="mt-2 text-[11px] text-slate-400">ผู้ออก/ผู้รับเงิน: บมจ.ไทยประกันชีวิต — ระบบตรวจตามมาตรฐานใบเสร็จให้อัตโนมัติ</div>
+                      </div>
+                    )}
+
+                    {wzErr && <p className="sm:col-span-2 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{wzErr}</p>}
+
+                    {wzDone && (
+                      <div className="sm:col-span-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                        ✓ บันทึกใบเสร็จแล้ว — เลขที่ <b className="font-mono">{wzDone.receiptNumber || wzDone.receiptId}</b> · ยอด {(Number(wzDone.amount) || 0).toLocaleString()} บาท
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <label htmlFor="scan-file-input" onClick={() => diag('picker-open', { ok: true, target: 'wizard-scan' })}
+                            className="cursor-pointer rounded-full bg-[#475569] px-3 py-1.5 text-[11px] font-bold text-white">
+                            📷 สแกนใบเสร็จรับเงิน (ต่อทันที)
+                          </label>
+                          <label htmlFor="scan-camera-input" onClick={() => diag('picker-open', { ok: true, target: 'wizard-camera' })}
+                            className="cursor-pointer rounded-full border border-slate-400 bg-white px-3 py-1.5 text-[11px] font-semibold">
+                            ถ่ายด้วยแอปกล้อง
+                          </label>
+                          <button type="button" onClick={() => { setWzOpen(false); setWzStep(1); setWzDone(null); }}
+                            className="rounded-full border px-3 py-1.5 text-[11px] text-slate-600">ปิด</button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="sm:col-span-2 mt-1 flex flex-wrap items-center gap-2">
+                      {wzStep > 1 && !wzDone && (
+                        <button type="button" onClick={() => { setWzErr(null); setWzStep(wzStep - 1); }}
+                          className="rounded-full border px-3 py-1.5 text-xs text-slate-600">← ย้อนกลับ</button>
+                      )}
+                      {wzStep < 5 && (
+                        <button type="button" disabled={!wzValid(wzStep)} onClick={() => { setWzErr(null); if (!wzValid(wzStep)) { setWzErr('กรอกข้อมูลในขั้นนี้ให้ครบก่อน'); return; } setWzStep(wzStep + 1); }}
+                          className="rounded-full bg-sky-600 px-4 py-1.5 text-xs font-bold text-white disabled:opacity-40">
+                          ขั้นถัดไป →
+                        </button>
+                      )}
+                      {wzStep === 5 && !wzDone && (
+                        <button type="button" disabled={wzBusy} onClick={submitWizard}
+                          className="rounded-full bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white disabled:opacity-40">
+                          {wzBusy ? 'กำลังบันทึก…' : 'บันทึกใบเสร็จ (จบกระบวนการ)'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="mb-3">
               <label className="text-xs text-slate-500 block mb-1">รหัสสมาชิก (Member ID)</label>

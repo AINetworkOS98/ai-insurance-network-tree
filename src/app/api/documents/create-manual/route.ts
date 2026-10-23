@@ -64,6 +64,12 @@ export async function POST(req: NextRequest) {
   const referenceNumber = String(b.referenceNumber || '').trim().slice(0, 60) || null;
   const policyNo = String(b.policyNo || '').trim().slice(0, 40) || null;
   const planName = String(b.planName || '').trim().slice(0, 120) || null;
+  // ── ตัวเลือกที่ "โปรแกรม/ใบเสร็จกำหนด" (กรอกตามขั้นตอนในหน้า /documents) ──
+  const docTypeIn = String(b.docType || 'receipt').slice(0, 40);
+  const installmentLabel = String(b.installmentLabel || '').trim().slice(0, 10) || null; // "01/04"
+  const paymentMethod = String(b.paymentMethod || '').trim().slice(0, 60) || null;       // รายปี / ราย 6 เดือน ...
+  const bank = String(b.bank || '').trim().slice(0, 80) || null;
+  const policyTermYears = Number(String(b.policyTermYears ?? '').replace(/\D/g, '')) || null;
   const amount = Number(String(b.amount ?? '').replace(/[^\d.]/g, ''));
   const paidAt = String(b.paidAt || '').trim().slice(0, 20) || null;
 
@@ -122,18 +128,18 @@ export async function POST(req: NextRequest) {
       date: paidAt,
       referenceNumber,
       receiverName: COMPANY,
-      bank: null,
+      bank,
       fingerprint: fp,
       createdAt: new Date().toISOString(),
       receiptNumber,
       policyNo,
       company: COMPANY,
       paidAt,
-      installmentLabel: null,
-      paymentMethod: 'TL ProPlus (สร้างใบเสร็จ)',
+      installmentLabel,
+      paymentMethod: paymentMethod || 'TL ProPlus (สร้างใบเสร็จ)',
       planName,
-      policyTermYears: null,
-      docType: 'receipt',
+      policyTermYears,
+      docType: docTypeIn,
       dedupKey,
       provider: 'tl_proplus',
       confidence: null,
