@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       isAdmin = await isAdminFromPayload(payload).catch(() => false);
       const me = await prisma.user.findUnique({ where: { id: userId }, select: { memberCode: true, email: true, displayName: true } }).catch(() => null);
       memberName = me?.displayName || me?.email || '';
-      mine = new Set([userId, me?.memberCode, me?.email, memberIdParam].filter(Boolean).map(String));
+      mine = new Set([userId, me?.memberCode, me?.email].filter(Boolean).map(String)); // ไม่ใช้ memberId จาก query (กันการดูใบเสร็จคนอื่น)
     }
 
     const snapshot = await db().collection('receipts').limit(500).get();
@@ -84,15 +84,12 @@ export async function DELETE(request: NextRequest) {
     try { payload = verifyToken(token); } catch { return NextResponse.json({ ok: false, error: 'โทเค็นไม่ถูกต้อง' }, { status: 401 }); }
     const userId = String(payload?.sub || '');
 
-    // ── สิทธิการลบ: ผู้ดูแลระบบเท่านั้น (นโยบายเจ้าของระบบ) ──
-    //    ตรวจสิทธิ์ก่อนแตะฐานข้อมูลเสมอ → ผู้ใช้ทั่วไปถูกปฏิเสธทันที ไม่มีการอ่าน/ลบข้อมูลใด ๆ
-    const isAdmin = await isAdminFromPayload(payload).catch(() => false);
-    if (!isAdmin) {
-      return NextResponse.json(
-        { ok: false, error: 'ลบได้เฉพาะผู้ดูแลระบบ — กรุณาติดต่อผู้ดูแลระบบให้ลบเอกสารให้', adminOnly: true },
-        { status: 403 },
-      );
-    }
+    // ── สิทธิการลบ (นโยบายเจ้าของระบบ) ──
+    //   • สมาชิก: ลบได้เฉพาะใบเสร็จของ "รหัสตัวเอง" เพื่อแก้ไขแล้วอัปโหลด/สแกนใหม่
+    //   • ผู้ดูแลระบบขั้นสูง: ลบได้ทุกใบ
+    const { isSystemAdmin } = await import('@/lib/admin');
+    const strictAdmin = await isSystemAdmin(String(payload?.sub || '')).catch(() => ({ ok: false }));
+    const isAdmin = !!strictAdmin?.ok;
 
     const url = new URL(request.url);
     const body = await request.json().catch(() => ({} as any));
@@ -103,6 +100,19 @@ export async function DELETE(request: NextRequest) {
     const snap = await docRef.get();
     if (!snap.exists) return NextResponse.json({ ok: false, error: 'ไม่พบใบเสร็จนี้ในระบบ' }, { status: 404 });
     const data: any = snap.data() || {};
+
+    if (!isAdmin) {
+      // ตัวตนของผู้เรียก = userId · memberCode · email (เทียบกับ memberId ของใบเสร็จ)
+      const me = await prisma.user.findUnique({ where: { id: userId }, select: { memberCode: true, email: true } }).catch(() => null);
+      const identities = new Set([userId, me?.memberCode, me?.email].filter(Boolean).map(String));
+      const owner = String(data?.memberId || '');
+      if (!owner || !identities.has(owner)) {
+        return NextResponse.json(
+          { ok: false, error: 'ลบได้เฉพาะใบเสร็จของรหัสตัวเองเท่านั้น', notOwner: true },
+          { status: 403 },
+        );
+      }
+    }
 
     // ลบไฟล์ต้นฉบับใน Storage ก่อน (ถ้ามี) — ไม่ให้เหลือไฟล์กำพร้า
     if (data.storagePath) {
@@ -313,5 +323,80 @@ async function addCommissionForUpload(memberId: string, receiptId: string) {
     });
   } catch (e: any) {
     console.warn('[documents] commission upload failed:', e?.message);
+  }
+}
+
+/**
+ * PATCH /api/documents  — แก้ไขข้อมูลใบเสร็จ (ผู้ดูแลระบบเท่านั้น)
+ * body: { receiptId, amount?, note?, paidAt?, receiptNumber?, company?, creditedPeriod? }
+ * • แก้ได้ทุกใบ (ตามนโยบาย: Admin แก้ไขได้ทั้งหมด) · บันทึก Audit Log receipt.edited ทุกครั้ง
+ * • ถ้าแก้ยอดเงินและใบเสร็จนี้เคยเข้าระบบผลงาน (countsToward1x5) จะปรับยอด verifiedAmount ตามไปด้วย
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    const token = request.cookies.get('token')?.value
+      || request.cookies.get('auth_token')?.value
+      || (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+    if (!token) return NextResponse.json({ ok: false, error: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
+    let payload: any;
+    try { payload = verifyToken(token); } catch { return NextResponse.json({ ok: false, error: 'โทเค็นไม่ถูกต้อง' }, { status: 401 }); }
+
+    const { isSystemAdmin } = await import('@/lib/admin');
+    const strictAdmin = await isSystemAdmin(String(payload?.sub || '')).catch(() => ({ ok: false }));
+    if (!strictAdmin?.ok) {
+      return NextResponse.json({ ok: false, error: 'แก้ไขได้เฉพาะผู้ดูแลระบบ (Admin)', adminOnly: true }, { status: 403 });
+    }
+
+    const body = await request.json().catch(() => ({} as any));
+    const receiptId = String(body?.receiptId || '').trim();
+    if (!receiptId) return NextResponse.json({ ok: false, error: 'ไม่ระบุใบเสร็จ' }, { status: 400 });
+
+    const ref = db().collection('receipts').doc(receiptId);
+    const snap = await ref.get();
+    if (!snap.exists) return NextResponse.json({ ok: false, error: 'ไม่พบใบเสร็จนี้ในระบบ' }, { status: 404 });
+    const before: any = snap.data() || {};
+
+    const upd: Record<string, any> = { updatedAt: new Date().toISOString(), editedBy: String(payload?.sub || '') };
+    const changed: Record<string, { from: any; to: any }> = {};
+    const setNum = (key: string, v: any) => {
+      const num = Number(String(v).replace(/,/g, ''));
+      if (!Number.isFinite(num) || num < 0) return;
+      if (Number(before[key] ?? NaN) !== num) { upd[key] = num; changed[key] = { from: before[key] ?? null, to: num }; }
+    };
+    const setStr = (key: string, v: any, max = 200) => {
+      const str = String(v ?? '').trim().slice(0, max);
+      if (str === String(before[key] ?? '')) return;
+      upd[key] = str; changed[key] = { from: before[key] ?? null, to: str };
+    };
+
+    if (body.amount !== undefined) { setNum('amount', body.amount); setNum('verifiedAmount', body.amount); }
+    if (body.paidAt !== undefined) setStr('paidAt', body.paidAt, 40);
+    if (body.receiptNumber !== undefined) setStr('receiptNumber', body.receiptNumber, 80);
+    if (body.company !== undefined) setStr('company', body.company, 120);
+    if (body.creditedPeriod !== undefined) setStr('creditedPeriod', body.creditedPeriod, 20);
+    if (body.note !== undefined) {
+      const note = String(body.note ?? '').slice(0, 1000);
+      if (note !== String(before.note ?? '')) { upd.note = note; changed.note = { from: before.note ?? null, to: note }; }
+    }
+
+    if (!Object.keys(changed).length) {
+      return NextResponse.json({ ok: true, changed: 0, message: 'ไม่มีข้อมูลเปลี่ยนแปลง' }, { headers: { 'Cache-Control': 'no-store' } });
+    }
+
+    await ref.set(upd, { merge: true });
+    await prisma.auditLog.create({
+      data: {
+        userId: String(payload?.sub || ''),
+        action: 'receipt.edited',
+        entity: 'FirestoreReceipt',
+        entityId: receiptId,
+        oldValue: changed as any,
+        newValue: upd as any,
+      },
+    }).catch(() => null);
+
+    return NextResponse.json({ ok: true, changed: Object.keys(changed).length, fields: Object.keys(changed) }, { headers: { 'Cache-Control': 'no-store' } });
+  } catch (e: any) {
+    return NextResponse.json({ ok: false, error: 'แก้ไขใบเสร็จไม่สำเร็จ' }, { status: 500 });
   }
 }

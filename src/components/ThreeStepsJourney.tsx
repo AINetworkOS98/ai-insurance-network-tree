@@ -28,8 +28,8 @@ type Copy = {
 
 // ลำดับ/ไอคอน/ลิงก์ ของ 3 ขั้น (คงที่ทั้งสองภาษา)
 const STEP_META = [
-  { n: '1', icon: '🧑‍💼', url: 'https://ai-insurance-network-tree.vercel.app/recruit' },
-  { n: '2', icon: '📝', url: 'https://ai-insurance-network-tree.vercel.app/register' },
+  { n: '1', icon: '📝', url: 'https://ai-insurance-network-tree.vercel.app/register' },
+  { n: '2', icon: '🧑‍💼', url: 'https://ai-insurance-network-tree.vercel.app/recruit' },
   { n: '3', icon: '🧾', url: 'https://ai-insurance-network-tree.vercel.app/documents' },
 ];
 
@@ -42,9 +42,9 @@ const EN: Copy = {
   sideTagline: 'Better Career\nBrighter Future',
   stepLabel: 'STEP',
   steps: [
-    { title: 'Become a Prospective Agent', desc: 'Start your journey by registering as a prospective life insurance agent.', cta: 'Become a Prospective Agent' },
-    { title: 'Register Your Interest', desc: 'Complete the expression-of-interest registration to continue the application process.', cta: 'Register Your Interest' },
-    { title: 'Submit Your Payment Receipt', desc: 'Upload or submit your payment receipt through the designated document submission page.', cta: 'Submit Payment Receipt' },
+    { title: 'Create Your Account', desc: 'Register with your email and password, then verify your email address.', cta: 'Go to Registration' },
+    { title: 'Apply as a Prospective Agent', desc: 'Submit the prospective-agent application to continue the selection process.', cta: 'Go to Agent Application' },
+    { title: 'Upload Your Payment Receipt', desc: 'Upload the receipt so the system reads the real amount and checks eligibility.', cta: 'Go to Receipt Upload' },
   ],
   benefits: [
     { icon: '🚀', title: 'Simple', sub: 'Easy to get started' },
@@ -67,9 +67,9 @@ const TH: Copy = {
   sideTagline: 'เริ่มวันนี้\nเพื่ออนาคตที่ดีกว่า',
   stepLabel: 'ขั้นตอน',
   steps: [
-    { title: 'สมัครเป็นตัวแทน\n(ผู้มุ่งหวัง)', desc: 'เริ่มต้นเส้นทางตัวแทนประกันชีวิต โดยสมัครเป็นผู้มุ่งหวังตัวแทน', cta: 'เข้าสู่หน้าสมัครตัวแทน' },
-    { title: 'สมัครแสดงความสนใจ', desc: 'ลงทะเบียนแสดงความสนใจ เพื่อดำเนินการในขั้นตอนถัดไป', cta: 'ลงทะเบียนแสดงความสนใจ' },
-    { title: 'ส่งใบเสร็จรับเงิน', desc: 'ส่งเอกสารใบเสร็จรับเงินผ่านระบบออนไลน์ ตามขั้นตอนที่กำหนด', cta: 'ส่งใบเสร็จรับเงิน' },
+    { title: 'ลงทะเบียน\nสมัครสมาชิก', desc: 'สมัครบัญชีด้วยอีเมลและรหัสผ่าน แล้วยืนยันอีเมลเพื่อเข้าใช้งาน', cta: 'เข้าสู่หน้าลงทะเบียน' },
+    { title: 'สมัครเป็นตัวแทน\n(ผู้มุ่งหวัง)', desc: 'กรอกใบสมัคร/แสดงความสนใจ เพื่อเข้าสู่กระบวนการคัดเลือกตัวแทน', cta: 'เข้าสู่หน้าสมัครตัวแทน' },
+    { title: 'อัปโหลดสลิป\n/ใบเสร็จ', desc: 'อัปโหลดสลิปให้ระบบอ่านยอดเงินจริง และตรวจคุณสมบัติอัตโนมัติ', cta: 'เข้าสู่หน้าอัปโหลดใบเสร็จ' },
   ],
   benefits: [
     { icon: '🚀', title: 'เริ่มต้นง่าย', sub: 'สมัครได้ทันที' },
@@ -113,8 +113,8 @@ export default function ThreeStepsJourney({
           <img
             src={`${img}.jpg`}
             alt={isThai
-              ? 'เริ่มต้นเส้นทางสู่อิสรภาพทางการเงิน เพียง 3 ขั้นตอน: 1) สมัครเป็นตัวแทน (ผู้มุ่งหวัง) 2) สมัครแสดงความสนใจ 3) ส่งใบเสร็จรับเงิน'
-              : 'Start your journey to financial freedom in 3 simple steps: 1) Become a prospective agent 2) Register your interest 3) Submit your payment receipt'}
+              ? 'เริ่มต้นเส้นทางสู่อิสรภาพทางการเงิน เพียง 3 ขั้นตอน: 1) ลงทะเบียนสมัครสมาชิก 2) สมัครเป็นตัวแทน (ผู้มุ่งหวัง) 3) อัปโหลดสลิป/ใบเสร็จ'
+              : 'Start your journey to financial freedom in 3 simple steps: 1) Create your account 2) Apply as a prospective agent 3) Upload your payment receipt'}
             className="w-full h-auto rounded-3xl border border-slate-200 shadow-lg"
             width={1600}
             height={1093}

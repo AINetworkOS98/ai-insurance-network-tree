@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>AI Insurance Network Tree — Launch</title>
+<style>
+  @font-face { font-family: 'ThaiNoto'; src: url(data:font/ttf;base64,{{FONT_THAI_REG}}) format('truetype'); font-weight: 400; font-style: normal; }
+  @font-face { font-family: 'ThaiNoto'; src: url(data:font/ttf;base64,{{FONT_THAI_BOLD}}) format('truetype'); font-weight: 600 900; font-style: normal; }
+  html,body{margin:0;padding:0;background:#03060f;overflow:hidden}
+  canvas{display:block}
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script>
+(() => {
+const W = 1920, H = 1080;
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d', { alpha: false });
+const FONT = 'ThaiNoto';
+
+/* ── ค่าคงที่แบรนด์ ─────────────────────────────────────────── */
+const C = {
+  bg0: '#03060f', bg1: '#071427', bg2: '#0b2036',
+  cyan: '#22d3ee', blue: '#3b82f6', sky: '#7dd3fc',
+  gold: '#f5c451', white: '#eaf4ff', dim: 'rgba(234,244,255,0.62)',
+};
+
+/* ── ยูทิลิตี ──────────────────────────────────────────────── */
+const clamp = (v,a=0,b=1) => Math.min(b, Math.max(a, v));
+const lerp = (a,b,t) => a + (b-a)*t;
+const easeOut = t => 1 - Math.pow(1-clamp(t), 3);
+const easeInOut = t => { t = clamp(t); return t<0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; };
+const smooth = (t,a,b) => easeInOut((t-a)/(b-a));
+
+function rngOf(seed){ let s = seed>>>0 || 1; return () => { s ^= s<<13; s^=s>>>17; s^=s<<5; return ((s>>>0)%100000)/100000; }; }
+
+let glowSprite = null;
+function getGlow(){
+  if (glowSprite) return glowSprite;
+  const s = 256, off = document.createElement('canvas'); off.width = off.height = s;
+  const g = off.getContext('2d');
+  const grd = g.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
+  grd.addColorStop(0,'rgba(120,230,255,0.95)');
+  grd.addColorStop(0.35,'rgba(56,160,255,0.35)');
+  grd.addColorStop(1,'rgba(10,40,90,0)');
+  g.fillStyle = grd; g.fillRect(0,0,s,s);
+  glowSprite = off; return off;
+}
+function glow(x,y,r,alpha,color){
+  const sp = getGlow();
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = clamp(alpha);
+  if (color) { ctx.filter = `hue-rotate(${color}deg)`; }
+  ctx.drawImage(sp, x-r, y-r, r*2, r*2);
+  ctx.restore();
+}
+function rr(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function textFit(str, maxW, size, weight=700){
+  ctx.font = `${weight} ${size}px ${FONT}`;
+  let w = ctx.measureText(str).width;
+  if (w > maxW) { size = size * (maxW / w); ctx.font = `${weight} ${size}px ${FONT}`; }
+  return size;
+}
+function bg(t){
+  const g = ctx.createLinearGradient(0,0,W,H);
+  g.addColorStop(0, C.bg0); g.addColorStop(0.55, C.bg1); g.addColorStop(1, C.bg2);
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+
+  // เส้นกริดบาง
+  ctx.save(); ctx.globalAlpha = 0.05; ctx.strokeStyle = C.sky; ctx.lineWidth = 1;
+  const gap = 90, off = (t*8) % gap;
+  for (let x=-gap+off; x<W+gap; x+=gap){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x+120,H); ctx.stroke(); }
+  for (let y=-gap; y<H+gap; y+=gap){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+  ctx.restore();
+}
+function grain(seed){
+  const rnd = rngOf(seed);
+  ctx.save(); ctx.globalAlpha = 0.035; ctx.fillStyle = '#ffffff';
+  for (let i=0;i<420;i++){ const x = rnd()*W, y = rnd()*H; ctx.fillRect(x,y,1.2,1.2); }
+  ctx.restore();
+}
+function vignette(){
+  const g = ctx.createRadialGradient(W/2,H/2,H*0.25,W/2,H/2,H*0.85);
+  g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,0.62)');
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+}
+
+/* ── แคปชันล่างจอ ──────────────────────────────────────────── */
+function caption(main, sub, a){
+  if (a <= 0.001) return;
+  ctx.save(); ctx.globalAlpha = a;
+  ctx.textAlign = 'center';
+  const cy = H - 118;
+  const size = textFit(main, W*0.8, 58, 700);
+  ctx.font = `700 ${size}px ${FONT}`;
+  const w = Math.min(ctx.measureText(main).width, W*0.82) + 84;
+  ctx.fillStyle = 'rgba(4,12,24,0.55)';
+  rr(W/2 - w/2, cy - 62, w, sub ? 108 : 86, 22); ctx.fill();
+  ctx.strokeStyle = 'rgba(120,220,255,0.16)'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = C.white; ctx.fillText(main, W/2, cy);
+  if (sub){ ctx.font = `400 30px ${FONT}`; ctx.fillStyle = C.dim; ctx.fillText(sub, W/2, cy + 40); }
+  ctx.restore();
+}
+
+/* ── ฉาก 1: ปัญหา (ความวุ่นวาย) ─────────────────────────────── */
+const chaosCards = (() => {
+  const rnd = rngOf(7717), out = [];
+  for (let i=0;i<26;i++){
+    out.push({
+      x: 200 + rnd()*1520, y: 170 + rnd()*620,
+      w: 150 + rnd()*180, h: 80 + rnd()*70,
+      rot: (rnd()-0.5)*0.7, a: 0.12 + rnd()*0.26, d: 20 + rnd()*90,
+      lines: 2 + Math.floor(rnd()*3),
+    });
+  }
+  return out;
+})();
+function drawChaos(t, a){
+  if (a <= 0.001) return;
+  ctx.save(); ctx.globalAlpha = a;
+
+  // เส้นเชื่อมยุ่งเหยิง
+  ctx.strokeStyle = 'rgba(120,180,255,0.10)'; ctx.lineWidth = 1.2;
+  const rnd = rngOf(991);
+  for (let i=0;i<34;i++){
+    const x1 = rnd()*W, y1 = rnd()*H, x2 = rnd()*W, y2 = rnd()*H;
+    ctx.beginPath(); ctx.moveTo(x1,y1);
+    ctx.bezierCurveTo((x1+x2)/2 + 120, y1 - 80, (x1+x2)/2 - 120, y2 + 80, x2, y2);
+    ctx.stroke();
+  }
+
+  // การ์ดกระดาษ/สเปรดชีตกระจัดกระจาย
+  for (const c of chaosCards){
+    const drift = Math.sin((t + c.d) * 0.35) * 6;
+    ctx.save();
+    ctx.translate(c.x, c.y + drift); ctx.rotate(c.rot + Math.sin(t*0.2 + c.d)*0.02);
+    ctx.fillStyle = `rgba(214,234,255,${clamp(c.a*1.55,0,0.42)})`;
+    rr(-c.w/2, -c.h/2, c.w, c.h, 8); ctx.fill();
+    ctx.strokeStyle = 'rgba(140,190,255,0.20)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.strokeStyle = `rgba(40,70,120,${clamp(c.a*1.6,0,0.5)})`;
+    for (let l=0;l<c.lines;l++){
+      const yy = -c.h/2 + 18 + l*16;
+      ctx.beginPath(); ctx.moveTo(-c.w/2+12, yy); ctx.lineTo(-c.w/2 + 12 + (c.w-24)*(0.5 + 0.4*Math.sin(l+c.d)), yy); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // ตัวเลข/กราฟลอยแบบยุ่ง
+  ctx.textAlign = 'left'; ctx.font = `700 26px ${FONT}`; ctx.fillStyle = 'rgba(140,200,255,0.18)';
+  const nums = ['฿', 'เบี้ย', 'Lead', 'โทร', 'นัด', 'ต่ออายุ', '??'];
+  nums.forEach((n,i) => {
+    const x = 160 + ((i*263 + t*26) % (W-260));
+    const y = 260 + ((i*167) % 520) + Math.sin(t*0.6+i)*10;
+    ctx.fillText(n, x, y);
+  });
+  ctx.restore();
+}
+
+/* ── ฉาก 2/4: ต้นไม้เครือข่าย 1 → 5 ─────────────────────────── */
+function treeNodes(){
+  const nodes = [{ x: W/2, y: 690, lvl: 0, i: 0 }];
+  for (let i=0;i<5;i++){
+    const ang = -Math.PI/2 + (i - 2) * (Math.PI/7.2);
+    nodes.push({ x: W/2 + Math.cos(ang)*260, y: 690 + Math.sin(ang)*230, lvl: 1, i });
+  }
+  for (let p=0;p<5;p++){
+    const parent = nodes[1+p];
+    for (let k=0;k<5;k++){
+      const ang = -Math.PI/2 + (k - 2) * (Math.PI/3.4) + (p-2)*0.06;
+      nodes.push({ x: parent.x + Math.cos(ang)*120, y: parent.y + Math.sin(ang)*96, lvl: 2, i: k, parent: 1+p });
+    }
+  }
+  return nodes;
+}
+const TN = treeNodes();
+function drawTree(t, a, grow, zoom=1, labelAlpha=0){
+  if (a <= 0.001) return;
+  ctx.save(); ctx.globalAlpha = a;
+  ctx.translate(W/2, 620); ctx.scale(zoom, zoom); ctx.translate(-W/2, -620);
+
+  const g = clamp(grow);
+  // เส้น
+  for (let idx=1; idx<TN.length; idx++){
+    const n = TN[idx], p = TN[n.parent ?? 0];
+    const k = clamp((g - (n.lvl===1 ? 0.12 : 0.45)) * 2.6);
+    if (k <= 0) continue;
+    const x = lerp(p.x, n.x, k), y = lerp(p.y, n.y, k);
+    ctx.strokeStyle = `rgba(70,180,255,${0.20 + 0.35*k})`;
+    ctx.lineWidth = n.lvl === 1 ? 3.2 : 1.8;
+    ctx.beginPath(); ctx.moveTo(p.x, p.y);
+    ctx.quadraticCurveTo((p.x+x)/2, (p.y+y)/2 - 18, x, y); ctx.stroke();
+  }
+  // โหนด
+  TN.forEach((n, idx) => {
+    const k = clamp((g - (n.lvl===1 ? 0.10 : 0.42)) * 2.8);
+    if (k <= 0) return;
+    const r = (n.lvl === 0 ? 26 : n.lvl === 1 ? 15 : 9) * k;
+    const pulse = 0.6 + 0.4*Math.sin(t*2.4 + idx*0.5);
+    glow(n.x, n.y, r*5.2, 0.30*k*pulse);
+    ctx.fillStyle = n.lvl === 0 ? C.gold : n.lvl === 1 ? C.cyan : C.sky;
+    ctx.globalAlpha = a * k;
+    ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = a;
+  });
+  ctx.restore();
+
+}
+
+/* ── ฉาก 3: แดชบอร์ด (จำลอง) ────────────────────────────────── */
+function drawDashboard(t, a){
+  if (a <= 0.001) return;
+  ctx.save(); ctx.globalAlpha = a;
+  const pw = 1180, ph = 520;
+  const px = (W - pw)/2, py = 210;
+  const enter = easeOut(clamp(t/0.8));
+
+  ctx.save();
+  ctx.translate(W/2, py + ph/2); ctx.scale(lerp(0.94,1,enter), lerp(0.94,1,enter)); ctx.translate(-W/2, -(py+ph/2));
+
+  // ตัวหน้าต่าง
+  ctx.fillStyle = 'rgba(8,20,38,0.92)'; rr(px, py, pw, ph, 26); ctx.fill();
+  ctx.strokeStyle = 'rgba(110,200,255,0.22)'; ctx.lineWidth = 2; ctx.stroke();
+  // แถบหัว
+  ctx.fillStyle = 'rgba(255,255,255,0.05)'; rr(px, py, pw, 62, 26); ctx.fill();
+  ['#ff5f57','#febc2e','#28c840'].forEach((c,i)=>{ ctx.fillStyle=c; ctx.beginPath(); ctx.arc(px+34+i*24, py+31, 7, 0, Math.PI*2); ctx.fill(); });
+  ctx.fillStyle = C.dim; ctx.font = `600 22px ${FONT}`; ctx.textAlign='left';
+  ctx.fillText('ระบบบริหารเครือข่ายตัวแทน', px+120, py+39);
+
+  // คอลัมน์ 1: สมาชิก
+  const colY = py + 92;
+  ctx.fillStyle = 'rgba(255,255,255,0.04)'; rr(px+28, colY, 340, 396, 18); ctx.fill();
+  ctx.fillStyle = C.sky; ctx.font = `700 22px ${FONT}`; ctx.fillText('สมาชิกในเครือข่าย', px+52, colY+38);
+  for (let i=0;i<5;i++){
+    const y = colY + 74 + i*58;
+    const on = smooth(t, 0.3 + i*0.12, 0.7 + i*0.12);
+    ctx.globalAlpha = a * on;
+    ctx.fillStyle = 'rgba(120,220,255,0.16)'; ctx.beginPath(); ctx.arc(px+74, y+6, 15, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = C.white; ctx.font = `600 19px ${FONT}`; ctx.fillText(`สมาชิก ${i+1}`, px+104, y);
+    ctx.fillStyle = 'rgba(120,220,255,0.55)'; ctx.font = `400 16px ${FONT}`; ctx.fillText('—', px+250, y);
+    ctx.globalAlpha = a;
+  }
+
+  // คอลัมน์ 2: ไปป์ไลน์
+  ctx.fillStyle = 'rgba(255,255,255,0.04)'; rr(px+392, colY, 360, 396, 18); ctx.fill();
+  ctx.fillStyle = C.sky; ctx.font = `700 22px ${FONT}`; ctx.fillText('ติดตามโอกาส (Lead)', px+416, colY+38);
+  const stages = ['ใหม่','ติดต่อ','นัดหมาย','ปิด'];
+  stages.forEach((s,i)=>{
+    const w = 300 * (0.92 - i*0.16) * smooth(t, 0.5+i*0.15, 1.0+i*0.15);
+    ctx.fillStyle = `rgba(60,140,255,${0.22 + i*0.08})`; rr(px+416, colY+64+i*62, Math.max(20,w), 44, 10); ctx.fill();
+    ctx.fillStyle = C.white; ctx.font = `600 17px ${FONT}`; ctx.fillText(s, px+430, colY+92+i*62);
+    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillText('—', px+416+Math.max(60,w)-36, colY+92+i*62);
+  });
+
+  // คอลัมน์ 3: AI
+  ctx.fillStyle = 'rgba(255,255,255,0.04)'; rr(px+776, colY, 376, 396, 18); ctx.fill();
+  ctx.fillStyle = C.gold; ctx.font = `700 22px ${FONT}`; ctx.fillText('AI ช่วยวิเคราะห์', px+800, colY+38);
+  const rows = ['สรุปโครงสร้างทีม','จัดลำดับผู้สนใจ','เตือนติดตามต่ออายุ'];
+  rows.forEach((r,i)=>{
+    const on = smooth(t, 0.8 + i*0.2, 1.3 + i*0.2);
+    ctx.globalAlpha = a * on;
+    ctx.fillStyle = 'rgba(245,196,81,0.12)'; rr(px+800, colY+64+i*74, 328, 58, 12); ctx.fill();
+    ctx.fillStyle = C.white; ctx.font = `600 18px ${FONT}`; ctx.fillText('• ' + r, px+818, colY+100+i*74);
+    ctx.globalAlpha = a;
+  });
+  // กราฟเส้นเล็ก
+  ctx.strokeStyle = 'rgba(120,230,255,0.8)'; ctx.lineWidth = 2.4; ctx.beginPath();
+  for (let i=0;i<=40;i++){ const x = px+806 + i*7.6, y = colY+340 - Math.sin(i*0.32)*30 - i*0.7; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+  ctx.stroke();
+
+  ctx.restore();
+
+  // ป้ายกำกับความซื่อสัตย์
+  ctx.textAlign = 'center'; ctx.font = `400 22px ${FONT}`; ctx.fillStyle = 'rgba(234,244,255,0.45)';
+  ctx.fillText('ภาพจำลองหน้าจอ · ไม่ใช่ข้อมูลจริง · ไม่แสดงข้อมูลส่วนบุคคล', W/2, py + ph + 46);
+  ctx.restore();
+}
+
+/* ── ฉาก 5: แบรนด์ ─────────────────────────────────────────── */
+function drawBrand(t, a){
+  if (a <= 0.001) return;
+  ctx.save(); ctx.globalAlpha = a;
+  const cx = W/2, cy = 445;
+
+  // ตรา: สามเหลี่ยมต้นไม้ 1→3
+  const k = easeOut(clamp(t/0.9));
+  const top = { x: cx, y: cy - 96 }, bl = { x: cx - 84, y: cy + 62 }, br = { x: cx + 84, y: cy + 62 };
+  ctx.strokeStyle = `rgba(120,225,255,${0.85*k})`; ctx.lineWidth = 4; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(top.x, top.y); ctx.lineTo(bl.x, bl.y); ctx.lineTo(br.x, br.y); ctx.closePath(); ctx.stroke();
+  [[top,1.0],[bl,0.85],[br,0.85]].forEach(([p,al],i)=>{
+    glow(p.x, p.y, 42, 0.55*k*al);
+    ctx.fillStyle = i===0 ? C.gold : C.cyan; ctx.beginPath(); ctx.arc(p.x, p.y, 9*k, 0, Math.PI*2); ctx.fill();
+  });
+
+  // ชื่อ
+  const t1 = smooth(t, 0.35, 1.1);
+  ctx.globalAlpha = a * t1;
+  ctx.textAlign = 'center';
+  let size = 86; ctx.font = `800 ${size}px ${FONT}`;
+  const name = 'AI INSURANCE NETWORK TREE';
+  const w = ctx.measureText(name).width;
+  if (w > W*0.86){ size = size * (W*0.86)/w; ctx.font = `800 ${size}px ${FONT}`; }
+  ctx.fillStyle = C.white; ctx.fillText(name, cx, cy + 192);
+
+  // แท็กไลน์
+  const t2 = smooth(t, 0.8, 1.6);
+  ctx.globalAlpha = a * t2;
+  ctx.font = `600 40px ${FONT}`; ctx.fillStyle = C.cyan;
+  ctx.fillText('เติบโตอย่างมีระบบ ด้วยพลังของ AI', cx, cy + 264);
+
+  const t3 = smooth(t, 1.3, 2.1);
+  ctx.globalAlpha = a * t3;
+  ctx.font = `400 26px ${FONT}`; ctx.fillStyle = 'rgba(234,244,255,0.55)';
+  ctx.fillText('ai-insurance-network-tree.vercel.app', cx, cy + 330);
+
+  ctx.restore();
+}
+
+/* ── ไทม์ไลน์ ─────────────────────────────────────────────── */
+const A1=0.0, A2=7.9, A3=17.5, A4=24.6, A5=30.6, END=39.0;
+const XF = 0.7;
+
+function renderAt(t){
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  bg(t);
+
+  // ฉาก 1
+  drawChaos(t, smooth(t, A1, A1+0.6) * (1 - smooth(t, A2-XF, A2)));
+  caption('งานขายที่ไม่มีระบบ = โอกาสที่หลุดมือ',
+          'ข้อมูลกระจัดกระจาย · ติดตามไม่ครบ · มองภาพรวมไม่ออก',
+          smooth(t, A1+0.4, A1+1.2) * (1 - smooth(t, A2-XF-0.2, A2-0.1)));
+
+  // ฉาก 2
+  const a2 = smooth(t, A2, A2+XF) * (1 - smooth(t, A3-XF, A3));
+  drawTree(t, a2, smooth(t, A2, A2+3.4), 1, smooth(t, A2+1.2, A2+2.0) * (1-smooth(t, A3-XF, A3-0.2)));
+  caption('1 คน ขยายเป็น 5 · โครงสร้างชัดเจน',
+          'เห็นสายงานทั้งหมดในหน้าจอเดียว',
+          smooth(t, A2+0.9, A2+1.6) * (1 - smooth(t, A3-XF-0.2, A3-0.1)));
+
+  // ฉาก 3
+  const a3 = smooth(t, A3, A3+XF) * (1 - smooth(t, A4-XF, A4));
+  drawDashboard(t - A3, a3);
+  caption('จัดการข้อมูล ติดตามโอกาส ด้วย AI',
+          'สมาชิก · ผู้สนใจ · สรุปโครงสร้าง — รวมไว้ที่เดียว',
+          smooth(t, A3+0.8, A3+1.5) * (1 - smooth(t, A4-XF-0.2, A4-0.1)));
+
+  // ฉาก 4 (ซูมผ่านเครือข่าย)
+  const a4 = smooth(t, A4, A4+XF) * (1 - smooth(t, A5-XF, A5));
+  const z = lerp(1, 1.55, easeInOut(clamp((t-A4)/5.9)));
+  drawTree(t*1.4, a4*0.95, 1, z, 0);
+  caption('ข้อมูล → โอกาส · เครือข่าย → พลังการเติบโต',
+          'วางแผนการเติบโตอย่างเป็นระบบ',
+          smooth(t, A4+1.0, A4+1.7) * (1 - smooth(t, A5-XF-0.2, A5-0.1)));
+
+  // ฉาก 5
+  drawBrand(t - A5, smooth(t, A5, A5+XF));
+
+  vignette();
+  grain(Math.floor(t*30));
+}
+
+window.renderAt = renderAt;
+window.__ready = async () => {
+  try { await document.fonts.load(`800 86px ${FONT}`); await document.fonts.load(`400 30px ${FONT}`); await document.fonts.ready; } catch {}
+  renderAt(0);
+  return true;
+};
+})();
+</script>
+</body>
+</html>

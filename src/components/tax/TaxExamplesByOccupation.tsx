@@ -702,15 +702,15 @@ export default function TaxExamplesByOccupation() {
       </div>
 
 
-      <div className="card p-4 text-[11px] text-slate-400 leading-5">
-        <div className="font-bold text-slate-500 mb-1">แหล่งอ้างอิงของเกณฑ์ทั้งหมดในหน้านี้</div>
+      <div className="card p-4 text-[12.5px] text-slate-600 leading-6">
+        <div className="font-bold text-slate-800 text-[13px] mb-2">แหล่งอ้างอิงของเกณฑ์ทั้งหมดในหน้านี้</div>
         • ใบแนบแสดงรายละเอียดรายการลดหย่อนและยกเว้น (ข้อ 7. เบี้ยประกันชีวิต / 7.1–7.3) — ดาวน์โหลดได้ที่{' '}
-        <a className="underline decoration-slate-300 hover:text-sky-700" href="https://www.rd.go.th/67335.html" target="_blank" rel="noreferrer">rd.go.th</a><br/>
+        <a className="underline decoration-sky-400 text-sky-700 hover:text-sky-900 font-medium" href="https://www.rd.go.th/67335.html" target="_blank" rel="noreferrer">rd.go.th</a><br/>
         • คำชี้แจงการกรอกแบบ ภ.ง.ด.90 ปีภาษี {DEFAULT_TAX_YEAR} — ข้อ 7.6 การใช้สิทธิเบี้ยประกันชีวิตแบบบำนาญ · ข้อ 7.7 หลักฐานจากผู้รับประกันภัย<br/>
         • อัตราภาษีขั้นบันได 8 ขั้น (สูงสุด {pct(maxBand)}) ตามมาตรา 48(1) แห่งประมวลรัษฎากร — ดูตารางฐานภาษีด้านบน<br/>
         • ค่าใช้จ่ายเหมาแยกประเภทเงินได้ มาตรา 42 ทวิ–46 และมาตรา 8 ทวิ ·{' '}
-        <a className="underline decoration-slate-300 hover:text-sky-700" href="https://www.rd.go.th/67335.html" target="_blank" rel="noreferrer">ไฟล์ราชการทั้งหมดที่ rd.go.th</a><br/>
-        ตัวเลขทั้งหมดเป็น<b>การประมาณการเพื่อวางแผนภาษี</b> · กรณีมีสิทธิพิเศษเฉพาะราย โทร. 1161 (สรรพากร)
+        <a className="underline decoration-sky-400 text-sky-700 hover:text-sky-900 font-medium" href="https://www.rd.go.th/67335.html" target="_blank" rel="noreferrer">ไฟล์ราชการทั้งหมดที่ rd.go.th</a><br/>
+        <span className="text-slate-700 font-medium">ตัวเลขทั้งหมดเป็น<b>การประมาณการเพื่อวางแผนภาษี</b> · กรณีมีสิทธิพิเศษเฉพาะราย โทร. 1161 (สรรพากร)</span>
       </div>
     </div>
   );

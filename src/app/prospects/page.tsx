@@ -67,7 +67,7 @@ export default function GeneralMembersPage(){
   const [members, setMembers]=useState<Member[]>([]);
   const [q, setQ]=useState('');
   const [statusQ, setStatusQ]=useState('');
-  const [onlyGeneral, setOnlyGeneral]=useState(true); // ค่าเริ่มต้น = เฉพาะสมาชิกทั่วไป (ระดับ 0)
+  const [onlyGeneral, setOnlyGeneral]=useState(false); // ค่าเริ่มต้น = แสดงทุกระดับ ตั้งแต่ระดับ 0 (สมาชิกทั่วไป) ขึ้นไป
   const [loading, setLoading]=useState(true);
   const [err, setErr]=useState('');
   // ── สิทธิ์ผู้ดูแล + สถานะการทำรายการ (ลบ/คืนค่า) ──
@@ -156,9 +156,13 @@ export default function GeneralMembersPage(){
   const isDeleted = (m:Member)=> m.deleted === true || String(m.status||'').toUpperCase()==='RESIGNED';
 
   // สมาชิกทั่วไป = ระดับ 0 (สลับดูทั้งหมดได้)
+  // เริ่มเห็นจากระดับ 0 (สมาชิกทั่วไป) ขึ้นไป — เรียงระดับต่ำสุดก่อน (สลับดูเฉพาะระดับ 0 ได้)
   const base = useMemo(
     ()=> (onlyGeneral ? members.filter(m=> (m.rankLevel ?? 0) === 0) : members)
-          .filter(m=> showDeleted ? true : !(m.deleted === true || String(m.status||'').toUpperCase()==='RESIGNED')),
+          .filter(m=> showDeleted ? true : !(m.deleted === true || String(m.status||'').toUpperCase()==='RESIGNED'))
+          .slice()
+          .sort((a,b)=> ((a.rankLevel ?? 0) - (b.rankLevel ?? 0))
+            || String(a.name||'').localeCompare(String(b.name||''), 'th')),
     [members, onlyGeneral, showDeleted]
   );
   /** จำนวนรายการที่ลบไปแล้ว (ในขอบเขตระดับ 0 ถ้าเปิดตัวกรองนั้นอยู่) */
@@ -179,13 +183,19 @@ export default function GeneralMembersPage(){
 
   const count = (st:string)=> base.filter(m=> String(m.status||'').toUpperCase() === st).length;
   const provinces = useMemo(()=> new Set(base.map(m=> m.province).filter(Boolean)).size, [base]);
+  /** จำนวนรายชื่อแยกตามระดับ — เริ่มจากระดับ 0 (สมาชิกทั่วไป) ขึ้นไป */
+  const rankCounts = useMemo(()=>{
+    const map = new Map<number, number>();
+    for(const m of base){ const r = m.rankLevel ?? 0; map.set(r, (map.get(r)||0)+1); }
+    return [...map.entries()].sort((a,b)=> a[0]-b[0]);
+  }, [base]);
 
   return (
     <div>
       <Header/>
       <div className="flex w-full">
         <Sidebar/>
-        <main className="flex-1 p-6 space-y-6">
+        <main className="flex-1 p-6 pb-28 space-y-6">
           {/* ── เมนูในหน้าเดียว: เครื่องคำนวณภาษี (สมาชิกทั่วไปใช้ก่อน) / ทะเบียนสมาชิกทั่วไป ── */}
           <div className="flex flex-wrap gap-2 items-center">
             {((view === 'members'
@@ -333,7 +343,7 @@ export default function GeneralMembersPage(){
               </select>
               <label className="flex items-center gap-2 px-3 py-2 rounded-xl border bg-white text-xs text-slate-600">
                 <input type="checkbox" checked={onlyGeneral} onChange={e=> setOnlyGeneral(e.target.checked)} />
-                เฉพาะระดับ 0 (สมาชิกทั่วไป)
+                เฉพาะระดับ 0 เท่านั้น (ปกติแสดงทุกระดับ)
               </label>
               {canManage && deletedCount > 0 && (
                 <label className="flex items-center gap-2 px-3 py-2 rounded-xl border bg-white text-xs text-slate-600">
@@ -344,9 +354,17 @@ export default function GeneralMembersPage(){
               <button onClick={()=>{ setQ(''); setStatusQ(''); }} className="px-4 py-2 rounded-xl border bg-white text-sm">ล้างตัวกรอง</button>
             </div>
 
-            <div className="text-xs text-slate-500 mb-3">
-              สมาชิกทั่วไปคือผู้ที่สมัครแล้วยังอยู่<b>ระดับ 0</b> — ลงทะเบียนผ่านหน้าสมัคร/ระบบสมาชิกฐานเดียวกัน
-              เมื่อผ่านการอนุมัติและเลื่อนเป็นตัวแทน (ระดับ 1) รายชื่อจะย้ายไป <Link href="/members" className="text-sky-700 underline">สมาชิกของฉัน</Link>
+            <div className="text-xs text-slate-500 mb-2">
+              แสดงรายชื่อ<b>ตั้งแต่ระดับ 0 (สมาชิกทั่วไป) ขึ้นไป</b> — เรียงจากระดับต่ำสุดก่อน · ลงทะเบียนผ่านหน้าสมัคร/ระบบสมาชิกฐานเดียวกัน
+              เมื่อผ่านการอนุมัติและเลื่อนเป็นตัวแทน (ระดับ 1 ขึ้นไป) รายชื่อยังเห็นที่นี่ และดูรายละเอียดเพิ่มที่ <Link href="/members" className="text-sky-700 underline">สมาชิกของฉัน</Link>
+            </div>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {rankCounts.map(([rank, n]) => (
+                <span key={rank} className="px-2.5 py-1 rounded-full border bg-white text-[11px] text-slate-600">
+                  ระดับ {rank} · {rank === 0 ? 'สมาชิกทั่วไป' : 'ตัวแทน'} · <b>{n}</b> คน
+                </span>
+              ))}
+              {rankCounts.length === 0 && <span className="text-[11px] text-slate-400">ยังไม่มีรายชื่อในขอบเขตนี้</span>}
             </div>
 
             {msg && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 mb-3">{msg}</div>}

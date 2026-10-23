@@ -1,9 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { DEMO_MEMBERS } from '@/lib/demo-data';
-type Node = {id:string; name:string; memberId:string; status:'active'|'pending'|'inactive'|'vacant'; rankName?:string; children?:Node[]; slot?:number; avatarUrl?:string};
+type Node = {id:string; name:string; memberId:string; status:'active'|'pending'|'inactive'|'vacant'; rankName?:string; children?:Node[]; slot?:number; avatarUrl?:string; rawId?:string};
 
-function NodeCard({node}:{node:Node}){
+function NodeCard({node, canManage, busy, onDelete}:{node:Node; canManage?:boolean; busy?:boolean; onDelete?:(n:Node)=>void}){
   const color = node.status==='vacant' ? 'border-dashed bg-slate-50 text-slate-500' : node.status==='active' ? 'bg-emerald-50 border-emerald-200' : node.status==='pending' ? 'bg-amber-50 border-amber-200' : 'bg-slate-50';
   const initials = node.name.split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('').toUpperCase();
   return (
@@ -20,6 +20,17 @@ function NodeCard({node}:{node:Node}){
       <div className="text-[11px]">{node.memberId}</div>
       {node.rankName && <div className="text-[10px] font-semibold text-sky-700 mt-0.5">{node.rankName}</div>}
       <div className="text-[10px] mt-1">{node.status==='vacant'?'ตำแหน่งว่าง': node.status==='active'?'Active': node.status==='pending'?'Pending':'Inactive'}</div>
+      {canManage && node.status!=='vacant' && (
+        <button
+          type="button"
+          disabled={!!busy}
+          onClick={()=>onDelete?.(node)}
+          title="ลบสมาชิกออกจากผัง (ซ่อนจากทะเบียน · คืนค่าได้ที่หน้า /members)"
+          className={`mt-2 px-2.5 py-1 rounded-full text-[10px] font-semibold border ${busy ? 'border-slate-200 bg-slate-50 text-slate-400' : 'border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100'}`}
+        >
+          {busy ? 'กำลังลบ...' : '🗑 ลบ'}
+        </button>
+      )}
     </div>
   );
 }
@@ -75,6 +86,60 @@ export default function TreeView({ filter }: { filter?: { q?:string; status?:str
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState('');
   const [count,setCount]=useState(0);
+  // ── ลบสมาชิก (ผู้ดูแลเท่านั้น · soft delete ผ่าน /api/admin/members) ──
+  const [canManage,setCanManage]=useState(false);
+  const [busyId,setBusyId]=useState('');
+  const [okMsg,setOkMsg]=useState('');
+  const [errMsg,setErrMsg]=useState('');
+  useEffect(()=>{
+    let cancelled=false;
+    (async()=>{
+      try{
+        const r=await fetch('/api/admin/members',{credentials:'include',cache:'no-store'});
+        const j=await r.json().catch(()=>({}));
+        if(!cancelled) setCanManage(j?.canDelete === true);
+      }catch{ if(!cancelled) setCanManage(false); }
+    })();
+    return ()=>{ cancelled=true; };
+  },[]);
+  async function reloadTree(){
+    const r=await fetch('/api/members',{cache:'no-store'});
+    const j=await r.json().catch(()=>({}));
+    const list=applyFilter(((j?.members||[]) as any[]).filter((m:any)=>String(m?.status||'').toUpperCase()!=='RESIGNED'));
+    setCount(list.length);
+    if(!list.length){ setTree(null); return; }
+    const root=list[0]; const rest=list.slice(1,5);
+    const children:Node[]=[1,2,3,4,5].map((slot,idx)=>{
+      const m=rest[idx];
+      if(m) return { id:m.memberId, name:m.name, memberId:m.memberId, rankName:m.rankName, status: m.status==='ACTIVE'?'active': m.status==='PENDING'?'pending':'inactive', slot, avatarUrl:m.avatarUrl, rawId:m.id||m.uid };
+      return { id:`vacant-${slot}`, name:'ตำแหน่งว่าง', memberId:'-', status:'vacant', slot };
+    });
+    setTree({ id:root.memberId, name:root.name, memberId:root.memberId, rankName:root.rankName, status: root.status==='ACTIVE'?'active':'pending', avatarUrl:root.avatarUrl, rawId:root.id||root.uid, children });
+  }
+  async function deleteNode(node:Node){
+    if(!node.rawId){ setErrMsg('ไม่พบรหัสสมาชิกของโหนดนี้ — กดรีเฟรชผังแล้วลองใหม่'); return; }
+    const ok = window.confirm(
+      `ยืนยันลบสมาชิกออกจากผังและระบบ?\n\n${node.memberId} · ${node.name}\n`+
+      'สถานะจะเปลี่ยนเป็น RESIGNED + ซ่อนจากทะเบียน/ผัง (ข้อมูลและประวัติยังอยู่ครบ) — คืนค่าได้ที่หน้า /members',
+    );
+    if(!ok) return;
+    setBusyId(node.rawId); setOkMsg(''); setErrMsg('');
+    try{
+      const r=await fetch('/api/admin/members',{
+        method:'POST', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ id:node.rawId, action:'delete', confirm:'DELETE' }),
+      });
+      const d=await r.json().catch(()=>({}));
+      if(!d?.ok) setErrMsg(d?.error||'ลบสมาชิกไม่สำเร็จ');
+      else{
+        setOkMsg(`🗑 ลบ ${node.name} (${node.memberId}) ออกจากผังแล้ว — ซ่อนจากทะเบียน · คืนค่าได้ที่หน้า /members`);
+        await reloadTree();
+        try{ window.dispatchEvent(new Event('members-updated')); }catch{}
+      }
+    }catch(e:any){ setErrMsg(e?.message||'เชื่อมต่อไม่สำเร็จ'); }
+    finally{ setBusyId(''); }
+  }
   function applyFilter(ms:any[]){
     const f = filter||{};
     let list = ms;
@@ -110,10 +175,10 @@ export default function TreeView({ filter }: { filter?: { q?:string; status?:str
           const rest = members.slice(1,5);
           const children:Node[] = [1,2,3,4,5].map((slot,idx)=>{
             const m = rest[idx];
-            if(m) return { id:m.memberId, name:m.name, memberId:m.memberId, rankName: m.rankName, status: m.status==='ACTIVE'?'active': m.status==='PENDING'?'pending':'inactive', slot, avatarUrl: m.avatarUrl };
+            if(m) return { id:m.memberId, name:m.name, memberId:m.memberId, rankName: m.rankName, status: m.status==='ACTIVE'?'active': m.status==='PENDING'?'pending':'inactive', slot, avatarUrl: m.avatarUrl, rawId: m.id || m.uid };
             return { id:`vacant-${slot}`, name:'ตำแหน่งว่าง', memberId:'-', status:'vacant', slot };
           });
-          setTree({ id:root.memberId, name:root.name, memberId:root.memberId, rankName: root.rankName, status: root.status==='ACTIVE'?'active':'pending', avatarUrl: root.avatarUrl, children });
+          setTree({ id:root.memberId, name:root.name, memberId:root.memberId, rankName: root.rankName, status: root.status==='ACTIVE'?'active':'pending', avatarUrl: root.avatarUrl, rawId: root.id || root.uid, children });
         }
       }catch(e){
         console.warn('fetch failed, using demo data:', e);
@@ -125,10 +190,10 @@ export default function TreeView({ filter }: { filter?: { q?:string; status?:str
           const rest = members.slice(1,5);
           const children:Node[] = [1,2,3,4,5].map((slot,idx)=>{
             const m = rest[idx];
-            if(m) return { id:m.memberId, name:m.name, memberId:m.memberId, rankName: m.rankName, status: m.status==='ACTIVE'?'active': m.status==='PENDING'?'pending':'inactive', slot, avatarUrl: m.avatarUrl };
+            if(m) return { id:m.memberId, name:m.name, memberId:m.memberId, rankName: m.rankName, status: m.status==='ACTIVE'?'active': m.status==='PENDING'?'pending':'inactive', slot, avatarUrl: m.avatarUrl, rawId: m.id || m.uid };
             return { id:`vacant-${slot}`, name:'ตำแหน่งว่าง', memberId:'-', status:'vacant', slot };
           });
-          setTree({ id:root.memberId, name:root.name, memberId:root.memberId, rankName: root.rankName, status: root.status==='ACTIVE'?'active':'pending', avatarUrl: root.avatarUrl, children });
+          setTree({ id:root.memberId, name:root.name, memberId:root.memberId, rankName: root.rankName, status: root.status==='ACTIVE'?'active':'pending', avatarUrl: root.avatarUrl, rawId: root.id || root.uid, children });
         }
       }
       if(cancelled) return;
@@ -159,6 +224,9 @@ export default function TreeView({ filter }: { filter?: { q?:string; status?:str
 
   return (
     <div>
+      {okMsg && <div className="mb-2 px-3 py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-xs text-emerald-800">{okMsg}</div>}
+      {errMsg && <div className="mb-2 px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 text-xs text-rose-700">{errMsg}</div>}
+      {canManage && <div className="mb-2 text-[11px] text-slate-500">🔐 โหมดผู้ดูแล — ปุ่ม 🗑 ลบ แสดงใต้การ์ดสมาชิก · ลบ = soft delete (RESIGNED) · บันทึก Audit Log ทุกครั้ง</div>}
       <div className="text-xs text-slate-500 mb-2">พบสมาชิก {count} คน{filter && (filter.q||filter.status||filter.province||filter.district||filter.tambon||filter.zipCode) ? ' (ตามเงื่อนไขค้นหา)' : ''}</div>
       <div className="flex gap-2 mb-3">
         <button onClick={()=>setZoom(z=>Math.max(60,z-10))} className="px-3 py-1.5 rounded-lg border bg-white text-sm">−</button>
@@ -176,10 +244,10 @@ export default function TreeView({ filter }: { filter?: { q?:string; status?:str
           .nt-pulse-dot { animation: ntPulse 1.6s ease-in-out infinite; }
         `}</style>
         <div className="flex flex-col items-center gap-0 min-w-[700px]">
-          <NodeCard node={tree} />
+          <NodeCard node={tree} canManage={canManage} busy={busyId===tree.rawId} onDelete={deleteNode} />
           <TreeConnector count={tree.children!.length} />
           <div className="flex gap-3">
-            {tree.children!.map(c=> <NodeCard key={c.id} node={c} />)}
+            {tree.children!.map(c=> <NodeCard key={c.id} node={c} canManage={canManage} busy={busyId===c.rawId} onDelete={deleteNode} />)}
           </div>
           <div className="text-[11px] text-slate-500 mt-3">คนที่ 6 จะลงใต้ {tree.children![0]?.memberId} (BFS ซ้าย→ขวา ชั้นตื้นสุดก่อน) • แสดงเฉพาะสมาชิกจริง</div>
           <div className="flex gap-2 text-[11px] mt-2">

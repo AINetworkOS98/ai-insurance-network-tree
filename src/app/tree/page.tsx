@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import TreeView from '@/components/TreeView';
@@ -16,6 +16,64 @@ export default function TreePage(){
   const [structResult, setStructResult] = useState<any>(null);
   const [rankResult, setRankResult] = useState<any>(null);
   const [closeResult, setCloseResult] = useState<any>(null);
+
+  // ── รายชื่อสมาชิกในผัง + ปุ่มลบ (เห็นตลอด ไม่ต้องคลิกโหนด) ──
+  const [treeMembers, setTreeMembers] = useState<any[]>([]);
+  const [canManage, setCanManage] = useState(false);
+  const [busyId, setBusyId] = useState('');
+  const [memberMsg, setMemberMsg] = useState('');
+  const [memberErr, setMemberErr] = useState('');
+
+  const loadTreeMembers = useCallback(async () => {
+    try {
+      const r = await fetch('/api/members', { cache: 'no-store' });
+      const j = await r.json().catch(() => ({}));
+      const list = ((j?.members || []) as any[]).filter((m: any) => String(m?.status || '').toUpperCase() !== 'RESIGNED');
+      setTreeMembers(list);
+    } catch { setTreeMembers([]); }
+  }, []);
+
+  useEffect(() => {
+    loadTreeMembers();
+    (async () => {
+      try {
+        const r = await fetch('/api/admin/members', { credentials: 'include', cache: 'no-store' });
+        const j = await r.json().catch(() => ({}));
+        setCanManage(j?.canDelete === true);
+      } catch { setCanManage(false); }
+    })();
+    const bump = () => { loadTreeMembers(); };
+    window.addEventListener('members-updated', bump as any);
+    return () => { window.removeEventListener('members-updated', bump as any); };
+  }, [loadTreeMembers]);
+
+  async function deleteTreeMember(m: any) {
+    const id = String(m?.id || m?.uid || '');
+    const code = String(m?.memberCode || m?.memberId || id);
+    const who = String(m?.name || m?.displayName || code);
+    if (!id) { setMemberErr('ไม่พบรหัสสมาชิกของรายการนี้ — กดรีเฟรชแล้วลองใหม่'); return; }
+    const ok = window.confirm(
+      `ยืนยันลบสมาชิกออกจากผังและระบบ?\n\n${code} · ${who}\n\n` +
+      'สถานะจะเปลี่ยนเป็น RESIGNED + ซ่อนจากทะเบียน/ผัง (ข้อมูลและประวัติยังอยู่ครบ) — คืนค่าได้ที่หน้า /members',
+    );
+    if (!ok) return;
+    setBusyId(id); setMemberMsg(''); setMemberErr('');
+    try {
+      const r = await fetch('/api/admin/members', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action: 'delete', confirm: 'DELETE' }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!d?.ok) setMemberErr(d?.error || 'ลบสมาชิกไม่สำเร็จ');
+      else {
+        setMemberMsg(`🗑 ลบ ${who} (${code}) ออกจากผังแล้ว — ซ่อนจากทะเบียน · คืนค่าได้ที่หน้า /members`);
+        await loadTreeMembers();
+        try { window.dispatchEvent(new Event('members-updated')); } catch {}
+      }
+    } catch (e: any) { setMemberErr(e?.message || 'เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ'); }
+    finally { setBusyId(''); }
+  }
 
   // ที่อยู่ cascade: จังหวัด → อำเภอ/เขต → ตำบล (ข้อมูลจริงจาก public/data)
   const [provList, setProvList] = useState<any[]>([]);
@@ -108,6 +166,26 @@ export default function TreePage(){
     const res = await fetch('/api/tree/runs?take=10');
     const j = await res.json();
     if(j.ok) setRuns(j.runs);
+  }
+  // ── ลบประวัติการรัน (ผู้ดูแลระบบ) ──
+  const [runBusy, setRunBusy] = useState('');
+  const [runMsg, setRunMsg] = useState('');
+  const [runErr, setRunErr] = useState('');
+  async function deleteRun(jobId?: string){
+    const label = jobId ? `ประวัติการรัน ${jobId}` : 'ประวัติการรันทั้งหมด';
+    if(!window.confirm(`ยืนยันลบ${label}?\n\nการลบไม่สามารถย้อนกลับได้ — รายละเอียดรายการ (entries) ของรอบนั้นจะถูกลบไปด้วย (ระบบเก็บร่องรอยไว้ใน Audit Log)`)) return;
+    setRunBusy(jobId || '__all__'); setRunMsg(''); setRunErr('');
+    try{
+      const r = await fetch('/api/tree/runs', {
+        method:'DELETE', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(jobId ? { jobId } : { all: true }),
+      });
+      const d = await r.json().catch(()=>({}));
+      if(!d?.ok) setRunErr(d?.error || 'ลบประวัติการรันไม่สำเร็จ');
+      else { setRunMsg(`🗑 ลบประวัติการรันแล้ว ${d.deleted} รายการ`); await loadRuns(); }
+    }catch(e:any){ setRunErr(e?.message || 'เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ'); }
+    finally{ setRunBusy(''); }
   }
   async function loadSimulate(){
     const res = await fetch('/api/tree/simulate?level=4');
@@ -213,6 +291,77 @@ export default function TreePage(){
                   <span className="text-[11px] text-slate-400 self-center">มุมมอง {viewMode==='radial' ? 'รากกลางจอ แตก 5 ทิศ แสงวิ่งแบบ n8n' : 'รากบน ลูก 5 เรียงซ้าย→ขวา'}</span>
                 </div>
               </div>
+              {/* รายชื่อสมาชิกในผัง + ปุ่มลบ — เห็นตลอดการทำงาน ไม่ต้องคลิกที่วงกลมในผัง */}
+              {activeTab==='real' && (
+                <div className="card p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-sm font-bold text-slate-700">🗂 รายชื่อสมาชิกในผัง ({treeMembers.length} คน)</h3>
+                    {canManage
+                      ? <span className="px-2 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-[11px] font-semibold text-rose-700">🔐 โหมดผู้ดูแล — ลบได้</span>
+                      : <span className="px-2 py-0.5 rounded-full bg-slate-100 border text-[11px] font-semibold text-slate-600">อ่านอย่างเดียว</span>}
+                    <button onClick={loadTreeMembers} className="ml-auto px-3 py-1.5 rounded-full bg-white border border-slate-200 text-[11px] font-semibold text-slate-600 hover:bg-slate-50">รีเฟรชรายชื่อ</button>
+                  </div>
+                  {memberMsg && <div className="mt-2 px-3 py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-xs text-emerald-800">{memberMsg}</div>}
+                  {memberErr && <div className="mt-2 px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 text-xs text-rose-700">{memberErr}</div>}
+                  {treeMembers.length === 0 ? (
+                    <div className="mt-3 text-xs text-slate-500">ยังไม่มีสมาชิกจริงในผัง</div>
+                  ) : (
+                    <div className="mt-3 overflow-x-auto rounded-xl border border-slate-100">
+                      <table className="w-full text-xs">
+                        <thead className="bg-[#f8fafc] text-slate-600">
+                          <tr>
+                            <th className="text-left px-3 py-2 font-semibold">ชื่อ</th>
+                            <th className="text-left px-3 py-2 font-semibold">รหัสสมาชิก</th>
+                            <th className="text-left px-3 py-2 font-semibold">สถานะ</th>
+                            <th className="text-left px-3 py-2 font-semibold">ตำแหน่ง</th>
+                            <th className="text-right px-3 py-2 font-semibold">จัดการ</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {treeMembers.map((m:any) => {
+                            const id = String(m?.id || m?.uid || '');
+                            const busy = busyId === id;
+                            return (
+                              <tr key={id || m?.memberCode || Math.random()} className="border-t border-slate-100">
+                                <td className="px-3 py-2">
+                                  <div className="font-semibold text-slate-800">{m?.name || m?.displayName || '-'}</div>
+                                  {m?.email && <div className="text-slate-400">{m.email}</div>}
+                                </td>
+                                <td className="px-3 py-2 font-mono text-slate-600">{m?.memberCode || m?.memberId || '-'}</td>
+                                <td className="px-3 py-2">
+                                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${String(m?.status||'').toUpperCase()==='ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                    {m?.status || 'PENDING'}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2 text-slate-600">{m?.rankName || '-'}</td>
+                                <td className="px-3 py-2 text-right">
+                                  {canManage ? (
+                                    <button
+                                      type="button"
+                                      disabled={busy}
+                                      onClick={() => deleteTreeMember(m)}
+                                      title="ลบสมาชิกออกจากผัง (ซ่อนจากทะเบียน · คืนค่าได้ที่หน้า /members)"
+                                      className={`px-3 py-1 rounded-full text-[11px] font-semibold border ${busy ? 'border-slate-200 bg-slate-50 text-slate-400' : 'border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100'}`}
+                                    >
+                                      {busy ? 'กำลังลบ...' : '🗑 ลบ'}
+                                    </button>
+                                  ) : (
+                                    <span className="text-[11px] text-slate-400">🔐 เฉพาะผู้ดูแล</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  <div className="mt-2 text-[11px] text-slate-500">
+                    ลบ = soft delete (สถานะ RESIGNED + ซ่อนจากทะเบียน/ผัง) · ข้อมูลและประวัติยังอยู่ครบ · ทุกครั้งถูกบันทึก Audit Log · คืนค่าได้ที่หน้า <b>/members</b>
+                  </div>
+                </div>
+              )}
+
               {viewMode==='radial'
                 ? <RadialNetworkTree filter={{q:fq,status:fStatus,province:fProv,district:fDist,tambon:fSub,zipCode:fZip}} />
                 : <TreeView filter={{q:fq,status:fStatus,province:fProv,district:fDist,tambon:fSub,zipCode:fZip}} />}
@@ -235,7 +384,27 @@ export default function TreePage(){
 
               {runs.length>0 && (
                 <div className="card p-4">
-                  <h3 className="font-semibold text-sm">ประวัติการรัน — สำเร็จ / รอจัดวาง / ผิดพลาด</h3>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-semibold text-sm">ประวัติการรัน — สำเร็จ / รอจัดวาง / ผิดพลาด</h3>
+                    {canManage
+                      ? <span className="px-2 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-[11px] font-semibold text-rose-700">🔐 ลบได้ (ผู้ดูแล)</span>
+                      : <span className="px-2 py-0.5 rounded-full bg-slate-100 border text-[11px] font-semibold text-slate-600">อ่านอย่างเดียว</span>}
+                    <div className="ml-auto flex items-center gap-2">
+                      <button onClick={()=> loadRuns()} className="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-[11px] font-semibold text-slate-600 hover:bg-slate-50">รีเฟรช</button>
+                      {canManage && (
+                        <button
+                          onClick={()=> deleteRun()}
+                          disabled={!!runBusy}
+                          title="ลบประวัติการรันทั้งหมด"
+                          className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border ${runBusy ? 'border-slate-200 bg-slate-50 text-slate-400' : 'border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100'}`}
+                        >
+                          {runBusy==='__all__' ? 'กำลังลบ...' : '🗑 ลบทั้งหมด'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {runMsg && <div className="mt-2 px-3 py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-xs text-emerald-800">{runMsg}</div>}
+                  {runErr && <div className="mt-2 px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 text-xs text-rose-700">{runErr}</div>}
                   <div className="mt-2 space-y-2">
                     {runs.map((r:any)=>(
                       <div key={r.jobId} className="p-3 rounded-xl border bg-slate-50 text-xs">
@@ -245,6 +414,16 @@ export default function TreePage(){
                           <span>สำเร็จ {r.totalSuccess} • รอจัดวาง {r.totalSkipped} • ผิดพลาด {r.totalFailed}</span>
                           <button onClick={()=> togglePause(r.jobId, r.status==='paused' ? 'resume' : 'pause')} className="ml-auto px-2 py-0.5 rounded-full border bg-white text-[11px]">{r.status==='paused'?'ดำเนินการต่อ':'พักการรัน'}</button>
                           <span className="text-[11px] text-slate-400">{new Date(r.startedAt).toLocaleString('th-TH')}</span>
+                          {canManage && (
+                            <button
+                              onClick={()=> deleteRun(r.jobId)}
+                              disabled={!!runBusy}
+                              title="ลบประวัติการรันรอบนี้"
+                              className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${runBusy===r.jobId ? 'border-slate-200 bg-white text-slate-400' : 'border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100'}`}
+                            >
+                              {runBusy===r.jobId ? 'กำลังลบ...' : '🗑 ลบ'}
+                            </button>
+                          )}
                         </div>
                         {r.entries?.length>0 && (
                           <div className="mt-2 space-y-1">

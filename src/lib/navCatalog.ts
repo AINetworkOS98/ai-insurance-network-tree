@@ -70,6 +70,8 @@ export const NAV_ENTRIES: NavEntry[] = [
   { href: '/admin/backup', section: 'admin', label: 'สำรองข้อมูล', key: 'sb_admin_backup', icon: '💾', minRank: 0, adminOnly: true },
 
   // ── สมาชิกทั่วไป (rank 0) ────────────────────────────────────────────────
+  // ทะเบียนสมาชิก — ให้เห็นตั้งแต่ระดับ 0 (สมาชิกทั่วไป) ขึ้นไป
+  { href: '/prospects?tab=members', section: 'general', label: 'ลงทะเบียนสมาชิกทั่วไป', key: 'nav_prospects', icon: '◎', minRank: 0 },
   { href: '/financial-freedom', section: 'general', label: 'อิสรภาพทางการเงิน', key: 'sb_financial_freedom', icon: '🌟', minRank: 0 },
   // ลิงก์รับสมัครตัวแทน — สมาชิกกรอกเองได้ หรือคัดลอกลิงก์ส่งให้ผู้มุ่งหวังกรอกเอง (หน้าสาธารณะ /recruit)
   { href: '/recruit', section: 'general', label: 'ลิงก์รับสมัครตัวแทน', icon: '🤝', minRank: 0 },
@@ -96,7 +98,6 @@ export const NAV_ENTRIES: NavEntry[] = [
 
   // ── ตัวแทน (rank 1 ขึ้นไป) ───────────────────────────────────────────────
   { href: '/dashboard', section: 'agent', label: 'ภาพรวม', key: 'sb_dashboard', icon: '▦', minRank: 1 },
-  { href: '/prospects?tab=members', section: 'agent', label: 'ลงทะเบียนสมาชิกทั่วไป', key: 'nav_prospects', icon: '◎', minRank: 1 },
   // ย้ายจากเมนูด้านบน (Header) มาฝั่งซ้ายตามคำสั่ง — ค้นหา/ตรวจสอบสมาชิก (ใช้ /api/members)
   { href: '/verify', section: 'agent', label: 'ตรวจสอบสมาชิก', key: 'nav_verify', icon: '🔍', minRank: 1 },
   { href: '/members', section: 'agent', label: 'สมาชิกของฉัน', key: 'sb_my_members', icon: '◉', minRank: 1 },

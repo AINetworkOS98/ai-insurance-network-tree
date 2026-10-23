@@ -135,12 +135,38 @@ export function buildTlSmartApplication(input: {
     },
     // ── ใบอนุญาต (คปภ.) ──
     license: {
-      status: d.licenseStatus || '',
-      number: d.licenseNumber || '',
-      expiryDate: d.licenseExpiryDate || '',
+      status: d.licenseStatus || d.trainingStatus || '',
+      number: d.licenseNumber || d.existingLicenseNo || '',
+      expiryDate: d.licenseExpiryDate || d.existingLicenseExpiry || '',
       examDate: d.examDate || '',
-      hasLifeLicense: d.hasICLicense === true,
-      hasGeneralInsuranceLicense: d.hasGeneralInsuranceLicense === true,
+      hasLifeLicense: d.hasICLicense === true || d.existingLicense === 'life_agent',
+      hasGeneralInsuranceLicense: d.hasGeneralInsuranceLicense === true || d.existingLicense === 'nonlife_agent',
+    },
+    // ── คุณสมบัติ/คำรับรองตามแบบ ตช.1 (ใช้ยื่นคำขอใบอนุญาตตัวแทน) ──
+    licensing: {
+      form: 'ตช.1',
+      purpose: d.purpose || '',
+      licenseKind: d.licenseKind || 'life_agent',
+      educationDetail: d.educationDetail || '',
+      educationLevelOic: d.educationLevel || '',
+      existingLicense: d.existingLicense || 'none',
+      existingCompany: d.existingCompany || '',
+      existingLicenseNo: d.existingLicenseNo || '',
+      trainingStatus: d.trainingStatus || '',
+      hasReleaseLetter: d.hasReleaseLetter === true,
+      declarationsNoDisqualification: d.disqualifications || {},
+      documentsConfirmed: d.documentsConfirmed || [],
+      nameEn: { first: d.firstNameEn || '', last: d.lastNameEn || '' },
+      houseAddress: d.houseAddress || '',
+      eligibility: d.eligibility
+        ? {
+            eligible: d.eligibility.eligible === true,
+            readyForAgentCode: d.eligibility.readyForAgentCode === true,
+            track: d.eligibility.track || '',
+            age: d.eligibility.age ?? null,
+            blockers: d.eligibility.blockers || [],
+          }
+        : null,
     },
     // ── เป้าหมายเส้นทางอาชีพ ──
     goals: {

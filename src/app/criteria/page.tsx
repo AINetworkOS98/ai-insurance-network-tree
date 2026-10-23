@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import Link from 'next/link';
 import { beYear, quartersOfYear, thaiDateFull } from '@/lib/now';
 
 // หน้าเกณฑ์มาตรฐาน — ฝ่าย 19 ไทยประกันชีวิต (ไตรมาสคำนวณจากปีปัจจุบันอัตโนมัติ)
@@ -18,6 +19,7 @@ const QUARTERS = quartersOfYear(BY);
 export default function CriteriaPage(){
   const [plan, setPlan] = useState<any>(null);
   const [results, setResults] = useState<any[]>([]);
+  const [promoPlan, setPromoPlan] = useState<any>(null);
 
   useEffect(()=>{ (async()=>{
     try{
@@ -32,6 +34,14 @@ export default function CriteriaPage(){
       const r = await fetch('/api/maintenance/results');
       const j = await r.json();
       if(j.ok) setResults(j.results||[]);
+    }catch{}
+    // เกณฑ์เลื่อนตำแหน่งจริง (แผน Active) — ตัวเดียวกับที่ระบบอัตโนมัติใช้ตัดสิน
+    try{
+      const r = await fetch('/api/rank-plans',{cache:'no-store'});
+      const j = await r.json();
+      const list = j?.plans || j?.data || j?.items || [];
+      const act = (Array.isArray(list)?list:[]).find((p:any)=>String(p.status).toLowerCase()==='active') || (Array.isArray(list)?list[0]:null);
+      setPromoPlan(act || null);
     }catch{}
   })(); },[]);
 
@@ -80,6 +90,36 @@ export default function CriteriaPage(){
             </div>
             <div className="mt-2 text-[11px] text-slate-500">เงื่อนไขเพิ่มเติม: บุคลากรในสังกัด 3 หน่วย (รวมหน่วยตรง) • ผลงานค่าบำเหน็จ COM + COM PLUS</div>
             {plan && <div className="mt-2 text-[11px]">แผนในระบบ: <span className="font-semibold">{plan.name}</span> <span className={`px-2 py-0.5 rounded-full ${plan.status==='Active'?'bg-emerald-600 text-white':'bg-slate-200'}`}>{plan.status}</span> <span className="text-slate-500">เตือนก่อน 1 รอบ • ผ่อนผันสมาชิกใหม่ {plan.graceMonths ?? 0} เดือน</span></div>}
+          </div>
+
+          <div className="card p-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="font-semibold text-sm">เกณฑ์เลื่อนตำแหน่ง (ตัวเดียวกับที่ระบบอัตโนมัติใช้ตัดสิน)</h3>
+              {promoPlan && (
+                <span className={`px-2 py-0.5 rounded-full text-[11px] ${String(promoPlan.status).toLowerCase()==='active' ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'}`}>
+                  {promoPlan.status}
+                </span>
+              )}
+            </div>
+            <div className="text-[11px] text-slate-500 mt-1">
+              ตารางด้านบนเป็น <b>เกณฑ์รักษาสถานะ</b> (ป้องกันสตาร์/แก้สตาร์) — คนละชุดกับ <b>เกณฑ์เลื่อนตำแหน่ง</b> ที่ระบบตรวจให้อัตโนมัติทุกวัน
+              (cron 01:00 UTC) และดูผลรายคนได้ที่ <Link href="/career" className="text-sky-700 underline">หน้าขึ้นตำแหน่ง</Link>
+            </div>
+            {promoPlan ? (
+              <>
+                <div className="text-xs mt-2 font-semibold text-[#475569]">
+                  {promoPlan.name} <span className="text-slate-400 font-normal">· version {promoPlan.version || '-'}</span>
+                </div>
+                <ul className="mt-2 space-y-1 text-sm text-slate-600 list-disc pl-5">
+                  {(promoPlan.rules || []).map((r: any, i: number) => (
+                    <li key={i}>{r.description || r.desc || r.name || r.label || `กฎข้อ ${i + 1}`}</li>
+                  ))}
+                  {!(promoPlan.rules || []).length && <li className="text-slate-400">แผนนี้ยังไม่มีกฎ</li>}
+                </ul>
+              </>
+            ) : (
+              <div className="text-xs text-slate-400 mt-2">ยังไม่พบแผน Active</div>
+            )}
           </div>
 
           <div className="card p-5">

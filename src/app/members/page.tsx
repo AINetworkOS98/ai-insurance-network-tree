@@ -64,7 +64,7 @@ export default function MembersPage(){
         const j = await r.json().catch(()=>({}));
         if(j?.ok){
           setMembers((j.members||[]) as Member[]);
-          setCanManage(true);
+          setCanManage((j as any)?.canDelete === true);
           setLastAt(new Date());
           return;
         }

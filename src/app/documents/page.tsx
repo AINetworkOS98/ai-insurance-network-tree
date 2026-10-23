@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import Link from 'next/link';
 import AdminRightsPanel, { useAdminMe } from '@/components/AdminRightsPanel';
 
 type OCRData = {
@@ -134,7 +135,8 @@ export default function DocumentsPage() {
   const [isIOS, setIsIOS] = useState(false);
   // สิทธิ์ผู้ดูแลระบบ — ใช้ซ่อน/แสดงปุ่มลบ (ฝั่งเซิร์ฟเวอร์บังคับซ้ำเสมอ)
   const me = useAdminMe();
-  const isAdmin = me?.isAdmin === true;
+  // ลบเอกสาร = ผู้ดูแลระบบขั้นสูงเท่านั้น (เซิร์ฟเวอร์บังคับซ้ำเสมอ)
+  const canDelete = me?.canDelete === true;
 
   // วินิจฉัยจากเครื่องผู้ใช้จริง → /api/scan-diag เขียนลง Vercel runtime log (ไม่แตะ DB)
   const diag = useCallback((stage: string, extra: Record<string, any> = {}) => {
@@ -248,9 +250,17 @@ export default function DocumentsPage() {
     loadReceipts();
   }, [loadReceipts]);
 
+  // ใบเสร็จนี้เป็นของ "รหัสตัวเอง" หรือไม่ (memberId ของใบเสร็จ เทียบกับรหัส/อีเมลของฉัน)
+  const isOwnRow = (r: any) => {
+    const mid = String(r?.memberId || '');
+    if (!mid) return false;
+    if (memberId && mid === String(memberId)) return true;
+    return !!me?.email && mid === String(me.email);
+  };
+
   // ลบใบเสร็จออกจากระบบ — ยืนยันก่อนลบทุกครั้ง และบันทึก audit ฝั่งเซิร์ฟเวอร์
-  const removeReceipt = async (receiptId: string, filename?: string) => {
-    if (!isAdmin) { setError('ลบได้เฉพาะผู้ดูแลระบบ — กรุณาติดต่อผู้ดูแลให้ลบเอกสารให้'); return; }
+  const removeReceipt = async (receiptId: string, filename?: string, own?: boolean) => {
+    if (!canDelete && !own) { setError('ลบได้เฉพาะใบเสร็จของรหัสตัวเอง (หรือผู้ดูแลระบบ)'); return; }
     if (!window.confirm(`ลบใบเสร็จ "${filename || receiptId}" ออกจากระบบ?\n\nการลบย้อนกลับไม่ได้`)) return;
     try {
       const res = await fetch('/api/documents', {
@@ -263,6 +273,30 @@ export default function DocumentsPage() {
       else setError(j.error || 'ลบใบเสร็จไม่สำเร็จ');
     } catch {
       setError('ลบใบเสร็จไม่สำเร็จ');
+    }
+  };
+
+
+  // แก้ไขใบเสร็จ — ผู้ดูแลระบบเท่านั้น (เซิร์ฟเวอร์บังคับซ้ำที่ PATCH /api/documents)
+  const editReceipt = async (r: any) => {
+    if (!canDelete) { setError('แก้ไขได้เฉพาะผู้ดูแลระบบ (Admin)'); return; }
+    const cur = Number(r.verifiedAmount ?? r.amount ?? 0);
+    const amt = window.prompt(`แก้ยอดเงิน (บาท) — ใบเสร็จ ${r.receiptNumber || r.referenceNumber || r.id}
+ยอดปัจจุบัน: ${cur.toLocaleString('th-TH')}`, String(cur || ''));
+    if (amt === null) return;
+    const note = window.prompt('หมายเหตุ/เหตุผลที่แก้ไข (เว้นว่างได้)', String(r.note || ''));
+    if (note === null) return;
+    try {
+      const res = await fetch('/api/documents', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ receiptId: r.id, amount: amt, note }),
+      });
+      const j = await res.json().catch(() => ({} as any));
+      if (j.ok) { setNotice(j.changed ? 'บันทึกการแก้ไขใบเสร็จแล้ว' : 'ไม่มีข้อมูลเปลี่ยนแปลง'); setError(null); loadReceipts(); }
+      else setError(j.error || 'แก้ไขใบเสร็จไม่สำเร็จ');
+    } catch {
+      setError('แก้ไขใบเสร็จไม่สำเร็จ');
     }
   };
 
@@ -665,9 +699,47 @@ export default function DocumentsPage() {
       <Header />
       <div className="flex w-full">
         <Sidebar />
-        <main className="flex-1 p-6 space-y-5">
+        <main className="flex-1 p-6 pb-28 space-y-5">
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold text-[#475569]">สแกนใบเสร็จรับเงิน เข้าระบบ</h1>
+          </div>
+
+          {/* ── 3 ขั้นตอนสมัคร/ลงทะเบียน (ยกมาไว้บนสุด) + ภาพขั้นตอนจากหน้า /financial-freedom ── */}
+          <div className="card p-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="font-semibold text-[#475569]">🧭 3 ขั้นตอนสมัครและลงทะเบียน</h2>
+              <span className="text-[11px] px-2 py-0.5 rounded-full border bg-white text-slate-500">ก่อนเริ่มสแกนใบเสร็จ</span>
+            </div>
+            <div className="grid md:grid-cols-3 gap-3 mt-3">
+              {[
+                { n: '1', icon: '📝', t: 'ลงทะเบียนสมัครสมาชิก', d: 'สมัครบัญชีด้วยอีเมลและรหัสผ่าน แล้วยืนยันอีเมล', href: '/register', cta: 'ไปหน้าลงทะเบียน' },
+                { n: '2', icon: '🧑‍💼', t: 'สมัครเป็นตัวแทน (ผู้มุ่งหวัง)', d: 'กรอกใบสมัคร/แสดงความสนใจ เข้าสู่การคัดเลือก', href: '/recruit', cta: 'ไปหน้าสมัครตัวแทน' },
+                { n: '3', icon: '🧾', t: 'อัปโหลดสลิป / ใบเสร็จ', d: 'ระบบอ่านยอดเงินจริงและตรวจคุณสมบัติอัตโนมัติ', href: '/documents', cta: 'อยู่หน้านี้แล้ว' },
+              ].map((s) => (
+                <div key={s.n} className="rounded-xl border bg-white p-4 flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <span className="w-7 h-7 rounded-full bg-[#475569] text-white text-xs font-bold flex items-center justify-center">{s.n}</span>
+                    <span className="text-lg">{s.icon}</span>
+                    <span className="text-sm font-semibold text-[#475569]">{s.t}</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2 flex-1">{s.d}</p>
+                  <Link href={s.href} className="mt-3 inline-block px-3 py-1.5 rounded-full border text-xs text-sky-700 hover:bg-sky-50 text-center">
+                    {s.cta} →
+                  </Link>
+                </div>
+              ))}
+            </div>
+
+            <a href="/steps/3-steps-th.jpg" target="_blank" rel="noreferrer" className="block mt-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/steps/3-steps-th.webp"
+                alt="ภาพ 3 ขั้นตอน: 1) ลงทะเบียนสมัครสมาชิก 2) สมัครเป็นตัวแทน (ผู้มุ่งหวัง) 3) อัปโหลดสลิป/ใบเสร็จ"
+                className="w-full max-w-4xl mx-auto rounded-xl border shadow-sm hover:shadow-md transition-shadow"
+                loading="lazy"
+              />
+              <div className="text-center text-[11px] text-slate-500 mt-2">ภาพรวม 3 ขั้นตอน (แตะที่ภาพเพื่อเปิดขนาดเต็ม)</div>
+            </a>
           </div>
 
           {/* ── แผงสิทธิ์: แสดงให้ "ผู้ดูแลระบบ" เห็นว่าตัวเองมีสิทธิอะไรในหน้านี้ (ผู้ใช้ทั่วไปไม่เห็น) ── */}
@@ -678,7 +750,7 @@ export default function DocumentsPage() {
               { icon: '📚', label: 'ดูคลังใบเสร็จทั้งหมด + สรุปยอดเข้าเครือข่าย 1 แตก 5' },
               { icon: '🧾', label: 'สแกน/บันทึกใบเสร็จให้สมาชิกคนใดก็ได้ผ่านช่องรหัสสมาชิก' },
             ]}
-            note="ลบเป็นสิทธิ์ของผู้ดูแลระบบเท่านั้น — เจ้าของใบเสร็จทั่วไปจะไม่เห็นปุ่มลบ และถ้าเรียก API ลบตรง ๆ เซิร์ฟเวอร์จะตอบ 403"
+            note="สมาชิกทั่วไปลบได้เฉพาะใบเสร็จของรหัสตัวเอง (เซิร์ฟเวอร์ตรวจเจ้าของทุกครั้ง) · ผู้ดูแลระบบลบและแก้ไขได้ทุกใบ · การลบ/แก้ไขบันทึก Audit Log เสมอ"
           />
 
           {/* สแกน + อัปโหลดใบเสร็จ */}
@@ -1225,21 +1297,33 @@ export default function DocumentsPage() {
                             : <span className="text-slate-400">{r.filename}</span>}
                         </td>
                         <td className="p-2 text-center">
-                          {isAdmin ? (
-                            <button
-                              type="button"
-                              onClick={() => removeReceipt(r.id, r.filename)}
-                              title="ลบใบเสร็จออกจากคลัง (ผู้ดูแลระบบเท่านั้น)"
-                              className="px-2.5 py-1 rounded-full border border-red-200 text-red-600 hover:bg-red-50"
-                            >
-                              🗑 ลบ
-                            </button>
+                          {(canDelete || isOwnRow(r)) ? (
+                            <div className="flex items-center justify-center gap-1 whitespace-nowrap">
+                              {canDelete && (
+                                <button
+                                  type="button"
+                                  onClick={() => editReceipt(r)}
+                                  title="แก้ไขข้อมูลใบเสร็จ (ผู้ดูแลระบบ)"
+                                  className="px-2.5 py-1 rounded-full border border-sky-200 text-sky-700 hover:bg-sky-50"
+                                >
+                                  ✏ แก้ไข
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => removeReceipt(r.id, r.filename, isOwnRow(r))}
+                                title={canDelete ? 'ลบใบเสร็จออกจากคลัง (ผู้ดูแลระบบ)' : 'ลบใบเสร็จของรหัสตัวเอง เพื่อสแกนใหม่'}
+                                className="px-2.5 py-1 rounded-full border border-red-200 text-red-600 hover:bg-red-50"
+                              >
+                                🗑 ลบ
+                              </button>
+                            </div>
                           ) : (
                             <span
                               className="text-[11px] text-slate-400 whitespace-nowrap"
-                              title="การลบเอกสารเป็นสิทธิ์ของผู้ดูแลระบบเท่านั้น"
+                              title="เห็น/ลบได้เฉพาะใบเสร็จของรหัสตัวเอง — ผู้ดูแลระบบจัดการได้ทุกใบ"
                             >
-                              🔒 ผู้ดูแลเท่านั้น
+                              🔒 ของรหัสอื่น
                             </span>
                           )}
                         </td>
@@ -1250,7 +1334,7 @@ export default function DocumentsPage() {
               </div>
             )}
             <p className="text-[11px] text-slate-400 mt-3">
-              🔒 PDPA: คลังนี้เก็บเฉพาะข้อมูลธุรกรรม (เลขที่ใบเสร็จ กรมธรรม์ วันที่ ยอดเงิน สถานะตรวจ) — ไม่เก็บชื่อ-นามสกุล เลขภาษี ที่อยู่ หรือเลขบัตรของลูกค้า
+              🔒 สิทธิ์การเข้าถึง: สมาชิกเห็นและลบได้เฉพาะใบเสร็จของรหัสตัวเอง (เพื่อแก้ไข/สแกนใหม่) · ผู้ดูแลระบบเห็น ลบ และแก้ไขได้ทุกใบ · ทุกการลบ/แก้ไขถูกบันทึก Audit Log · คลังนี้เก็บเฉพาะข้อมูลธุรกรรม (เลขที่ใบเสร็จ กรมธรรม์ วันที่ ยอดเงิน สถานะตรวจ) ไม่เก็บชื่อ-นามสกุล เลขภาษี ที่อยู่ หรือเลขบัตรของลูกค้า
             </p>
           </div>
 

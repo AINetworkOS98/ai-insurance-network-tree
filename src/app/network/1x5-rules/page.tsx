@@ -28,7 +28,7 @@ export default function OneBreakFiveRulesPage(){
       <Header/>
       <div className="flex w-full">
         <Sidebar/>
-        <main className="flex-1 p-6 space-y-5 w-full min-w-0">
+        <main className="flex-1 p-6 pb-28 space-y-5 w-full min-w-0">
           <div>
             <h1 className="text-xl font-bold text-navy">หลักเกณฑ์การสร้าง 1 แตก 5 อัตโนมัติ</h1>
             <p className="text-xs text-slate-500 mt-1">รายละเอียดการเข้าระบบสมาชิก — ระบบทำงานอัตโนมัติทั้งหมดตามหลักเกณฑ์นี้</p>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebase-admin';
 import { verifyToken } from '@/lib/auth';
-import { isAdminFromPayload } from '@/lib/admin';
+import { isAdminFromPayload, isSystemAdmin } from '@/lib/admin';
 import { rankName } from '@/lib/rankCatalog';
 import { DEFAULT_POSITIONS } from '@/lib/compensationRules';
 import { applyMemberAction, readAdminStates, readGlobalAutoRenew, normalizeState, type MemberAction } from '@/lib/memberAdmin';
@@ -149,7 +149,10 @@ export async function GET(req: NextRequest) {
       sources: { postgres: members.length - legacyCount, legacy: legacyCount },
     };
 
-    return NextResponse.json({ ok: true, members, count: members.length, summary, autoRenewGlobal: globalAutoRenew });
+    // สิทธิ์ลบ/คืนค่า = ผู้ดูแลระบบขั้นสูงเท่านั้น (role super_admin/admin หรืออีเมลแอดมิน — ไม่รวม auditor)
+    const strict = await isSystemAdmin(String(g.decoded?.sub || '')).catch(() => ({ ok: false }));
+
+    return NextResponse.json({ ok: true, members, count: members.length, summary, autoRenewGlobal: globalAutoRenew, canDelete: !!strict?.ok });
 
   } catch (error: any) {
     console.error('Admin members API error:', error);
@@ -181,6 +184,11 @@ export async function POST(req: NextRequest) {
     }
     if (action !== 'autoRenewGlobal' && !id) {
       return NextResponse.json({ ok: false, error: 'ไม่ระบุสมาชิก' }, { status: 400 });
+    }
+    // ลบ/คืนค่าสมาชิก = ผู้ดูแลระบบขั้นสูงเท่านั้น (บังคับที่เซิร์ฟเวอร์ ไม่พึ่ง UI)
+    if (action === 'delete' || action === 'restore') {
+      const strict = await isSystemAdmin(String(g.decoded?.sub || '')).catch(() => ({ ok: false }));
+      if (!strict?.ok) return NextResponse.json({ ok: false, error: 'เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่ลบ/คืนค่าสมาชิกได้' }, { status: 403 });
     }
     if (action === 'delete' && body?.confirm !== 'DELETE') {
       return NextResponse.json({ ok: false, error: 'ต้องยืนยันก่อนลบ (confirm: "DELETE")' }, { status: 400 });

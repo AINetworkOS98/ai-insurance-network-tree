@@ -33,6 +33,38 @@ export default function AdminConsentPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [testInfo, setTestInfo] = useState<string>('');
+  const [sel, setSel] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState('');
+  const [errNotice, setErrNotice] = useState('');
+
+  const toggle = (id: string) =>
+    setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  const allSel = records.length > 0 && records.every((r) => sel.includes(r.id));
+  const toggleAll = () => setSel(allSel ? [] : records.map((r) => r.id));
+
+  const doDelete = async (ids: string[]) => {
+    if (!ids.length) return;
+    const label = ids.length === 1 ? 'บันทึกความยินยอมรายการนี้' : `บันทึกความยินยอม ${ids.length} รายการ`;
+    if (!confirm(`ยืนยันลบ${label}?\n\nการลบไม่สามารถย้อนกลับได้ (ระบบเก็บร่องรอยไว้ใน AuditLog)`)) return;
+    setBusy(true); setNotice(''); setErrNotice('');
+    try {
+      const r = await fetch('/api/admin/consent', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      });
+      const j = await r.json();
+      if (!j.ok) { setErrNotice(j.error || 'ลบไม่สำเร็จ'); return; }
+      setNotice(`ลบแล้ว ${j.deleted} รายการ`);
+      setSel([]);
+      await load();
+    } catch {
+      setErrNotice('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
@@ -105,6 +137,28 @@ export default function AdminConsentPage() {
           {error && (
             <div className="mb-4 px-4 py-3 rounded-xl border border-red-100 bg-red-50 text-sm text-red-700">{error}</div>
           )}
+          {notice && (
+            <div className="mb-4 px-4 py-3 rounded-xl border border-emerald-100 bg-emerald-50 text-sm text-emerald-700">{notice}</div>
+          )}
+          {errNotice && (
+            <div className="mb-4 px-4 py-3 rounded-xl border border-red-100 bg-red-50 text-sm text-red-700">{errNotice}</div>
+          )}
+
+          {sel.length > 0 && (
+            <div className="mb-3 flex flex-wrap items-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 bg-red-50">
+              <span className="text-xs font-semibold text-red-700">เลือกไว้ {sel.length} รายการ</span>
+              <button
+                onClick={() => doDelete(sel)}
+                disabled={busy}
+                className="px-4 py-1.5 rounded-full bg-red-600 text-white text-xs font-semibold disabled:opacity-50"
+              >
+                {busy ? 'กำลังลบ...' : `ลบที่เลือก (${sel.length})`}
+              </button>
+              <button onClick={() => setSel([])} className="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-semibold text-slate-600">
+                ยกเลิกการเลือก
+              </button>
+            </div>
+          )}
 
           {loading ? (
             <div className="text-sm text-slate-500 p-6">กำลังโหลด...</div>
@@ -115,6 +169,15 @@ export default function AdminConsentPage() {
               <table className="w-full text-xs">
                 <thead className="bg-[#f8fafc] text-slate-600">
                   <tr>
+                    <th className="px-3 py-2 w-8">
+                      <input
+                        type="checkbox"
+                        checked={allSel}
+                        onChange={toggleAll}
+                        aria-label="เลือกทั้งหมด"
+                        className="accent-red-600 cursor-pointer"
+                      />
+                    </th>
                     <th className="text-left px-3 py-2 font-semibold">วันเวลา</th>
                     <th className="text-left px-3 py-2 font-semibold">สมาชิก</th>
                     <th className="text-left px-3 py-2 font-semibold">ประเภท</th>
@@ -122,11 +185,21 @@ export default function AdminConsentPage() {
                     <th className="text-left px-3 py-2 font-semibold">เวอร์ชัน</th>
                     <th className="text-left px-3 py-2 font-semibold">ที่มา</th>
                     <th className="text-left px-3 py-2 font-semibold">IP</th>
+                    <th className="text-right px-3 py-2 font-semibold">จัดการ</th>
                   </tr>
                 </thead>
                 <tbody>
                   {records.map((r) => (
-                    <tr key={r.id} className="border-t border-slate-100">
+                    <tr key={r.id} className={`border-t border-slate-100 ${sel.includes(r.id) ? 'bg-red-50/50' : ''}`}>
+                      <td className="px-3 py-2">
+                        <input
+                          type="checkbox"
+                          checked={sel.includes(r.id)}
+                          onChange={() => toggle(r.id)}
+                          aria-label={`เลือกบันทึก ${r.id}`}
+                          className="accent-red-600 cursor-pointer"
+                        />
+                      </td>
                       <td className="px-3 py-2 whitespace-nowrap text-slate-600">{fmt(r.consentedAt)}</td>
                       <td className="px-3 py-2">
                         <div className="font-semibold text-slate-800">{r.user?.displayName || '-'}</div>
@@ -143,6 +216,15 @@ export default function AdminConsentPage() {
                       <td className="px-3 py-2 font-mono">{r.version}</td>
                       <td className="px-3 py-2 text-slate-500">{r.source || '-'}</td>
                       <td className="px-3 py-2 text-slate-400 font-mono">{r.ip || '-'}</td>
+                      <td className="px-3 py-2 text-right">
+                        <button
+                          onClick={() => doDelete([r.id])}
+                          disabled={busy}
+                          className="px-3 py-1 rounded-full bg-red-50 border border-red-200 text-[11px] font-semibold text-red-700 disabled:opacity-50"
+                        >
+                          ลบ
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

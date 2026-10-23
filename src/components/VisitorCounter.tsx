@@ -33,12 +33,12 @@ export default function VisitorCounter() {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-slate-200 py-1.5 px-3 text-center text-[10px] sm:text-xs text-slate-500 z-50 overflow-hidden leading-tight"
+      className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-slate-200 py-2 px-3 text-center text-[11px] sm:text-xs text-slate-700 z-50 overflow-hidden leading-snug"
       style={{ fontFamily: "'Sarabun','Noto Sans Thai',sans-serif" }}
     >
       {/* ชื่อโดเมน + ข้อความสงวนสิทธิ (เพิ่มตามคำสั่ง) */}
-      <div className="text-[9px] sm:text-[10px] text-slate-400 tracking-tight">ai-insurance-network-tree.vercel.app</div>
-      <div className="text-[9px] sm:text-[10px] text-slate-500 font-medium">ขอสงวนสิทธิเฉพาะสมาชิก</div>
+      <div className="text-[10px] sm:text-[11px] text-slate-600 tracking-tight">ai-insurance-network-tree.vercel.app</div>
+      <div className="text-[10px] sm:text-[11px] text-slate-700 font-semibold">ขอสงวนสิทธิเฉพาะสมาชิก</div>
       <div className="flex items-center justify-center whitespace-nowrap">
         <span className="font-medium text-slate-700">
           👥 สมาชิกทั้งหมด:{' '}

@@ -13,7 +13,7 @@ import { useEffect, useState } from 'react';
 
 export type AdminRight = { icon?: string; label: string; detail?: string };
 
-type MeState = { isAdmin: boolean; email?: string; rankLevel?: number; rankName?: string };
+type MeState = { isAdmin: boolean; canDelete?: boolean; email?: string; rankLevel?: number; rankName?: string };
 
 let cached: MeState | null = null;
 let inflight: Promise<MeState> | null = null;
@@ -29,6 +29,7 @@ export function useAdminMe(): MeState | null {
         .then((j: any) => {
           const s: MeState = {
             isAdmin: j?.isAdmin === true,
+            canDelete: j?.canDelete === true,
             email: j?.user?.email || undefined,
             rankLevel: j?.user?.rankLevel ?? undefined,
             rankName: j?.user?.rankName || undefined,

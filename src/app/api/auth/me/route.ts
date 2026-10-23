@@ -37,5 +37,12 @@ export async function GET(req: NextRequest){
     const { isAdminFromPayload } = await import('@/lib/admin');
     isAdmin = await isAdminFromPayload({ ...payload, ...(profile || {}) });
   }catch{}
-  return NextResponse.json({ ok:true, authed:true, isAdmin, user: { ...payload, ...(profile || {}) }, consents });
+  // สิทธิ์ลบ (เข้มกว่าสิทธิ์ดูแผงผู้ดูแล): super_admin/admin · อีเมลแอดมิน · system.manage
+  let canDelete = false;
+  try {
+    const { isSystemAdmin } = await import('@/lib/admin');
+    const sub = String((payload as any)?.sub || (payload as any)?.id || '');
+    if (sub) canDelete = !!(await isSystemAdmin(sub)).ok;
+  } catch {}
+  return NextResponse.json({ ok:true, authed:true, isAdmin, canDelete, user: { ...payload, ...(profile || {}) }, consents });
 }

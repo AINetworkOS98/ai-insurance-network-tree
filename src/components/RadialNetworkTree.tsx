@@ -13,6 +13,7 @@ type Status = 'active' | 'pending' | 'inactive' | 'vacant';
 
 type RNode = {
   id: string;
+  userId: string;
   name: string;
   memberId: string;
   status: Status;
@@ -29,6 +30,7 @@ type RNode = {
 };
 
 type MemberLike = {
+  id?: string; uid?: string;
   memberId?: string; memberCode?: string; name?: string; displayName?: string;
   email?: string; status?: string; rankName?: string; avatarUrl?: string;
   province?: string; branch?: string; district?: string;
@@ -61,7 +63,7 @@ function buildSkeleton(maxDepth: number) {
     parent: RNode | null, slot: number, id: string,
   ): RNode => {
     const node: RNode = {
-      id, name: '', memberId: '', status: 'vacant',
+      id, userId: '', name: '', memberId: '', status: 'vacant',
       level, branch, slot, angle: (a0 + a1) / 2,
       x: 0, y: 0, parent, children: [],
     };
@@ -97,6 +99,53 @@ export default function RadialNetworkTree({ filter, demoOnly = false }: {
   const membersRef = useRef<MemberLike[] | null>(null);
   const applyMembers = (ms: MemberLike[]) => { membersRef.current = ms; setMembers(ms); };
   const [tick, setTick] = useState(0);
+  // ── ลบสมาชิกออกจากผัง (soft delete ผ่านเครื่องยนต์เดียวกับ /members) ──
+  const [sel, setSel] = useState<RNode | null>(null);
+  const [canManage, setCanManage] = useState(false);
+  const [busyId, setBusyId] = useState('');
+  const [actMsg, setActMsg] = useState('');
+  const [actErr, setActErr] = useState('');
+
+  // สิทธิ์ผู้ดูแล: /api/admin/members ตอบ ok เฉพาะผู้ดูแล (คำขออื่นได้ 401/403)
+  useEffect(() => {
+    if (demoOnly) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch('/api/admin/members', { credentials: 'include', cache: 'no-store' });
+        const j = await r.json().catch(() => ({}));
+        if (!cancelled) setCanManage(j?.canDelete === true);
+      } catch { if (!cancelled) setCanManage(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [demoOnly]);
+
+  async function deleteMember(node: RNode) {
+    if (!node.userId) { setActErr('ไม่พบรหัสสมาชิกของโหนดนี้ — รีเฟรชผังแล้วลองใหม่'); return; }
+    const ok = window.confirm(
+      `ยืนยันลบสมาชิกออกจากผังและระบบ?\n\n${node.memberId} · ${node.name}\n` +
+      'สถานะจะเปลี่ยนเป็น RESIGNED + ซ่อนจากทะเบียน/ผัง (ข้อมูลและประวัติยังอยู่ครบ) — คืนค่าได้ที่หน้า /members',
+    );
+    if (!ok) return;
+    setBusyId(node.userId); setActMsg(''); setActErr('');
+    try {
+      const r = await fetch('/api/admin/members', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: node.userId, action: 'delete', confirm: 'DELETE' }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!d?.ok) setActErr(d?.error || 'ลบสมาชิกไม่สำเร็จ');
+      else {
+        setActMsg(`🗑 ลบ ${node.name} (${node.memberId}) ออกจากผังแล้ว — ซ่อนจากทะเบียน · คืนค่าได้ที่หน้า /members`);
+        setSel(null);
+        setTick(v => v + 1);
+        try { window.dispatchEvent(new Event('members-updated')); } catch {}
+      }
+    } catch (e: any) {
+      setActErr(e?.message || 'เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ');
+    } finally { setBusyId(''); }
+  }
 
   // อัปเดตข้อมูลจริงอัตโนมัติ: ทุก 30 วิ · เมื่อหน้าอื่นแก้ข้อมูลสมาชิก · เมื่อกลับเข้าหน้านี้
   useEffect(() => {
@@ -167,6 +216,7 @@ export default function RadialNetworkTree({ filter, demoOnly = false }: {
       if (m) {
         n.name = String(m.name || m.displayName || 'ไม่ระบุชื่อ');
         n.memberId = String(m.memberId || m.memberCode || '-');
+        n.userId = String(m.id || m.uid || '');
         n.rankName = m.rankName;
         n.avatarUrl = m.avatarUrl;
         const st = String(m.status || '').toUpperCase();
@@ -174,6 +224,7 @@ export default function RadialNetworkTree({ filter, demoOnly = false }: {
       } else {
         n.name = 'ตำแหน่งว่าง';
         n.memberId = '-';
+        n.userId = '';
         n.status = 'vacant';
       }
     });
@@ -225,7 +276,48 @@ export default function RadialNetworkTree({ filter, demoOnly = false }: {
         {demoOnly
           ? <span className="ml-2 px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 text-[10px] font-semibold">ตัวอย่างสาธิต — ไม่ใช่ข้อมูลสมาชิกจริง</span>
           : usedDemo && <span className="ml-2 text-amber-700">(ยังไม่มีข้อมูลจริง — แสดงข้อมูลตัวอย่าง)</span>}
+        {!demoOnly && <span className="ml-2 text-slate-400">• คลิกที่วงกลมสมาชิกเพื่อดูรายละเอียด/ลบ</span>}
       </div>
+
+      {actMsg && <div className="mb-2 px-3 py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-xs text-emerald-800">{actMsg}</div>}
+      {actErr && <div className="mb-2 px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 text-xs text-rose-700">{actErr}</div>}
+
+      {/* แผงรายละเอียดโหนด + ปุ่มลบ (เฉพาะผู้ดูแล) */}
+      {sel && (
+        <div className="mb-3 rounded-2xl border border-slate-200 bg-[#f8fafc] p-3">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-slate-500">โหนดที่เลือก:</span>
+            <span className="font-semibold text-slate-800">{sel.name}</span>
+            <span className="font-mono text-slate-500">{sel.memberId}</span>
+            <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${sel.status === 'active' ? 'bg-emerald-100 text-emerald-700' : sel.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-slate-200 text-slate-700'}`}>
+              {sel.status === 'active' ? 'Active' : sel.status === 'pending' ? 'Pending' : 'Inactive'}
+            </span>
+            {sel.rankName && <span className="text-sky-700 font-semibold">{sel.rankName}</span>}
+            <span className="text-slate-400">ชั้น {sel.level} · ช่อง {sel.slot}</span>
+            <div className="ml-auto flex items-center gap-2">
+              {canManage ? (
+                <button
+                  type="button"
+                  disabled={!!busyId}
+                  onClick={() => deleteMember(sel)}
+                  title="ลบสมาชิกออกจากผัง (ซ่อนจากทะเบียน · คืนค่าได้ที่หน้า /members)"
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border ${busyId ? 'border-slate-200 bg-slate-50 text-slate-400' : 'border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100'}`}
+                >
+                  {busyId ? 'กำลังลบ...' : '🗑 ลบสมาชิก'}
+                </button>
+              ) : (
+                <span className="text-[11px] text-slate-400">🔐 ลบได้เฉพาะผู้ดูแลระบบ</span>
+              )}
+              <button type="button" onClick={() => setSel(null)} className="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-semibold text-slate-600">ปิด</button>
+            </div>
+          </div>
+          {canManage && (
+            <div className="mt-2 text-[11px] text-slate-500">
+              การลบ = soft delete (สถานะ RESIGNED + ซ่อนจากทะเบียน/ผัง) · ข้อมูลและประวัติยังอยู่ครบ · ทุกครั้งถูกบันทึก Audit Log · คืนค่าได้ที่หน้า <b>/members</b>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="overflow-auto border rounded-2xl bg-[#0b1020] p-4">
         <style>{`
@@ -290,7 +382,9 @@ export default function RadialNetworkTree({ filter, demoOnly = false }: {
               const r = n.level === 0 ? 34 : n.level === 1 ? 22 : n.level === 2 ? 14 : 9;
               const col = n.status === 'vacant' ? '#475569' : BRANCH_COLORS[n.branch % FANOUT];
               return (
-                <g key={n.id}>
+                <g key={n.id}
+                   onClick={() => { if (n.status !== 'vacant') { setSel(n); setActErr(''); } }}
+                   style={{ cursor: n.status === 'vacant' ? 'default' : 'pointer' }}>
                   <title>{`${n.memberId} — ${n.name}${n.rankName ? ' • ' + n.rankName : ''} (ชั้น ${n.level}, ช่อง ${n.slot})`}</title>
                   {n.status !== 'vacant' && (
                     <circle cx={n.x} cy={n.y} r={r + 7} fill="none" stroke={col} strokeWidth="1.5"

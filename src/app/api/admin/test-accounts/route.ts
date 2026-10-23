@@ -29,7 +29,7 @@ export async function GET(req: NextRequest){
   if(g.error) return g.error;
   try{
     const users: any[] = await (prisma as any).user.findMany({
-      where:{ email: { endsWith: TEST_DOMAIN } },
+      where:{ OR: [ { email: { endsWith: TEST_DOMAIN } }, { email: { in: ['child.ref.20261009@example.com','test.noref.20261009@example.com'] } } ] },
       select:{ id:true, email:true, username:true, displayName:true, memberCode:true, status:true, createdAt:true },
       orderBy:{ createdAt: 'desc' },
     }).catch(()=>[]);
@@ -43,8 +43,13 @@ export async function DELETE(req: NextRequest){
   const g = await gate(req);
   if(g.error) return g.error;
   try{
+    // บัญชีทดสอบชุดแรกที่สมัครผ่านหน้า /register ด้วยอีเมล @example.com (ระบุตรงตัวเท่านั้น — ไม่เปิดกว้างทั้งโดเมน)
+    const EXTRA_TEST_EMAILS = [
+      'child.ref.20261009@example.com',
+      'test.noref.20261009@example.com',
+    ];
     const users: any[] = await (prisma as any).user.findMany({
-      where:{ email: { endsWith: TEST_DOMAIN } },
+      where:{ OR: [ { email: { endsWith: TEST_DOMAIN } }, { email: { in: EXTRA_TEST_EMAILS } } ] },
       select:{ id:true, email:true },
     }).catch(()=>[]);
     if(!users.length) return NextResponse.json({ ok:true, deleted:0, message:'ไม่มีบัญชีทดสอบให้ลบ' });
