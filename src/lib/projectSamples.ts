@@ -456,6 +456,25 @@ export function isRiderCat(cat: string): boolean {
   return RIDER_CATS.includes(cat);
 }
 
+/**
+ * แยก "สัญญาหลัก" กับ "อนุสัญญา/สัญญาเพิ่มเติม" จากตัวสินค้าจริง (ไม่ดูแค่หมวด)
+ * เหตุผล: หมวด "LifeVerse" (รหัส LV-*) มีทั้งสัญญาหลักและสัญญาเพิ่มเติมปนกัน
+ *   สัญญาหลัก: LV-อ01 (อ.1/ขจ.1) · LV-อ02 · LV-A03 (อ.3) · LV-สร2 · LV-D11 (มัลติเพย์) · LV-D28 (กร.48)
+ *   อนุสัญญา:  LV-รพ (ค่ารักษา/รายวัน) · LV-OP4 (ผู้ป่วยนอก) · LV-HHA/LV-NHG/LV-SPH/LV-VP (เฮลท์ ฟิต)
+ *              · LV-C21 (มัลติเพย์ แคนเซอร์)
+ * ⇒ ตรวจจากชื่อ/รหัสด้วยคีย์เวิร์ด เพื่อไม่ให้ "อนุสัญญา" หลุดไปอยู่ในลิสต์สัญญาหลัก
+ */
+const RIDER_NAME_RE = /(ค่ารักษา|ผู้ป่วยนอก|เวชภัณฑ์|เฮลท์|health|แคนเซอร์|มะเร็ง|โรคร้าย|อุบัติเหตุ|ทุพพลภาพ|รายวัน|ชดเชย|สัญญาเพิ่มเติม)/i;
+const RIDER_CODE_RE = /^LV-(รพ|OP\d*|HHA|NHG|SPH|VP|C\d+)$/i;
+
+export function isRiderProduct(p: { c?: string | null; n?: string | null; cat?: string | null } | null | undefined): boolean {
+  if (!p) return false;
+  if (isRiderCat(String(p.cat || ''))) return true;
+  if (RIDER_CODE_RE.test(String(p.c || ''))) return true;
+  if (RIDER_NAME_RE.test(String(p.n || ''))) return true;
+  return false;
+}
+
 export function templateFor(cat: string): CategoryTemplate {
   return CATEGORY_TEMPLATES[cat] || FALLBACK_TEMPLATE;
 }

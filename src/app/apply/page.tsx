@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import PremiumPaymentPicture from '@/components/PremiumPaymentPicture';
-import { buildProjectSamples, condText, isRiderCat } from '@/lib/projectSamples';
+import { buildProjectSamples, condText, isRiderProduct } from '@/lib/projectSamples';
 import { estimatePremium, LIFE_PREMIUM_TAX_CAP, PREMIUM_RATE_VERSION } from '@/lib/premiumEstimate';
 
 const fmt = (n: number) => Number(n || 0).toLocaleString('th-TH');
@@ -91,8 +91,9 @@ export default function ApplyPage() {
   const products = (data?.products || []) as any[];
 
   // แยก "สัญญาหลัก" กับ "สัญญาเพิ่มเติม" — สัญญาเพิ่มเติมเลือกได้หลายตัวและต้องมีสัญญาหลักก่อน
-  const mains = useMemo(() => products.filter(p => !isRiderCat(p.cat)), [products]);
-  const riderPlans = useMemo(() => products.filter(p => isRiderCat(p.cat)), [products]);
+  // ใช้ isRiderProduct (หมวด + ชื่อ + รหัส) — หมวด LifeVerse มีทั้งสัญญาหลักและอนุสัญญาปนกัน
+  const mains = useMemo(() => products.filter(p => !isRiderProduct(p)), [products]);
+  const riderPlans = useMemo(() => products.filter(p => isRiderProduct(p)), [products]);
 
   const match = (p: any, s: string) => !s || String(p.c).toLowerCase().includes(s) || String(p.n).toLowerCase().includes(s) || String(p.cat).toLowerCase().includes(s);
 

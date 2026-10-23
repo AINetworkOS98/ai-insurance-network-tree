@@ -4,7 +4,7 @@ import Header from '@/components/Header';
 import LineOaCard from '@/components/LineOaCard';
 import Sidebar from '@/components/Sidebar';
 import { estimatePremium, LIFE_PREMIUM_TAX_CAP, PREMIUM_RATE_VERSION } from '@/lib/premiumEstimate';
-import { isRiderCat } from '@/lib/projectSamples';
+import { isRiderProduct } from '@/lib/projectSamples';
 import Link from 'next/link';
 import AdminRightsPanel, { useAdminMe } from '@/components/AdminRightsPanel';
 
@@ -909,7 +909,7 @@ export default function DocumentsPage() {
                     className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
                   >
                     <option value="">— เลือกสัญญาหลัก —</option>
-                    {premPlans.filter((x) => !isRiderCat(x.cat)).slice(0, 200).map((x) => <option key={x.c} value={x.c}>{x.c} · {x.n} ({x.cat})</option>)}
+                    {premPlans.filter((x) => !isRiderProduct(x)).slice(0, 200).map((x) => <option key={x.c} value={x.c}>{x.c} · {x.n} ({x.cat})</option>)}
                   </select>
                 </label>
                 <label className="text-[11px] font-medium text-slate-600 lg:col-span-2">อนุสัญญา / สัญญาเพิ่มเติม (ไม่บังคับ)
@@ -919,7 +919,7 @@ export default function DocumentsPage() {
                     className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
                   >
                     <option value="">— ไม่มีอนุสัญญา —</option>
-                    {premPlans.filter((x) => isRiderCat(x.cat)).slice(0, 300).map((x) => <option key={x.c} value={x.c}>{x.c} · {x.n} ({x.cat})</option>)}
+                    {premPlans.filter((x) => isRiderProduct(x)).slice(0, 300).map((x) => <option key={x.c} value={x.c}>{x.c} · {x.n} ({x.cat})</option>)}
                   </select>
                 </label>
                 <label className="text-[11px] font-medium text-slate-600">เพศ
