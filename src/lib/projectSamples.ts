@@ -464,6 +464,9 @@ export function isRiderCat(cat: string): boolean {
  *              · LV-C21 (มัลติเพย์ แคนเซอร์)
  * ⇒ ตรวจจากชื่อ/รหัสด้วยคีย์เวิร์ด เพื่อไม่ให้ "อนุสัญญา" หลุดไปอยู่ในลิสต์สัญญาหลัก
  */
+/** รหัสที่เจ้าของระบบยืนยันแล้วว่าเป็น "สัญญาหลัก" แม้หมวด/ชื่อจะเข้าข่ายอนุสัญญา */
+export const MAIN_CONTRACT_CODES = new Set(['W013', 'UWD']);
+
 const RIDER_NAME_RE = /(ค่ารักษา|ผู้ป่วยนอก|เวชภัณฑ์|เฮลท์|health|แคนเซอร์|มะเร็ง|โรคร้าย|อุบัติเหตุ|ทุพพลภาพ|รายวัน|ชดเชย|สัญญาเพิ่มเติม)/i;
 const RIDER_CODE_RE = /^LV-(รพ|OP\d*|HHA|NHG|SPH|VP|C\d+)$/i;
 
@@ -472,6 +475,8 @@ export function isRiderProduct(p: { c?: string | null; n?: string | null; cat?: 
   const code = String(p.c || '');
   const name = String(p.n || '');
   const cat = String(p.cat || '');
+  // 1) ข้อยกเว้นที่เจ้าของระบบยืนยัน: สัญญาหลักเสมอ (เช่น W013 คุ้มธนกิจ 99/99, UWD ไลฟ์เวิร์ส เวลท์ ฟิต 99/99)
+  if (MAIN_CONTRACT_CODES.has(code.trim().toUpperCase())) return false;
   if (isRiderCat(cat)) return true;
   // หมวด LifeVerse (LV-*) ทั้งหมด = อนุสัญญา/สัญญาเพิ่มเติม (ตามที่เจ้าของระบบยืนยัน)
   if (cat === 'LifeVerse') return true;
