@@ -7,6 +7,7 @@ import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import PremiumPaymentPicture from '@/components/PremiumPaymentPicture';
 import { buildProjectSamples, condText, isRiderCat } from '@/lib/projectSamples';
+import { estimatePremium, LIFE_PREMIUM_TAX_CAP, PREMIUM_RATE_VERSION } from '@/lib/premiumEstimate';
 
 const fmt = (n: number) => Number(n || 0).toLocaleString('th-TH');
 const PAGE_SIZE = 10;
@@ -120,6 +121,9 @@ export default function ApplyPage() {
     return buildProjectSamples([full], { startGender: gender, age: Number(age) || 30, cover: Number(cover) || 1000000 })[0];
   }, [picked, products, gender, age, cover]);
 
+  // ── เครื่องคำนวณเบี้ยประกันชีวิต (ประมาณการ) ──────────────────────────────────
+  const [premCalcOpen, setPremCalcOpen] = useState(true);
+  const [premResult, setPremResult] = useState<any>(null);
   const ageNum = Number(age) || 30;
   const coverNum = Number(String(cover).replace(/[^\d]/g, '')) || 1000000;
 
@@ -202,6 +206,157 @@ export default function ApplyPage() {
             </p>
             <a href="/cases" className="inline-block mt-1 text-[11px] font-semibold text-navy underline">→ ดูเคสที่บันทึกไว้ทั้งหมด</a>
           </div>
+
+          {/* ══ โปรแกรมคำนวณเบี้ยประกันชีวิต (วางไว้ "ก่อน" ขั้นสร้าง/อัปโหลดใบเสร็จ) ══ */}
+          <section className="overflow-hidden rounded-2xl border border-[#0b2b5b]/15 bg-white shadow-sm">
+            <div className="bg-gradient-to-r from-[#0b2b5b] via-[#123a73] to-[#1d4ed8] px-5 py-5 text-white">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em]">Insurance toolkit</span>
+                  <h2 className="mt-2 text-lg font-bold leading-snug sm:text-xl">คำนวณเบี้ยประกันชีวิต — แล้วส่งต่ออัปโหลดใบเสร็จ</h2>
+                  <p className="mt-1 max-w-2xl text-xs leading-relaxed text-white/85">
+                    เลือกแบบประกัน · เพศ · อายุ · ทุนประกัน · ระยะชำระเบี้ย แล้วระบบประมาณการเบี้ยให้ทันที
+                    พร้อมสิทธิลดหย่อนภาษี และปุ่มส่งต่อไป <b>สร้าง/อัปโหลดสลิป/ใบเสร็จ</b> ในขั้นถัดไป
+                  </p>
+                </div>
+                <div className="grid shrink-0 grid-cols-3 gap-2 text-center">
+                  {[
+                    { k: 'ทันที', v: 'ประมาณการ' },
+                    { k: 'สูงสุด', v: 'ลดหย่อนภาษี' },
+                    { k: '1 คลิก', v: 'ต่อใบเสร็จ' },
+                  ].map((c) => (
+                    <div key={c.v} className="rounded-xl bg-white/10 px-3 py-2">
+                      <div className="text-sm font-bold">{c.k}</div>
+                      <div className="text-[10px] text-white/75">{c.v}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 sm:p-5">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                <label className="text-[11px] font-medium text-slate-600 lg:col-span-2">แบบประกัน (สัญญาหลัก)
+                  <select
+                    value={picked?.c || ''}
+                    onChange={(e) => { const hit = mains.find((m: any) => m.c === e.target.value); setPicked(hit || null); setPremResult(null); }}
+                    className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm"
+                  >
+                    <option value="">— เลือกแบบประกัน —</option>
+                    {mains.slice(0, 120).map((m: any) => <option key={m.c} value={m.c}>{m.c} · {m.n} ({m.cat})</option>)}
+                  </select>
+                </label>
+                <label className="text-[11px] font-medium text-slate-600">เพศ
+                  <select value={gender} onChange={(e) => { setGender(e.target.value as 'ชาย' | 'หญิง'); setPremResult(null); }}
+                    className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm">
+                    <option value="ชาย">ชาย</option>
+                    <option value="หญิง">หญิง</option>
+                  </select>
+                </label>
+                <label className="text-[11px] font-medium text-slate-600">อายุ (ปี)
+                  <input value={age} inputMode="numeric" onChange={(e) => { setAge(e.target.value.replace(/\D/g, '').slice(0, 2)); setPremResult(null); }}
+                    className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm" placeholder="30" />
+                </label>
+                <label className="text-[11px] font-medium text-slate-600">ทุนประกัน (บาท)
+                  <input value={cover} inputMode="numeric" onChange={(e) => { setCover(e.target.value.replace(/[^\d]/g, '').slice(0, 9)); setPremResult(null); }}
+                    className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm" placeholder="1000000" />
+                </label>
+                <label className="text-[11px] font-medium text-slate-600">ระยะชำระเบี้ย (ปี)
+                  <input value={payYears} inputMode="numeric" onChange={(e) => { setPayYears(e.target.value.replace(/\D/g, '').slice(0, 2)); setPremResult(null); }}
+                    className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm" placeholder="10" />
+                </label>
+              </div>
+
+              <div className="mt-2 flex flex-wrap gap-1">
+                {[1000000, 2000000, 3000000, 5000000].map((c) => (
+                  <button key={c} type="button" onClick={() => { setCover(String(c)); setPremResult(null); }}
+                    className={`rounded-full border px-2.5 py-1 text-[11px] ${coverNum === c ? 'border-navy bg-navy text-white' : 'bg-white text-slate-600'}`}>
+                    {fmt(c)} บาท
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <button type="button" onClick={() => setPremCalcOpen((v) => !v)}
+                  className="rounded-full bg-navy px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:opacity-95">
+                  {premCalcOpen ? 'ซ่อนเครื่องคำนวณ' : 'เปิดเครื่องคำนวณเบี้ย'}
+                </button>
+                <button type="button"
+                  onClick={() => setPremResult(estimatePremium({ planName: picked?.n, planCat: picked?.cat, gender: gender === 'หญิง' ? 'female' : 'male', age: ageNum, cover: coverNum, payYears: Number(payYears) || 10 }))}
+                  className="rounded-full bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:opacity-95">
+                  คำนวณเบี้ยประกันชีวิต
+                </button>
+                <a href="/documents?m=1&cam=1"
+                  className="rounded-full border border-emerald-600 px-5 py-2.5 text-xs font-bold text-emerald-700 no-underline hover:bg-emerald-50">
+                  🧾 ส่งต่ออัปโหลดใบเสร็จ
+                </a>
+                <span className="text-[10px] text-slate-400">{PREMIUM_RATE_VERSION}</span>
+              </div>
+
+              {premCalcOpen && premResult && (
+                <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    {[
+                      { l: 'เบี้ยต่อปี (ประมาณการ)', v: `${fmt(premResult.perYear)} ฿`, s: `${(picked?.c || '-')} · ${gender} ${ageNum} ปี` },
+                      { l: 'เฉลี่ยต่อเดือน', v: `${fmt(premResult.perMonth)} ฿`, s: 'เบี้ยรายปี ÷ 12' },
+                      { l: 'ลดหย่อนภาษีได้สูงสุด', v: `${fmt(premResult.taxDeductible)} ฿`, s: `เพดาน ${fmt(LIFE_PREMIUM_TAX_CAP)} ฿/ปี` },
+                      { l: `รวมตลอด ${premResult.payYears || 0} ปี`, v: `${fmt(premResult.totalPremium)} ฿`, s: 'เบี้ยต่อปี × ระยะชำระ' },
+                    ].map((k) => (
+                      <div key={k.l} className="rounded-xl border bg-white px-3 py-2">
+                        <div className="text-[10px] text-slate-500">{k.l}</div>
+                        <div className="text-base font-bold text-navy">{k.v}</div>
+                        <div className="text-[10px] text-slate-400">{k.s}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-2 text-[10px] leading-relaxed text-slate-500">
+                    ฐานคำนวณ: {premResult.basis}<br />
+                    {premResult.disclaimer}
+                  </div>
+                  {premResult.warnings?.length > 0 && (
+                    <ul className="mt-1 space-y-0.5 text-[10px] text-amber-700">
+                      {premResult.warnings.map((w: string, i: number) => <li key={i}>• {w}</li>)}
+                    </ul>
+                  )}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button type="button" onClick={() => setStep(2)}
+                      className="rounded-full bg-navy px-4 py-2 text-[11px] font-bold text-white">
+                      ใช้แบบนี้กรอกข้อมูลต่อ →
+                    </button>
+                    <a href="/documents?m=1&cam=1"
+                      className="rounded-full bg-emerald-600 px-4 py-2 text-[11px] font-bold text-white no-underline">
+                      🧾 ไปอัปโหลดใบเสร็จขั้นถัดไป
+                    </a>
+                    <a href="/commissions"
+                      className="rounded-full border px-4 py-2 text-[11px] font-semibold text-slate-600 no-underline">
+                      ดูตารางค่าคอมมิชชั่น
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* ══ ขั้นถัดไป: สร้าง/อัปโหลดสลิป/ใบเสร็จ — สแกนยอดเงินจริง ══ */}
+          <section className="card border-l-4 border-emerald-500 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="text-sm font-bold text-navy">🧾 ขั้นถัดไป: สร้าง/อัปโหลดสลิป/ใบเสร็จ — สแกนยอดเงินจริง</h3>
+                <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                  คำนวณเบี้ยแล้ว ออกใบเสร็จ/สลิปใน TL ProPlus แล้วบันทึกเข้าคลังได้ทันที —
+                  ระบบตรวจยอดเงินจริงด้วย AI และผูกผลงานกับรหัสตัวแทนของคุณ
+                </p>
+              </div>
+              <div className="flex shrink-0 flex-wrap gap-2">
+                <a href="/documents?m=1&cam=1" className="rounded-full bg-emerald-600 px-4 py-2 text-[11px] font-bold text-white no-underline">
+                  📷 ถ่าย/สแกนใบเสร็จ
+                </a>
+                <a href="/documents" className="rounded-full border px-4 py-2 text-[11px] font-semibold text-slate-700 no-underline">
+                  เปิดหน้าสร้างใบเสร็จ
+                </a>
+              </div>
+            </div>
+          </section>
 
           <div className="card p-2 flex flex-wrap items-center gap-2 text-[11px]">
             {[
