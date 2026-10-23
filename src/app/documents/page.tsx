@@ -107,6 +107,14 @@ export default function DocumentsPage() {
   const [dragOver, setDragOver] = useState(false);
   const [stage, setStage] = useState<Stage>('idle');
   const [memberId, setMemberId] = useState<string>('demo-member');
+  // ── สร้างใบเสร็จด้วยรหัสตัวแทนของตัวเอง (TL ProPlus บน iPad) ────────────────
+  const [mkOpen, setMkOpen] = useState(false);
+  const [mkBusy, setMkBusy] = useState(false);
+  const [mkError, setMkError] = useState<string | null>(null);
+  const [mkDone, setMkDone] = useState<any>(null);
+  const [mk, setMk] = useState<{ agentCode: string; receiptNumber: string; referenceNumber: string; amount: string; paidAt: string; policyNo: string; planName: string }>({
+    agentCode: '', receiptNumber: '', referenceNumber: '', amount: '', paidAt: '', policyNo: '', planName: '',
+  });
   const [ocr, setOcr] = useState<OCRData | null>(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<{ amount: string; date: string; payerName: string; receiverName: string; referenceNumber: string }>({ amount: '', date: '', payerName: '', receiverName: '', referenceNumber: '' });
@@ -691,6 +699,49 @@ export default function DocumentsPage() {
     }
   };
 
+  // เติมรหัสตัวแทนของตัวเองจากเซสชัน (ครั้งแรกที่เปิดฟอร์ม)
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch('/api/auth/me', { credentials: 'include' });
+        if (!r.ok) return;
+        const u = (await r.json())?.user || null;
+        if (!alive || !u) return;
+        setMk((prev) => (prev.agentCode ? prev : { ...prev, agentCode: String(u.memberCode || u.referralCode || '') }));
+      } catch { /* ไม่ล็อกอิน = ผู้ใช้กรอกรหัสเอง */ }
+    })();
+    return () => { alive = false; };
+  }, [mkOpen]);
+
+  /** สร้างใบเสร็จ: ตรวจฟิลด์ตาม receiptStandard แล้วบันทึกผ่าน /api/documents/create-manual */
+  const createManualReceipt = async () => {
+    setMkError(null); setMkDone(null);
+    const amountNum = Number(String(mk.amount).replace(/[^\d.]/g, ''));
+    if (!String(mk.agentCode).trim()) { setMkError('ต้องระบุรหัสตัวแทนของตัวเอง (ดูได้จาก app TL ProPlus บน iPad)'); return; }
+    if (!amountNum || amountNum <= 0) { setMkError('ต้องระบุยอดเงินที่ชำระ (มากกว่า 0 บาท)'); return; }
+    if (!String(mk.receiptNumber).trim() && !String(mk.referenceNumber).trim()) { setMkError('ต้องมีเลขใบเสร็จ หรือ เลขอ้างอิงรายการ อย่างน้อย 1 อย่าง'); return; }
+    if (!String(mk.paidAt).trim()) { setMkError('ต้องระบุวันที่ชำระ'); return; }
+    setMkBusy(true);
+    try {
+      const res = await fetch('/api/documents/create-manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ ...mk, memberId }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j.ok) { setMkError(j.error || 'บันทึกใบเสร็จไม่สำเร็จ'); return; }
+      setMkDone(j.receipt || j);
+      setMk({ agentCode: mk.agentCode, receiptNumber: '', referenceNumber: '', amount: '', paidAt: '', policyNo: '', planName: '' });
+      await loadReceipts();
+    } catch (e: any) {
+      setMkError(e?.message || 'เชื่อมต่อไม่สำเร็จ');
+    } finally {
+      setMkBusy(false);
+    }
+  };
+
   const confPct = ocr ? Math.round(ocr.confidence * 100) : 0;
   const busy = stage !== 'idle' && stage !== 'preview';
 
@@ -714,7 +765,7 @@ export default function DocumentsPage() {
               {[
                 { n: '1', icon: '📝', t: 'ลงทะเบียนสมัครสมาชิก', d: 'สมัครบัญชีด้วยอีเมลและรหัสผ่าน แล้วยืนยันอีเมล', href: '/register', cta: 'ไปหน้าลงทะเบียน' },
                 { n: '2', icon: '🧑‍💼', t: 'สมัครเป็นตัวแทน (ผู้มุ่งหวัง)', d: 'กรอกใบสมัคร/แสดงความสนใจ เข้าสู่การคัดเลือก', href: '/recruit', cta: 'ไปหน้าสมัครตัวแทน' },
-                { n: '3', icon: '🧾', t: 'อัปโหลดสลิป / ใบเสร็จ', d: 'ระบบอ่านยอดเงินจริงและตรวจคุณสมบัติอัตโนมัติ', href: '/documents', cta: 'อยู่หน้านี้แล้ว' },
+                { n: '3', icon: '🧾', t: 'สร้าง/อัปโหลดสลิป / ใบเสร็จ', d: 'สร้างใบเสร็จด้วยรหัสตัวแทนของตัวเอง หรืออัปโหลดสลิปให้ระบบอ่านยอดเงินจริง', href: '/documents', cta: 'อยู่หน้านี้แล้ว' },
               ].map((s) => (
                 <div key={s.n} className="rounded-xl border bg-white p-4 flex flex-col">
                   <div className="flex items-center gap-2">
@@ -734,7 +785,7 @@ export default function DocumentsPage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/steps/3-steps-th.webp"
-                alt="ภาพ 3 ขั้นตอน: 1) ลงทะเบียนสมัครสมาชิก 2) สมัครเป็นตัวแทน (ผู้มุ่งหวัง) 3) อัปโหลดสลิป/ใบเสร็จ"
+                alt="ภาพ 3 ขั้นตอน: 1) ลงทะเบียนสมัครสมาชิก 2) สมัครเป็นตัวแทน (ผู้มุ่งหวัง) 3) สร้าง/อัปโหลดสลิป/ใบเสร็จ"
                 className="w-full max-w-4xl mx-auto rounded-xl border shadow-sm hover:shadow-md transition-shadow"
                 loading="lazy"
               />
@@ -755,13 +806,82 @@ export default function DocumentsPage() {
 
           {/* สแกน + อัปโหลดใบเสร็จ */}
           <div className="card p-5">
-            <h2 className="font-semibold text-[#475569] mb-1">↑ อัปโหลดสลิป/ใบเสร็จ — สแกนยอดเงินจริง</h2>
+            <h2 className="font-semibold text-[#475569] mb-1">↑ สร้าง/อัปโหลดสลิป/ใบเสร็จ — สแกนยอดเงินจริง</h2>
             <p className="text-xs text-slate-500 mb-1">
               ระบบจะสแกนยอดเงินจริงด้วย AI (Gemini Vision) แล้วตรวจคุณสมบัติเลื่อนตำแหน่งให้อัตโนมัติ
             </p>
             <p className="text-[10px] text-slate-400 mb-3">
               build: {(process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA || 'dev').slice(0, 7)} · ถ้าเลขนี้ไม่ตรงกับที่แจ้ง ให้กดรีเฟรชหน้า (ล้างแคช)
             </p>
+
+            {/* ── สร้างใบเสร็จด้วยรหัสตัวแทนของฉัน (ออกจาก TL ProPlus บน iPad) ── */}
+            <div className="mb-3 rounded-xl border border-[#c8a84e] bg-[#fffdf5] p-3">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-[#475569]">🧾 สร้างใบเสร็จด้วยรหัสตัวแทนของฉัน</div>
+                  <div className="text-[11px] leading-relaxed text-slate-500">
+                    ออกใบเสร็จในแอป <b>TL ProPlus บน iPad</b> → คัดลอก <b>เลขใบเสร็จ / เลขอ้างอิงรายการ</b> มากรอกที่นี่
+                    ระบบบันทึกเข้าคลังและผูกกับ <b>รหัสตัวแทนของคุณ</b> — ไม่ต้องถ่ายรูป
+                  </div>
+                </div>
+                <button type="button" onClick={() => { setMkOpen(!mkOpen); setMkError(null); }}
+                  className="shrink-0 rounded-full bg-[#475569] px-4 py-2 text-xs font-bold text-white">
+                  {mkOpen ? 'ปิดฟอร์ม' : 'สร้างใบเสร็จ'}
+                </button>
+              </div>
+
+              {mkOpen && (
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <label className="text-xs text-slate-500">รหัสตัวแทนของฉัน *
+                    <input value={mk.agentCode} onChange={(e) => setMk({ ...mk, agentCode: e.target.value.trim() })}
+                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="เช่น 01759064" />
+                  </label>
+                  <label className="text-xs text-slate-500">ยอดเงินที่ชำระ (บาท) *
+                    <input value={mk.amount} inputMode="decimal" onChange={(e) => setMk({ ...mk, amount: e.target.value })}
+                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="เช่น 66604.00" />
+                  </label>
+                  <label className="text-xs text-slate-500">เลขใบเสร็จ
+                    <input value={mk.receiptNumber} onChange={(e) => setMk({ ...mk, receiptNumber: e.target.value })}
+                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="จาก TL ProPlus" />
+                  </label>
+                  <label className="text-xs text-slate-500">เลขอ้างอิงรายการ
+                    <input value={mk.referenceNumber} onChange={(e) => setMk({ ...mk, referenceNumber: e.target.value })}
+                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="Ref./Transaction No." />
+                  </label>
+                  <label className="text-xs text-slate-500">วันที่ชำระ *
+                    <input type="date" value={mk.paidAt} onChange={(e) => setMk({ ...mk, paidAt: e.target.value })}
+                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
+                  </label>
+                  <label className="text-xs text-slate-500">เลขกรมธรรม์ (ถ้ามี)
+                    <input value={mk.policyNo} onChange={(e) => setMk({ ...mk, policyNo: e.target.value })}
+                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
+                  </label>
+                  <label className="text-xs text-slate-500 sm:col-span-2">แบบประกัน / หมายเหตุ (ถ้ามี)
+                    <input value={mk.planName} onChange={(e) => setMk({ ...mk, planName: e.target.value })}
+                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
+                  </label>
+
+                  <div className="sm:col-span-2 flex flex-wrap items-center gap-2">
+                    <button type="button" onClick={createManualReceipt} disabled={mkBusy}
+                      className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">
+                      {mkBusy ? 'กำลังบันทึก…' : 'บันทึกใบเสร็จเข้าคลัง'}
+                    </button>
+                    <span className="text-[11px] text-slate-400">ผู้ออก/ผู้รับเงิน: บมจ.ไทยประกันชีวิต (ตรวจตามมาตรฐานใบเสร็จอัตโนมัติ)</span>
+                  </div>
+
+                  {mkError && <p className="sm:col-span-2 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{mkError}</p>}
+                  {mkDone && (
+                    <div className="sm:col-span-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                      ✓ สร้างใบเสร็จแล้ว — เลขที่ <b className="font-mono">{mkDone.receiptNumber || mkDone.receiptId}</b>
+                      {' '}· ยอด {(Number(mkDone.amount) || 0).toLocaleString()} บาท · รหัสตัวแทน <b className="font-mono">{mkDone.agentCode}</b>
+                      <div className="mt-1 text-[11px] text-emerald-700">
+                        สถานะ: {mkDone.verificationStatus || 'รอตรวจสอบ'} — ระบบยังไม่นับยอดเข้า FYC/ตำแหน่ง จนกว่าจะแนบหลักฐานหรือผู้ดูแลตรวจทาน
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* ติดตั้งเป็นแอป (PWA) — ครั้งต่อไปแตะไอคอนแล้วกล้องพร้อมถ่ายเลย ไม่ต้องผ่าน LINE */}
             {(installEvt || isPhone) && (
