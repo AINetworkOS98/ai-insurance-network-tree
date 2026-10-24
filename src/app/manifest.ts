@@ -13,6 +13,13 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: '#ffffff',
     theme_color: '#475569',
     lang: 'th',
+    // ทางลัดเมื่อกดค้างที่ไอคอนแอป (Android/Chrome)
+    shortcuts: [
+      { name: 'สมัครใช้งานฟรี', short_name: 'สมัครฟรี', url: '/join', description: 'สมัครเข้าใช้ระบบฟรี' },
+      { name: 'สแกน/อัปโหลดใบเสร็จ', short_name: 'สแกนใบเสร็จ', url: '/documents?m=1&cam=1' },
+      { name: 'คำนวณเบี้ยประกัน', short_name: 'คำนวณเบี้ย', url: '/apply' },
+      { name: 'คำนวณภาษี', short_name: 'ภาษี', url: '/prospects?tab=pit' },
+    ],
     icons: [
       { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
       { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },

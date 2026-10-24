@@ -123,6 +123,13 @@ function getToken(req: NextRequest): string | null{
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // ── ไฟล์ static/PWA ต้องโหลดได้เสมอ (ไม่ผ่านด่านล็อกอิน) ──────────────────
+  // ถ้าไม่ยกเว้น: /sw.js และ /manifest.webmanifest จะถูก redirect ไป /admin
+  // ⇒ service worker ลงทะเบียนไม่ได้ และเบราว์เซอร์ไม่ยอมให้ "ติดตั้งแอป" (PWA)
+  if (/^\/(sw\.js|manifest\.webmanifest|robots\.txt|sitemap\.xml|icon-192\.png|icon-512\.png|icon-maskable-512\.png|apple-touch-icon\.png|logo\.png)$/.test(pathname)) {
+    return NextResponse.next();
+  }
+
   // ── ลิงก์รหัสผู้สนใจแบบสั้น /P-0URWO6 (เกิดจากแจ้งเตือนที่เก็บรหัสไว้ใน referenceId) ──
   // ไม่มี route ของตัวเอง -> rewrite ไปหน้ารายชื่อผู้สนใจ พร้อมแนบรหัสไว้กรอง/ค้นหา
   const prospectCodeMatch = pathname.match(/^\/(P-[A-Za-z0-9]{4,12})\/?$/);

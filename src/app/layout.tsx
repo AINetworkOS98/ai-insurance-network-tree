@@ -5,6 +5,7 @@ import VisitorCounter from "@/components/VisitorCounter";
 import UtmCapture from "@/components/UtmCapture";
 import AutoTranslate from "@/components/AutoTranslate";
 import SiteAiAssistant from "@/components/SiteAiAssistant";
+import PwaRegister from "@/components/PwaRegister";
 
 export const metadata: Metadata = {
   title: "AI Insurance Network Tree — ระบบบริหารเครือข่ายตัวแทน",
@@ -26,6 +27,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AutoTranslate />
         {/* เก็บที่มาแคมเปญ (UTM / ttclid) ไว้ทั้ง session เพื่อแนบไปกับฟอร์มลีด */}
         <UtmCapture />
+        {/* ลงทะเบียน service worker → เว็บติดตั้งเป็นแอป (PWA) ได้ */}
+        <PwaRegister />
         {/* สคริปต์เก็บข้อมูลผู้เข้าชม — ทำงานเฉพาะเมื่อผู้ใช้กด "ยินยอม" เท่านั้น */}
         <Script src="/track.js" strategy="afterInteractive" />
       </body>

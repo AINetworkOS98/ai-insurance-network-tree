@@ -10,6 +10,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/Header';
+import InstallAppCard from '@/components/InstallAppCard';
 
 const INTERESTS = [
   'ขอเข้าใช้ระบบ (ทดลองใช้)',
@@ -108,7 +109,10 @@ function JoinInner() {
               {' · '}อีเมล {done.notify?.email?.sent ? 'ส่งแล้ว ✓' : (done.notify?.email?.configured ? 'ส่งไม่สำเร็จ' : 'ยังไม่ตั้งค่า')}
             </p>
           )}
-          <p className="mt-4 text-[11px] text-slate-400">ต้องการถอนความยินยอม/ลบข้อมูล แจ้งทีมงานได้ทุกเมื่อ (PDPA)</p>
+          <div className="mt-4 text-left">
+            <InstallAppCard compact />
+          </div>
+          <p className="mt-3 text-[11px] text-slate-400">ต้องการถอนความยินยอม/ลบข้อมูล แจ้งทีมงานได้ทุกเมื่อ (PDPA)</p>
         </div>
       </main>
     );
@@ -116,6 +120,10 @@ function JoinInner() {
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6">
+      <div className="mb-4">
+        <InstallAppCard />
+      </div>
+
       <section className="overflow-hidden rounded-2xl border border-sky-100 shadow-sm">
         <div className="bg-gradient-to-r from-[#0b2b5b] via-[#123a73] to-[#1d4ed8] px-6 py-7 text-white">
           <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em]">AI Insurance Network</span>
