@@ -31,7 +31,11 @@ export default function ProspectCodeLookup() {
         const r = await fetch('/api/dashboard/leads?limit=500', { credentials: 'include' });
         const j = await r.json().catch(() => ({}));
         const list: any[] = j?.leads || j?.data || j?.prospects || [];
-        const found = list.find((x) => String(x.prospectId || x.prospectCode || x.code || '').toUpperCase() === code);
+        // เทียบกับ "รหัสที่คนเห็น" (prospectCode = P-XXXXXX) ก่อน แล้วค่อยลอง id/prospectId
+        // (เดิมใช้ prospectId ก่อน ซึ่งเป็น UUID → หา P-XXXXXX ไม่เจอทั้งที่มีอยู่จริง)
+        const found = list.find((x) => [x.prospectCode, x.prospectId, x.code, x.id]
+          .map((v) => String(v || '').toUpperCase())
+          .includes(code));
         if (!alive) return;
         if (found) setHit(found);
         else setErr('ไม่พบรหัสนี้ในรายการผู้สนใจ (อาจถูกลบ หรือยังไม่ได้โหลดข้อมูล)');
