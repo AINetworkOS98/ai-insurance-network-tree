@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import JoinSignupsPanel from '@/components/JoinSignupsPanel';
 
 /**
  * แปลง referenceId ของแจ้งเตือนเป็นลิงก์ที่เปิดได้จริง
@@ -53,6 +54,10 @@ export default function NotificationsPage(){
             <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={filterUnread} onChange={e=> setFilterUnread(e.target.checked)} /> ยังไม่อ่าน</label>
           </div>
           {msg && <div className="p-2 rounded-xl bg-amber-50 border text-xs">{msg}</div>}
+
+          {/* ── ผู้สมัครเข้าใช้ app จากลิงก์ /join: รายชื่อ + รหัสผู้สนใจ ── */}
+          <JoinSignupsPanel />
+
           <div className="card p-4">
             <div className="space-y-2 max-h-[520px] overflow-auto">
               {list.map((n:any)=>(

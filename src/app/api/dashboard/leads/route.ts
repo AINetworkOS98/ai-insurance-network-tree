@@ -31,7 +31,10 @@ export async function GET(req: NextRequest) {
     const prospects: any[] = await db.prospect.findMany({
       orderBy: { createdAt: 'desc' },
       take: limit,
-      include: { consents: { orderBy: { createdAt: 'desc' }, take: 6 } },
+      include: {
+        consents: { orderBy: { createdAt: 'desc' }, take: 6 },
+        leadSource: { select: { name: true } },
+      },
     });
 
     const ids: string[] = prospects.map((p) => p.id);
@@ -117,6 +120,9 @@ export async function GET(req: NextRequest) {
         lineId: pref?.lineUserId || null,
         province: p.province || null,
         occupation: p.occupation || null,
+        // ที่มา (LeadSource.name) — ใช้แยกว่าใครมาจากลิงก์ /join
+        source: (p as any).leadSource?.name || null,
+        sourceName: (p as any).leadSource?.name || null,
         ageRange: p.ageRange || null,
         interest: p.interest || null,
         // ความสนใจ
