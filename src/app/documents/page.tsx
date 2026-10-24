@@ -841,6 +841,31 @@ export default function DocumentsPage() {
             <h1 className="text-xl font-bold text-[#475569]">สแกนใบเสร็จรับเงิน เข้าระบบ</h1>
           </div>
 
+          {/* ── อัปโหลดใบเสร็จ: บอกให้ชัดว่า "อัปโหลดตรงไหน" (ไม่มีอะไรต้องติดตั้ง/อัปโหลดโปรแกรม) ── */}
+          <div className="card border-l-4 border-emerald-500 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-sm font-bold text-[#475569]">📤 อัปโหลดใบเสร็จ — ที่นี่ที่เดียว (ไม่ต้องติดตั้ง/อัปโหลดโปรแกรมใด ๆ)</div>
+                <div className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                  ระบบนี้ใช้ผ่านเว็บเบราว์เซอร์ หลังสมัคร/เข้าสู่ระบบแล้ว <b>ไม่ต้องอัปโหลดโปรแกรม</b> —
+                  สิ่งที่ต้องอัปโหลดคือ <b>รูปใบเสร็จ/สลิป</b> ด้านล่างนี้: กดปุ่ม → ถ่ายรูปหรือเลือกไฟล์ → ระบบอ่านยอดเงินจริงให้อัตโนมัติ
+                </div>
+              </div>
+              <div className="flex shrink-0 flex-wrap gap-2">
+                <label htmlFor="scan-camera-input" onClick={() => {
+                  document.getElementById('upload-receipt')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  diag('picker-open', { ok: true, target: 'top-camera' });
+                }} className="cursor-pointer rounded-full bg-emerald-600 px-4 py-2 text-[11px] font-bold text-white">
+                  📷 ถ่าย / เลือกใบเสร็จ
+                </label>
+                <button type="button" onClick={() => document.getElementById('upload-receipt')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  className="rounded-full border px-4 py-2 text-[11px] font-semibold text-slate-700">
+                  ไปช่องอัปโหลด ↓
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* ── 3 ขั้นตอนสมัคร/ลงทะเบียน (ยกมาไว้บนสุด) + ภาพขั้นตอนจากหน้า /financial-freedom ── */}
           <div className="card p-5">
             <div className="flex flex-wrap items-center gap-2">
@@ -1005,7 +1030,7 @@ export default function DocumentsPage() {
           </div>
 
           {/* สแกน + อัปโหลดใบเสร็จ */}
-          <div className="card p-5">
+          <div className="card p-5" id="upload-receipt">
             <h2 className="font-semibold text-[#475569] mb-1">↑ สร้าง/อัปโหลดสลิป/ใบเสร็จ — สแกนยอดเงินจริง</h2>
             <p className="text-xs text-slate-500 mb-1">
               ระบบจะสแกนยอดเงินจริงด้วย AI (Gemini Vision) แล้วตรวจคุณสมบัติเลื่อนตำแหน่งให้อัตโนมัติ

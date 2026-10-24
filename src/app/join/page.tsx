@@ -83,9 +83,22 @@ function JoinInner() {
           <p className="mt-2 text-sm text-slate-500">
             เราได้รับความสนใจของคุณแล้ว (หัวข้อ: {interests.length} รายการ) · ทีมงานจะติดต่อภายใน 1 วันทำการ
           </p>
-          <div className="mt-5 grid gap-2 sm:grid-cols-2">
-            <Link href="/register" className="rounded-xl bg-[#0b2b5b] px-4 py-3 text-sm font-semibold text-white no-underline">① สร้างบัญชีเข้าใช้ระบบ</Link>
-            <Link href="/documents?m=1&cam=1" className="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white no-underline">② สแกน/อัปโหลดใบเสร็จ</Link>
+
+          <div className="mt-5 rounded-xl border border-[#dbeafe] bg-sky-50/60 p-4 text-left">
+            <div className="text-sm font-bold text-[#0b2b5b]">หลังสมัครแล้ว — ทำ 3 ขั้นนี้ (ไม่มีอะไรต้องอัปโหลด/ติดตั้ง)</div>
+            <ol className="mt-2 space-y-1.5 text-xs leading-relaxed text-slate-700">
+              <li><b>1)</b> สร้างบัญชี/เข้าสู่ระบบ (อีเมล + รหัสผ่าน)</li>
+              <li><b>2)</b> ไปเมนู <b>“สแกนใบเสร็จ”</b> → การ์ด <b>📤 อัปโหลดใบเสร็จ</b> อยู่บนสุดของหน้า → กด <b>“📷 ถ่าย/เลือกใบเสร็จ”</b> แล้วถ่ายหรือเลือกไฟล์รูป</li>
+              <li><b>3)</b> ตรวจยอดที่ระบบอ่านได้ → กดบันทึก ระบบจะผูกยอดกับรหัสของคุณและตรวจคุณสมบัติตำแหน่งให้</li>
+            </ol>
+            <div className="mt-2 text-[11px] text-slate-500">
+              ระบบนี้ทำงานบนเว็บเบราว์เซอร์ — <b>ไม่ต้องอัปโหลดโปรแกรมใด ๆ</b> สิ่งที่อัปโหลดคือ <b>รูปใบเสร็จ/สลิป</b> เท่านั้น
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <Link href="/register" className="rounded-xl bg-[#0b2b5b] px-4 py-3 text-sm font-semibold text-white no-underline">① สร้างบัญชี / เข้าสู่ระบบ</Link>
+            <Link href="/documents?m=1&cam=1" className="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white no-underline">② ไปหน้าอัปโหลดใบเสร็จ →</Link>
             <Link href="/apply" className="rounded-xl border px-4 py-3 text-sm font-semibold text-slate-700 no-underline">③ คำนวณเบี้ย / ทำเคส</Link>
             <Link href="/recruit" className="rounded-xl border px-4 py-3 text-sm font-semibold text-slate-700 no-underline">④ สมัครเป็นตัวแทน</Link>
           </div>
@@ -187,7 +200,7 @@ function JoinInner() {
               {busy ? 'กำลังส่ง…' : 'สมัครเข้าใช้ระบบ (ฟรี)'}
             </button>
             <Link href="/documents" className="text-xs font-semibold text-[#0b2b5b] underline">ดูตัวอย่างระบบก่อน</Link>
-            <span className="text-[10px] text-slate-400">ไม่เก็บเลขบัตรประชาชน/เลขบัญชี · เก็บเท่าที่จำเป็นต่อการติดต่อ</span>
+            <span className="text-[10px] text-slate-400">ไม่เก็บเลขบัตรประชาชน/เลขบัญชี · เก็บเท่าที่จำเป็นต่อการติดต่อ · <b>ไม่ต้องอัปโหลดโปรแกรม</b> (ใช้ผ่านเว็บ)</span>
           </div>
         </div>
       </section>
