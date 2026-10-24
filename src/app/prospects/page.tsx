@@ -10,6 +10,7 @@ import InsuranceTaxTools from '@/components/tax/InsuranceTaxTools';
 import TaxExamplesByOccupation from '@/components/tax/TaxExamplesByOccupation';
 import CorporateTaxCalculator from '@/components/tax/CorporateTaxCalculator';
 import KeymanInsurance from '@/components/tax/KeymanInsurance';
+import JoinShareCard from '@/components/JoinShareCard';
 import BusinessSimulator from '@/components/tax/BusinessSimulator';
 import TaxTable2569 from '@/components/tax/TaxTable2569';
 
@@ -249,6 +250,8 @@ export default function GeneralMembersPage(){
             </div>
           ) : view === 'keyman' ? (
             <div className="space-y-4">
+              {/* ชวนคนสนใจสมัครเข้าใช้ app — ลิงก์ + QR แชร์ได้ทันที */}
+              <JoinShareCard src="keyman" />
               {/* ประกันคีย์แมน — ต่อจากแท็บภาษีนิติบุคคล */}
               <KeymanInsurance/>
             </div>

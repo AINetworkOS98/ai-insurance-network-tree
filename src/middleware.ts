@@ -91,6 +91,7 @@ const PUBLIC_PAGES = [
   '/faq',
   '/admin',
   '/recruit', // ลิงก์รับสมัครตัวแทน (สาธารณะ) — ผู้มุ่งหวังกรอกเองได้โดยไม่ต้องมีบัญชี
+  '/join', // ลิงก์ชวน "สมัครเข้าใช้ app" (สาธารณะ) — กรอกชื่อ/เบอร์ + consent PDPA แล้วทีมติดต่อกลับ
 ];
 
 function isPublicApi(pathname: string) {
