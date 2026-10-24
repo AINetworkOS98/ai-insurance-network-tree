@@ -115,7 +115,7 @@ export async function notifyJoinSignup(o: SignupReportInput): Promise<SignupNoti
       type: 'lead_signup',
       title: `คนสมัครใช้ app: ${o.name || o.prospectCode || '-'}`,
       body: `${o.phone || '-'} · ${(o.interests || []).slice(0, 3).join(', ')}`,
-      referenceId: o.prospectCode || o.phone || 'join',
+      referenceId: o.prospectCode ? `/prospects?tab=members&code=${encodeURIComponent(String(o.prospectCode).toUpperCase())}` : '/prospects',
     });
     notified = (ADMIN_EMAILS || []).length;
   } catch { /* ignore */ }

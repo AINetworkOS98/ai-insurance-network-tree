@@ -3,6 +3,21 @@ import { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 
+/**
+ * แปลง referenceId ของแจ้งเตือนเป็นลิงก์ที่เปิดได้จริง
+ * - เก็บมาเป็น path อยู่แล้ว ('/documents') → ใช้ตามนั้น
+ * - รหัสผู้สนใจ 'P-0URWO6' → /prospects (เดิมต่อเป็น '/P-0URWO6' แล้ว 404)
+ * - UUID (ใบเสร็จ/ผู้สนใจ) → /documents
+ */
+function refHref(ref: string): string {
+  const r = String(ref || '').trim();
+  if (!r) return '/';
+  if (r.startsWith('/')) return r;
+  if (/^P-[A-Za-z0-9]{4,12}$/i.test(r)) return `/prospects?tab=members&code=${encodeURIComponent(r.toUpperCase())}`;
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(r)) return '/documents';
+  return '/';
+}
+
 export default function NotificationsPage(){
   const [list, setList] = useState<any[]>([]);
   const [unread, setUnread] = useState(0);
@@ -47,7 +62,9 @@ export default function NotificationsPage(){
                     <div className="text-slate-600 mt-0.5 line-clamp-2">{n.body || '-'}</div>
                     <div className="text-[11px] text-slate-400 mt-1">{new Date(n.createdAt).toLocaleString('th-TH')}</div>
                   </div>
-                  {n.referenceId && <a href={n.referenceId.startsWith('/')? n.referenceId : `/${n.referenceId}`} className="px-3 py-1 rounded-full border bg-white text-[11px] self-center">เปิดรายการ</a>}
+                  {n.referenceId && (
+                    <a href={refHref(n.referenceId)} className="px-3 py-1 rounded-full border bg-white text-[11px] self-center">เปิดรายการ</a>
+                  )}
                   <button onClick={(e)=>{ e.stopPropagation(); deleteOne(n.id); }} className="px-2 py-1 rounded text-[10px] text-red-600 hover:bg-red-50 border border-red-200 self-center">ลบ</button>
                 </div>
               ))}

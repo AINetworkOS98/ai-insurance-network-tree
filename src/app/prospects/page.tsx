@@ -11,6 +11,7 @@ import TaxExamplesByOccupation from '@/components/tax/TaxExamplesByOccupation';
 import CorporateTaxCalculator from '@/components/tax/CorporateTaxCalculator';
 import KeymanInsurance from '@/components/tax/KeymanInsurance';
 import JoinShareCard from '@/components/JoinShareCard';
+import ProspectCodeLookup from '@/components/ProspectCodeLookup';
 import BusinessSimulator from '@/components/tax/BusinessSimulator';
 import TaxTable2569 from '@/components/tax/TaxTable2569';
 
@@ -298,6 +299,8 @@ export default function GeneralMembersPage(){
           </div>
 
           {/* ── แผงสิทธิ์: ผู้ดูแลระบบเห็นว่าตัวเองมีสิทธิอะไรในหน้านี้ (ผู้ใช้ทั่วไปไม่เห็น) ── */}
+          {/* ลิงก์รหัสผู้สนใจแบบสั้น /P-XXXXXX (จากแจ้งเตือน) → แสดงว่าเป็นใคร (เดิม 404) */}
+          <ProspectCodeLookup />
           <AdminRightsPanel
             scope="เห็นสมาชิกทั่วไป (ระดับ 0) ทุกคนในระบบ — ไม่จำกัดเฉพาะทีมของตัวเอง"
             rights={[

@@ -123,6 +123,16 @@ function getToken(req: NextRequest): string | null{
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // ── ลิงก์รหัสผู้สนใจแบบสั้น /P-0URWO6 (เกิดจากแจ้งเตือนที่เก็บรหัสไว้ใน referenceId) ──
+  // ไม่มี route ของตัวเอง -> rewrite ไปหน้ารายชื่อผู้สนใจ พร้อมแนบรหัสไว้กรอง/ค้นหา
+  const prospectCodeMatch = pathname.match(/^\/(P-[A-Za-z0-9]{4,12})\/?$/);
+  if (prospectCodeMatch) {
+    const url = new URL('/prospects', req.url);
+    url.searchParams.set('tab', 'members');
+    url.searchParams.set('code', prospectCodeMatch[1].toUpperCase());
+    return NextResponse.rewrite(url);
+  }
+
   const isApi = pathname.startsWith('/api/');
   const isPage = !isApi;
 
