@@ -30,6 +30,8 @@ export default function JoinSignupsPanel() {
   const [filter, setFilter] = useState<'join' | 'all'>('join');
   const [q, setQ] = useState('');
   const [copied, setCopied] = useState('');
+  const [scope, setScope] = useState<'all' | 'mine'>('mine');
+  const [meInfo, setMeInfo] = useState<{ code: string; ip: string; ipMasked: string }>({ code: '', ip: '', ipMasked: '' });
 
   useEffect(() => {
     let alive = true;
@@ -40,12 +42,33 @@ export default function JoinSignupsPanel() {
         const j = await r.json().catch(() => ({}));
         if (!r.ok || j?.ok === false) { setErr(j?.error || 'โหลดรายชื่อไม่สำเร็จ'); return; }
         const list: Lead[] = j?.leads || j?.data || j?.items || [];
-        if (alive) setLeads(list);
+        if (alive) {
+          setLeads(list);
+          if (j?.scope === 'all' || j?.scope === 'mine') setScope(j.scope);
+        }
       } catch {
         if (alive) setErr('เชื่อมต่อไม่สำเร็จ');
       } finally {
         if (alive) setLoading(false);
       }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  // รหัสของตัวเอง (memberCode/referralCode) + IP ของตัวเอง
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const [a, b] = await Promise.all([
+          fetch('/api/auth/me', { credentials: 'include' }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+          fetch('/api/me/ip', { credentials: 'include' }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        ]);
+        if (!alive) return;
+        const u = a?.user || a || {};
+        const code = String(u.memberCode || u.referralCode || '').toUpperCase();
+        setMeInfo({ code, ip: String(b?.ip || ''), ipMasked: String(b?.masked || '') });
+      } catch { /* ไม่ล็อกอิน/เน็ตหลุด = ไม่แสดง */ }
     })();
     return () => { alive = false; };
   }, []);
@@ -84,6 +107,19 @@ export default function JoinSignupsPanel() {
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+          {meInfo.code && (
+            <span className="rounded-full border bg-white px-2.5 py-1 text-[10px] text-slate-600">
+              รหัสของคุณ: <b className="font-mono text-[#0b2b5b]">{meInfo.code}</b>
+            </span>
+          )}
+          {meInfo.ipMasked && (
+            <span className="rounded-full border bg-white px-2.5 py-1 text-[10px] text-slate-600" title={`IP ของคุณ (${meInfo.ip})`}>
+              IP ของคุณ: <b className="font-mono text-[#0b2b5b]">{meInfo.ipMasked}</b>
+            </span>
+          )}
+          <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${scope === 'all' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+            {scope === 'all' ? 'เห็นทุกรหัส (ผู้ดูแลระบบ)' : 'เห็นเฉพาะรหัสของคุณ'}
+          </span>
           <button type="button" className={badge(joinLeads.length, filter === 'join')} onClick={() => setFilter('join')}>
             จากลิงก์ /join ({joinLeads.length})
           </button>

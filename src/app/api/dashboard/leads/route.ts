@@ -28,7 +28,34 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const limit = Math.min(500, Math.max(1, Number(url.searchParams.get('limit') || 200) || 200));
 
+    // ── ขอบเขตข้อมูล: สมาชิกทั่วไปเห็นเฉพาะผู้สนใจ/รหัสของตัวเอง · แอดมินเห็นทั้งหมด ──
+    let scope: 'all' | 'mine' = 'all';
+    let mineWhere: any = null;
+    if (auth.via === 'session' && auth.userId) {
+      try {
+        const { isSystemAdmin } = await import('@/lib/admin');
+        const adm = await isSystemAdmin(String(auth.userId)).catch(() => ({ ok: false } as any));
+        if (!adm?.ok) {
+          scope = 'mine';
+          const me = await db.user.findUnique({
+            where: { id: auth.userId },
+            select: { id: true, memberCode: true, referralCode: true, email: true },
+          }).catch(() => null);
+          const codes = [me?.memberCode, me?.referralCode].filter(Boolean) as string[];
+          mineWhere = {
+            OR: [
+              { ownerId: auth.userId },
+              { sponsorId: auth.userId },
+              { assignedTo: auth.userId },
+              ...(codes.length ? [{ referralCode: { in: codes } }] : []),
+            ],
+          };
+        }
+      } catch { /* ถ้าตรวจสิทธิ์ไม่ได้ ให้เห็นเฉพาะของตัวเองไว้ก่อน (ปลอดภัยกว่า) */ }
+    }
+
     const prospects: any[] = await db.prospect.findMany({
+      where: mineWhere || undefined,
       orderBy: { createdAt: 'desc' },
       take: limit,
       include: {
@@ -39,7 +66,7 @@ export async function GET(req: NextRequest) {
 
     const ids: string[] = prospects.map((p) => p.id);
     if (!ids.length) {
-      return NextResponse.json({ ok: true, leads: [], data: [], items: [], total: 0, stats: { total: 0, high: 0, interested: 0, warm: 0, low: 0, consent: 0 }, via: auth.via });
+      return NextResponse.json({ ok: true, scope, leads: [], data: [], items: [], total: 0, stats: { total: 0, high: 0, interested: 0, warm: 0, low: 0, consent: 0 }, via: auth.via });
     }
 
     const now = new Date();
@@ -177,6 +204,7 @@ export async function GET(req: NextRequest) {
       caps: null,
       generatedAt: now.toISOString(),
       via: auth.via,
+      scope,
     });
   } catch (e: any) {
     console.error('[dashboard/leads] error', e?.message);
