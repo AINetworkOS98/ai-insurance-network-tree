@@ -127,10 +127,12 @@ export async function middleware(req: NextRequest) {
   // ไม่มี route ของตัวเอง -> rewrite ไปหน้ารายชื่อผู้สนใจ พร้อมแนบรหัสไว้กรอง/ค้นหา
   const prospectCodeMatch = pathname.match(/^\/(P-[A-Za-z0-9]{4,12})\/?$/);
   if (prospectCodeMatch) {
+    // ใช้ redirect (ไม่ใช่ rewrite) เพื่อให้คำขอใหม่วิ่งผ่านด่านล็อกอินของ /prospects ตามปกติ
+    // (rewrite จะข้ามการตรวจสิทธิ์ของหน้าเป้าหมาย) และ query string ไม่หายระหว่างทาง
     const url = new URL('/prospects', req.url);
     url.searchParams.set('tab', 'members');
     url.searchParams.set('code', prospectCodeMatch[1].toUpperCase());
-    return NextResponse.rewrite(url);
+    return NextResponse.redirect(url, 307);
   }
 
   const isApi = pathname.startsWith('/api/');
