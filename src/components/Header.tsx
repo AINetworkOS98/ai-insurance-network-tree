@@ -125,6 +125,8 @@ export default function Header(){
           <ReceiptScanMenu />
           {/* "สอบถามรายละเอียด" ย้ายมาต่อท้ายเมนู "สแกนใบเสร็จ" (สั่งโดยเจ้าของระบบ) */}
           <Link href={user ? "/contact" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_inquire')}</Link>
+          {/* ลิงก์ชวน "สมัครเข้าใช้ app" — หน้าสาธารณะ /join (เห็นได้ทั้งสมาชิกและผู้เยี่ยมชม) */}
+          <Link href="/join" className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">📤 ชวนสมัครใช้ app</Link>
           <Link href={user ? "/prospects?tab=members" : "/admin"} className="text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">{t('nav_prospects')}</Link>
           <Link href={user ? "/notifications" : "/admin"} className="relative text-[#57534e] hover:text-[#475569] hover:bg-[#FCFBF6] hover:shadow-sm rounded-full px-3 py-1.5 transition-colors">🔔 {t('nav_notif')} {unread!=null && unread>0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-red-600 text-white text-[11px]">{unread}</span>}</Link>
         </nav>

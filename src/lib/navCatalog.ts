@@ -75,6 +75,8 @@ export const NAV_ENTRIES: NavEntry[] = [
   { href: '/financial-freedom', section: 'general', label: 'อิสรภาพทางการเงิน', key: 'sb_financial_freedom', icon: '🌟', minRank: 0 },
   // ลิงก์รับสมัครตัวแทน — สมาชิกกรอกเองได้ หรือคัดลอกลิงก์ส่งให้ผู้มุ่งหวังกรอกเอง (หน้าสาธารณะ /recruit)
   { href: '/recruit', section: 'general', label: 'ลิงก์รับสมัครตัวแทน', icon: '🤝', minRank: 0 },
+  // ลิงก์ชวน "สมัครเข้าใช้ app" — หน้าสาธารณะ /join (คนสนใจกรอกชื่อ/เบอร์ แล้วเข้าคิวผู้สนใจ)
+  { href: '/join', section: 'general', label: 'ลิงก์ชวนสมัครใช้ app', icon: '📤', minRank: 0 },
   // ไปป์ไลน์ 8 ขั้นของผู้มุ่งหวัง (รอดำเนินการ → อนุมัติ → สอบ → ใบอนุญาต → ค้ำประกัน → แต่งตั้ง → สอบใบอนุญาต → ต่ออายุ)
   { href: '/recruit/pipeline', section: 'general', label: 'ขั้นตอนรับสมัครตัวแทน (ผู้มุ่งหวัง)', icon: '🧭', minRank: 0 },
   // ศูนย์รวมช่องทาง/เครื่องมือขยายทีม (ลิงก์แนะนำ + QR + 6 ช่องทาง + ข้อความชวนสำเร็จรูป + แผน 7 วัน)
