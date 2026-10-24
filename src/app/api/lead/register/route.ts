@@ -470,9 +470,32 @@ export async function POST(req: NextRequest) {
     });
 
     const finalScore = score?.score ?? initialScore;
+
+    // ── ⑨ รายงานคนสมัครเข้าใช้ app: LINE OA + อีเมล + กระดิ่งในแอป (ไม่บล็อกการบันทึกถ้าส่งไม่ผ่าน) ──
+    let notify: Record<string, any> = { line: { sent: false }, email: { sent: false }, inApp: { notified: 0 } };
+    try {
+      const { notifyJoinSignup } = await import('@/lib/joinNotify');
+      notify = await notifyJoinSignup({
+        name: `${prospect.firstName || ''} ${prospect.lastName || ''}`.trim(),
+        phone: prospect.phone,
+        email: prospect.email,
+        province: profile.province,
+        occupation: profile.occupation,
+        incomeRange: profile.ageRange, // ฟอร์ม /join ส่งช่วงรายได้มาทางช่องนี้ของระบบเดิม
+        interests: topics,
+        source: sourceName,
+        prospectCode: prospect.prospectId,
+        score: finalScore,
+        isExisting,
+      });
+    } catch (e: any) {
+      notify = { line: { sent: false, error: String(e?.message || e).slice(0, 200) }, email: { sent: false }, inApp: { notified: 0 } };
+    }
+
     return NextResponse.json({
       ok: true,
       existing: isExisting,
+      notify,
       lead: {
         id: prospect.id,
         prospectId: prospect.prospectId,

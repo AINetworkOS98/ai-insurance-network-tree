@@ -102,6 +102,12 @@ function JoinInner() {
             <Link href="/apply" className="rounded-xl border px-4 py-3 text-sm font-semibold text-slate-700 no-underline">③ คำนวณเบี้ย / ทำเคส</Link>
             <Link href="/recruit" className="rounded-xl border px-4 py-3 text-sm font-semibold text-slate-700 no-underline">④ สมัครเป็นตัวแทน</Link>
           </div>
+          {done?.notify && (
+            <p className="mt-3 text-[11px] text-slate-500">
+              แจ้งเตือนทีมงาน: LINE OA {done.notify?.line?.sent ? 'ส่งแล้ว ✓' : (done.notify?.line?.configured ? 'ส่งไม่สำเร็จ (เก็บคิวไว้)' : 'ยังไม่ตั้งค่า')}
+              {' · '}อีเมล {done.notify?.email?.sent ? 'ส่งแล้ว ✓' : (done.notify?.email?.configured ? 'ส่งไม่สำเร็จ' : 'ยังไม่ตั้งค่า')}
+            </p>
+          )}
           <p className="mt-4 text-[11px] text-slate-400">ต้องการถอนความยินยอม/ลบข้อมูล แจ้งทีมงานได้ทุกเมื่อ (PDPA)</p>
         </div>
       </main>
