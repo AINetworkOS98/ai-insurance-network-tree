@@ -5,10 +5,10 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     // id = ตัวตนของแอป (ถ้าเปลี่ยน start_url ภายหลัง Chrome จะไม่มองเป็นแอปใหม่)
     id: '/',
-    name: 'NAVI สแกนใบเสร็จ — AI Insurance Network',
-    short_name: 'สแกนใบเสร็จ',
-    description: 'ถ่ายใบเสร็จ/สลิปด้วยกล้องมือถือ แล้วให้ AI อ่านยอดเงินและตรวจคุณสมบัติเลื่อนตำแหน่ง',
-    start_url: '/documents?m=1&cam=1',
+    name: 'NAVI Agent — AI Insurance Network',
+    short_name: 'NAVI Agent',
+    description: 'NAVI Agent — AI-assisted insurance agency toolkit: scan receipts, track prospects and members, calculate premiums and tax. ระบบบริหารเครือข่ายตัวแทน + สแกนใบเสร็จด้วย AI',
+    start_url: '/dashboard',
     scope: '/',
     display: 'standalone',
     orientation: 'portrait',
