@@ -14,6 +14,7 @@ import JoinShareCard from '@/components/JoinShareCard';
 import ProspectCodeLookup from '@/components/ProspectCodeLookup';
 import BusinessSimulator from '@/components/tax/BusinessSimulator';
 import TaxTable2569 from '@/components/tax/TaxTable2569';
+import TaxPlannerDownload from '@/components/tax/TaxPlannerDownload';
 
 // หน้า "สมาชิกทั่วไป" (เดิมชื่อ "ผู้สนใจ") — ฐานเดียวกับระบบสมาชิก (/api/members)
 // นิยาม: สมาชิกทั่วไป = ผู้ที่ยังอยู่ระดับตำแหน่ง 0 (ยังไม่เลื่อนเป็นตัวแทน)
@@ -235,7 +236,9 @@ export default function GeneralMembersPage(){
 
           {view === 'tax' ? (
             <div className="space-y-4">
-              {/* 0) ประกันลดหย่อนภาษี (บนสุด ตามที่ผู้ใช้สั่ง) */}
+              {/* 0) ดาวน์โหลดโปรแกรมคำนวณภาษี 2569 (แอปมือถือ ออฟไลน์) — สมาชิกทั่วไปทุกระดับกดเองได้ */}
+              <TaxPlannerDownload />
+              {/* 0.1) ประกันลดหย่อนภาษี (บนสุด ตามที่ผู้ใช้สั่ง) */}
               <InsuranceTaxTools/>
               {/* 1) ฐานภาษีบุคคลธรรมดา (ปีล่าสุด) */}
               <TaxBaseTable/>

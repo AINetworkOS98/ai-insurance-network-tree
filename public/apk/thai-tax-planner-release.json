@@ -1,0 +1,36 @@
+{
+  "app": {
+    "name": "คำนวณภาษี 2569 (Thai Tax Planner)",
+    "version": "1.0.0"
+  },
+  "platform": {
+    "android": {
+      "minOs": "Android 5.0 (API 21) ขึ้นไป",
+      "file": "APK"
+    },
+    "ios": {
+      "note": "ใช้วิธี “เพิ่มไปที่หน้าจอโฮม” ใน Safari (ยังไม่มีไฟล์ .ipa ที่เซ็นแล้ว)"
+    }
+  },
+  "apk": {
+    "primary": {
+      "file": "thai-tax-planner.apk",
+      "url": "/apk/thai-tax-planner.apk",
+      "downloadUrl": "/apk/thai-tax-planner.apk?v=e4394ae06933",
+      "bytes": 18149202,
+      "sizeText": "17.3 MB",
+      "sha256": "e4394ae069336664e108d5c63bec2539a38c8e733f4606f68a36bb6d9a467c20",
+      "version": "1.0.0"
+    },
+    "legacy": {
+      "file": "thai-tax-planner-legacy.apk",
+      "url": "/apk/thai-tax-planner-legacy.apk",
+      "downloadUrl": "/apk/thai-tax-planner-legacy.apk?v=0091a8579a93",
+      "bytes": 15459614,
+      "sizeText": "14.7 MB",
+      "sha256": "0091a8579a93fa536895f9f54cea9c79192122272223f14c2892fa23bbc72947",
+      "version": "1.0.0"
+    }
+  },
+  "releasedAt": "2026-10-25T22:47:08.284Z"
+}
