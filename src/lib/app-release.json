@@ -1,0 +1,79 @@
+{
+  "app": {
+    "name": "AI Insurance Network OS",
+    "version": "0.1.0"
+  },
+  "build": {
+    "commit": "0d42d5c",
+    "message": "fix(ai): ปุ่มผู้ช่วย AI ลอยกลับไปมุมซ้ายล่าง (เดิมอยู่ซ้าย) — ไม่ทับปุ่มเมนูด้านขวา; จอ lg วางถัดจาก sidebar",
+    "author": "akarapol",
+    "committedAt": "2026-10-25T19:14:13+07:00",
+    "generatedAt": "2026-10-25T13:13:06.739Z",
+    "env": "local"
+  },
+  "apk": {
+    "version": "1.0.0",
+    "primary": {
+      "file": "ai-insurance-mobile.apk",
+      "url": "/apk/ai-insurance-mobile.apk",
+      "downloadUrl": "/apk/ai-insurance-mobile.apk?v=6d04de315970",
+      "bytes": 18170055,
+      "sizeText": "17.3 MB",
+      "sha256": "6d04de3159704e9c6f40dce9c2d7cbb506d386762b2bbdc1a53e23291207c52a",
+      "version": "1.0.0"
+    },
+    "universal": {
+      "file": "ai-insurance-mobile-universal.apk",
+      "url": "/apk/ai-insurance-mobile-universal.apk",
+      "downloadUrl": "/apk/ai-insurance-mobile-universal.apk?v=7e88a42470b8",
+      "bytes": 52160118,
+      "sizeText": "49.7 MB",
+      "sha256": "7e88a42470b8ce67f52d0b41bb5e64aa0f238c4f291e45638938bdb156beec18",
+      "version": "1.0.0"
+    }
+  },
+  "changelog": [
+    {
+      "commit": "0d42d5c",
+      "date": "2026-10-25T19:14:13+07:00",
+      "subject": "fix(ai): ปุ่มผู้ช่วย AI ลอยกลับไปมุมซ้ายล่าง (เดิมอยู่ซ้าย) — ไม่ทับปุ่มเมนูด้านขวา; จอ lg วางถัดจาก sidebar"
+    },
+    {
+      "commit": "2d4a9d7",
+      "date": "2026-10-25T07:54:48+07:00",
+      "subject": "feat(pwa): InstallAppCard 2 ภาษา (ไทย/อังกฤษ) ให้ตรงกับเมนูภาษา — โหมด EN ไม่มีข้อความไทยค้าง"
+    },
+    {
+      "commit": "402d163",
+      "date": "2026-10-25T07:36:31+07:00",
+      "subject": "feat(pwa): ทำแอปให้เป็นสากล — ชื่อแอป NAVI Agent + start_url /dashboard + หน้า /app ไทย/อังกฤษ"
+    },
+    {
+      "commit": "981e63a",
+      "date": "2026-10-25T07:17:59+07:00",
+      "subject": "fix(pwa): sw v3 — navigation ใช้ cache:no-store ไม่งั้นตอนเน็ตหลุดเห็นหน้าเก่าที่ขึ้น Failed to fetch แทนหน้า offline"
+    },
+    {
+      "commit": "a70d7e0",
+      "date": "2026-10-25T07:15:36+07:00",
+      "subject": "feat(pwa): หน้า /app สำหรับสมาชิก + ไอคอน iOS + offline + จำปลายทางหลังล็อกอิน"
+    },
+    {
+      "commit": "f391372",
+      "date": "2026-10-24T14:29:25+07:00",
+      "subject": "feat(privacy): /notifications เห็นเฉพาะรหัสของตัวเอง + แสดง IP ของตัวเอง"
+    },
+    {
+      "commit": "913ad46",
+      "date": "2026-10-24T08:55:59+07:00",
+      "subject": "feat(pwa): ติดตั้งเป็นแอปได้จากหน้า /join (สมัครฟรี)"
+    },
+    {
+      "commit": "43fd4b8",
+      "date": "2026-10-24T08:45:07+07:00",
+      "subject": "fix(lookup): ค้นรหัสผู้สนใจด้วย prospectCode (P-XXXXXX) ก่อน — เดิมเทียบ prospectId (UUID) ทำให้ขึ้น 'ไม่พบรหัส'"
+    }
+  ],
+  "downloadPage": "/download",
+  "fingerprint": "325dfd96cab5dcf9"
+}

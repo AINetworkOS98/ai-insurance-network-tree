@@ -10,11 +10,26 @@ import Header from '@/components/Header';
 import JoinAppTabs from '@/components/JoinAppTabs';
 import { getLang } from '@/i18n';
 
+// ค่าเริ่มต้น — ใช้แสดงผลระหว่างรอ fetch /api/app-release (หรือเมื่อดึงไม่สำเร็จ)
+// ค่าจริง (เวอร์ชัน/ขนาด/เวลา/มีอะไรใหม่/ลิงก์ ?v=<hash>) มาจาก /api/app-release เสมอ
 const APK_URL = '/apk/ai-insurance-mobile.apk';            // arm64-v8a (มือถือส่วนใหญ่)
 const APK_URL_ALL = '/apk/ai-insurance-mobile-universal.apk'; // รวมทุกสถาปัตยกรรม (เครื่องรุ่นเก่า)
 const APK_VERSION = '1.0.0';
 const APK_SIZE = '17.3 MB';
+const APK_SIZE_ALL = '49.7 MB';
 const WEB_APP = '/m/index.html';
+
+// ใบรับรองเวอร์ชันจาก /api/app-release (สร้างจาก scripts/gen-release.mjs ตอน build)
+type Release = {
+  app: { version: string };
+  build: { commit: string; message: string; committedAt: string; generatedAt: string };
+  apk: {
+    version: string;
+    primary: { downloadUrl: string; sizeText: string; sha256: string } | null;
+    universal: { downloadUrl: string; sizeText: string; sha256: string } | null;
+  };
+  changelog: { commit: string; date: string; subject: string }[];
+};
 
 const COPY = {
   th: {
@@ -25,7 +40,7 @@ const COPY = {
     androidBadge: 'แนะนำสำหรับ Android',
     androidDesc: 'ไฟล์ติดตั้งตรงจากระบบเรา ไม่ผ่าน Play Store — ไม่มีค่าใช้จ่าย',
     androidBtn: 'ดาวน์โหลด APK',
-    androidMeta: `เวอร์ชัน ${APK_VERSION} · ${APK_SIZE} · Android 7.0 ขึ้นไป`,
+    androidMeta: (v: string, s: string) => `เวอร์ชัน ${v} · ${s} · Android 7.0 ขึ้นไป`,
     androidStepsTitle: 'วิธีติดตั้ง (3 ขั้น)',
     androidSteps: [
       'กดปุ่ม «ดาวน์โหลด APK» แล้วรอไฟล์โหลดเสร็จ (จะเห็นแจ้งเตือนที่แถบด้านบน)',
@@ -64,6 +79,11 @@ const COPY = {
       ['อัปเดตแอปอย่างไร?', 'เมื่อมีเวอร์ชันใหม่ ดาวน์โหลด APK จากหน้านี้ทับของเดิมได้เลย (ข้อมูลไม่หาย)'],
       ['iPhone ใช้ได้จริงไหม?', 'ได้ — ผ่าน Safari «เพิ่มไปที่หน้าจอโฮม» ทำงานเหมือนแอป (กล้อง/แจ้งเตือน/ไอคอน)'],
     ],
+    whatsNewTitle: '🆕 มีอะไรใหม่ (อัปเดตล่าสุด)',
+    whatsNewEmpty: 'ยังไม่มีบันทึกการอัปเดต',
+    updatedLabel: 'อัปเดตล่าสุด',
+    liveBadge: 'ข้อมูลสดจากระบบ',
+    liveHint: 'หน้านี้อัปเดตเองทุกครั้งที่ระบบแอป/ข้อมูลเปลี่ยน — ไม่ต้องรีเฟรชด้วยมือ',
     back: '← กลับหน้าแรก',
   },
   en: {
@@ -74,7 +94,7 @@ const COPY = {
     androidBadge: 'Recommended on Android',
     androidDesc: 'Direct install file from our system, no Play Store, no charge.',
     androidBtn: 'Download APK',
-    androidMeta: `Version ${APK_VERSION} · ${APK_SIZE} · Android 7.0+`,
+    androidMeta: (v: string, s: string) => `Version ${v} · ${s} · Android 7.0+`,
     androidStepsTitle: 'How to install (3 steps)',
     androidSteps: [
       'Tap “Download APK” and wait for the file to finish downloading.',
@@ -113,6 +133,11 @@ const COPY = {
       ['How do I update?', 'Download the newer APK from this page and install over the old one; data is kept.'],
       ['Does it work on iPhone?', 'Yes — via Safari “Add to Home Screen”, it behaves like an app (camera, icon, full screen).'],
     ],
+    whatsNewTitle: '🆕 What’s new (latest release)',
+    whatsNewEmpty: 'No release notes yet',
+    updatedLabel: 'Last updated',
+    liveBadge: 'Live from the system',
+    liveHint: 'This page refreshes itself whenever the app or its data changes — no manual reload needed.',
     back: '← Back to home',
   },
 };
@@ -122,6 +147,26 @@ type Lang = keyof typeof COPY;
 export default function DownloadPage() {
   const [lang, setLang] = useState<Lang>('th');
   const [ua, setUa] = useState({ ios: false, android: false });
+  const [rel, setRel] = useState<Release | null>(null);
+
+  // ดึง "ใบรับรองเวอร์ชัน" จริงจากระบบ — รีเฟรชเองทุก 60 วิ และเมื่อกลับเข้าหน้านี้
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      try {
+        const r = await fetch('/api/app-release', { cache: 'no-store' });
+        const j = await r.json();
+        if (alive && j?.ok) setRel(j as Release);
+      } catch {
+        /* เน็ตล่ม → ใช้ค่าเริ่มต้นต่อ ไม่ทำให้หน้าพัง */
+      }
+    };
+    load();
+    const t = setInterval(load, 60_000);
+    const onVis = () => { if (document.visibilityState === 'visible') load(); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => { alive = false; clearInterval(t); document.removeEventListener('visibilitychange', onVis); };
+  }, []);
 
   useEffect(() => {
     const read = () => setLang(getLang() === 'th' ? 'th' : 'en');
@@ -138,6 +183,23 @@ export default function DownloadPage() {
   }, []);
 
   const c = COPY[lang];
+
+  // ── ค่าจริงจาก /api/app-release (ถ้ายังโหลดไม่เสร็จ/ล่ม ใช้ค่าคงที่ด้านบน) ──
+  const apkUrl = rel?.apk?.primary?.downloadUrl || APK_URL;
+  const apkUrlAll = rel?.apk?.universal?.downloadUrl || APK_URL_ALL;
+  const apkSize = rel?.apk?.primary?.sizeText || APK_SIZE;
+  const apkSizeAll = rel?.apk?.universal?.sizeText || APK_SIZE_ALL;
+  const apkVersion = rel?.apk?.version || APK_VERSION;
+  const builtAt = rel?.build?.committedAt ? new Date(rel.build.committedAt) : null;
+  const builtText =
+    builtAt && !isNaN(builtAt.getTime())
+      ? builtAt.toLocaleString(lang === 'th' ? 'th-TH' : 'en-GB', {
+          day: '2-digit', month: 'short', year: 'numeric',
+          hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok',
+        })
+      : '';
+  const changes = (rel?.changelog || []).slice(0, 6);
+
   const card = 'rounded-2xl border border-[#dbeafe] bg-[#f0f7ff] p-4';
   const primaryBtn =
     'block w-full rounded-xl bg-[#1d4ed8] px-4 py-3 text-center text-sm font-bold text-white shadow-sm hover:bg-[#1e40af]';
@@ -159,6 +221,23 @@ export default function DownloadPage() {
           <p className="mt-1 text-[11px] text-slate-500">{c.leadNote}</p>
         </div>
 
+        {/* แถบ "อัปเดตล่าสุด" — ค่าจริงจากระบบ (ไม่ต้อง deploy ใหม่เพื่อแก้ข้อความตรงนี้) */}
+        <div className="mb-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-emerald-900">
+            <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
+              {c.liveBadge}
+            </span>
+            {builtText && (
+              <span className="font-semibold">
+                {c.updatedLabel}: {builtText}
+              </span>
+            )}
+            {rel?.app?.version && <span className="text-emerald-800">เว็บ v{rel.app.version}</span>}
+            {rel?.build?.commit && <span className="text-emerald-700">build {rel.build.commit}</span>}
+          </div>
+          <div className="mt-1 text-[10.5px] leading-relaxed text-emerald-800">{c.liveHint}</div>
+        </div>
+
         <div className="grid gap-3 sm:grid-cols-2">
           {/* Android */}
           <section className={card + (ua.android ? ' ring-2 ring-[#1d4ed8]' : '')}>
@@ -170,14 +249,14 @@ export default function DownloadPage() {
             </div>
             <p className="mt-1 text-[11.5px] leading-relaxed text-slate-600">{c.androidDesc}</p>
             <div className="mt-3">
-              <a href={APK_URL} download className={primaryBtn}>
+              <a href={apkUrl} download className={primaryBtn}>
                 ⬇️ {c.androidBtn}
               </a>
-              <div className="mt-1.5 text-center text-[10px] text-slate-500">{c.androidMeta}</div>
+              <div className="mt-1.5 text-center text-[10px] text-slate-500">{c.androidMeta(apkVersion, apkSize)}</div>
               <div className="mt-1 text-center text-[10px] text-slate-500">
                 เครื่องรุ่นเก่า/ติดตั้งไม่ผ่าน?{' '}
-                <a href={APK_URL_ALL} download className="font-semibold text-sky-700 underline">
-                  ดาวน์โหลดไฟล์รวมทุกเครื่อง (49.7 MB)
+                <a href={apkUrlAll} download className="font-semibold text-sky-700 underline">
+                  ดาวน์โหลดไฟล์รวมทุกเครื่อง ({apkSizeAll})
                 </a>
               </div>
             </div>
@@ -257,6 +336,28 @@ export default function DownloadPage() {
           </div>
         </section>
 
+        {/* มีอะไรใหม่ — ดึงจาก changelog จริงของระบบ (commit ล่าสุด) */}
+        <section className="mt-4 rounded-2xl border border-[#dbeafe] bg-white p-4">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-bold text-[#334155]">{c.whatsNewTitle}</h2>
+            {builtText && <span className="text-[10px] text-slate-500">{builtText}</span>}
+          </div>
+          {changes.length === 0 ? (
+            <p className="mt-2 text-[11px] text-slate-500">{c.whatsNewEmpty}</p>
+          ) : (
+            <ol className="mt-2 space-y-1.5">
+              {changes.map((ch) => (
+                <li key={ch.commit + ch.subject} className="flex gap-2 text-[11.5px] leading-relaxed text-slate-600">
+                  <span className="mt-0.5 flex-none rounded bg-[#f1f5f9] px-1.5 py-0.5 text-[9.5px] font-bold text-slate-500">
+                    {ch.commit}
+                  </span>
+                  <span>{ch.subject}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+
         {/* FAQ */}
         <section className="mt-4 rounded-2xl border border-[#e2e8f0] bg-white p-4">
           <h2 className="text-sm font-bold text-[#334155]">{c.faqTitle}</h2>
@@ -271,7 +372,7 @@ export default function DownloadPage() {
         </section>
 
         <p className="mt-4 text-center text-[10px] text-slate-400">
-          AI Insurance Network Tree · APK v{APK_VERSION} · ไม่เก็บรหัสผ่านในเครื่อง · ใช้บัญชีเดียวกับเว็บ
+          AI Insurance Network Tree · APK v{apkVersion} · ไม่เก็บรหัสผ่านในเครื่อง · ใช้บัญชีเดียวกับเว็บ
           <br />ติดตั้งจากไฟล์ตรง (sideload) — ไม่ผ่าน Play Store · อัปเดตโดยดาวน์โหลดไฟล์ใหม่ทับของเดิม
         </p>
       </main>
