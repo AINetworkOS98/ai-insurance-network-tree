@@ -122,6 +122,9 @@ function JoinInner() {
     <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6">
       <div className="mb-4">
         <InstallAppCard />
+        <div className="mt-1 text-right text-[10px]">
+          <a href="/app" className="font-semibold text-sky-700 underline">วิธีติดตั้งแบบละเอียด (Android/iPhone) →</a>
+        </div>
       </div>
 
       <section className="overflow-hidden rounded-2xl border border-sky-100 shadow-sm">

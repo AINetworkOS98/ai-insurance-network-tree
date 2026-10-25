@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#475569" />
+<title>ไม่มีการเชื่อมต่อ — NAVI</title>
+<style>
+  :root { color-scheme: light; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Sarabun', 'Noto Sans Thai', system-ui, -apple-system, sans-serif;
+    background: #f8fafc; color: #475569; padding: 24px;
+  }
+  .wrap { max-width: 340px; text-align: center; }
+  .ic { font-size: 44px; line-height: 1; }
+  h1 { font-size: 17px; margin: 14px 0 6px; color: #334155; }
+  p { font-size: 13px; line-height: 1.7; margin: 0 0 18px; color: #64748b; }
+  button {
+    font: inherit; font-weight: 700; font-size: 14px;
+    background: #475569; color: #fff; border: 0; border-radius: 999px;
+    padding: 11px 26px; cursor: pointer;
+  }
+  button:active { transform: scale(.98); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="ic">📡</div>
+    <h1>อินเทอร์เน็ตหลุดชั่วคราว</h1>
+    <p>แอปนี้ต้องใช้เน็ตเพื่อดึงข้อมูลล่าสุด (ใบเสร็จ · ผู้สนใจ · ผลงาน)<br />ต่อ Wi-Fi หรือเปิดเน็ตมือถือ แล้วกดลองอีกครั้ง</p>
+    <button type="button" onclick="location.replace('/')">ลองอีกครั้ง</button>
+  </div>
+</body>
+</html>

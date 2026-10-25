@@ -377,7 +377,19 @@ function AdminContent() {
             ลองใหม่
           </button>
           {errorHint === 'auth' && (
-            <Link href="/login" className="px-4 py-2 rounded-full bg-white border border-blue-200 text-sky-700 text-sm">ไปหน้าเข้าสู่ระบบ</Link>
+            <Link
+              href="/login"
+              onClick={(e) => {
+                // ถ้ามาจากหน้า /admin?next=<ปลายทาง> (เช่น เปิดแอปจากไอคอน) → พากลับไปหน้านั้นหลังล็อกอิน
+                try {
+                  const n = new URLSearchParams(window.location.search).get('next');
+                  if (n && n.startsWith('/') && !n.startsWith('//') && !n.startsWith('/login')) {
+                    e.preventDefault();
+                    window.location.href = `/login?next=${encodeURIComponent(n)}`;
+                  }
+                } catch { /* noop */ }
+              }}
+              className="px-4 py-2 rounded-full bg-white border border-blue-200 text-sky-700 text-sm">ไปหน้าเข้าสู่ระบบ</Link>
           )}
           {errorHint === 'perm' && (
             <Link href="/" className="px-4 py-2 rounded-full bg-white border border-blue-200 text-sky-700 text-sm">กลับหน้าแรก</Link>

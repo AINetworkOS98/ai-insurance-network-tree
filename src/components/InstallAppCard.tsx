@@ -18,13 +18,25 @@ export default function InstallAppCard({ compact = false }: { compact?: boolean 
     const standalone = window.matchMedia?.('(display-mode: standalone)')?.matches || (navigator as any).standalone === true;
     setInstalled(Boolean(standalone));
 
-    const onPrompt = (e: any) => { e.preventDefault(); setEvt(e); };
+    // event ที่ PwaRegister (ระดับ layout) ดักไว้ก่อนหน้า — ใช้ได้แม้ผู้ใช้เข้าหน้านี้ทีหลัง
+    const grab = () => {
+      const saved = (window as any).__naviInstallPrompt;
+      if (saved) setEvt(saved);
+      if ((window as any).__naviInstalled) setInstalled(true);
+    };
+    grab();
+
+    const onPrompt = (e: any) => { e.preventDefault(); (window as any).__naviInstallPrompt = e; setEvt(e); };
     const onInstalled = () => { setInstalled(true); setMsg('ติดตั้งแอปเรียบร้อย — เปิดจากไอคอนบนหน้าจอโฮมได้เลย'); };
     window.addEventListener('beforeinstallprompt', onPrompt);
     window.addEventListener('appinstalled', onInstalled);
+    window.addEventListener('navi-install-available', grab);
+    window.addEventListener('navi-installed', onInstalled);
     return () => {
       window.removeEventListener('beforeinstallprompt', onPrompt);
       window.removeEventListener('appinstalled', onInstalled);
+      window.removeEventListener('navi-install-available', grab);
+      window.removeEventListener('navi-installed', onInstalled);
     };
   }, []);
 

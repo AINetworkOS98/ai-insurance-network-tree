@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Header from '@/components/Header';
 import LineOaCard from '@/components/LineOaCard';
+import InstallAppCard from '@/components/InstallAppCard';
 import Sidebar from '@/components/Sidebar';
 import { estimatePremium, LIFE_PREMIUM_TAX_CAP, PREMIUM_RATE_VERSION } from '@/lib/premiumEstimate';
 import { isRiderProduct } from '@/lib/projectSamples';
@@ -840,6 +841,9 @@ export default function DocumentsPage() {
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold text-[#475569]">สแกนใบเสร็จรับเงิน เข้าระบบ</h1>
           </div>
+
+          {/* ติดตั้งเป็นแอป: สมาชิกที่สแกนใบเสร็จบ่อย → เปิดจากไอคอน กล้องเต็มจอ ไม่ต้องผ่าน LINE */}
+          <InstallAppCard compact />
 
           {/* ── อัปโหลดใบเสร็จ: บอกให้ชัดว่า "อัปโหลดตรงไหน" (ไม่มีอะไรต้องติดตั้ง/อัปโหลดโปรแกรม) ── */}
           <div className="card border-l-4 border-emerald-500 p-4">

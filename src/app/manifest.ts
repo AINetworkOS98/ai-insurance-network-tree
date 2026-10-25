@@ -3,6 +3,8 @@ import type { MetadataRoute } from 'next';
 // PWA สำหรับสแกนใบเสร็จ — ติดตั้งบนมือถือแล้วเปิดกล้องได้ทันที (standalone = ไม่ผ่าน LINE/URL bar)
 export default function manifest(): MetadataRoute.Manifest {
   return {
+    // id = ตัวตนของแอป (ถ้าเปลี่ยน start_url ภายหลัง Chrome จะไม่มองเป็นแอปใหม่)
+    id: '/',
     name: 'NAVI สแกนใบเสร็จ — AI Insurance Network',
     short_name: 'สแกนใบเสร็จ',
     description: 'ถ่ายใบเสร็จ/สลิปด้วยกล้องมือถือ แล้วให้ AI อ่านยอดเงินและตรวจคุณสมบัติเลื่อนตำแหน่ง',
@@ -15,6 +17,7 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: 'th',
     // ทางลัดเมื่อกดค้างที่ไอคอนแอป (Android/Chrome)
     shortcuts: [
+      { name: 'ติดตั้งแอป (วิธีติดตั้ง)', short_name: 'ติดตั้งแอป', url: '/app', description: 'วิธีติดตั้งแอปบน Android/iPhone' },
       { name: 'สมัครใช้งานฟรี', short_name: 'สมัครฟรี', url: '/join', description: 'สมัครเข้าใช้ระบบฟรี' },
       { name: 'สแกน/อัปโหลดใบเสร็จ', short_name: 'สแกนใบเสร็จ', url: '/documents?m=1&cam=1' },
       { name: 'คำนวณเบี้ยประกัน', short_name: 'คำนวณเบี้ย', url: '/apply' },

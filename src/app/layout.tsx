@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Script from "next/script";
 import VisitorCounter from "@/components/VisitorCounter";
@@ -7,9 +7,36 @@ import AutoTranslate from "@/components/AutoTranslate";
 import SiteAiAssistant from "@/components/SiteAiAssistant";
 import PwaRegister from "@/components/PwaRegister";
 
+// สีหลักของแอป (ต้องตรงกับ theme_color ใน manifest + apple status bar)
+const PWA_THEME = "#475569";
+
 export const metadata: Metadata = {
   title: "AI Insurance Network Tree — ระบบบริหารเครือข่ายตัวแทน",
   description: "บริหารผู้สนใจ ผู้สมัคร สมาชิก ต้นไม้ฐานกว้าง 5 คน ผลงาน รายได้ และเอกสารทางการเงินอย่างโปร่งใส",
+  applicationName: "NAVI สแกนใบเสร็จ",
+  // ไอคอน: Android/Chrome ใช้ manifest · iOS ต้องมี apple-touch-icon.png (180x180) ไม่งั้นหน้าจอโฮมได้ภาพหน้าจอแทนไอคอน
+  icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    shortcut: "/icon-192.png",
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  // iOS: เปิดจากหน้าจอโฮมแล้วเป็นแอปเต็มจอ (ไม่ติดแถบ Safari)
+  appleWebApp: {
+    capable: true,
+    title: "NAVI สแกนใบเสร็จ",
+    statusBarStyle: "default",
+  },
+  formatDetection: { telephone: false },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: PWA_THEME,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

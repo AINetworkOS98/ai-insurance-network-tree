@@ -217,12 +217,17 @@ export async function middleware(req: NextRequest) {
   // ยังไม่สมัครสมาชิก (ไม่มี token) → ส่งไปหน้า /admin ซึ่งมีการ์ดชวนเข้าสู่ระบบ
   const token = getToken(req);
   if(!token){
-    return NextResponse.redirect(new URL('/admin', req.url));
+    // ยังไม่ล็อกอิน → หน้า /admin (มีการ์ดชวนเข้าสู่ระบบ) แต่ต้องจำปลายทางเดิมไว้
+    // เช่น สมาชิกเปิดแอปจากไอคอน (start_url = /documents?m=1&cam=1) → ล็อกอินแล้วกลับไปสแกนต่อทันที
+    const landing = new URL('/admin', req.url);
+    const dest = pathname + (req.nextUrl.search || '');
+    if(dest && dest !== '/' && !dest.startsWith('/admin')) landing.searchParams.set('next', dest);
+    return NextResponse.redirect(landing);
   }
   const payload = await verifyTokenEdge(token);
   if(!payload){
     const loginUrl = new URL('/login', req.url);
-    loginUrl.searchParams.set('next', pathname);
+    loginUrl.searchParams.set('next', pathname + (req.nextUrl.search || ''));
     // ลบ cookie หมดอายุ
     const res = NextResponse.redirect(loginUrl);
     res.cookies.set('token','',{ path:'/', maxAge:0 });
