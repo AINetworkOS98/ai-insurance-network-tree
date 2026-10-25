@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"><title>ลดหย่อนภาษี — 30s 9:16</title>
+<style>
+  @font-face{font-family:'ThaiNoto';src:url(data:font/ttf;base64,{{FONT_REG}}) format('truetype');font-weight:400}
+  @font-face{font-family:'ThaiNoto';src:url(data:font/ttf;base64,{{FONT_BOLD}}) format('truetype');font-weight:600 900}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1080px;height:1920px;overflow:hidden;background:#07070a}
+  body{font-family:'ThaiNoto','Leelawadee UI',sans-serif;color:#f6efe4}
+  #stage{position:absolute;inset:0;overflow:hidden;background:linear-gradient(165deg,#0b0b0f,#191106 60%,#07070a)}
+  .scene{position:absolute;inset:0;opacity:0}
+
+  /* ── แสงอบอุ่นแบบภาพยนตร์ ── */
+  #keylight{position:absolute;width:1200px;height:1200px;left:-300px;top:-380px;border-radius:50%;filter:blur(120px);
+    background:radial-gradient(circle,rgba(255,178,92,.42),transparent 66%)}
+  #rimlight{position:absolute;width:900px;height:900px;right:-320px;top:-160px;border-radius:50%;filter:blur(110px);
+    background:radial-gradient(circle,rgba(255,214,150,.24),transparent 68%)}
+  #vign{position:absolute;inset:0;background:radial-gradient(120% 78% at 50% 46%,transparent 44%,rgba(0,0,0,.72) 100%)}
+  #grain{position:absolute;inset:0;opacity:.10;background-image:radial-gradient(rgba(255,255,255,.9) .5px,transparent .6px);background-size:2px 2px}
+  #bars{position:absolute;left:0;right:0;top:0;height:96px;background:linear-gradient(#000,rgba(0,0,0,0));opacity:.55}
+
+  /* ── ซับไตเติล ── */
+  #sub{position:absolute;left:70px;right:70px;bottom:210px;text-align:center;font-size:46px;line-height:1.42;font-weight:700;
+    text-shadow:0 10px 26px rgba(0,0,0,.9),0 2px 4px rgba(0,0,0,.8);opacity:0}
+  #kicker{position:absolute;left:0;right:0;top:150px;text-align:center;font-size:26px;letter-spacing:.22em;font-weight:700;
+    color:rgba(255,206,140,.85);opacity:0}
+
+  /* ── ซิลูเอตคน (ไม่โชว์ใบหน้า = ดูมีอยู่จริงแต่ไม่หลอน) ── */
+  .person{position:absolute;bottom:0;filter:blur(.6px) drop-shadow(0 30px 60px rgba(0,0,0,.7))}
+  .person svg{display:block}
+
+  /* ── โต๊ะ + เอกสาร ── */
+  #desk{position:absolute;left:-10%;right:-10%;bottom:-6%;height:44%;
+    background:linear-gradient(180deg,#2a1a0d,#1a1008 70%,#120b05);box-shadow:inset 0 24px 60px rgba(0,0,0,.6)}
+  .paper{position:absolute;border-radius:8px;background:linear-gradient(160deg,#f7f1e6,#e7dcc9);
+    box-shadow:0 26px 50px -18px rgba(0,0,0,.85);padding:22px}
+  .paper i{display:block;height:9px;border-radius:5px;background:#c9bca6;margin:10px 0}
+  .paper i:nth-child(3n){width:64%}
+  .paper .hdr{height:14px;width:52%;background:#b99b6c;border-radius:5px;margin-bottom:16px}
+  #calc{position:absolute;border-radius:14px;background:linear-gradient(160deg,#3a3f46,#20242a);padding:16px;
+    box-shadow:0 26px 50px -18px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,255,255,.12)}
+  #calc .scr{height:58px;border-radius:8px;background:#0d1a12;margin-bottom:12px;box-shadow:inset 0 0 20px rgba(80,255,160,.18)}
+  #calc .keys{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  #calc .keys b{display:block;height:28px;border-radius:6px;background:#4a5058;box-shadow:inset 0 1px 0 rgba(255,255,255,.14)}
+
+  /* ── การ์ดปิดท้าย ── */
+  #endcard{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;padding:0 88px;opacity:0}
+  #endcard .l1{font-size:60px;font-weight:700;line-height:1.28;text-shadow:0 12px 30px rgba(0,0,0,.8)}
+  #endcard .l2{margin-top:26px;font-size:34px;line-height:1.45;color:rgba(255,233,205,.92)}
+  #endcard .cta{margin-top:44px;display:inline-block;align-self:flex-start;padding:24px 44px;border-radius:60px;
+    background:linear-gradient(180deg,#ffc670,#e59b2e);color:#231302;font-size:38px;font-weight:700;
+    box-shadow:0 26px 60px -22px rgba(255,180,80,.85)}
+  #endcard .url{margin-top:26px;font-size:24px;font-family:ui-monospace,Consolas,monospace;color:rgba(255,240,220,.82)}
+  #brand{position:absolute;left:88px;bottom:96px;font-size:22px;letter-spacing:.14em;font-weight:700;color:rgba(255,240,220,.55);opacity:0}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="keylight"></div><div id="rimlight"></div>
+
+  <!-- ฉาก 1: ตรวจเอกสารภาษี -->
+  <div class="scene" id="s1">
+    <div id="desk"></div>
+    <div class="paper" id="p1" style="left:90px;bottom:330px;width:430px;height:300px;transform:rotate(-7deg)">
+      <div class="hdr"></div><i></i><i></i><i></i><i></i><i></i>
+    </div>
+    <div class="paper" id="p2" style="left:400px;bottom:410px;width:380px;height:270px;transform:rotate(6deg)">
+      <div class="hdr"></div><i></i><i></i><i></i><i></i>
+    </div>
+    <div id="calc" style="right:110px;bottom:470px;width:230px;transform:rotate(-4deg)">
+      <div class="scr"></div><div class="keys"><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></div>
+    </div>
+    <div class="person" id="per1" style="left:265px;width:640px">
+      <svg viewBox="0 0 640 700" width="640" height="700">
+        <path d="M320 96c62 0 108 46 108 108 0 42-16 76-44 96l14 40c78 16 132 62 150 132 12 46 18 108 18 228H74c0-120 6-182 18-228 18-70 72-116 150-132l14-40c-28-20-44-54-44-96 0-62 46-108 108-108z" fill="#0c0a08"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- ฉาก 2: ปรึกษาที่ปรึกษา -->
+  <div class="scene" id="s2">
+    <div id="desk"></div>
+    <div class="paper" id="p3" style="left:150px;bottom:520px;width:330px;height:240px;transform:rotate(9deg)">
+      <div class="hdr"></div><i></i><i></i><i></i><i></i>
+    </div>
+    <div id="calc" style="right:180px;bottom:560px;width:200px;transform:rotate(5deg)">
+      <div class="scr"></div><div class="keys"><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></div>
+    </div>
+    <div class="person" id="per2" style="left:-40px;width:520px">
+      <svg viewBox="0 0 640 700" width="520" height="568"><path d="M320 96c62 0 108 46 108 108 0 42-16 76-44 96l14 40c78 16 132 62 150 132 12 46 18 108 18 228H74c0-120 6-182 18-228 18-70 72-116 150-132l14-40c28-20 44-54 44-96 0-62 46-108 108-108z" fill="#0a0908"/></svg>
+    </div>
+    <div class="person" id="per3" style="right:-30px;width:520px">
+      <svg viewBox="0 0 640 700" width="520" height="568"><path d="M320 96c62 0 108 46 108 108 0 42-16 76-44 96l14 40c78 16 132 62 150 132 12 46 18 108 18 228H74c0-120 6-182 18-228 18-70 72-116 150-132l14-40c28-20 44-54 44-96 0-62 46-108 108-108z" fill="#100d09"/></svg>
+    </div>
+  </div>
+
+  <!-- ฉาก 3: ครอบครัว -->
+  <div class="scene" id="s3">
+    <div id="bokeh"></div>
+    <div class="person" id="per4" style="left:70px;width:430px">
+      <svg viewBox="0 0 640 700" width="430" height="470"><path d="M320 96c62 0 108 46 108 108 0 42-16 76-44 96l14 40c78 16 132 62 150 132 12 46 18 108 18 228H74c0-120 6-182 18-228 18-70 72-116 150-132l14-40c28-20 44-54 44-96 0-62 46-108 108-108z" fill="#0b0907"/></svg>
+    </div>
+    <div class="person" id="per5" style="right:60px;width:430px">
+      <svg viewBox="0 0 640 700" width="430" height="470"><path d="M320 96c62 0 108 46 108 108 0 42-16 76-44 96l14 40c78 16 132 62 150 132 12 46 18 108 18 228H74c0-120 6-182 18-228 18-70 72-116 150-132l14-40c28-20 44-54 44-96 0-62 46-108 108-108z" fill="#0d0a08"/></svg>
+    </div>
+    <div class="person" id="per6" style="left:410px;width:280px">
+      <svg viewBox="0 0 640 700" width="280" height="306"><path d="M320 96c62 0 108 46 108 108 0 42-16 76-44 96l14 40c78 16 132 62 150 132 12 46 18 108 18 228H74c0-120 6-182 18-228 18-70 72-116 150-132l14-40c28-20 44-54 44-96 0-62 46-108 108-108z" fill="#0f0c09"/></svg>
+    </div>
+  </div>
+
+  <!-- ฉาก 4: ตัวแทน + การ์ดปิด -->
+  <div class="scene" id="s4">
+    <div id="desk"></div>
+    <div class="person" id="per7" style="left:230px;width:660px">
+      <svg viewBox="0 0 640 700" width="660" height="722"><path d="M320 96c62 0 108 46 108 108 0 42-16 76-44 96l14 40c78 16 132 62 150 132 12 46 18 108 18 228H74c0-120 6-182 18-228 18-70 72-116 150-132l14-40c28-20 44-54 44-96 0-62 46-108 108-108z" fill="#0a0806"/></svg>
+    </div>
+  </div>
+
+  <div id="kicker">สิทธิลดหย่อนภาษี · ประกันชีวิต</div>
+  <div id="sub"></div>
+
+  <div id="endcard">
+    <div class="l1">ทำประกันให้คุ้มค่า<br/>อย่าลืมเช็กสิทธิลดหย่อนภาษี</div>
+    <div class="l2">ทักแชตเพื่อปรึกษาการวางแผนประกันชีวิต</div>
+    <div class="cta">ปรึกษาฟรี → /join</div>
+    <div class="url">ai-insurance-network-tree.vercel.app/join</div>
+  </div>
+  <div id="brand">AI INSURANCE NETWORK TREE</div>
+
+  <div id="bars"></div><div id="vign"></div><div id="grain"></div>
+</div>
+<script>
+(() => {
+  const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
+  const easeOut=t=>1-Math.pow(1-clamp(t),3);
+  const easeInOut=t=>{t=clamp(t);return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;};
+  const seg=(t,a,b)=>clamp((t-a)/(b-a));
+  const $=id=>document.getElementById(id);
+
+  // ไทม์ไลน์ตรงกับเสียงพากย์ (วัดจริง: 7.73 / 6.38 / 5.90 / 6.02 วิ)
+  const S = [
+    {id:'s1', a:0.0,  b:8.0,  sub:'ถ้าทำประกันชีวิต แต่ไม่ได้ใช้สิทธิลดหย่อนภาษี<br/>คุณอาจพลาดประโยชน์ที่ตัวเองมีสิทธิได้รับ'},
+    {id:'s2', a:7.9,  b:15.1, sub:'เบี้ยประกันชีวิตที่เข้าเงื่อนไข<br/>นำไปลดหย่อนภาษีได้ตามเกณฑ์กรมสรรพากร'},
+    {id:'s3', a:15.0, b:23.1, sub:'ได้ทั้งความคุ้มครองชีวิต<br/>และอาจได้ประโยชน์ทางภาษีเพิ่มเติม'},
+    {id:'s4', a:23.0, b:30.0, sub:'อย่าปล่อยให้สิทธิหลุดมือ<br/>ปรึกษาตัวแทนเพื่อเช็กสิทธิก่อนยื่นภาษี'}
+  ];
+
+  function renderAt(t){
+    // ฉาก
+    S.forEach((s,i)=>{
+      const el=$(s.id);
+      const inA=s.a, outA=s.b-0.7;
+      const a = Math.min(easeOut(seg(t,inA,inA+0.8)), 1-easeInOut(seg(t,outA,s.b)));
+      el.style.opacity=String(clamp(a));
+      // slow push-in (cinematic)
+      const p = seg(t,inA,s.b);
+      el.style.transform = `scale(${1.04 + 0.10*p}) translateY(${-14*p}px)`;
+    });
+
+    // subtitle ตามฉาก
+    let sub=''; let subA=0;
+    for(const s of S){ if(t>=s.a+0.5 && t<s.b-0.5){ sub=s.sub; subA=Math.min(easeOut(seg(t,s.a+0.5,s.a+1.1)),1-easeInOut(seg(t,s.b-1.0,s.b-0.4))); } }
+    const sb=$('sub');
+    if(sb.dataset.txt!==sub){ sb.innerHTML=sub; sb.dataset.txt=sub; }
+    sb.style.opacity=String(subA);
+
+    // kicker เฉพาะช่วงต้น
+    $('kicker').style.opacity=String(easeOut(seg(t,0.6,1.6))*(1-seg(t,6.4,7.6)));
+
+    // เอกสารเลื่อนช้า ๆ (parallax)
+    const drift=(t*0.02)%1;
+    const p1=$('p1'), p2=$('p2');
+    if(p1) p1.style.transform=`rotate(-7deg) translate(${drift*10}px,${-drift*12}px)`;
+    if(p2) p2.style.transform=`rotate(6deg) translate(${-drift*8}px,${drift*6}px)`;
+
+    // bokeh อบอุ่นในฉากครอบครัว
+    const bk=$('bokeh');
+    if(bk && (!bk.dataset.n)){
+      let h='';
+      for(let i=0;i<18;i++){
+        const x=Math.round(60+Math.random()*960), y=Math.round(120+Math.random()*1100), r=Math.round(26+Math.random()*70);
+        h+=`<div style="position:absolute;left:${x}px;top:${y}px;width:${r}px;height:${r}px;border-radius:50%;
+          background:radial-gradient(circle,rgba(255,196,120,.55),rgba(255,170,90,.06) 70%,transparent);
+          filter:blur(${Math.round(6+Math.random()*10)}px);"></div>`;
+      }
+      bk.innerHTML=h; bk.dataset.n='1';
+    }
+    if(bk){ const bs=[...bk.children]; bs.forEach((b,i)=>{ b.style.transform=`translate(${Math.sin(t*0.5+i)*12}px,${Math.cos(t*0.4+i)*10}px)`; }); }
+
+    // person fade in ต่อฉาก
+    const pf=[[1,0.3],[2,0.3],[3,0.5],[4,0.3],[5,0.5],[6,0.7],[7,0.3]];
+    pf.forEach(([n,delay])=>{
+      const el=$('per'+n); if(!el) return;
+      const sc=S[n<=1?0:(n<=3?1:(n<=6?2:3))];
+      const a=easeOut(seg(t,sc.a+delay,sc.a+delay+1.2));
+      el.style.opacity=String(a);
+      el.style.transform=`translateY(${(1-a)*40}px)`;
+    });
+
+    // endcard
+    const ec=$('endcard');
+    const eA=easeOut(seg(t,24.2,25.4));
+    ec.style.opacity=String(eA*(1-seg(t,29.4,30.0)));
+    ec.style.transform=`translateY(${(1-eA)*30}px)`;
+    $('brand').style.opacity=String(easeOut(seg(t,25.0,26.0))*0.9);
+
+    // แสงหายใจช้า ๆ
+    $('keylight').style.opacity=String(0.86+0.14*Math.sin(t*0.5));
+  }
+
+  window.renderAt=renderAt;
+  window.__ready=async()=>{ try{await document.fonts.load('700 46px ThaiNoto');await document.fonts.ready;}catch(e){}
+    renderAt(0); return true; };
+})();
+</script>
+</body></html>

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"><title>Join — 9:16</title>
+<style>
+  @font-face{font-family:'ThaiNoto';src:url(data:font/ttf;base64,{{FONT_REG}}) format('truetype');font-weight:400}
+  @font-face{font-family:'ThaiNoto';src:url(data:font/ttf;base64,{{FONT_BOLD}}) format('truetype');font-weight:600 900}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1080px;height:1920px;overflow:hidden;background:#04070f}
+  body{font-family:'ThaiNoto','Leelawadee UI',sans-serif;color:#eaf4ff}
+  #stage{position:absolute;inset:0;overflow:hidden;
+    background:radial-gradient(900px 700px at 72% 12%,rgba(34,211,238,.20),transparent 62%),
+               radial-gradient(700px 600px at 18% 88%,rgba(200,168,78,.16),transparent 64%),
+               linear-gradient(165deg,#04070f 0%,#08182b 55%,#03080f 100%)}
+  #grid{position:absolute;left:-20%;right:-20%;bottom:-14%;height:56%;
+    background-image:linear-gradient(rgba(90,190,255,.30) 1px,transparent 1px),linear-gradient(90deg,rgba(90,190,255,.30) 1px,transparent 1px);
+    background-size:96px 96px;opacity:.20;transform:perspective(620px) rotateX(64deg);transform-origin:bottom center}
+  #glowA{position:absolute;width:520px;height:520px;left:58%;top:-140px;border-radius:50%;filter:blur(70px);
+    background:radial-gradient(circle,rgba(34,211,238,.55),transparent 66%)}
+  #lines{position:absolute;left:74px;top:520px;width:940px}
+  .ln{position:absolute;left:0;white-space:nowrap;font-weight:700;line-height:1.16;opacity:0;
+      text-shadow:0 14px 34px rgba(0,0,0,.6)}
+  .k{color:#22d3ee}.g{color:#f5c451}
+  #world{position:absolute;inset:0;perspective:1400px;perspective-origin:50% 58%}
+  #plane{position:absolute;left:50%;top:470px;width:900px;height:600px;margin-left:-450px;border-radius:26px;overflow:hidden;
+    background:#fff;box-shadow:0 60px 120px -50px rgba(0,0,0,.95),0 0 0 1px rgba(125,211,252,.22);opacity:0}
+  #plane img{width:100%;height:100%;display:block}
+  #cta{position:absolute;left:0;right:0;top:1130px;text-align:center;opacity:0}
+  #cta .b{display:inline-block;padding:26px 54px;border-radius:60px;
+    background:linear-gradient(180deg,#22d3ee,#0e7490);color:#04121c;font-size:52px;font-weight:700;
+    box-shadow:0 24px 50px -18px rgba(34,211,238,.8)}
+  #cta .u{margin-top:22px;font-size:30px;font-weight:700;color:rgba(234,244,255,.85);font-family:ui-monospace,Consolas,monospace}
+  #vign{position:absolute;inset:0;background:radial-gradient(120% 80% at 50% 46%,transparent 46%,rgba(0,0,0,.66) 100%)}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="grid"></div><div id="glowA"></div>
+  <div id="world"><div id="plane"><img id="art" src="data:image/png;base64,{{IMG_STEPS}}"></div></div>
+  <div id="lines">
+    <div class="ln" id="l1">สมัครเข้าใช้ระบบ<br/><span class="k">ฟรี · ไม่มีค่าใช้จ่าย</span></div>
+    <div class="ln" id="l2">เห็น<span class="k">ผังเครือข่าย</span>ทั้งทีม</div>
+    <div class="ln" id="l3">ติดตาม<span class="k">ผลงาน · ค่าคอม</span></div>
+    <div class="ln" id="l4"><span class="g">AI ช่วยวิเคราะห์</span>โอกาส</div>
+    <div class="ln" id="l5">เริ่มได้ใน <span class="k">3 ขั้นตอน</span></div>
+  </div>
+  <div id="head" style="position:absolute;left:0;right:0;top:170px;text-align:center;opacity:.95"><div style="font-size:30px;letter-spacing:.16em;font-weight:700;color:#7dd3fc">AI INSURANCE NETWORK TREE</div><div style="font-size:56px;font-weight:700;margin-top:10px">สมัครฟรี · ใช้ฟรี</div></div>
+  <div id="cta"><div class="b">สมัครฟรี → /join</div><div class="u">ai-insurance-network-tree.vercel.app/join</div></div>
+  <div id="vign"></div>
+</div>
+<script>
+(() => {
+  const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
+  const easeOut=t=>1-Math.pow(1-clamp(t),3);
+  const easeInOut=t=>{t=clamp(t);return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;};
+  const seg=(t,a,b)=>clamp((t-a)/(b-a));
+  const $=id=>document.getElementById(id);
+  const L=[$('l1'),$('l2'),$('l3'),$('l4'),$('l5')];
+  const START=[0.4,2.0,3.4,4.8,6.2], DUR=1.4;
+  const IMG_IN=7.6, IMG_FULL=9.6;
+
+  function line(el,i,t){
+    const t0=START[i], k=seg(t,t0,t0+.6), out=seg(t,t0+DUR+1.2,t0+DUR+2.0);
+    const a=easeOut(k)*(1-easeInOut(out));
+    el.style.opacity=String(a);
+    el.style.fontSize=i===0?'78px':'64px';
+    el.style.top=(i===0?0:(210+(i-1)*120))+'px';
+    el.style.transform=`translate3d(${(1-easeOut(k))*90}px,${Math.sin(t*1.1+i)*5}px,${(1-easeOut(k))*-260}px) rotateY(${(1-easeOut(k))*20}deg)`;
+  }
+
+  function renderAt(t){
+    L.forEach((el,i)=>line(el,i,t));
+    const p=seg(t,IMG_IN,IMG_FULL), e=easeInOut(p);
+    const plane=$('plane');
+    plane.style.transform=`translate3d(0,${(1-e)*220}px,${(1-e)*-380}px) rotateX(${26-18*e}deg) rotateZ(${-4+4*e}deg) scale(${.88+.12*e})`;
+    plane.style.opacity=String(clamp(p*1.5));
+    $('grid').style.transform=`perspective(620px) rotateX(64deg) translateY(${Math.sin(t*.5)*8}px)`;
+    $('glowA').style.transform=`translate3d(${Math.sin(t*.6)*34}px,${Math.cos(t*.5)*20}px,0)`;
+    const c=easeOut(seg(t,IMG_FULL,IMG_FULL+1.0));
+    $('cta').style.opacity=String(c);
+    $('cta').style.transform=`translateY(${(1-c)*24}px)`;
+    if(t>IMG_IN){ const f=1-seg(t,IMG_IN,IMG_IN+1.0); L.forEach(el=>{ el.style.opacity=String(parseFloat(el.style.opacity||'0')*f); }); }
+  }
+  window.renderAt=renderAt;
+  window.__ready=async()=>{ try{await document.fonts.load('800 64px ThaiNoto');await document.fonts.ready;}catch(e){}
+    const im=$('art'); if(im&&!im.complete){ await new Promise(r=>{im.onload=r;im.onerror=r;}); }
+    renderAt(0); return true; };
+})();
+</script>
+</body></html>

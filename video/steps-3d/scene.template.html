@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>3 ขั้นตอน — 3D</title>
+<style>
+  @font-face{font-family:'ThaiNoto';src:url(data:font/ttf;base64,{{FONT_REG}}) format('truetype');font-weight:400}
+  @font-face{font-family:'ThaiNoto';src:url(data:font/ttf;base64,{{FONT_BOLD}}) format('truetype');font-weight:600 900}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1920px;height:1080px;overflow:hidden;background:#05070e}
+  body{font-family:'ThaiNoto','Leelawadee UI',sans-serif;color:#eaf4ff}
+  #stage{position:absolute;inset:0;overflow:hidden;
+    background:
+      radial-gradient(1100px 620px at 74% 18%, rgba(34,211,238,.20), transparent 62%),
+      radial-gradient(820px 520px at 16% 86%, rgba(200,168,78,.14), transparent 64%),
+      linear-gradient(160deg,#05070e 0%,#08182b 52%,#040c18 100%)}
+  #grid{position:absolute;left:-10%;right:-10%;bottom:-18%;height:74%;
+    background-image:linear-gradient(rgba(90,190,255,.30) 1px,transparent 1px),linear-gradient(90deg,rgba(90,190,255,.30) 1px,transparent 1px);
+    background-size:110px 110px;opacity:.22;
+    transform:perspective(700px) rotateX(66deg);transform-origin:bottom center}
+  #glowA,#glowB{position:absolute;border-radius:50%;filter:blur(60px);opacity:.55}
+  #glowA{width:520px;height:520px;left:55%;top:-160px;background:radial-gradient(circle,rgba(34,211,238,.55),transparent 65%)}
+  #glowB{width:460px;height:460px;left:-120px;bottom:-120px;background:radial-gradient(circle,rgba(245,196,81,.42),transparent 66%)}
+
+  /* ── 3D stage ── */
+  #world{position:absolute;inset:0;perspective:1500px;perspective-origin:50% 42%}
+  #plane{position:absolute;left:50%;top:46%;width:1180px;height:787px;margin-left:-590px;margin-top:-394px;
+    transform-style:preserve-3d;border-radius:26px;
+    box-shadow:0 70px 140px -60px rgba(0,0,0,.95),0 0 0 1px rgba(125,211,252,.22),0 0 90px -20px rgba(34,211,238,.35);
+    background:#fff;overflow:hidden}
+  #plane img{width:100%;height:100%;display:block}
+  #sheen{position:absolute;inset:0;background:linear-gradient(105deg,rgba(255,255,255,.30) 0%,rgba(255,255,255,0) 42%,rgba(255,255,255,0) 60%,rgba(255,255,255,.16) 100%);
+    mix-blend-mode:screen;pointer-events:none}
+  #reflection{position:absolute;left:50%;top:calc(46% + 400px);width:1180px;height:200px;margin-left:-590px;
+    background:url(data:image/png;base64,{{IMG_STEPS}}) center top/100% auto no-repeat;
+    transform:scaleY(-1);opacity:.16;filter:blur(6px);mask-image:linear-gradient(to bottom,rgba(0,0,0,.55),transparent 78%)}
+
+  /* ── text rows ── */
+  #lines{position:absolute;left:96px;top:200px;width:760px;transform-style:preserve-3d}
+  .ln{position:absolute;left:0;white-space:nowrap;font-weight:800;line-height:1.14;
+      text-shadow:0 18px 40px rgba(0,0,0,.55);opacity:0;will-change:transform,opacity}
+  .ln .k{color:#22d3ee}
+  .ln .g{color:#f5c451}
+  #cap{position:absolute;left:100px;bottom:96px;font-size:26px;font-weight:600;color:rgba(234,244,255,.72);opacity:0}
+  #brand{position:absolute;left:100px;bottom:44px;font-size:22px;font-weight:700;color:rgba(234,244,255,.45);opacity:0;letter-spacing:.04em}
+  #vign{position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 45%,transparent 45%,rgba(0,0,0,.62) 100%)}
+  #grain{position:absolute;inset:0;opacity:.05;background-image:radial-gradient(rgba(255,255,255,.9) .6px,transparent .7px);
+    background-size:3px 3px}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="grid"></div>
+  <div id="glowA"></div><div id="glowB"></div>
+  <div id="world">
+    <div id="reflection"></div>
+    <div id="plane">
+      <img id="stepsImg" src="data:image/png;base64,{{IMG_STEPS}}" alt="">
+      <div id="sheen"></div>
+    </div>
+    <div id="lines">
+      <div class="ln" id="l1">อิสรภาพทางการเงิน<br/><span class="k">เริ่มจากการลงมือทำ</span></div>
+      <div class="ln" id="l2">ขั้นที่ 1 · <span class="k">ลงทะเบียนสมัครสมาชิก</span></div>
+      <div class="ln" id="l3">ขั้นที่ 2 · <span class="g">สมัครเป็นตัวแทน (ผู้มุ่งหวัง)</span></div>
+      <div class="ln" id="l4">ขั้นที่ 3 · <span class="k">อัปโหลดสลิป / ใบเสร็จ</span></div>
+      <div class="ln" id="l5">ระบบตรวจคุณสมบัติให้<u>อัตโนมัติ</u></div>
+    </div>
+  </div>
+  <div id="cap">AI Insurance Network Tree — ระบบบริหารเครือข่ายตัวแทน</div>
+  <div id="brand">ai-insurance-network-tree.vercel.app</div>
+  <div id="vign"></div><div id="grain"></div>
+</div>
+<script>
+(() => {
+  const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
+  const easeOut=t=>1-Math.pow(1-clamp(t),3);
+  const easeInOut=t=>{t=clamp(t);return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;};
+  const seg=(t,a,b)=>clamp((t-a)/(b-a));
+  const $=id=>document.getElementById(id);
+
+  const L=[$('l1'),$('l2'),$('l3'),$('l4'),$('l5')];
+  // เวลาแสดงข้อความทีละแถว
+  const START=[0.35,1.75,3.05,4.35,5.65];
+  const DUR=1.15;
+  const IMG_IN=7.0, IMG_FULL=9.2;
+
+  function setLine(el,i,t){
+    const t0=START[i], k=seg(t,t0,t0+.55), out=seg(t,t0+DUR+1.6,t0+DUR+2.3);
+    const a=easeOut(k)*(1-easeInOut(out));
+    const dx=(1-easeOut(k))*70;
+    const dz=(1-easeOut(k))*-220;
+    const bob=Math.sin((t*1.1)+i)*4;
+    el.style.opacity=String(a);
+    el.style.transform=`translate3d(${dx}px, ${bob}px, ${dz}px) rotateY(${(1-easeOut(k))*18}deg)`;
+    el.style.fontSize = i===0 ? '62px' : '46px';
+    el.style.top = i===0 ? '0px' : (150 + (i-1)*86) + 'px';
+    el.style.left = i===0 ? '0px' : '26px';
+  }
+
+  function renderAt(t){
+    // ข้อความทีละแถว
+    L.forEach((el,i)=>setLine(el,i,t));
+
+    // ระนาบภาพ 3 มิติ: ลอยมาจากขวา → ตั้งตรง
+    const p=seg(t,IMG_IN,IMG_FULL);
+    const e=easeInOut(p);
+    const rotY = 34 - 34*e;                 // 34° → 0°
+    const rotX = 18 - 10*e;                 // 18° → 8°
+    const rotZ = -6 + 6*e;
+    const tx = (1-e)*420;                    // สไลด์จากขวา
+    const tz = (1-e)*-520;
+    const sc = 0.86 + 0.14*e;
+    const float = Math.sin(t*0.9)*6;
+    const plane=$('plane');
+    plane.style.transform =
+      `translate3d(${tx}px, ${float}px, ${tz}px) rotateX(${rotX}deg) rotateY(${rotY}deg) rotateZ(${rotZ}deg) scale(${sc})`;
+    plane.style.opacity = String(clamp(p*1.4));
+    // แสงกวาดบนผิวภาพ
+    const sh=(t*0.22)%1;
+    $('sheen').style.opacity=String(0.25 + 0.45*Math.sin(t*0.8));
+    $('sheen').style.transform=`translateX(${(sh*2-1)*40}%)`;
+
+    // พื้นหลังขยับเบา ๆ
+    $('grid').style.transform=`perspective(700px) rotateX(66deg) translateY(${Math.sin(t*0.5)*10}px)`;
+    $('glowA').style.transform=`translate3d(${Math.sin(t*0.6)*40}px,${Math.cos(t*0.5)*24}px,0)`;
+    $('glowB').style.transform=`translate3d(${Math.cos(t*0.4)*30}px,${Math.sin(t*0.45)*20}px,0)`;
+
+    // เครดิตท้าย
+    const c1=easeOut(seg(t,IMG_FULL-0.2,IMG_FULL+0.6));
+    $('cap').style.opacity=String(c1*0.95);
+    $('cap').style.transform=`translateY(${(1-c1)*18}px)`;
+    const c2=easeOut(seg(t,IMG_FULL+0.4,IMG_FULL+1.2));
+    $('brand').style.opacity=String(c2*0.95);
+
+    // ข้อความค่อย ๆ จางตอนภาพเข้ามา
+    if(t>IMG_IN){ const f=1-seg(t,IMG_IN,IMG_IN+1.0); L.forEach(el=>{ el.style.opacity=String(parseFloat(el.style.opacity||'0')*f); }); }
+  }
+
+  window.renderAt=renderAt;
+  window.__ready=async()=>{
+    try{ await document.fonts.load('800 46px ThaiNoto'); await document.fonts.ready; }catch(e){}
+    const im=$('stepsImg');
+    if(im && !im.complete){ await new Promise(r=>{ im.onload=r; im.onerror=r; }); }
+    renderAt(0);
+    return true;
+  };
+})();
+</script>
+</body>
+</html>

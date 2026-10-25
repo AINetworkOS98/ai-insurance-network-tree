@@ -108,6 +108,20 @@ export default function ThreeStepsJourney({
       {/* ── ภาพขั้นตอน 3 ขั้น (แสดงก่อนทุกอย่าง) — เปลี่ยนตามภาษาที่เลือก: ไทย ⇄ อังกฤษ ── */}
       {showImage && (
       <figure className="m-0">
+        {/* ── วิดีโอ 3D: ข้อความขึ้นทีละแถว แล้วค่อยเผยภาพ 3 ขั้นตอน (เงียบ · เล่นวน) ── */}
+        {isThai ? (
+          <video
+            className="w-full h-auto rounded-3xl border border-slate-200 shadow-lg bg-[#05070e]"
+            src="/steps/3steps-3d.mp4"
+            poster="/steps/3steps-3d-poster.jpg"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="none"
+            aria-label="แนะนำ 3 ขั้นตอนแบบ 3 มิติ — ข้อความขึ้นทีละบรรทัด"
+          />
+        ) : (
         <picture>
           <source srcSet={`${img}.webp`} type="image/webp" />
           <img
@@ -122,8 +136,11 @@ export default function ThreeStepsJourney({
             data-step-art={isThai ? 'th' : 'en'}
           />
         </picture>
+        )}
         <figcaption className="mt-2 text-center text-[11px] text-slate-400">
-          🖼 {isThai ? 'ภาพชุดภาษาไทย' : 'English artwork'} · เปลี่ยนตามปุ่มเลือกภาษา (🇹🇭 ไทย / 🇬🇧 English)
+          {isThai
+            ? '🎬 3D intro: ข้อความขึ้นทีละบรรทัด แล้วเผยภาพ 3 ขั้นตอน · ภาพนิ่งเปิดในแท็บใหม่ได้ที่ /steps/3-steps-th.webp'
+            : '🖼 English artwork · switches with the language button (🇹🇭 ไทย / 🇬🇧 English)'}
         </figcaption>
       </figure>
       )}

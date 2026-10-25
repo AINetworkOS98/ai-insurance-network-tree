@@ -11,6 +11,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import InstallAppCard from '@/components/InstallAppCard';
+import JoinAppTabs from '@/components/JoinAppTabs';
 
 const INTERESTS = [
   'ขอเข้าใช้ระบบ (ทดลองใช้)',
@@ -120,6 +121,8 @@ function JoinInner() {
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6">
+      {/* เมนูย่อย 2 เมนู: สมาชิกทั่วไป (หน้านี้) · ดาวน์โหลดแอป (/download) — ลิงก์เดิมทั้งหมดยังอยู่ครบ */}
+      <JoinAppTabs active="join" />
       <div className="mb-4">
         <InstallAppCard />
         <div className="mt-1 text-right text-[10px]">

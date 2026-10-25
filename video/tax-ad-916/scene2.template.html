@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"><title>ลดหย่อนภาษี — 30s 9:16 (v2)</title>
+<style>
+  @font-face{font-family:'ThaiNoto';src:url(data:font/ttf;base64,{{FONT_REG}}) format('truetype');font-weight:400}
+  @font-face{font-family:'ThaiNoto';src:url(data:font/ttf;base64,{{FONT_BOLD}}) format('truetype');font-weight:600 900}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1080px;height:1920px;overflow:hidden;background:#0b0908}
+  body{font-family:'ThaiNoto','Leelawadee UI',sans-serif;color:#f7f0e4}
+  #stage{position:absolute;inset:0;overflow:hidden;background:linear-gradient(168deg,#100c09 0%,#1c130b 46%,#0a0806 100%)}
+  #keylight{position:absolute;width:1300px;height:1300px;left:-380px;top:-420px;border-radius:50%;filter:blur(150px);
+    background:radial-gradient(circle,rgba(255,176,92,.34),transparent 68%)}
+  #warmlight{position:absolute;width:1000px;height:1000px;right:-360px;bottom:-260px;border-radius:50%;filter:blur(150px);
+    background:radial-gradient(circle,rgba(226,158,72,.22),transparent 70%)}
+  #vign{position:absolute;inset:0;background:radial-gradient(126% 82% at 50% 44%,transparent 42%,rgba(0,0,0,.74) 100%)}
+  #grain{position:absolute;inset:0;opacity:.09;background-image:radial-gradient(rgba(255,255,255,.9) .5px,transparent .6px);background-size:2px 2px}
+  .scene{position:absolute;inset:0;opacity:0}
+
+  .rule{position:absolute;left:88px;width:120px;height:3px;background:linear-gradient(90deg,#e8b45f,rgba(232,180,95,0));border-radius:2px}
+  .kick{position:absolute;left:88px;font-size:25px;letter-spacing:.2em;font-weight:700;color:#e8b45f}
+  .h1{position:absolute;left:88px;right:88px;font-weight:700;line-height:1.24;text-shadow:0 14px 34px rgba(0,0,0,.6)}
+
+  .desk{position:absolute;left:-8%;right:-8%;bottom:-4%;height:40%;transform:rotate(-2deg);
+    background:linear-gradient(180deg,#3a2513,#24160b 62%,#170e07);
+    box-shadow:inset 0 30px 70px rgba(0,0,0,.75), 0 -40px 90px rgba(0,0,0,.6)}
+  .desk::after{content:'';position:absolute;inset:0;opacity:.35;
+    background-image:repeating-linear-gradient(94deg,rgba(255,205,150,.06) 0 2px,transparent 2px 9px)}
+  .paper{position:absolute;border-radius:10px;background:linear-gradient(158deg,#f8f2e7,#e6dac6);
+    box-shadow:0 34px 64px -22px rgba(0,0,0,.9);padding:24px}
+  .paper i{display:block;height:10px;border-radius:5px;background:#c8b9a1;margin:11px 0}
+  .paper i:nth-child(3n){width:62%}
+  .paper i:nth-child(4n){width:82%}
+  .paper .hdr{height:15px;width:50%;background:#b8965f;border-radius:6px;margin-bottom:18px}
+  #calc{position:absolute;border-radius:16px;background:linear-gradient(158deg,#454b53,#22262b);padding:18px;
+    box-shadow:0 34px 64px -22px rgba(0,0,0,.95),inset 0 1px 0 rgba(255,255,255,.13)}
+  #calc .scr{height:64px;border-radius:9px;background:#0c1a12;margin-bottom:13px;box-shadow:inset 0 0 24px rgba(90,255,170,.16)}
+  #calc .keys{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+  #calc .keys b{display:block;height:30px;border-radius:7px;background:#4d545c;box-shadow:inset 0 1px 0 rgba(255,255,255,.15)}
+
+  .card{position:absolute;left:88px;right:88px;border-radius:22px;padding:34px 38px;
+    background:linear-gradient(158deg,rgba(255,244,228,.09),rgba(255,238,214,.03));
+    border:1px solid rgba(255,214,160,.20);
+    box-shadow:0 40px 90px -40px rgba(0,0,0,.9)}
+  .card .t{font-size:44px;font-weight:700;line-height:1.3}
+  .card .d{margin-top:12px;font-size:27px;line-height:1.5;color:rgba(247,240,228,.80)}
+  .card .tag{display:inline-block;margin-top:16px;padding:8px 18px;border-radius:40px;font-size:22px;font-weight:700;
+    color:#2a1a06;background:linear-gradient(180deg,#ffcf82,#e6a648)}
+
+  #sub{position:absolute;left:76px;right:76px;bottom:196px;text-align:center;font-size:45px;line-height:1.4;font-weight:700;
+    text-shadow:0 10px 26px rgba(0,0,0,.95),0 2px 4px rgba(0,0,0,.9);opacity:0}
+
+  #endcard{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;padding:0 88px;opacity:0}
+  #endcard .l1{font-size:58px;font-weight:700;line-height:1.28;text-shadow:0 12px 30px rgba(0,0,0,.85)}
+  #endcard .l2{margin-top:24px;font-size:33px;line-height:1.45;color:rgba(255,235,208,.92)}
+  #endcard .cta{margin-top:42px;align-self:flex-start;padding:24px 46px;border-radius:60px;
+    background:linear-gradient(180deg,#ffc670,#e59b2e);color:#231302;font-size:37px;font-weight:700;
+    box-shadow:0 26px 60px -22px rgba(255,180,80,.85)}
+  #endcard .url{margin-top:24px;font-size:23px;font-family:ui-monospace,Consolas,monospace;color:rgba(255,240,220,.80)}
+  #brand{position:absolute;left:88px;bottom:92px;font-size:21px;letter-spacing:.16em;font-weight:700;color:rgba(255,240,220,.50);opacity:0}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="keylight"></div><div id="warmlight"></div>
+
+  <div class="scene" id="s1">
+    <div class="kick" style="top:250px">ฉาก 1 · ตรวจเอกสารภาษี</div>
+    <div class="rule" style="top:305px"></div>
+    <div class="h1" style="top:360px;font-size:66px">ทำประกันชีวิตแล้ว<br/><span style="color:#e8b45f">ได้ใช้สิทธิหรือยัง?</span></div>
+    <div style="position:absolute;left:88px;right:110px;top:640px;font-size:29px;line-height:1.55;color:rgba(247,240,228,.72)">เช็กก่อนยื่น ภ.ง.ด.90 / 91 — เบี้ยประกันชีวิตที่เข้าเงื่อนไขนำไปลดหย่อนภาษีได้ อย่าปล่อยสิทธิหลุดมือ</div>
+    <div class="desk" style="height:44%"></div>
+    <div class="paper" id="p1" style="left:96px;bottom:470px;width:440px;height:310px;transform:rotate(-6deg)">
+      <div class="hdr"></div><i></i><i></i><i></i><i></i><i></i><i></i>
+    </div>
+    <div class="paper" id="p2" style="left:430px;bottom:545px;width:392px;height:280px;transform:rotate(5deg)">
+      <div class="hdr"></div><i></i><i></i><i></i><i></i><i></i>
+    </div>
+    <div id="calc" style="right:96px;bottom:600px;width:238px;transform:rotate(-3deg)">
+      <div class="scr"></div><div class="keys"><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></div>
+    </div>
+  </div>
+
+  <div class="scene" id="s2">
+    <div class="kick" style="top:250px">ฉาก 2 · เงื่อนไขตามกรมสรรพากร</div>
+    <div class="rule" style="top:305px"></div>
+    <div class="h1" style="top:360px;font-size:62px">เบี้ยประกันชีวิต<br/>ที่เข้าเงื่อนไข</div>
+    <div class="card" style="top:660px">
+      <div class="t">นำไปลดหย่อนภาษีได้</div>
+      <div class="d">ตามเกณฑ์ที่กรมสรรพากรกำหนด · ต้องเป็นกรมธรรม์ที่มีผลบังคับอยู่จริง</div>
+      <div class="tag">ตรวจสิทธิของคุณก่อนยื่นภาษี</div>
+    </div>
+    <div class="card" style="top:1010px;background:linear-gradient(158deg,rgba(232,180,95,.14),rgba(232,180,95,.04));border-color:rgba(255,206,140,.35)">
+      <div class="t" style="font-size:38px">ประกันชีวิต + สุขภาพ</div>
+      <div class="d">รวมกันไม่เกิน 100,000 บาท (สุขภาพภายใน 25,000) · ตามกฎหมายที่ใช้บังคับ</div>
+    </div>
+  </div>
+
+  <div class="scene" id="s3">
+    <div class="kick" style="top:250px">ฉาก 3 · คุ้มครองและวางแผน</div>
+    <div class="rule" style="top:305px"></div>
+    <div class="h1" style="top:360px;font-size:62px">ได้ทั้งความคุ้มครอง<br/><span style="color:#e8b45f">และสิทธิทางภาษี</span></div>
+    <div class="card" style="top:700px">
+      <div class="t" style="font-size:39px">ความคุ้มครองชีวิต</div>
+      <div class="d">ปกป้องคนที่คุณรักเมื่อเกิดเหตุไม่คาดคิด</div>
+    </div>
+    <div class="card" style="top:940px">
+      <div class="t" style="font-size:39px">สิทธิลดหย่อนภาษี</div>
+      <div class="d">เมื่อวางแผนถูกเงื่อนไข · ไม่ใช่คำแนะนำเฉพาะบุคคล</div>
+    </div>
+    <div class="card" style="top:1180px;background:linear-gradient(158deg,rgba(232,180,95,.14),rgba(232,180,95,.04));border-color:rgba(255,206,140,.35)">
+      <div class="d" style="font-size:26px">ผลลัพธ์ขึ้นกับข้อมูลจริงและกฎหมายที่ใช้บังคับในปีภาษีนั้น</div>
+    </div>
+  </div>
+
+  <div class="scene" id="s4">
+    <div class="desk" style="height:32%;opacity:.5"></div>
+  </div>
+
+  <div id="sub"></div>
+
+  <div id="endcard">
+    <div class="l1">ทำประกันให้คุ้มค่า<br/>อย่าลืมเช็กสิทธิลดหย่อนภาษี</div>
+    <div class="l2">ทักแชตเพื่อปรึกษาการวางแผนประกันชีวิต</div>
+    <div class="cta">ปรึกษาฟรี → /join</div>
+    <div class="url">ai-insurance-network-tree.vercel.app/join</div>
+  </div>
+  <div id="brand">AI INSURANCE NETWORK TREE</div>
+
+  <div id="vign"></div><div id="grain"></div>
+</div>
+<script>
+(() => {
+  const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
+  const easeOut=t=>1-Math.pow(1-clamp(t),3);
+  const easeInOut=t=>{t=clamp(t);return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;};
+  const seg=(t,a,b)=>clamp((t-a)/(b-a));
+  const $=id=>document.getElementById(id);
+
+  const S=[
+    {id:'s1',a:0.0,b:8.0,sub:'ถ้าทำประกันชีวิต แต่ไม่ได้ใช้สิทธิลดหย่อนภาษี<br/>คุณอาจพลาดประโยชน์ที่ตัวเองมีสิทธิได้รับ'},
+    {id:'s2',a:7.9,b:15.1,sub:'เบี้ยประกันชีวิตที่เข้าเงื่อนไข<br/>นำไปลดหย่อนภาษีได้ตามเกณฑ์กรมสรรพากร'},
+    {id:'s3',a:15.0,b:23.1,sub:'ได้ทั้งความคุ้มครองชีวิต<br/>และอาจได้ประโยชน์ทางภาษีเพิ่มเติม'},
+    {id:'s4',a:23.0,b:30.0,sub:'อย่าปล่อยให้สิทธิหลุดมือ<br/>ปรึกษาตัวแทนเพื่อเช็กสิทธิก่อนยื่นภาษี'}
+  ];
+
+  function renderAt(t){
+    S.forEach(s=>{
+      const el=$(s.id);
+      const a=Math.min(easeOut(seg(t,s.a,s.a+0.9)),1-easeInOut(seg(t,s.b-0.7,s.b)));
+      el.style.opacity=String(clamp(a));
+      const p=seg(t,s.a,s.b);
+      el.style.transform=`scale(${1.03+0.07*p}) translateY(${-10*p}px)`;
+    });
+    let sub='',sa=0;
+    for(const s of S){ if(t>=s.a+0.45 && t<s.b-0.6){ sub=s.sub; sa=Math.min(easeOut(seg(t,s.a+0.45,s.a+1.05)),1-easeInOut(seg(t,s.b-1.05,s.b-0.45))); } }
+    const sb=$('sub'); if(sb.dataset.t!==sub){ sb.innerHTML=sub; sb.dataset.t=sub; }
+    sb.style.opacity=String(sub===S[3].sub?0:sa);
+    const d=(t*0.03)%1;
+    const p1=$('p1'),p2=$('p2');
+    if(p1) p1.style.transform=`rotate(-6deg) translate(${d*12}px,${-d*14}px)`;
+    if(p2) p2.style.transform=`rotate(5deg) translate(${-d*10}px,${d*8}px)`;
+    const eA=easeOut(seg(t,24.1,25.3));
+    const ec=$('endcard');
+    ec.style.opacity=String(eA*(1-seg(t,29.4,30.0)));
+    ec.style.transform=`translateY(${(1-eA)*28}px)`;
+    $('brand').style.opacity=String(easeOut(seg(t,25.0,26.0))*0.9);
+    $('keylight').style.opacity=String(0.84+0.16*Math.sin(t*0.45));
+  }
+  window.renderAt=renderAt;
+  window.__ready=async()=>{ try{await document.fonts.load('700 45px ThaiNoto');await document.fonts.ready;}catch(e){} renderAt(0); return true; };
+})();
+</script>
+</body></html>

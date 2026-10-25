@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"><title>พ่อ…กับประกันชีวิต — 40s 9:16</title>
+<style>
+  @font-face{font-family:'ThaiNoto';src:url(data:font/ttf;base64,{{FONT_REG}}) format('truetype');font-weight:400}
+  @font-face{font-family:'ThaiNoto';src:url(data:font/ttf;base64,{{FONT_BOLD}}) format('truetype');font-weight:600 900}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1080px;height:1920px;overflow:hidden;background:#07080a}
+  body{font-family:'ThaiNoto','Leelawadee UI',sans-serif;color:#f4f1ec}
+  #stage{position:absolute;inset:0;overflow:hidden;background:#07080a}
+  .scene{position:absolute;inset:0;opacity:0;overflow:hidden}
+  .bgA{position:absolute;inset:0;background:linear-gradient(170deg,#0b1218 0%,#131a20 48%,#070a0d 100%)}
+  .bgD{position:absolute;inset:0;background:linear-gradient(170deg,#160c0c 0%,#241111 46%,#0b0707 100%)}
+  .bgG{position:absolute;inset:0;background:linear-gradient(170deg,#08161a 0%,#0c2430 46%,#061014 100%)}
+  .glow{position:absolute;width:900px;height:900px;border-radius:50%;filter:blur(90px);opacity:.5}
+  .warm{background:radial-gradient(circle,rgba(255,176,92,.32),transparent 68%)}
+  .red{background:radial-gradient(circle,rgba(239,68,68,.26),transparent 68%)}
+  .teal{background:radial-gradient(circle,rgba(34,211,238,.26),transparent 68%)}
+
+  .kick{position:absolute;left:78px;top:250px;font-size:24px;letter-spacing:.2em;font-weight:700;color:rgba(255,205,150,.9)}
+  .h{position:absolute;left:78px;right:78px;font-weight:700;line-height:1.26;text-shadow:0 12px 30px rgba(0,0,0,.7)}
+  .sub{position:absolute;left:70px;right:70px;bottom:200px;text-align:center;font-size:44px;line-height:1.4;font-weight:700;
+    text-shadow:0 10px 26px rgba(0,0,0,.95)}
+  .rule{position:absolute;left:78px;width:110px;height:3px;border-radius:2px;background:linear-gradient(90deg,#e8b45f,transparent)}
+
+  /* เก้าอี้ว่าง + เงาพ่อ */
+  .chair{position:absolute;left:50%;margin-left:-150px;bottom:470px;width:300px}
+  .chair svg{display:block;width:100%}
+  /* กองหนี้ */
+  .debt{position:absolute;left:110px;right:110px;top:640px}
+  .debt .it{display:flex;align-items:center;gap:16px;margin:16px 0;font-size:31px;color:#f3d9d9}
+  .debt .dot{width:14px;height:14px;border-radius:50%;background:#ef4444;box-shadow:0 0 14px rgba(239,68,68,.8)}
+  .debt .amt{margin-left:auto;font-weight:700;color:#fca5a5;font-variant-numeric:tabular-nums}
+  /* การ์ดเทียบ */
+  .card{position:absolute;left:78px;right:78px;border-radius:22px;padding:32px 34px;
+    background:linear-gradient(158deg,rgba(255,255,255,.07),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.12)}
+  .card .t{font-size:38px;font-weight:700;line-height:1.3}
+  .card .d{margin-top:12px;font-size:26px;line-height:1.5;color:rgba(244,241,236,.78)}
+
+  #endcard{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;padding:0 82px;opacity:0}
+  #endcard .l1{font-size:54px;font-weight:700;line-height:1.3}
+  #endcard .l2{margin-top:22px;font-size:31px;line-height:1.45;color:rgba(255,236,214,.9)}
+  #endcard .cta{margin-top:40px;align-self:flex-start;padding:22px 44px;border-radius:60px;
+    background:linear-gradient(180deg,#ffc670,#e59b2e);color:#231302;font-size:35px;font-weight:700}
+  #endcard .url{margin-top:22px;font-size:22px;font-family:ui-monospace,Consolas,monospace;color:rgba(255,240,220,.8)}
+
+  #disc{position:absolute;left:0;right:0;bottom:34px;text-align:center;font-size:19px;letter-spacing:.04em;color:rgba(244,241,236,.42)}
+  #vign{position:absolute;inset:0;background:radial-gradient(120% 78% at 50% 44%,transparent 46%,rgba(0,0,0,.78) 100%)}
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- 1) พ่อไมได้กลับมา -->
+  <div class="scene" id="s1">
+    <div class="bgA"></div><div class="glow warm" style="left:-260px;top:-300px"></div>
+    <div class="kick">เรื่องเล่าจำลอง · ครอบครัวหนึ่ง</div>
+    <div class="rule" style="top:305px"></div>
+    <div class="h" style="top:360px;font-size:66px">วันหนึ่ง พ่อออกไปทำงาน<br/>แล้ว<span style="color:#e8b45f">ไม่ได้กลับมา</span></div>
+    <div class="chair">
+      <svg viewBox="0 0 300 320" width="300" height="320">
+        <rect x="40" y="20" width="220" height="150" rx="18" fill="#1b1f24" stroke="#2c333a" stroke-width="3"/>
+        <rect x="30" y="170" width="240" height="40" rx="12" fill="#151a1f" stroke="#2c333a" stroke-width="3"/>
+        <rect x="54" y="210" width="16" height="86" rx="6" fill="#141a1f"/>
+        <rect x="230" y="210" width="16" height="86" rx="6" fill="#141a1f"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- 2) พ่อเป็นคนหาเลี้ยงครอบครัว -->
+  <div class="scene" id="s2">
+    <div class="bgA"></div><div class="glow warm" style="right:-300px;bottom:-260px"></div>
+    <div class="kick">ก่อนเกิดเหตุ</div>
+    <div class="rule" style="top:305px"></div>
+    <div class="h" style="top:360px;font-size:60px">พ่อเป็นคนหาเลี้ยงครอบครัว<br/><span style="color:#e8b45f">ไม่มีเงินเก็บ</span> · มีหนี้สิน</div>
+    <div class="card" style="top:720px">
+      <div class="t">รายได้ทั้งหมดของบ้าน</div>
+      <div class="d">มาจากพ่อคนเดียว · ค่าเช่า ค่ากิน ค่าเรียนลูก ยังต้องจ่ายทุกเดือน</div>
+    </div>
+  </div>
+
+  <!-- 3) ไม่มีประกัน -->
+  <div class="scene" id="s3">
+    <div class="bgD"></div><div class="glow red" style="right:-280px;top:-260px"></div>
+    <div class="kick" style="color:#fca5a5">กรณีที่ 1 · ไม่มีประกันชีวิต</div>
+    <div class="rule" style="top:305px;background:linear-gradient(90deg,#ef4444,transparent)"></div>
+    <div class="h" style="top:360px;font-size:58px">หนี้ทั้งหมด<br/><span style="color:#fca5a5">ตกอยู่กับแม่และลูก</span></div>
+    <div class="debt">
+      <div class="it"><span class="dot"></span>ค่าผ่อนบ้าน / ค่าเช่า <span class="amt">8,500/เดือน</span></div>
+      <div class="it"><span class="dot"></span>หนี้บัตรเครดิต <span class="amt">120,000</span></div>
+      <div class="it"><span class="dot"></span>ค่าเทอมลูก 2 คน <span class="amt">60,000/ปี</span></div>
+      <div class="it"><span class="dot"></span>รายได้ที่หายไป <span class="amt">25,000/เดือน</span></div>
+    </div>
+    <div class="card" style="top:1120px;border-color:rgba(239,68,68,.35);background:linear-gradient(158deg,rgba(239,68,68,.12),rgba(239,68,68,.03))">
+      <div class="d">ลูกอาจต้องหยุดเรียน แม่ต้องทำงานสองกอง และบ้านอาจต้องถูกขาย</div>
+    </div>
+  </div>
+
+  <!-- 4) มีประกัน -->
+  <div class="scene" id="s4">
+    <div class="bgG"></div><div class="glow teal" style="left:-280px;top:-240px"></div>
+    <div class="kick" style="color:#7dd3fc">กรณีที่ 2 · มีประกันชีวิต</div>
+    <div class="rule" style="top:305px;background:linear-gradient(90deg,#22d3ee,transparent)"></div>
+    <div class="h" style="top:360px;font-size:58px">เงินค่าสินไหม<br/><span style="color:#7dd3fc">ช่วยปิดหนี้ และพยุงครอบครัว</span></div>
+    <div class="card" style="top:700px;border-color:rgba(34,211,238,.28)">
+      <div class="t" style="font-size:34px">ปิดหนี้ที่ค้างอยู่</div>
+      <div class="d">บ้านยังอยู่ · ลูกได้เรียนต่อ · แม่มีเวลาไว้ทุกข์ ไม่ต้องสู้คนเดียวทันที</div>
+    </div>
+    <div class="card" style="top:940px;border-color:rgba(34,211,238,.28)">
+      <div class="t" style="font-size:34px">มีเงินสำรองระหว่างปรับตัว</div>
+      <div class="d">ตามทุนประกันและเงื่อนไขกรมธรรม์ที่ทำไว้</div>
+    </div>
+  </div>
+
+  <!-- 5) ข้อความจริง -->
+  <div class="scene" id="s5">
+    <div class="bgA"></div><div class="glow warm" style="left:-200px;bottom:-240px"></div>
+    <div class="kick">ความจริงที่ต้องบอก</div>
+    <div class="rule" style="top:305px"></div>
+    <div class="h" style="top:420px;font-size:62px;line-height:1.32">ประกัน<br/><span style="color:#e8b45f">ไม่ได้แทนพ่อได้</span><br/><br/>แต่ช่วยให้ครอบครัว<br/>ไม่ต้องสู้คนเดียว</div>
+  </div>
+
+  <!-- 6) CTA -->
+  <div class="scene" id="s6">
+    <div class="bgA"></div><div class="glow warm" style="right:-240px;top:-260px"></div>
+    <div class="kick">เช็กก่อนเกิดเหตุ</div>
+    <div class="rule" style="top:305px"></div>
+    <div class="h" style="top:380px;font-size:56px">ครอบครัวคุณ<br/><span style="color:#e8b45f">พร้อมแค่ไหน</span> ถ้าวันนั้นมาถึง</div>
+    <div class="card" style="top:760px">
+      <div class="d">ทุนประกันที่เหมาะ = หนี้สิน + รายได้ที่หายไปหลายปี + ค่าเรียนลูก<br/>ปรึกษาตัวแทนเพื่อคำนวณตามจริง</div>
+    </div>
+  </div>
+
+  <div id="endcard">
+    <div class="l1">รักครอบครัว<br/>อย่าปล่อยให้เขาต้องสู้คนเดียว</div>
+    <div class="l2">ปรึกษาการวางแผนประกันชีวิตฟรี</div>
+    <div class="cta">ปรึกษาฟรี → /join</div>
+    <div class="url">ai-insurance-network-tree.vercel.app/join</div>
+  </div>
+
+  <div id="disc">ภาพจำลองเพื่อการเรียนรู้ · ไม่ใช่บุคคลหรือเหตุการณ์จริง · ผลประโยชน์ขึ้นกับเงื่อนไขกรมธรรม์ · ไม่รับประกันผลตอบแทน</div>
+  <div id="vign"></div>
+</div>
+<script>
+(() => {
+  const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
+  const easeOut=t=>1-Math.pow(1-clamp(t),3);
+  const easeInOut=t=>{t=clamp(t);return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;};
+  const seg=(t,a,b)=>clamp((t-a)/(b-a));
+  const $=id=>document.getElementById(id);
+
+  const S=[
+    {id:'s1',a:0.0,b:5.1},
+    {id:'s2',a:5.0,b:10.4},
+    {id:'s3',a:10.3,b:16.6},
+    {id:'s4',a:16.5,b:23.6},
+    {id:'s5',a:23.5,b:29.2},
+    {id:'s6',a:29.1,b:34.4}
+  ];
+  function renderAt(t){
+    S.forEach(s=>{
+      const el=$(s.id);
+      const a=Math.min(easeOut(seg(t,s.a,s.a+0.7)),1-easeInOut(seg(t,s.b-0.5,s.b)));
+      el.style.opacity=String(clamp(a));
+      const p=seg(t,s.a,s.b);
+      el.style.transform=`scale(${1.02+0.05*p})`;
+    });
+    // เก้าอี้ค่อย ๆ หาย
+    const ch=$('s1').querySelector('.chair');
+    if(ch) ch.style.opacity=String(1-0.6*seg(t,2.6,5.0));
+    const eA=easeOut(seg(t,34.2,35.4));
+    const ec=$('endcard');
+    ec.style.opacity=String(eA*(1-seg(t,39.4,40.0)));
+    ec.style.transform=`translateY(${(1-eA)*26}px)`;
+  }
+  window.renderAt=renderAt;
+  window.__ready=async()=>{ try{await document.fonts.load('700 44px ThaiNoto');await document.fonts.ready;}catch(e){} renderAt(0); return true; };
+})();
+</script>
+</body></html>
