@@ -110,7 +110,7 @@ export default function KeymanAppDownload() {
         <b className="text-slate-700">วิธีติดตั้ง APK (ครั้งแรกครั้งเดียว):</b>{' '}
         แตะไฟล์ที่ดาวน์โหลด → “ติดตั้ง” → ถ้าเครื่องเตือน ให้เปิด “อนุญาตจากแหล่งที่มานี้” (Install unknown apps)
         เฉพาะเบราว์เซอร์ที่ใช้ดาวน์โหลด → เปิดแอป “คีย์แมน” ได้เลย (ไม่ต้องใช้เน็ตหลังจากนี้)
-        รองรับ {m?.platform?.android?.minOs || 'Android 7.0 (API 24)'} ขึ้นไป
+        รองรับ {m?.platform?.android?.minOs || 'Android 7.0 (API 24) ขึ้นไป'}
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
