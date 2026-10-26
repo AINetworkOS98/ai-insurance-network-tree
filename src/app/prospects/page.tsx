@@ -15,6 +15,7 @@ import ProspectCodeLookup from '@/components/ProspectCodeLookup';
 import BusinessSimulator from '@/components/tax/BusinessSimulator';
 import TaxTable2569 from '@/components/tax/TaxTable2569';
 import TaxPlannerDownload from '@/components/tax/TaxPlannerDownload';
+import KeymanAppDownload from '@/components/tax/KeymanAppDownload';
 
 // หน้า "สมาชิกทั่วไป" (เดิมชื่อ "ผู้สนใจ") — ฐานเดียวกับระบบสมาชิก (/api/members)
 // นิยาม: สมาชิกทั่วไป = ผู้ที่ยังอยู่ระดับตำแหน่ง 0 (ยังไม่เลื่อนเป็นตัวแทน)
@@ -254,6 +255,8 @@ export default function GeneralMembersPage(){
             </div>
           ) : view === 'keyman' ? (
             <div className="space-y-4">
+              {/* 0) ดาวน์โหลดแอปประกันคีย์แมน (Android APK · ออฟไลน์ 100%) — สมาชิกทั่วไปกดเองได้ */}
+              <KeymanAppDownload />
               {/* ชวนคนสนใจสมัครเข้าใช้ app — ลิงก์ + QR แชร์ได้ทันที */}
               <JoinShareCard src="keyman" />
               {/* ประกันคีย์แมน — ต่อจากแท็บภาษีนิติบุคคล */}

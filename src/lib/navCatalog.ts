@@ -94,6 +94,7 @@ export const NAV_ENTRIES: NavEntry[] = [
   { href: '/prospects?tab=keyman', section: 'taxcalc', label: 'ประกันคีย์แมน (ลดหย่อนภาษี)', key: 'sb_tax_keyman', icon: '🛡', minRank: 0 },
   // ดาวน์โหลดโปรแกรมคำนวณภาษี (แอปมือถือ ออฟไลน์) — สมาชิกทั่วไประดับ 0 ขึ้นไปกดดาวน์โหลดเองได้
   { href: '/prospects?tab=pit#tax-planner-download', section: 'taxcalc', label: 'ดาวน์โหลดโปรแกรมคำนวณภาษี (แอป)', key: 'sb_tax_download', icon: '⤓', minRank: 0 },
+  { href: '/prospects?tab=keyman#keyman-app-download', section: 'taxcalc', label: 'ดาวน์โหลดแอปประกันคีย์แมน (แอป)', key: 'sb_keyman_download', icon: '⤓', minRank: 0 },
   // ลิงก์ตรงไปแต่ละหน้าของเครื่องคำนวณภาษีบุคคลธรรมดา (หน้าถัดไป 4 ส่วน)
   { href: '/prospects?tab=pit#sec=1', section: 'taxcalc', label: 'ตารางอาชีพ (2,037 อาชีพ)', icon: '▤', minRank: 0 },
   { href: '/prospects?tab=pit#sec=2', section: 'taxcalc', label: '1ข) ทุกอาชีพที่ต้องยื่นแบบ', icon: '📊', minRank: 0 },

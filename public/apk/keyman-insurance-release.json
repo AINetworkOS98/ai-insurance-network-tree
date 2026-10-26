@@ -1,0 +1,38 @@
+{
+  "app": {
+    "name": "ประกันคีย์แมน (Keyman Insurance)",
+    "version": "1.0.0"
+  },
+  "platform": {
+    "android": {
+      "minOs": "Android 7.0 (API 24) ขึ้นไป",
+      "file": "APK"
+    },
+    "ios": {
+      "note": "ใช้วิธี “เพิ่มไปที่หน้าจอโฮม” ใน Safari (ยังไม่มีไฟล์ .ipa ที่เซ็นแล้ว)"
+    }
+  },
+  "source": "/prospects?tab=keyman",
+  "formula": "สูตรเดียวกับหน้าเว็บ src/lib/tax/keyman.ts (ชุดทดสอบ 8 กรณี + ภาษีบุคคลธรรมดา 23 กรณี)",
+  "apk": {
+    "primary": {
+      "file": "keyman-insurance.apk",
+      "url": "/apk/keyman-insurance.apk",
+      "downloadUrl": "/apk/keyman-insurance.apk?v=28cc3528d786",
+      "bytes": 18264535,
+      "sizeText": "17.4 MB",
+      "sha256": "28cc3528d786572db22c28f3cb7aca1776f3b481318fd6c673aa5a483e29b298",
+      "version": "1.0.0"
+    },
+    "legacy": {
+      "file": "keyman-insurance-legacy.apk",
+      "url": "/apk/keyman-insurance-legacy.apk",
+      "downloadUrl": "/apk/keyman-insurance-legacy.apk?v=4b2820a97daa",
+      "bytes": 15656863,
+      "sizeText": "14.9 MB",
+      "sha256": "4b2820a97daa3da82d76cf8484d1546120a4c32baff2bfb72782c93d416c0899",
+      "version": "1.0.0"
+    }
+  },
+  "releasedAt": "2026-10-26T21:56:16.763Z"
+}
