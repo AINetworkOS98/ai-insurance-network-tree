@@ -5,7 +5,7 @@
   },
   "platform": {
     "android": {
-      "minOs": "Android 5.0 (API 21) ขึ้นไป",
+      "minOs": "Android 7.0 (API 24) ขึ้นไป",
       "file": "APK"
     },
     "ios": {

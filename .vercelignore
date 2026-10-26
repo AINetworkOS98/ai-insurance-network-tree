@@ -1,0 +1,8 @@
+# ไม่ต้องอัปขึ้น Vercel — ไฟล์ต้นฉบับวิดีโอ/โปรไฟล์ Chrome ที่ค้างในโปรเจกต์ (ไม่ถูก serve และทำให้ deploy ค้าง)
+# หมายเหตุ: ไฟล์วิดีโอที่เว็บใช้จริงอยู่ใน public/videos (ไม่ใช่ video/)
+video/
+node_modules/
+.next/
+out/
+python/__pycache__/
+tsconfig.tsbuildinfo

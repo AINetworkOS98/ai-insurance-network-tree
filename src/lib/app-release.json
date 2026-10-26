@@ -1,14 +1,14 @@
 {
   "app": {
     "name": "AI Insurance Network OS",
-    "version": "0.1.0"
+    "version": "1.1.0"
   },
   "build": {
-    "commit": "0d42d5c",
-    "message": "fix(ai): ปุ่มผู้ช่วย AI ลอยกลับไปมุมซ้ายล่าง (เดิมอยู่ซ้าย) — ไม่ทับปุ่มเมนูด้านขวา; จอ lg วางถัดจาก sidebar",
-    "author": "akarapol",
-    "committedAt": "2026-10-25T19:14:13+07:00",
-    "generatedAt": "2026-10-25T13:13:06.739Z",
+    "commit": "9ad76b7",
+    "message": "feat(tax): แอปคำนวณภาษี 2569 (Flutter/Android, ออฟไลน์) — ดาวน์โหลดได้เองในเมนูคำนวณภาษีสำหรับสมาชิกทั่วไป",
+    "author": "NAVI",
+    "committedAt": "2026-10-26T05:49:40+07:00",
+    "generatedAt": "2026-10-26T11:31:29.459Z",
     "env": "local"
   },
   "apk": {
@@ -33,6 +33,16 @@
     }
   },
   "changelog": [
+    {
+      "commit": "9ad76b7",
+      "date": "2026-10-26T05:49:40+07:00",
+      "subject": "feat(tax): แอปคำนวณภาษี 2569 (Flutter/Android, ออฟไลน์) — ดาวน์โหลดได้เองในเมนูคำนวณภาษีสำหรับสมาชิกทั่วไป"
+    },
+    {
+      "commit": "39945f0",
+      "date": "2026-10-25T20:40:43+07:00",
+      "subject": "feat(release): หน้า /download อัปเดตเองจากระบบ + /api/app-release (เวอร์ชัน/ขนาด APK/เวลาอัปเดต/มีอะไรใหม่) สำหรับรายงานอีเมลผ่าน n8n"
+    },
     {
       "commit": "0d42d5c",
       "date": "2026-10-25T19:14:13+07:00",
@@ -62,18 +72,8 @@
       "commit": "f391372",
       "date": "2026-10-24T14:29:25+07:00",
       "subject": "feat(privacy): /notifications เห็นเฉพาะรหัสของตัวเอง + แสดง IP ของตัวเอง"
-    },
-    {
-      "commit": "913ad46",
-      "date": "2026-10-24T08:55:59+07:00",
-      "subject": "feat(pwa): ติดตั้งเป็นแอปได้จากหน้า /join (สมัครฟรี)"
-    },
-    {
-      "commit": "43fd4b8",
-      "date": "2026-10-24T08:45:07+07:00",
-      "subject": "fix(lookup): ค้นรหัสผู้สนใจด้วย prospectCode (P-XXXXXX) ก่อน — เดิมเทียบ prospectId (UUID) ทำให้ขึ้น 'ไม่พบรหัส'"
     }
   ],
   "downloadPage": "/download",
-  "fingerprint": "325dfd96cab5dcf9"
+  "fingerprint": "2e5710c082aeea7a"
 }

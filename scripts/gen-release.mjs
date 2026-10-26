@@ -46,6 +46,10 @@ const commitAuthor = (process.env.VERCEL_GIT_COMMIT_AUTHOR_NAME || git('log -1 -
 const committedAt = git('log -1 --pretty=%cI') || new Date().toISOString();
 
 // ── changelog: 8 commit ล่าสุด (บน Vercel ไม่มี .git จึงเหลือแค่ commit ปัจจุบัน) ──
+// ถ้า build บน Vercel: ต่อรายการจากไฟล์ที่ commit ไว้ก่อนหน้า (คงประวัติ 8 รายการล่าสุด)
+const prevPath = path.join(root, 'src', 'lib', 'app-release.json');
+const prevChangelog = readJson(prevPath, {}).changelog || [];
+
 let changelog = [];
 const logRaw = git('log -8 --pretty=%h\u0001%cI\u0001%s');
 if (logRaw) {
@@ -55,7 +59,10 @@ if (logRaw) {
   }).filter((c) => c.commit);
 }
 if (!changelog.length && commitMessage) {
-  changelog = [{ commit, date: committedAt, subject: commitMessage }];
+  const head = [{ commit, date: committedAt, subject: commitMessage }];
+  // รวมกับประวัติเดิม: ตัดรายการที่ commit ซ้ำ แล้วเก็บ 8 รายการล่าสุด
+  const seen = new Set(head.map((c) => c.subject));
+  changelog = head.concat(prevChangelog.filter((c) => c?.subject && !seen.has(c.subject))).slice(0, 8);
 }
 
 // ── APK ──

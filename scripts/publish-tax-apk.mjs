@@ -24,7 +24,7 @@ fs.mkdirSync(OUT, { recursive: true });
 const manifest = {
   app: { name: 'คำนวณภาษี 2569 (Thai Tax Planner)', version: '1.0.0' },
   platform: {
-    android: { minOs: 'Android 5.0 (API 21) ขึ้นไป', file: 'APK' },
+    android: { minOs: 'Android 7.0 (API 24) ขึ้นไป', file: 'APK' },
     ios: { note: 'ใช้วิธี “เพิ่มไปที่หน้าจอโฮม” ใน Safari (ยังไม่มีไฟล์ .ipa ที่เซ็นแล้ว)' },
   },
   apk: {},
