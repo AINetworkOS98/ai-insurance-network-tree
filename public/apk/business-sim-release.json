@@ -1,0 +1,38 @@
+{
+  "app": {
+    "name": "ผลประกอบการ (Keyman) — Business Result Simulator",
+    "version": "1.0.0"
+  },
+  "platform": {
+    "android": {
+      "minOs": "Android 7.0 (API 24) ขึ้นไป",
+      "file": "APK"
+    },
+    "ios": {
+      "note": "ใช้วิธี “เพิ่มไปที่หน้าจอโฮม” ใน Safari (ยังไม่มีไฟล์ .ipa ที่เซ็นแล้ว)"
+    }
+  },
+  "source": "/prospects?tab=sim",
+  "formula": "สูตรเดียวกับหน้าเว็บ src/lib/tax/businessSim.ts (ชุดทดสอบ 6 กรณีที่สร้างจากเอนจินเว็บ + ภาษีบุคคลธรรมดา 23 กรณี)",
+  "apk": {
+    "primary": {
+      "file": "business-sim.apk",
+      "url": "/apk/business-sim.apk",
+      "downloadUrl": "/apk/business-sim.apk?v=6ab88fa1b6da",
+      "bytes": 17897481,
+      "sizeText": "17.1 MB",
+      "sha256": "6ab88fa1b6dad292e70bbafb709bddfde4b8af009b00f4f853595ada46a860df",
+      "version": "1.0.0"
+    },
+    "legacy": {
+      "file": "business-sim-legacy.apk",
+      "url": "/apk/business-sim-legacy.apk",
+      "downloadUrl": "/apk/business-sim-legacy.apk?v=57bd1d0f5d60",
+      "bytes": 15273425,
+      "sizeText": "14.6 MB",
+      "sha256": "57bd1d0f5d60c56068aeb0a182e12bb5fd8cfba6965b2c01ad32635be8f51b88",
+      "version": "1.0.0"
+    }
+  },
+  "releasedAt": "2026-10-27T04:53:39.905Z"
+}

@@ -16,6 +16,7 @@ import BusinessSimulator from '@/components/tax/BusinessSimulator';
 import TaxTable2569 from '@/components/tax/TaxTable2569';
 import TaxPlannerDownload from '@/components/tax/TaxPlannerDownload';
 import KeymanAppDownload from '@/components/tax/KeymanAppDownload';
+import BusinessSimAppDownload from '@/components/tax/BusinessSimAppDownload';
 
 // หน้า "สมาชิกทั่วไป" (เดิมชื่อ "ผู้สนใจ") — ฐานเดียวกับระบบสมาชิก (/api/members)
 // นิยาม: สมาชิกทั่วไป = ผู้ที่ยังอยู่ระดับตำแหน่ง 0 (ยังไม่เลื่อนเป็นตัวแทน)
@@ -265,6 +266,8 @@ export default function GeneralMembersPage(){
           ) : view === 'sim' ? (
             <div className="space-y-4">
               {/* โปรแกรมเปรียบเทียบผลประกอบการ (ต่อจากแท็บคีย์แมน) — ให้สมาชิกกรอกข้อมูลลูกค้าเอง */}
+              {/* 0) ดาวน์โหลดแอปผลประกอบการ (Android APK · ออฟไลน์ 100%) — สมาชิกทั่วไปกดเองได้ */}
+              <BusinessSimAppDownload />
               <BusinessSimulator/>
               {/* ตารางคำนวณภาษี 2569 + เครื่องคำนวณออกภาษีให้ทุกทอด (ดึงสูตรจากโปรแกรมภาษี2569.xls) */}
               <TaxTable2569/>
